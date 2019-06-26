@@ -1314,6 +1314,12 @@ public class DtvkitTvInput extends TvInputService {
                             break;
                         case "badsignal":
                             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_WEAK_SIGNAL);
+                            boolean isTeleOn = playerIsTeletextOn();
+                            if (isTeleOn) {
+                                playerSetTeletextOn(false, -1);
+                                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
+                                Log.d(TAG, "close teletext when badsignal received");
+                            }
                             break;
                         case "off":
                             if (timeshiftRecorderState != RecorderState.STOPPED) {
