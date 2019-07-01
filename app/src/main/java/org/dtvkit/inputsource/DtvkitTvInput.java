@@ -648,6 +648,12 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public void onRelease() {
             Log.i(TAG, "onRelease");
+            //must destory mview,!!! we
+            //will regist handle to client when
+            //creat ciMenuView,so we need destory and
+            //unregist handle.
+            if (mView != null)
+                mView.destroy();
             releaseWorkThread();
         }
 
