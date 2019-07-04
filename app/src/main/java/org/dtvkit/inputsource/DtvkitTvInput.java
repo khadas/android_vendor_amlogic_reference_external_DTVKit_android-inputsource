@@ -659,6 +659,9 @@ public class DtvkitTvInput extends TvInputService {
         private boolean mBlocked = false;
         private int mSignalStrength = 0;
         private int mSignalQuality = 0;
+        private boolean mMediaCodecPlay = false;
+        private static final String TV_TF_DTV_MEDIACODECPLAY = "tv.tf.dtv.mediaCodecPlay";
+
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -669,6 +672,10 @@ public class DtvkitTvInput extends TvInputService {
                 (CaptioningManager) context.getSystemService(Context.CAPTIONING_SERVICE);
             numActiveRecordings = recordingGetNumActiveRecordings();
             Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
+
+            String mcodec = mSystemControlManager.getProperty(TV_TF_DTV_MEDIACODECPLAY);
+            mMediaCodecPlay = Boolean.parseBoolean(mcodec);
+            Log.i(TAG, "media codec used:" + mMediaCodecPlay + " str:"+mcodec);
 
             if (numActiveRecordings < numRecorders) {
                 timeshiftAvailable = true;
@@ -723,7 +730,8 @@ public class DtvkitTvInput extends TvInputService {
                 if (null != mView)
                     layoutSurface(0, 0, mView.w, mView.h);
             } else {
-                if (null != mSysSettingManager)
+                if (null != mSysSettingManager
+                    && mMediaCodecPlay == false)
                     mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "1");
             }
         }
@@ -810,7 +818,8 @@ public class DtvkitTvInput extends TvInputService {
                         mSurface = null;
                         //doRelease();
                         sendDoReleaseMessage();
-                        if (null != mSysSettingManager)
+                        if (null != mSysSettingManager
+                            && mMediaCodecPlay == false)
                             mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "0");
                     }
                 } else {
@@ -825,10 +834,13 @@ public class DtvkitTvInput extends TvInputService {
                     createDecoder();
                     decoderRelease();
                     sendSetSurfaceMessage(surface, mConfigs[0]);
+
                     mSurface = surface;
                     Log.d(TAG, "onSetSurface ok");
                 }
             }
+            //set surface to mediaplayer
+            DtvkitGlueClient.getInstance().setDisplay(surface);
             return true;
         }
 
