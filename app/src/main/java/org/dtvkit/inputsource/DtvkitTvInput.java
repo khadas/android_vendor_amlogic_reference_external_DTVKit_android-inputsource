@@ -411,6 +411,7 @@ public class DtvkitTvInput extends TvInputService {
         private String mInputId = null;
         private long startRecordTimeMillis = 0;
         private long endRecordTimeMillis = 0;
+        private String recordingUri = null;
 
         @RequiresApi(api = Build.VERSION_CODES.N)
         public DtvkitRecordingSession(Context context, String inputId) {
@@ -460,15 +461,24 @@ public class DtvkitTvInput extends TvInputService {
                 durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
             }
             StringBuffer recordingResponse = new StringBuffer();
-            if (!recordingAddRecording(dvbUri, false, durationSecs, recordingResponse)) {
+            if (!recordingStartRecording(dvbUri, recordingResponse)) {
                 if (recordingResponse.toString().equals("May not be enough space on disk")) {
                     Log.i(TAG, "record error insufficient space");
                     notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
+                }
+                else if (recordingResponse.toString().equals("Failed to get a tuner to record")) {
+                    Log.i(TAG, "record error no tuner to record");
+                    notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
                 }
                 else {
                     Log.i(TAG, "record error unknown");
                     notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
                 }
+            }
+            else
+            {
+                recordingUri = recordingResponse.toString();
+                Log.i(TAG, "Recording started:"+recordingUri);
             }
         }
 
@@ -477,9 +487,8 @@ public class DtvkitTvInput extends TvInputService {
             Log.i(TAG, "onStopRecording");
 
             endRecordTimeMillis = System.currentTimeMillis();
-            String recordingUri = getProgramInternalRecordingUri(recordingGetStatus());
             scheduleTimeshiftRecording = true;
-
+            Log.d(TAG, "stop Recording:"+recordingUri);
             if (!recordingStopRecording(recordingUri)) {
                 notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
             } else {
@@ -646,6 +655,8 @@ public class DtvkitTvInput extends TvInputService {
             Log.i(TAG, "doRelease");
             removeScheduleTimeshiftRecordingTask();
             scheduleTimeshiftRecording = false;
+            timeshiftRecorderState = RecorderState.STOPPED;
+            timeshifting = false;
             mhegStop();
             playerStopTimeshiftRecording(false);
             playerStop();
@@ -1034,7 +1045,14 @@ public class DtvkitTvInput extends TvInputService {
             if (recordedProgram != null) {
                 playerState = PlayerState.PLAYING;
                 playerStop();
-                playerPlay(recordedProgram.getRecordingDataUri());
+                if (playerPlay(recordedProgram.getRecordingDataUri()))
+                {
+                    DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
+                }
+                else
+                {
+                    notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
+                }
             }
         }
 
@@ -1421,7 +1439,7 @@ public class DtvkitTvInput extends TvInputService {
                     Log.i(TAG, "DvbUpdatedChannel");
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
                     EpgSyncJobService.requestImmediateSync(mContext, mInputId, false, true, sync);
-                }
+                }/*
                 else if (signal.equals("DvbUpdatedChannelData"))
                 {
                     Log.i(TAG, "DvbUpdatedChannelData");
@@ -1433,7 +1451,7 @@ public class DtvkitTvInput extends TvInputService {
                     Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
                     notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
                     initSubtitleOrTeletextIfNeed();
-                }
+                }*/
                 else if (signal.equals("MhegAppStarted"))
                 {
                    Log.i(TAG, "MhegAppStarted");
@@ -1620,6 +1638,7 @@ public class DtvkitTvInput extends TvInputService {
             }
             removeScheduleTimeshiftRecordingTask();
             if (timeshiftRecorderState != RecorderState.STOPPED) {
+                Log.i(TAG, "reset timeshiftState to STOPPED.");
                 timeshiftRecorderState = RecorderState.STOPPED;
                 timeshifting = false;
                 scheduleTimeshiftRecording = false;
@@ -1743,6 +1762,7 @@ public class DtvkitTvInput extends TvInputService {
             args.put(dvbUri);
             AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
             audioManager.setParameters("tuner_in=dtv");
+            Log.d(TAG, "player.play: "+dvbUri);
             DtvkitGlueClient.getInstance().request("Player.play", args);
             return true;
         } catch (Exception e) {
@@ -2550,6 +2570,19 @@ public class DtvkitTvInput extends TvInputService {
        return response;
    }
 
+   private boolean recordingStartRecording(String dvbUri, StringBuffer response) {
+       try {
+           JSONArray args = new JSONArray();
+           args.put(dvbUri);
+           response.insert(0, DtvkitGlueClient.getInstance().request("Recording.startRecording", args).getString("data"));
+           return true;
+       } catch (Exception e) {
+           Log.e(TAG, e.getMessage());
+           response.insert(0, e.getMessage());
+           return false;
+       }
+   }
+
    private boolean recordingStopRecording(String dvbUri) {
        try {
            JSONArray args = new JSONArray();
@@ -2741,6 +2774,7 @@ public class DtvkitTvInput extends TvInputService {
                            }
 
                            if (!checkRecordingExists(uri, cursor)) {
+                               Log.d(TAG, "remove invalid recording: "+uri);
                                recordingRemoveRecording(uri);
                            }
 
