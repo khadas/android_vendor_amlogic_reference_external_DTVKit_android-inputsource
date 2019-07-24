@@ -63,9 +63,10 @@ public class DtvkitGlueClient {
             Log.e(TAG, e.getMessage());
             return;
         }
-
-        for (SignalHandler handler :mHandlers) {
-            handler.onSignal(resource, object);
+        synchronized (mHandlers) {
+            for (SignalHandler handler :mHandlers) {
+                handler.onSignal(resource, object);
+            }
         }
     }
 
@@ -167,14 +168,18 @@ public class DtvkitGlueClient {
     }
 
     public void registerSignalHandler(SignalHandler handler) {
-        if (!mHandlers.contains(handler)) {
-            mHandlers.add(handler);
+        synchronized (mHandlers) {
+            if (!mHandlers.contains(handler)) {
+                mHandlers.add(handler);
+            }
         }
     }
 
     public void unregisterSignalHandler(SignalHandler handler) {
-        if (mHandlers.contains(handler)) {
-            mHandlers.remove(handler);
+        synchronized (mHandlers) {
+            if (mHandlers.contains(handler)) {
+                mHandlers.remove(handler);
+            }
         }
     }
 
