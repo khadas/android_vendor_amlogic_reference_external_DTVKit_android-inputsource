@@ -127,7 +127,7 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_SET_EAST_DISH_LIMITS = R.string.parameter_diseqc1_2_dish_limits_east;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_SET_WEST_DISH_LIMITS = R.string.parameter_diseqc1_2_dish_limits_west;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTTION = R.string.parameter_diseqc1_2_move_direction;
-    public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTTION_LIST = {R.string.parameter_diseqc1_2_move_direction_east, R.string.parameter_diseqc1_2_move_direction_west, R.string.parameter_diseqc1_2_move_direction_center};
+    public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTTION_LIST = {R.string.parameter_diseqc1_2_move_direction_east, R.string.parameter_diseqc1_2_move_direction_center, R.string.parameter_diseqc1_2_move_direction_west};
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_STEP = R.string.parameter_diseqc1_2_move_step;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_MOVE = R.string.parameter_diseqc1_2_move;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_POSITION = R.string.parameter_diseqc1_2_current_position;

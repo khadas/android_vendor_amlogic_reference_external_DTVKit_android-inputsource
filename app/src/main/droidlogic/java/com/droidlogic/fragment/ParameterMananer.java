@@ -752,11 +752,11 @@ public class ParameterMananer {
             case 0:
                 derection = "east";
                 break;
+            case 1:
+                derection = "center";
+                break;
             case 2:
                 derection = "west";
-                break;
-            case 3:
-                derection = "center";
                 break;
             default:
                 derection = "center";
