@@ -424,7 +424,7 @@ public class DtvkitDvbtSetup extends Activity {
                     if (mIsDvbt) {
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
                             args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
-                            args.put(Integer.valueOf(parameter) * 1000000);//mhz
+                            args.put(Integer.valueOf(parameter) * 1000);//khz to hz
                             args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
                             args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
                             args.put(DataMananer.VALUE_DVBT_TYPE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE)]);
@@ -439,7 +439,7 @@ public class DtvkitDvbtSetup extends Activity {
                     } else {
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
                             args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
-                            args.put(Integer.valueOf(parameter) * 1000000);//mhz
+                            args.put(Integer.valueOf(parameter) * 1000);//khz to hz
                             args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
                             args.put(getUpdatedDvbcSymbolRate());
                         } else {
@@ -473,8 +473,11 @@ public class DtvkitDvbtSetup extends Activity {
             parameter = getChannelIndex();
         } else if (editable != null) {
             String value = editable.toString();
-            if (!TextUtils.isEmpty(value) && TextUtils.isDigitsOnly(value)) {
-                parameter = value;
+            if (!TextUtils.isEmpty(value)/* && TextUtils.isDigitsOnly(value)*/) {
+                //float for frequency
+                float toFloat = Float.valueOf(value);
+                int toInt = (int)(toFloat * 1000.0f);//khz
+                parameter = String.valueOf(toInt);
             }
         }
 
