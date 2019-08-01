@@ -81,6 +81,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.HashMap;
 
+import android.media.MediaCodec;
+
+
 public class DtvkitTvInput extends TvInputService {
     private static final String TAG = "DtvkitTvInput";
     private LongSparseArray<Channel> mChannels;
@@ -115,6 +118,8 @@ public class DtvkitTvInput extends TvInputService {
     private Runnable timeshiftRecordRunnable;
     private long mDtvkitTvInputSessionCount = 0;
     private DataMananer mDataMananer;
+    private MediaCodec mMediaCodec1;
+    private MediaCodec mMediaCodec2;
 
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
@@ -702,6 +707,9 @@ public class DtvkitTvInput extends TvInputService {
                     mSysSettingManager.writeSysFs("/sys/class/video/disable_video", "1");
                 if (null != mView)
                     layoutSurface(0, 0, mView.w, mView.h);
+            } else {
+                if (null != mSysSettingManager)
+                    mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "1");
             }
         }
 
@@ -785,6 +793,8 @@ public class DtvkitTvInput extends TvInputService {
                         mSurface = null;
                         //doRelease();
                         sendDoReleaseMessage();
+                        if (null != mSysSettingManager)
+                            mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "0");
                     }
                 } else {
                     if (mSurface != surface) {
@@ -795,6 +805,8 @@ public class DtvkitTvInput extends TvInputService {
                         sendSetSurfaceMessage(null, null);
                     }
                     //mHardware.setSurface(surface, mConfigs[0]);
+                    createDecoder();
+                    decoderRelease();
                     sendSetSurfaceMessage(surface, mConfigs[0]);
                     surface = mSurface;
                     Log.d(TAG, "onSetSurface ok");
@@ -3313,7 +3325,67 @@ public class DtvkitTvInput extends TvInputService {
         return id;
     }
 
+
     private boolean getFeatureSupportTimeshifting() {
         return !PropSettingManager.getBoolean("tv.dtv.tf.disable", false);
     }
+
+    private boolean createDecoder() {
+        String str = "OMX.amlogic.avc.decoder.awesome.secure";
+        try {
+            mMediaCodec1 = MediaCodec.createByCodecName(str);
+            } catch (Exception exception) {
+            Log.e(TAG, "Exception during decoder creation", exception);
+            decoderRelease();
+            return false;
+        }
+        try {
+            mMediaCodec2 = MediaCodec.createByCodecName(str);
+            } catch (Exception exception) {
+            Log.e(TAG, "Exception during decoder creation", exception);
+            decoderRelease();
+            return false;
+        }
+        Log.e(TAG, "createDecoder done");
+        return true;
+    }
+
+    private void decoderRelease() {
+        if (mMediaCodec1 != null) {
+            try {
+                mMediaCodec1.stop();
+                } catch (IllegalStateException exception) {
+                mMediaCodec1.reset();
+                // IllegalStateException happens when decoder fail to start.
+                Log.e(TAG, "IllegalStateException during decoder1 stop", exception);
+                } finally {
+                    try {
+                        mMediaCodec1.release();
+                    } catch (IllegalStateException exception) {
+                        Log.e(TAG, "IllegalStateException during decoder1 release", exception);
+                    }
+                    mMediaCodec1 = null;
+            }
+        }
+
+        if (mMediaCodec2 != null) {
+            try {
+                mMediaCodec2.stop();
+                } catch (IllegalStateException exception) {
+                mMediaCodec2.reset();
+                // IllegalStateException happens when decoder fail to start.
+                Log.e(TAG, "IllegalStateException during decoder2 stop", exception);
+                } finally {
+                    try {
+                        mMediaCodec2.release();
+                    } catch (IllegalStateException exception) {
+                        Log.e(TAG, "IllegalStateException during decoder2 release", exception);
+                    }
+                    mMediaCodec2 = null;
+            }
+        }
+
+        Log.e(TAG, "decoderRelease done");
+    }
+
 }
