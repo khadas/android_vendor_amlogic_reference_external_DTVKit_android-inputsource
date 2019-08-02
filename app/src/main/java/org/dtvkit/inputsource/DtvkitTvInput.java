@@ -71,6 +71,7 @@ import com.droidlogic.settings.SysSettingManager;
 import com.droidlogic.settings.ConstantManager;
 
 //import com.droidlogic.app.tv.TvControlManager;
+import com.droidlogic.app.SystemControlManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -179,6 +180,8 @@ public class DtvkitTvInput extends TvInputService {
     public final Session onCreateSession(String inputId) {
         Log.i(TAG, "onCreateSession " + inputId);
         mSession = new DtvkitTvInputSession(this);
+        SystemControlManager mSystemControlManager = SystemControlManager.getInstance();
+        mSystemControlManager.SetDtvKitSourceEnable(1);
         return mSession;
     }
 
