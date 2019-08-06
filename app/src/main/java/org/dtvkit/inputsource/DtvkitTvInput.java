@@ -395,10 +395,11 @@ public class DtvkitTvInput extends TvInputService {
         numActiveRecordings = recordingGetNumActiveRecordings();
         Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
         if (numActiveRecordings >= numRecorders) {
-            Log.i(TAG, "stopping timeshift");
             boolean returnToLive = timeshifting;
+            Log.i(TAG, "stopping timeshift [return live:"+returnToLive+"]");
             timeshiftRecorderState = RecorderState.STOPPED;
             scheduleTimeshiftRecording = false;
+            timeshifting = false;
             playerStopTimeshiftRecording(returnToLive);
         }
 
@@ -439,7 +440,7 @@ public class DtvkitTvInput extends TvInputService {
                 notifyTuned(uri);
             } else {
                 Log.i(TAG, "No recording path available");
-                notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
+                notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
             }
         }
 
@@ -620,7 +621,14 @@ public class DtvkitTvInput extends TvInputService {
                     if (timeshiftAvailable) {
                         if (timeshiftRecorderState == RecorderState.STOPPED) {
                             if (playerStartTimeshiftRecording()) {
-                                timeshiftRecorderState = RecorderState.STARTING;
+                                /*
+                                  The onSignal callback may be triggerd before here,
+                                  and changes the state to a further value.
+                                  so check the state first, in order to prevent getting it reset.
+                                */
+                                if (timeshiftRecorderState != RecorderState.RECORDING) {
+                                    timeshiftRecorderState = RecorderState.STARTING;
+                                }
                             } else {
                                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                             }
@@ -1074,10 +1082,18 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         public void onTimeShiftPause() {
-            Log.i(TAG, "onTimeShiftPause ");
+            Log.i(TAG, "onTimeShiftPause timeshiftRecorderState:"+timeshiftRecorderState+" timeshifting:"+timeshifting);
             if (timeshiftRecorderState == RecorderState.RECORDING && !timeshifting) {
                 Log.i(TAG, "starting pause playback ");
                 timeshifting = true;
+
+                /*
+                  The mheg may hold an external_control in the dtvkit,
+                  which upset the normal av process following, so stop it first,
+                  thus, mheg will not be valid since here to the next onTune.
+                */
+                mhegStop();
+
                 playerPlayTimeshiftRecording(true, true);
             }
             else {
