@@ -748,8 +748,13 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onSetStreamVolume(float volume) {
-            Log.i(TAG, "onSetStreamVolume " + volume);
-            playerSetVolume((int) (volume * 100));
+            Log.i(TAG, "onSetStreamVolume " + volume + ", mute " + (volume == 0.0f));
+            //playerSetVolume((int) (volume * 100));
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.removeMessages(MSG_BLOCK_MUTE_OR_UNMUTE);
+                Message mess = mHandlerThreadHandle.obtainMessage(MSG_BLOCK_MUTE_OR_UNMUTE, (volume == 0.0f ? 1 : 0), 0);
+                mHandlerThreadHandle.sendMessageDelayed(mess, MSG_BLOCK_MUTE_OR_UNMUTE_PERIOD);
+            }
         }
 
         @Override
@@ -1540,9 +1545,11 @@ public class DtvkitTvInput extends TvInputService {
         protected static final int MSG_ON_TUNE = 1;
         protected static final int MSG_CHECK_RESOLUTION = 2;
         protected static final int MSG_CHECK_PARENTAL_CONTROL = 3;
+        protected static final int MSG_BLOCK_MUTE_OR_UNMUTE = 4;
 
         protected static final int MSG_CHECK_RESOLUTION_PERIOD = 1000;//MS
         protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 500;//MS
+        protected static final int MSG_BLOCK_MUTE_OR_UNMUTE_PERIOD = 100;//MS
 
         protected void initWorkThread() {
             Log.d(TAG, "initWorkThread");
@@ -1569,6 +1576,10 @@ public class DtvkitTvInput extends TvInputService {
                                 break;
                             case MSG_CHECK_PARENTAL_CONTROL:
                                 updateParentalControl();
+                                break;
+                            case MSG_BLOCK_MUTE_OR_UNMUTE:
+                                boolean mute = msg.arg1 == 0 ? false : true;
+                                setBlockMute(mute);
                                 break;
                             default:
                                 Log.d(TAG, "initWorkThread default");
@@ -1622,6 +1633,24 @@ public class DtvkitTvInput extends TvInputService {
                 }
             }
         }
+
+        private void setBlockMute(boolean mute) {
+            AudioManager audioManager = null;
+            if (mContext != null) {
+                audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+            }
+            if (audioManager != null) {
+                Log.d(TAG, "setBlockMute = " + mute);
+                if (mute) {
+                    audioManager.setParameters("parental_control_av_mute=true");
+                } else {
+                    audioManager.setParameters("parental_control_av_mute=false");
+                }
+            } else {
+                Log.i(TAG, "setBlockMute can't get audioManager");
+            }
+        }
+
         private class MainHandler extends Handler {
             public void handleMessage(Message msg) {
                 Log.d(TAG, "MainHandler handleMessage:"+msg.what);
@@ -1756,6 +1785,16 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Player.setVolume", args);
         } catch (Exception e) {
             Log.e(TAG, "playerSetVolume = " + e.getMessage());
+        }
+    }
+
+    private void playerSetMute(boolean mute) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(mute);
+            DtvkitGlueClient.getInstance().request("Player.setMute", args);
+        } catch (Exception e) {
+            Log.e(TAG, "playerSetMute = " + e.getMessage());
         }
     }
 
