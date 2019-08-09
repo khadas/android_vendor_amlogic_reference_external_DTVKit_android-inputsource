@@ -22,8 +22,10 @@ public class ConstantManager {
     public static final String PI_FORMAT_KEY = "pi_format";
     public static final String KEY_AUDIO_CODES_DES = "audio_codes";
     public static final String KEY_TRACK_PID = "pid";
+    public static final String KEY_INFO = "info";
 
     public static final String EVENT_STREAM_PI_FORMAT = "event_pi_format";
+    public static final String EVENT_RESOURCE_BUSY = "event_resource_busy";
 
     public static final String CONSTANT_QAA = "qaa";//Original Audio flag
     public static final String CONSTANT_ORIGINAL_AUDIO = "Original Audio";

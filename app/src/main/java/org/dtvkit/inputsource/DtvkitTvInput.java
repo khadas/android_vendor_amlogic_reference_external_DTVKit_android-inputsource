@@ -391,18 +391,6 @@ public class DtvkitTvInput extends TvInputService {
     public TvInputService.RecordingSession onCreateRecordingSession(String inputId)
     {
         Log.i(TAG, "onCreateRecordingSession");
-        removeScheduleTimeshiftRecordingTask();
-        numActiveRecordings = recordingGetNumActiveRecordings();
-        Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
-        if (numActiveRecordings >= numRecorders) {
-            boolean returnToLive = timeshifting;
-            Log.i(TAG, "stopping timeshift [return live:"+returnToLive+"]");
-            timeshiftRecorderState = RecorderState.STOPPED;
-            scheduleTimeshiftRecording = false;
-            timeshifting = false;
-            playerStopTimeshiftRecording(returnToLive);
-        }
-
         return new DtvkitRecordingSession(this, inputId);
     }
 
@@ -433,14 +421,42 @@ public class DtvkitTvInput extends TvInputService {
                 notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
                 return;
             }
+
+            removeScheduleTimeshiftRecordingTask();
+            numActiveRecordings = recordingGetNumActiveRecordings();
+            Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
+            if (numActiveRecordings >= numRecorders) {
+                if (getFeatureSupportTimeshifting()
+                        && timeshiftRecorderState != RecorderState.STOPPED) {
+                    Log.i(TAG, "No recording path available, no recorder");
+                    notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
+
+                    Bundle event = new Bundle();
+                    event.putString(ConstantManager.KEY_INFO, "No recording path available, no recorder");
+                    notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                    return;
+                } else {
+                    boolean returnToLive = timeshifting;
+                    Log.i(TAG, "stopping timeshift [return live:"+returnToLive+"]");
+                    timeshiftRecorderState = RecorderState.STOPPED;
+                    scheduleTimeshiftRecording = false;
+                    timeshifting = false;
+                    playerStopTimeshiftRecording(returnToLive);
+                }
+            }
+
             mChannel = uri;
             Channel channel = getChannel(uri);
             if (recordingCheckAvailability(getChannelInternalDvbUri(channel))) {
                 Log.i(TAG, "recording path available");
                 notifyTuned(uri);
             } else {
-                Log.i(TAG, "No recording path available");
+                Log.i(TAG, "No recording path available, no tuner/demux");
                 notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
+
+                Bundle event = new Bundle();
+                event.putString(ConstantManager.KEY_INFO, "No recording path available, no tuner/demux");
+                notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
             }
         }
 
@@ -527,8 +543,10 @@ public class DtvkitTvInput extends TvInputService {
             String uri = "";
             if (mProgram != null) {
                 uri = getProgramInternalDvbUri(getProgram(mProgram));
-            } else {
+            } else if (mChannel != null) {
                 uri = getChannelInternalDvbUri(getChannel(mChannel)) + ";0000";
+            } else {
+                return;
             }
 
             JSONArray scheduledRecordings = recordingGetListOfScheduledRecordings();
@@ -1070,7 +1088,7 @@ public class DtvkitTvInput extends TvInputService {
             if (recordedProgram != null) {
                 playerState = PlayerState.PLAYING;
                 playerStop();
-                if (playerPlay(recordedProgram.getRecordingDataUri()))
+                if (playerPlay(recordedProgram.getRecordingDataUri()).equals("ok"))
                 {
                     DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 }
@@ -1296,23 +1314,25 @@ public class DtvkitTvInput extends TvInputService {
                                 notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
                                 initSubtitleOrTeletextIfNeed();
 
-                                if (timeshiftRecorderState == RecorderState.STOPPED) {
-                                    numActiveRecordings = recordingGetNumActiveRecordings();
-                                    Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
-                                    if (numActiveRecordings < numRecorders) {
-                                        timeshiftAvailable = true;
-                                    } else {
-                                        timeshiftAvailable = false;
-                                    }
-                                }
-                                Log.i(TAG, "timeshiftAvailable: " + timeshiftAvailable);
-                                Log.i(TAG, "timeshiftRecorderState: " + timeshiftRecorderState);
-                                if (timeshiftAvailable) {
+                                if (getFeatureSupportTimeshifting()) {
                                     if (timeshiftRecorderState == RecorderState.STOPPED) {
-                                        if (playerStartTimeshiftRecording()) {
-                                            timeshiftRecorderState = RecorderState.STARTING;
+                                        numActiveRecordings = recordingGetNumActiveRecordings();
+                                        Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
+                                        if (numActiveRecordings < numRecorders) {
+                                            timeshiftAvailable = true;
                                         } else {
-                                            notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+                                            timeshiftAvailable = false;
+                                        }
+                                    }
+                                    Log.i(TAG, "timeshiftAvailable: " + timeshiftAvailable);
+                                    Log.i(TAG, "timeshiftRecorderState: " + timeshiftRecorderState);
+                                    if (timeshiftAvailable) {
+                                        if (timeshiftRecorderState == RecorderState.STOPPED) {
+                                            if (playerStartTimeshiftRecording()) {
+                                                timeshiftRecorderState = RecorderState.STARTING;
+                                            } else {
+                                                notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+                                            }
                                         }
                                     }
                                 }
@@ -1731,7 +1751,7 @@ public class DtvkitTvInput extends TvInputService {
                 }
             }
 
-            if (playerPlay(dvbUri)) {
+            if (playerPlay(dvbUri).equals("ok")) {
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
                     playerSetSubtitlesOn(true);
@@ -1740,6 +1760,11 @@ public class DtvkitTvInput extends TvInputService {
                 mTunedChannel = null;
                 notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+
+                Log.e(TAG, "No play path available");
+                Bundle event = new Bundle();
+                event.putString(ConstantManager.KEY_INFO, "No play path available");
+                notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
             }
             Log.i(TAG, "onTuneByHandlerThreadHandle Done");
             return mTunedChannel != null;
@@ -1825,18 +1850,23 @@ public class DtvkitTvInput extends TvInputService {
         }
     }
 
-    private boolean playerPlay(String dvbUri) {
+    private String playerPlay(String dvbUri) {
         try {
             JSONArray args = new JSONArray();
             args.put(dvbUri);
             AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
             audioManager.setParameters("tuner_in=dtv");
             Log.d(TAG, "player.play: "+dvbUri);
-            DtvkitGlueClient.getInstance().request("Player.play", args);
-            return true;
+
+            JSONObject resp = DtvkitGlueClient.getInstance().request("Player.play", args);
+            boolean ok = resp.optBoolean("data");
+            if (ok)
+                return "ok";
+            else
+                return resp.optString("data", "");
         } catch (Exception e) {
             Log.e(TAG, "playerPlay = " + e.getMessage());
-            return false;
+            return "unknown error";
         }
     }
 
@@ -2940,4 +2970,7 @@ public class DtvkitTvInput extends TvInputService {
         return id;
     }
 
+    private boolean getFeatureSupportTimeshifting() {
+        return !PropSettingManager.getBoolean("tv.dtv.tf.disable", false);
+    }
 }
