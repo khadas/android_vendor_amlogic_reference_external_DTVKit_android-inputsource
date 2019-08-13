@@ -40,6 +40,10 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 InternalProviderData data = new InternalProviderData();
                 data.put("dvbUri", uri);
                 data.put("hidden", service.getBoolean("hidden"));
+                data.put("network_id", service.getInt("network_id"));
+                data.put("frequency", service.getInt("freq"));
+                data.put("satellite", service.getString("sate_name"));
+                data.put("transponder", service.getString("transponder"));
 
                 channels.add(new Channel.Builder()
                         .setDisplayName(service.getString("name"))
