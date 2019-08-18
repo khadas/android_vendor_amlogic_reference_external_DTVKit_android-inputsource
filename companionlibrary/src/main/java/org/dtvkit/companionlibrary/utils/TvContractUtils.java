@@ -417,6 +417,21 @@ public class TvContractUtils {
         return null;
     }
 
+    public static Program getCurrentProgramExt(ContentResolver resolver, Uri channelUri, long nowMs) {
+        List<Program> programs = getPrograms(resolver, channelUri);
+        if (programs == null) {
+            return null;
+        }
+        //long nowMs = System.currentTimeMillis();
+        for (Program program : programs) {
+            if (program.getStartTimeUtcMillis() <= nowMs && program.getEndTimeUtcMillis() > nowMs) {
+                return program;
+            }
+        }
+        return null;
+    }
+
+
     /**
      * Returns the program that is scheduled to be playing after a given program on a given channel.
      *

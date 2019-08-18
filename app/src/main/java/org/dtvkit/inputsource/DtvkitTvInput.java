@@ -126,12 +126,12 @@ public class DtvkitTvInput extends TvInputService {
                    || action.equals(TvInputManager.ACTION_PARENTAL_CONTROLS_ENABLED_CHANGED)) {
                boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
                Log.d(TAG, "BLOCKED_RATINGS_CHANGED isParentControlEnabled = " + isParentControlEnabled);
-               if (isParentControlEnabled != getParentalControlOn()) {
+               /*if (isParentControlEnabled != getParentalControlOn()) {
                    setParentalControlOn(isParentControlEnabled);
                }
                if (isParentControlEnabled && mSession != null) {
                    mSession.syncParentControlSetting();
-               }
+               }*/
             }
         }
     };
@@ -614,6 +614,8 @@ public class DtvkitTvInput extends TvInputService {
         protected Handler mMainHandle = null;
         private boolean mIsMain = false;
         private final CaptioningManager mCaptioningManager;
+        private boolean mKeyUnlocked = false;
+        private boolean mBlocked = false;
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -911,6 +913,9 @@ public class DtvkitTvInput extends TvInputService {
             Log.i(TAG, "onUnblockContent " + unblockedRating);
             setParentalControlOn(false);
             notifyContentAllowed();
+            setBlockMute(false);
+            mKeyUnlocked = true;
+            mBlocked = false;
         }
 
         @Override
@@ -1584,7 +1589,7 @@ public class DtvkitTvInput extends TvInputService {
         protected static final int MSG_BLOCK_MUTE_OR_UNMUTE = 4;
 
         protected static final int MSG_CHECK_RESOLUTION_PERIOD = 1000;//MS
-        protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 500;//MS
+        protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 2000;//MS
         protected static final int MSG_BLOCK_MUTE_OR_UNMUTE_PERIOD = 100;//MS
 
         protected void initWorkThread() {
@@ -1611,7 +1616,11 @@ public class DtvkitTvInput extends TvInputService {
                                 }
                                 break;
                             case MSG_CHECK_PARENTAL_CONTROL:
-                                updateParentalControl();
+                                updateParentalControlExt();
+                                if (mHandlerThreadHandle != null) {
+                                    mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
+                                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
+                                }
                                 break;
                             case MSG_BLOCK_MUTE_OR_UNMUTE:
                                 boolean mute = msg.arg1 == 0 ? false : true;
@@ -1629,39 +1638,121 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         private void syncParentControlSetting() {
-            int min_age = 4;
-            min_age = getCurrentMinAgeByBlockedRatings();
-            if (min_age == 0xFF && getParentalControlOn()) {
+            int current_age, setting_min_age;
+
+            current_age = getParentalControlAge();
+            setting_min_age = getCurrentMinAgeByBlockedRatings();
+            if (setting_min_age == 0xFF && getParentalControlOn()) {
                 setParentalControlOn(false);
                 notifyContentAllowed();
-            }else if (min_age >= 4 && min_age <= 18 && min_age != getParentalControlAge()) {
-                setParentalControlAge(min_age);
+            }else if (setting_min_age >= 4 && setting_min_age <= 18 && current_age != setting_min_age) {
+                setParentalControlAge(setting_min_age);
+                if (current_age < setting_min_age) {
+                    Log.e(TAG, "rating changed, oldAge < newAge : [" +current_age+ " < " +setting_min_age+ "], so will allow");
+                    notifyContentAllowed();
+                }
+            }
+        }
+
+        private int getContentRatingsOfCurrentProgram() {
+            int age = 0;
+            String pc_rating;
+            String rating_system;
+            long currentStreamTime = 0;
+            TvContentRating[] ratings;
+
+            currentStreamTime = PropSettingManager.getCurrentStreamTime(true);
+            if (currentStreamTime == 0)
+                return 0;
+            Log.d(TAG, "currentStreamTime:("+currentStreamTime+")");
+            Program program = TvContractUtils.getCurrentProgramExt(mContext.getContentResolver(), TvContract.buildChannelUri(mTunedChannel.getId()), currentStreamTime);
+
+            ratings = program == null ? null : program.getContentRatings();
+            if (ratings != null)
+            {
+               Log.d(TAG, "ratings:["+ratings[0].flattenToString()+"]");
+               pc_rating = ratings[0].getMainRating();
+               rating_system = ratings[0].getRatingSystem();
+               if (rating_system.equals("DVB"))
+               {
+                   String[] ageArry = pc_rating.split("_", 2);
+                   if (ageArry[0].equals("DVB"))
+                   {
+                       age = Integer.valueOf(ageArry[1]);
+                   }
+               }
+            }
+
+            return age;
+        }
+
+        private void updateParentalControlExt() {
+            int age = 0;
+            int rating;
+            boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
+            if (isParentControlEnabled && !mKeyUnlocked) {
+                try {
+                    JSONArray args = new JSONArray();
+                    rating = getCurrentMinAgeByBlockedRatings();
+                    age = getContentRatingsOfCurrentProgram();
+                    Log.e(TAG, "updateParentalControlExt current program age["+ age +"] setting_rating[" +rating+ "]");
+                    if ((rating < 4 || rating > 18 || age < rating) && mBlocked)
+                    {
+                        notifyContentAllowed();
+                        setBlockMute(false);
+                        mBlocked = false;
+                    }
+                    else if (rating >= 4 && rating <= 18 && age >= rating)
+                    {
+                        String Rating = "";
+                        Rating = String.format("DVB_%d", age);
+                        notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", Rating));
+                        if (!mBlocked)
+                        {
+                            setBlockMute(true);
+                            mBlocked = true;
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "updateParentalControlExt = " + e.getMessage());
+                }
+            }
+            else if (mBlocked)
+            {
+                notifyContentAllowed();
+                setBlockMute(false);
+                mBlocked = false;
             }
         }
 
         private void updateParentalControl() {
             int age = 0;
             int rating;
+            int pc_age;
             boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
             if (isParentControlEnabled) {
                 try {
                     JSONArray args = new JSONArray();
-                    age = DtvkitGlueClient.getInstance().request("Player.getCurrentProgramRatingAge", args).getInt("data");
+                    //age = DtvkitGlueClient.getInstance().request("Player.getCurrentProgramRatingAge", args).getInt("data");
                     rating = getCurrentMinAgeByBlockedRatings();
+                    pc_age = getParentalControlAge();
+                    age = getContentRatingsOfCurrentProgram();
+                    Log.e(TAG, "updateParentalControl current program age["+ age +"] setting_rating[" +rating+ "] pc_age[" +pc_age+ "]");
                     if (getParentalControlOn()) {
                         if (rating < 4 || rating > 18 || age == 0) {
-                            Log.e(TAG, "P_C true, but age is 0, so set P_C disbale");
                             setParentalControlOn(false);
                             notifyContentAllowed();
                         }else if (rating >= 4 && rating <= 18 && age >= rating) {
-                            Log.e(TAG, "P_C true, age changed, current age["+ age +"]");
-                            setParentalControlAge(rating);
-                        }
+                            if (pc_age != rating)
+                                setParentalControlAge(rating);
+                            }
                     }else {
                         if (rating >= 4 && rating <= 18 && age != 0) {
-                           Log.e(TAG, "P_C false, but age isn't 0, so set P_C enbale rating:" + rating);
-                           setParentalControlOn(true);
-                           setParentalControlAge(rating);
+                            Log.e(TAG, "P_C false, but age isn't 0, so set P_C enbale rating:" + rating);
+                            if (pc_age != rating || age >= rating) {
+                                setParentalControlOn(true);
+                                setParentalControlAge(rating);
+                            }
                         }
                     }
                 } catch (Exception e) {
@@ -1740,18 +1831,34 @@ public class DtvkitTvInput extends TvInputService {
             playerStop();
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
+            setParentalControlOn(false);
+            mKeyUnlocked = false;
+            if (mBlocked)
+            {
+                notifyContentAllowed();
+                setBlockMute(false);
+                mBlocked = false;
+            }
             if (mTvInputManager != null) {
                 boolean parentControlSwitch = mTvInputManager.isParentalControlsEnabled();
-                boolean parentControlStatus = getParentalControlOn();
+                if (parentControlSwitch)
+                {
+                    updateParentalControlExt();
+                }
+                /*boolean parentControlStatus = getParentalControlOn();
                 if (parentControlSwitch != parentControlStatus) {
                     setParentalControlOn(parentControlSwitch);
                 }
                 if (parentControlSwitch) {
                     syncParentControlSetting();
-                }
+                }*/
             }
 
             if (playerPlay(dvbUri).equals("ok")) {
+                if (mHandlerThreadHandle != null) {
+                    mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
+                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
+                }
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
                     playerSetSubtitlesOn(true);
@@ -2450,17 +2557,14 @@ public class DtvkitTvInput extends TvInputService {
         int min_age = 0xFF;
         for (int i = 0; i < ratingList.size(); i++)
         {
-            Log.d(TAG, "TvContentRating:"+ratingList.get(i).flattenToString());
             parentcontrol_rating = ratingList.get(i).getMainRating();
             rating_system = ratingList.get(i).getRatingSystem();
-            Log.d(TAG, "TvContentRating: " +rating_system+ "/" + parentcontrol_rating);
             if (rating_system.equals("DVB"))
             {
                 String[] ageArry = parentcontrol_rating.split("_", 2);
                 if (ageArry[0].equals("DVB"))
                 {
                    int age_temp = Integer.valueOf(ageArry[1]);
-                   Log.d(TAG, "age_temp:" + age_temp);
                    min_age = min_age < age_temp ? min_age : age_temp;
                 }
             }
