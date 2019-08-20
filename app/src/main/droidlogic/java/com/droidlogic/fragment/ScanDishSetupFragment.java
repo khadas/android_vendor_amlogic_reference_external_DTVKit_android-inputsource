@@ -504,14 +504,17 @@ public class ScanDishSetupFragment extends Fragment {
                         switch (diseqc1_2_position) {
                             case 7://move
                                 mParameterMananer.dishMove(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_MOVE_DIRECTION), mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_MOVE_STEP));
+                                needbreak = true;
                                 break;
                             case 9://save to position
                                 mParameterMananer.storeDishPosition(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION));
                                 startTune();
+                                needbreak = true;
                                 break;
                             case 10://move to position
                                 mParameterMananer.moveDishToPosition(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION));
                                 startTune();
+                                needbreak = true;
                                 break;
                             default:
                                 needbreak = true;

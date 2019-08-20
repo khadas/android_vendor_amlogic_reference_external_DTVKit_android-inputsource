@@ -27,6 +27,13 @@ public class ConstantManager {
     public static final String EVENT_STREAM_PI_FORMAT = "event_pi_format";
     public static final String EVENT_RESOURCE_BUSY = "event_resource_busy";
 
+    //show or hide overlay
+    public static final String ACTION_TIF_CONTROL_OVERLAY = "tif_control_overlay";
+    public static final String KEY_TIF_OVERLAY_SHOW_STATUS = "tif_overlay_show_status";
+    //surface related
+    public static final String KEY_SURFACE = "surface";
+    public static final String KEY_TV_STREAM_CONFIG = "config";
+
     public static final String CONSTANT_QAA = "qaa";//Original Audio flag
     public static final String CONSTANT_ORIGINAL_AUDIO = "Original Audio";
     public static final String CONSTANT_UND_FLAG = "und";//undefined flag

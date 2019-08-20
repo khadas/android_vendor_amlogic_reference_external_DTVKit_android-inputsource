@@ -78,6 +78,8 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.Objects;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.HashMap;
 
 public class DtvkitTvInput extends TvInputService {
     private static final String TAG = "DtvkitTvInput";
@@ -213,6 +215,28 @@ public class DtvkitTvInput extends TvInputService {
 
         public void destroy() {
             ciOverlayView.destroy();
+            removeView(nativeOverlayView);
+            removeView(ciOverlayView);
+        }
+
+        public void hideOverLay() {
+            if (nativeOverlayView != null) {
+                nativeOverlayView.setVisibility(View.GONE);
+            }
+            if (ciOverlayView != null) {
+                ciOverlayView.setVisibility(View.GONE);
+            }
+            setVisibility(View.GONE);
+        }
+
+        public void showOverLay() {
+            if (nativeOverlayView != null) {
+                nativeOverlayView.setVisibility(View.VISIBLE);
+            }
+            if (ciOverlayView != null) {
+                ciOverlayView.setVisibility(View.VISIBLE);
+            }
+            setVisibility(View.VISIBLE);
         }
 
         public void setSize(int width, int height) {
@@ -683,12 +707,20 @@ public class DtvkitTvInput extends TvInputService {
             //will regist handle to client when
             //creat ciMenuView,so we need destory and
             //unregist handle.
-            if (mView != null)
-                mView.destroy();
-            releaseWorkThread();
+            if (mMainHandle != null) {
+                mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
+            }
+            //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
         }
 
-        public void doRelease() {
+        private void doDestroyOverlay() {
+            Log.i(TAG, "doDestroyOverlay");
+            if (mView != null) {
+                mView.destroy();
+            }
+        }
+
+        private void doRelease() {
             Log.i(TAG, "doRelease");
             removeScheduleTimeshiftRecordingTask();
             scheduleTimeshiftRecording = false;
@@ -702,26 +734,63 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
         }
 
+        private void doSetSurface(Map<String, Object> surfaceInfo) {
+            if (surfaceInfo == null) {
+                Log.d(TAG, "doSetSurface null parameter");
+                return;
+            } else {
+                Surface surface = (Surface)surfaceInfo.get(ConstantManager.KEY_SURFACE);
+                TvStreamConfig config = (TvStreamConfig)surfaceInfo.get(ConstantManager.KEY_TV_STREAM_CONFIG);
+                Log.d(TAG, "doSetSurface surface = " + surface + ", config = " + config);
+                mHardware.setSurface(surface, config);
+            }
+        }
+
+        private void sendSetSurfaceMessage(Surface surface, TvStreamConfig config) {
+            Map<String, Object> surfaceInfo = new HashMap<String, Object>();
+            surfaceInfo.put(ConstantManager.KEY_SURFACE, surface);
+            surfaceInfo.put(ConstantManager.KEY_TV_STREAM_CONFIG, config);
+            if (mHandlerThreadHandle != null) {
+                boolean result = mHandlerThreadHandle.sendMessage(mHandlerThreadHandle.obtainMessage(MSG_SET_SURFACE, surfaceInfo));
+                Log.d(TAG, "sendDoReleaseMessage status = " + result + ", surface = " + surface + ", config = " + config);
+            } else {
+                Log.d(TAG, "sendSetSurfaceMessage null mHandlerThreadHandle");
+            }
+        }
+
+        private void sendDoReleaseMessage() {
+            if (mHandlerThreadHandle != null) {
+                boolean result = mHandlerThreadHandle.sendEmptyMessage(MSG_DO_RELEASE);
+                Log.d(TAG, "sendDoReleaseMessage status = " + result);
+            } else {
+                Log.d(TAG, "sendDoReleaseMessage null mHandlerThreadHandle");
+            }
+        }
+
         @Override
         public boolean onSetSurface(Surface surface) {
             Log.i(TAG, "onSetSurface " + surface + ", mDtvkitTvInputSessionCount = " + mDtvkitTvInputSessionCount + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
-
             if (null != mHardware && mConfigs.length > 0) {
                 if (null == surface) {
                     if (mIsMain) {
                         setOverlayViewEnabled(false);
-                        mHardware.setSurface(null, null);
+                        //mHardware.setSurface(null, null);
+                        sendSetSurfaceMessage(null, null);
                         Log.d(TAG, "onSetSurface null");
                         mSurface = null;
-                        doRelease();
+                        //doRelease();
+                        sendDoReleaseMessage();
                     }
                 } else {
                     if (mSurface != surface) {
                         Log.d(TAG, "TvView swithed,  onSetSurface null first");
-                        doRelease();
-                        mHardware.setSurface(null, null);
+                        //doRelease();
+                        sendDoReleaseMessage();
+                        //mHardware.setSurface(null, null);
+                        sendSetSurfaceMessage(null, null);
                     }
-                    mHardware.setSurface(surface, mConfigs[0]);
+                    //mHardware.setSurface(surface, mConfigs[0]);
+                    sendSetSurfaceMessage(surface, mConfigs[0]);
                     surface = mSurface;
                     Log.d(TAG, "onSetSurface ok");
                 }
@@ -1082,6 +1151,19 @@ public class DtvkitTvInput extends TvInputService {
                 if (actiondown) {
                     playerNotifyTeletextEvent(28);
                 }
+            } else if (ConstantManager.ACTION_TIF_CONTROL_OVERLAY.equals(action)) {
+                boolean show = data.getBoolean(ConstantManager.KEY_TIF_OVERLAY_SHOW_STATUS, false);
+                Log.d(TAG, "do private cmd:"+ ConstantManager.ACTION_TIF_CONTROL_OVERLAY + ", show:" + show);
+                //not needed at the moment
+                /*if (!show) {
+                    if (mView != null) {
+                        mView.hideOverLay();
+                    };
+                } else {
+                    if (mView != null) {
+                        mView.showOverLay();
+                    };
+                }*/
             }
         }
 
@@ -1587,10 +1669,15 @@ public class DtvkitTvInput extends TvInputService {
         protected static final int MSG_CHECK_RESOLUTION = 2;
         protected static final int MSG_CHECK_PARENTAL_CONTROL = 3;
         protected static final int MSG_BLOCK_MUTE_OR_UNMUTE = 4;
+        protected static final int MSG_SET_SURFACE = 5;
+        protected static final int MSG_DO_RELEASE = 6;
+        protected static final int MSG_RELEASE_WORK_THREAD = 7;
 
         protected static final int MSG_CHECK_RESOLUTION_PERIOD = 1000;//MS
         protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 2000;//MS
         protected static final int MSG_BLOCK_MUTE_OR_UNMUTE_PERIOD = 100;//MS
+
+        protected static final int MSG_MAIN_HANDLE_DESTROY_OVERLAY = 1;
 
         protected void initWorkThread() {
             Log.d(TAG, "initWorkThread");
@@ -1625,6 +1712,15 @@ public class DtvkitTvInput extends TvInputService {
                             case MSG_BLOCK_MUTE_OR_UNMUTE:
                                 boolean mute = msg.arg1 == 0 ? false : true;
                                 setBlockMute(mute);
+                                break;
+                            case MSG_SET_SURFACE:
+                                doSetSurface((Map<String, Object>)msg.obj);
+                                break;
+                            case MSG_DO_RELEASE:
+                                doRelease();
+                                break;
+                            case MSG_RELEASE_WORK_THREAD:
+                                releaseWorkThread();
                                 break;
                             default:
                                 Log.d(TAG, "initWorkThread default");
@@ -1781,6 +1877,17 @@ public class DtvkitTvInput extends TvInputService {
         private class MainHandler extends Handler {
             public void handleMessage(Message msg) {
                 Log.d(TAG, "MainHandler handleMessage:"+msg.what);
+                switch (msg.what) {
+                    case MSG_MAIN_HANDLE_DESTROY_OVERLAY:
+                        doDestroyOverlay();
+                        if (mHandlerThreadHandle != null) {
+                            mHandlerThreadHandle.sendEmptyMessage(MSG_RELEASE_WORK_THREAD);
+                        }
+                        break;
+                    default:
+                        Log.d(TAG, "MainHandler default");
+                        break;
+                }
             }
         }
 
