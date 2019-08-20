@@ -1588,7 +1588,7 @@ public class DtvkitTvInput extends TvInputService {
                     Log.i(TAG, "DvbUpdatedChannel");
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
                     EpgSyncJobService.requestImmediateSync(mContext, mInputId, false, true, sync);
-                }/*
+                }
                 else if (signal.equals("DvbUpdatedChannelData"))
                 {
                     Log.i(TAG, "DvbUpdatedChannelData");
@@ -1600,7 +1600,7 @@ public class DtvkitTvInput extends TvInputService {
                     Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
                     notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
                     initSubtitleOrTeletextIfNeed();
-                }*/
+                }
                 else if (signal.equals("MhegAppStarted"))
                 {
                    Log.i(TAG, "MhegAppStarted");
