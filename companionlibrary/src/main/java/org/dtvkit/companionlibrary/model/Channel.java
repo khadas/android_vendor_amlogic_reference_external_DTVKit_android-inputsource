@@ -62,10 +62,13 @@ public final class Channel {
     private int mSearchable;
     private String mServiceType;
 
+    //sync with ChannelInfo in droidlogic-tv.jar
     public static final String KEY_IS_FAVOURITE = "is_favourite";
     public static final String KEY_SET_FAVOURITE = "set_favourite";
     public static final String KEY_HIDDEN = "hidden";
     public static final String KEY_SET_HIDDEN = "set_hidden";
+    public static final String KEY_SET_DISPLAYNAME = "set_displayname";
+    public static final String KEY_SET_DISPLAYNUMBER = "set_displaynumber";
 
     private Channel() {
         mId = INVALID_CHANNEL_ID;
