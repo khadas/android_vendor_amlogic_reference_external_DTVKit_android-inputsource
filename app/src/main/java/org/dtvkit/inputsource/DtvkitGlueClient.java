@@ -10,6 +10,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import android.view.Surface;
+import android.view.SurfaceHolder;
+
+import java.util.ArrayList;
 
 import com.droidlogic.app.SystemControlManager;
 
@@ -18,7 +21,7 @@ public class DtvkitGlueClient {
     private static final String TAG = "DtvkitGlueClient";
 
     private static DtvkitGlueClient mSingleton = null;
-    private SignalHandler mHandler;
+    private ArrayList<SignalHandler> mHandlers = new ArrayList<>();
     // Notification object used to listen to the start of the rpcserver daemon.
     //private final ServiceNotification mServiceNotification = new ServiceNotification();
     //private static final int DTVKITSERVER_DEATH_COOKIE = 1000;
@@ -60,8 +63,10 @@ public class DtvkitGlueClient {
             Log.e(TAG, e.getMessage());
             return;
         }
-        if (mHandler != null) {
-            mHandler.onSignal(resource, object);
+        synchronized (mHandlers) {
+            for (SignalHandler handler :mHandlers) {
+                handler.onSignal(resource, object);
+            }
         }
     }
 
@@ -163,11 +168,19 @@ public class DtvkitGlueClient {
     }
 
     public void registerSignalHandler(SignalHandler handler) {
-        mHandler = handler;
+        synchronized (mHandlers) {
+            if (!mHandlers.contains(handler)) {
+                mHandlers.add(handler);
+            }
+        }
     }
 
     public void unregisterSignalHandler(SignalHandler handler) {
-        mHandler = null;
+        synchronized (mHandlers) {
+            if (mHandlers.contains(handler)) {
+                mHandlers.remove(handler);
+            }
+        }
     }
 
     public void setOverlayTarget(OverlayTarget target) {
