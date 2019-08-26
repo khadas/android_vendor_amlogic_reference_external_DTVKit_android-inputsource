@@ -1605,21 +1605,36 @@ public class DtvkitTvInput extends TvInputService {
                    top = 0;
                    right = 1920;
                    bottom = 1080;
+                   int voff0, hoff0, voff1, hoff1;
+                   voff0 = 0;
+                   hoff0 = 0;
+                   voff1 = 0;
+                   hoff1 = 0;
                    try {
                       left = data.getInt("left");
                       top = data.getInt("top");
                       right = data.getInt("right");
                       bottom = data.getInt("bottom");
+                      voff0 = data.getInt("crop-voff0");
+                      hoff0 = data.getInt("crop-hoff0");
+                      voff1 = data.getInt("crop-voff1");
+                      hoff1 = data.getInt("crop-hoff1");
                    } catch (JSONException e) {
                       Log.e(TAG, e.getMessage());
                    }
                    if (mHandlerThreadHandle != null) {
                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
                    }
-                   //due to the incorrect Surface size passed in onSurfaceChanged(),
-                   //close this feature temporarily, will affect all video layout requests.(eg. mheg, afd)
-                   if (mIsMain)
+                   if (mIsMain) {
+                       String crop = new StringBuilder()
+                           .append(voff0).append(" ")
+                           .append(hoff0).append(" ")
+                           .append(voff1).append(" ")
+                           .append(hoff1).toString();
+                       SystemControlManager mSystemControlManager = SystemControlManager.getInstance();
+                       mSystemControlManager.writeSysFs("/sys/class/video/crop", crop);
                        layoutSurface(left,top,right,bottom);
+                   }
                 }
                 else if (signal.equals("ServiceRetuned"))
                 {
