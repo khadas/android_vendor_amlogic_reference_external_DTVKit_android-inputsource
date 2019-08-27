@@ -114,6 +114,7 @@ public class DtvkitTvInput extends TvInputService {
     private Handler scheduleTimeshiftRecordingHandler = null;
     private Runnable timeshiftRecordRunnable;
     private long mDtvkitTvInputSessionCount = 0;
+    private DataMananer mDataMananer;
 
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
@@ -165,7 +166,8 @@ public class DtvkitTvInput extends TvInputService {
                     .setTunerCount(1);
         }
         getApplicationContext().getSystemService(TvInputManager.class).updateTvInputInfo(builder.build());
-        mSysSettingManager = new SysSettingManager();
+        mSysSettingManager = new SysSettingManager(this);
+        mDataMananer = new DataMananer(this);
     }
 
     @Override
@@ -682,8 +684,8 @@ public class DtvkitTvInput extends TvInputService {
             };
 
             playerSetTimeshiftBufferSize(timeshiftBufferSizeMins);
-            recordingAddDiskPath("/data/data/org.dtvkit.inputsource");
-            recordingSetDefaultDisk("/data/data/org.dtvkit.inputsource");
+            recordingAddDiskPath(mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH)/*"/data/data/org.dtvkit.inputsource"*/);
+            recordingSetDefaultDisk(mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH)/*"/data/data/org.dtvkit.inputsource"*/);
             mDtvkitTvInputSessionCount++;
             mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
             initWorkThread();

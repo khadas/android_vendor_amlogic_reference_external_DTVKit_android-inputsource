@@ -100,4 +100,7 @@
     <string name="strSettingsSubtitleLang">Text Language:</string>
     <string name="strSettingsMainSubtitleLang">Main Text Language:</string>
     <string name="strSettingsAssistSubtitleLang">Second Text Language:</string>
+    <string name="strSettingsStorageSelect">PVR Storage Select:</string>
+    <string name="strSettingsRefresh">Refresh</string>
+    <string name="strSettingsPvrDefault">App Data</string>
 </resources>

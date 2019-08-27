@@ -9,6 +9,9 @@ import android.widget.Spinner;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.text.TextUtils;
+
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -28,6 +31,8 @@ import android.media.tv.TvInputInfo;
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.dtvkit.inputsource.DtvkitEpgSync;
 
+import com.droidlogic.settings.SysSettingManager;
+
 public class DtvkitDvbSettings extends Activity {
 
     private static final String TAG = "DtvkitDvbSettings";
@@ -35,12 +40,18 @@ public class DtvkitDvbSettings extends Activity {
 
     private DtvkitGlueClient mDtvkitGlueClient = DtvkitGlueClient.getInstance();
     private ParameterMananer mParameterMananer = null;
+    private SysSettingManager mSysSettingManager = null;
+    private List<String> mStoragePathList = new ArrayList<String>();
+    private List<String> mStorageNameList = new ArrayList<String>();
+    private Object mStorageLock = new Object();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.lanuage_settings);
         mParameterMananer = new ParameterMananer(this, mDtvkitGlueClient);
+        mSysSettingManager = new SysSettingManager(this);
+        updateStorageList();
         initLayout(false);
     }
 
@@ -57,6 +68,8 @@ public class DtvkitDvbSettings extends Activity {
         Spinner assist_audio = (Spinner)findViewById(R.id.assist_audio_spinner);
         Spinner main_subtitle = (Spinner)findViewById(R.id.main_subtitle_spinner);
         Spinner assist_subtitle = (Spinner)findViewById(R.id.assist_subtitle_spinner);
+        Spinner pvr_path = (Spinner)findViewById(R.id.storage_select_spinner);
+        Button refresh = (Button)findViewById(R.id.storage_refresh);
         initSpinnerParameter();
         if (update) {
             Log.d(TAG, "initLayout update");
@@ -158,6 +171,32 @@ public class DtvkitDvbSettings extends Activity {
                 // TODO Auto-generated method stub
             }
         });
+        pvr_path.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                Log.d(TAG, "pvr_path onItemSelected position = " + position);
+                String saved = mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
+                String current = getCurrentStoragePath(position);
+                if (TextUtils.equals(current, saved)) {
+                    Log.d(TAG, "pvr_path onItemSelected same path");
+                    return;
+                }
+                mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, current);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // TODO Auto-generated method stub
+            }
+        });
+        refresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "refresh storage device");
+                updateStorageList();
+                initLayout(true);
+            }
+        });
     }
 
     private void initSpinnerParameter() {
@@ -166,6 +205,7 @@ public class DtvkitDvbSettings extends Activity {
         Spinner assist_audio = (Spinner)findViewById(R.id.assist_audio_spinner);
         Spinner main_subtitle = (Spinner)findViewById(R.id.main_subtitle_spinner);
         Spinner assist_subtitle = (Spinner)findViewById(R.id.assist_subtitle_spinner);
+        Spinner pvr_path = (Spinner)findViewById(R.id.storage_select_spinner);
         List<String> list = null;
         ArrayAdapter<String> adapter = null;
         int select = 0;
@@ -204,5 +244,47 @@ public class DtvkitDvbSettings extends Activity {
         assist_subtitle.setAdapter(adapter);
         select = mParameterMananer.getCurrentSecondSubLangId();
         assist_subtitle.setSelection(select);
+        //add pvr path select
+        list = mStorageNameList;
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+        pvr_path.setAdapter(adapter);
+        select = getCurrentStoragePosition(mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH));
+        pvr_path.setSelection(select);
+    }
+
+    private void updateStorageList() {
+        synchronized(mStorageLock) {
+            mStorageNameList = mSysSettingManager.getStorageDeviceNameList();
+            mStoragePathList = mSysSettingManager.getStorageDevicePathList();
+        }
+    }
+
+    private int getCurrentStoragePosition(String name) {
+        int result = 0;
+        boolean found = false;
+        synchronized(mStorageLock) {
+            if (mStoragePathList != null && mStoragePathList.size() > 0) {
+                for (int i = 0; i < mStoragePathList.size(); i++) {
+                    if (TextUtils.equals(mStoragePathList.get(i), name)) {
+                        result = i;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!found) {
+            mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, mSysSettingManager.getAppDefaultPath());
+        }
+        return result;
+    }
+
+    private String getCurrentStoragePath(int position) {
+        String result = null;
+        synchronized(mStorageLock) {
+            result = mStoragePathList.get(position);
+        }
+        return result;
     }
 }
