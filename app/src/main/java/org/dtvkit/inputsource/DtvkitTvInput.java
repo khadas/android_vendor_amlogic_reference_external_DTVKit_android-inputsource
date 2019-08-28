@@ -1178,6 +1178,7 @@ public class DtvkitTvInput extends TvInputService {
                 if (playerPlay(recordedProgram.getRecordingDataUri()).equals("ok"))
                 {
                     DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
+                    DtvkitGlueClient.getInstance().setAudioHandler(AHandler);
                 }
                 else
                 {
@@ -1355,6 +1356,70 @@ public class DtvkitTvInput extends TvInputService {
             return used;
         }
 
+        private final DtvkitGlueClient.AudioHandler AHandler = new DtvkitGlueClient.AudioHandler() {
+            @RequiresApi(api = Build.VERSION_CODES.M)
+            @Override
+            public void onEvent(String signal, JSONObject data) {
+                Log.i(TAG, "onSignal: " + signal + " : " + data.toString());
+                if (signal.equals("AudioParamCB")) {
+                    int cmd = 0, param1 = 0, param2 = 0;
+                    AudioManager audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+                    try {
+                        cmd = data.getInt("audio_status");
+                        param1 = data.getInt("audio_param1");
+                        param2 = data.getInt("audio_param2");
+                    } catch (JSONException ignore) {
+                        Log.e(TAG, ignore.getMessage());
+                    }
+                    Log.d(TAG, "cmd ="+cmd+" param1 ="+param1+" param2 ="+param2);
+                    switch (cmd) {
+                        case ADEC_START_DECODE:
+                            audioManager.setParameters("fmt="+param1);
+                            audioManager.setParameters("has_dtv_video="+param2);
+                            audioManager.setParameters("cmd="+cmd);
+                            break;
+                        case ADEC_PAUSE_DECODE:
+                            audioManager.setParameters("cmd="+cmd);
+                            break;
+                        case ADEC_RESUME_DECODE:
+                            audioManager.setParameters("cmd="+cmd);
+                            break;
+                        case ADEC_STOP_DECODE:
+                            audioManager.setParameters("cmd="+cmd);
+                            break;
+                        case ADEC_SET_DECODE_AD:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("fmt="+param1);
+                            audioManager.setParameters("pid="+param2);
+                            break;
+                        case ADEC_SET_VOLUME:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("vol="+param1);
+                            break;
+                        case ADEC_SET_MUTE:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("mute="+param1);
+                            break;
+                        case ADEC_SET_OUTPUT_MODE:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("mode="+param1);
+                            break;
+                        case ADEC_SET_PRE_GAIN:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("gain="+param1);
+                            break;
+                        case ADEC_SET_PRE_MUTE:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("mute="+param1);
+                            break;
+                        default:
+                            Log.i(TAG,"unkown audio cmd!");
+                            break;
+                    }
+                }
+            }
+        };
+
         private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
             @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
@@ -1477,61 +1542,6 @@ public class DtvkitTvInput extends TvInputService {
                            break;
                         default:
                             Log.i(TAG, "Unhandled state: " + state);
-                            break;
-                    }
-                } else if (signal.equals("AudioParamCB")) {
-                    int cmd = 0, param1 = 0, param2 = 0;
-                    AudioManager audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
-                    try {
-                        cmd = data.getInt("audio_status");
-                        param1 = data.getInt("audio_param1");
-                        param2 = data.getInt("audio_param2");
-                    } catch (JSONException ignore) {
-                        Log.e(TAG, ignore.getMessage());
-                    }
-                    Log.d(TAG, "cmd ="+cmd+" param1 ="+param1+" param2 ="+param2);
-                    switch (cmd) {
-                        case ADEC_START_DECODE:
-                            audioManager.setParameters("fmt="+param1);
-                            audioManager.setParameters("has_dtv_video="+param2);
-                            audioManager.setParameters("cmd="+cmd);
-                            break;
-                        case ADEC_PAUSE_DECODE:
-                            audioManager.setParameters("cmd="+cmd);
-                            break;
-                        case ADEC_RESUME_DECODE:
-                            audioManager.setParameters("cmd="+cmd);
-                            break;
-                        case ADEC_STOP_DECODE:
-                            audioManager.setParameters("cmd="+cmd);
-                            break;
-                        case ADEC_SET_DECODE_AD:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("fmt="+param1);
-                            audioManager.setParameters("pid="+param2);
-                            break;
-                        case ADEC_SET_VOLUME:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("vol="+param1);
-                            break;
-                        case ADEC_SET_MUTE:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("mute="+param1);
-                            break;
-                        case ADEC_SET_OUTPUT_MODE:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("mode="+param1);
-                            break;
-                        case ADEC_SET_PRE_GAIN:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("gain="+param1);
-                            break;
-                        case ADEC_SET_PRE_MUTE:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("mute="+param1);
-                            break;
-                        default:
-                            Log.i(TAG,"unkown audio cmd!");
                             break;
                     }
                 } else if (signal.equals("PlayerTimeshiftRecorderStatusChanged")) {
@@ -1967,6 +1977,7 @@ public class DtvkitTvInput extends TvInputService {
                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
                 }
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
+                DtvkitGlueClient.getInstance().setAudioHandler(AHandler);
                 if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
                     playerSetSubtitlesOn(true);
                 }
