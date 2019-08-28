@@ -68,6 +68,7 @@ public class DtvkitDvbSettings extends Activity {
         Spinner assist_audio = (Spinner)findViewById(R.id.assist_audio_spinner);
         Spinner main_subtitle = (Spinner)findViewById(R.id.main_subtitle_spinner);
         Spinner assist_subtitle = (Spinner)findViewById(R.id.assist_subtitle_spinner);
+        Spinner hearing_impaired = (Spinner)findViewById(R.id.hearing_impaired_spinner);
         Spinner pvr_path = (Spinner)findViewById(R.id.storage_select_spinner);
         Button refresh = (Button)findViewById(R.id.storage_refresh);
         initSpinnerParameter();
@@ -171,6 +172,23 @@ public class DtvkitDvbSettings extends Activity {
                 // TODO Auto-generated method stub
             }
         });
+        hearing_impaired.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                Log.d(TAG, "hearing_impaired onItemSelected position = " + position);
+                int saved = mParameterMananer.getHearingImpairedSwitchStatus() ? 1 : 0;
+                if (saved == position) {
+                    Log.d(TAG, "hearing_impaired onItemSelected same position");
+                    return;
+                }
+                mParameterMananer.setHearingImpairedSwitchStatus(position == 1);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // TODO Auto-generated method stub
+            }
+        });
         pvr_path.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -205,6 +223,7 @@ public class DtvkitDvbSettings extends Activity {
         Spinner assist_audio = (Spinner)findViewById(R.id.assist_audio_spinner);
         Spinner main_subtitle = (Spinner)findViewById(R.id.main_subtitle_spinner);
         Spinner assist_subtitle = (Spinner)findViewById(R.id.assist_subtitle_spinner);
+        Spinner hearing_impaired = (Spinner)findViewById(R.id.hearing_impaired_spinner);
         Spinner pvr_path = (Spinner)findViewById(R.id.storage_select_spinner);
         List<String> list = null;
         ArrayAdapter<String> adapter = null;
@@ -244,6 +263,13 @@ public class DtvkitDvbSettings extends Activity {
         assist_subtitle.setAdapter(adapter);
         select = mParameterMananer.getCurrentSecondSubLangId();
         assist_subtitle.setSelection(select);
+        //add hearing impaired
+        list = getHearingImpairedOption();
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+        hearing_impaired.setAdapter(adapter);
+        select = mParameterMananer.getHearingImpairedSwitchStatus() ? 1 : 0;
+        hearing_impaired.setSelection(select);
         //add pvr path select
         list = mStorageNameList;
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
@@ -251,6 +277,13 @@ public class DtvkitDvbSettings extends Activity {
         pvr_path.setAdapter(adapter);
         select = getCurrentStoragePosition(mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH));
         pvr_path.setSelection(select);
+    }
+
+    private List<String> getHearingImpairedOption() {
+        List<String> result = new ArrayList<String>();
+        result.add(getString(R.string.strSettingsHearingImpairedOff));
+        result.add(getString(R.string.strSettingsHearingImpairedOn));
+        return result;
     }
 
     private void updateStorageList() {

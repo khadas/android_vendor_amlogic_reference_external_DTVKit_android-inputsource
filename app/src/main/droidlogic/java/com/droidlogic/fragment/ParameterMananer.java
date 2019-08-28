@@ -1950,4 +1950,29 @@ public class ParameterMananer {
         result.put(DataMananer.KEY_FEC_ARRAY_VALUE[mDataMananer.getIntParameters(DataMananer.KEY_FEC_MODE)]);//arg5
         return result;
     }
+
+    public boolean getHearingImpairedSwitchStatus() {
+        boolean result = false;
+        try {
+            JSONArray args = new JSONArray();
+            result = DtvkitGlueClient.getInstance().request("Player.getSubtitleHardHearingOn", args).getBoolean("data");
+        } catch (Exception e) {
+            Log.d(TAG, "getHearingImpairedSwitchStatus Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        Log.i(TAG, "getHearingImpairedSwitchStatus on = " + result);
+        return result;
+    }
+
+    public void setHearingImpairedSwitchStatus(boolean on) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(on);
+            DtvkitGlueClient.getInstance().request("Player.setSubtitleHardHearingOn", args);
+            Log.i(TAG, "setHearingImpairedSwitchStatus:" + on);
+        } catch (Exception e) {
+            Log.e(TAG, "setHearingImpairedSwitchStatus " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 }

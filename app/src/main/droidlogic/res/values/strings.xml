@@ -100,6 +100,9 @@
     <string name="strSettingsSubtitleLang">Text Language:</string>
     <string name="strSettingsMainSubtitleLang">Main Text Language:</string>
     <string name="strSettingsAssistSubtitleLang">Second Text Language:</string>
+    <string name="strSettingsHearingImpaired">Hearing Impaired:</string>
+    <string name="strSettingsHearingImpairedOff">OFF</string>
+    <string name="strSettingsHearingImpairedOn">ON</string>
     <string name="strSettingsStorageSelect">PVR Storage Select:</string>
     <string name="strSettingsRefresh">Refresh</string>
     <string name="strSettingsPvrDefault">App Data</string>
