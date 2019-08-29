@@ -642,6 +642,8 @@ public class DtvkitTvInput extends TvInputService {
         private final CaptioningManager mCaptioningManager;
         private boolean mKeyUnlocked = false;
         private boolean mBlocked = false;
+        private int mSignalStrength = 0;
+        private int mSignalQuality = 0;
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -1400,6 +1402,10 @@ public class DtvkitTvInput extends TvInputService {
                                         mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);//check resolution later
                                     }
                                 }
+                                if (mHandlerThreadHandle != null) {
+                                    mHandlerThreadHandle.removeMessages(MSG_GET_SIGNAL_STRENGTH);
+                                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_GET_SIGNAL_STRENGTH, MSG_GET_SIGNAL_STRENGTH_PERIOD);//check signal per 1s
+                                }
                                 Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
                                 notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
                                 initSubtitleOrTeletextIfNeed();
@@ -1690,10 +1696,12 @@ public class DtvkitTvInput extends TvInputService {
         protected static final int MSG_SET_SURFACE = 5;
         protected static final int MSG_DO_RELEASE = 6;
         protected static final int MSG_RELEASE_WORK_THREAD = 7;
+        protected static final int MSG_GET_SIGNAL_STRENGTH = 8;
 
         protected static final int MSG_CHECK_RESOLUTION_PERIOD = 1000;//MS
         protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 2000;//MS
         protected static final int MSG_BLOCK_MUTE_OR_UNMUTE_PERIOD = 100;//MS
+        protected static final int MSG_GET_SIGNAL_STRENGTH_PERIOD = 1000;//MS
 
         protected static final int MSG_MAIN_HANDLE_DESTROY_OVERLAY = 1;
 
@@ -1739,6 +1747,13 @@ public class DtvkitTvInput extends TvInputService {
                                 break;
                             case MSG_RELEASE_WORK_THREAD:
                                 releaseWorkThread();
+                                break;
+                            case MSG_GET_SIGNAL_STRENGTH:
+                                sendCurrentSignalInfomation();
+                                if (mHandlerThreadHandle != null) {
+                                    mHandlerThreadHandle.removeMessages(MSG_GET_SIGNAL_STRENGTH);
+                                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_GET_SIGNAL_STRENGTH, MSG_GET_SIGNAL_STRENGTH_PERIOD);//check signal per 1s
+                                }
                                 break;
                             default:
                                 Log.d(TAG, "initWorkThread default");
@@ -2019,6 +2034,25 @@ public class DtvkitTvInput extends TvInputService {
                     notifySessionEvent(ConstantManager.EVENT_STREAM_PI_FORMAT, formatbundle);
                     Log.d(TAG, "checkRealTimeResolution notify realtimeVideoFormat = " + realtimeVideoFormat + ", videoSize width = " + videoSize[0] + ", height = " + videoSize[1]);
                 }
+            }
+            return result;
+        }
+
+        private boolean sendCurrentSignalInfomation() {
+            boolean result = false;
+            if (mTunedChannel == null) {
+                return result;
+            }
+            int[] signalInfo = getSignalStatus();
+            if (mSignalStrength != signalInfo[0] || mSignalQuality != signalInfo[1]) {
+                mSignalStrength = signalInfo[0];
+                mSignalQuality = signalInfo[1];
+                Bundle signalbundle = new Bundle();
+                signalbundle.putInt(ConstantManager.KEY_SIGNAL_STRENGTH, signalInfo[0]);
+                signalbundle.putInt(ConstantManager.KEY_SIGNAL_QUALITY, signalInfo[1]);
+                notifySessionEvent(ConstantManager.EVENT_SIGNAL_INFO, signalbundle);
+                result = true;
+                Log.d(TAG, "sendCurrentSignalInfomation notify signalStrength = " + signalInfo[0] + ", signalQuality = " + signalInfo[1]);
             }
             return result;
         }
@@ -2730,6 +2764,35 @@ public class DtvkitTvInput extends TvInputService {
             Log.e(TAG, "playerGetStatus = " + e.getMessage());
         }
         return response;
+    }
+
+    private int[] getSignalStatus() {
+        int[] result = {0, 0};
+        try {
+            JSONArray args1 = new JSONArray();
+            args1.put(0);
+            JSONObject jsonObj = DtvkitGlueClient.getInstance().request("Dvb.getFrontend", args1);
+            if (jsonObj != null) {
+                Log.d(TAG, "getSignalStatus resultObj:" + jsonObj.toString());
+            } else {
+                Log.d(TAG, "getSignalStatus then get null");
+            }
+            JSONObject data = null;
+            if (jsonObj != null) {
+                data = (JSONObject)jsonObj.get("data");
+            }
+            if (data == null || data.length() == 0) {
+                return result;
+            } else {
+                result[0] = (int)(data.get("strength"));
+                result[1] = (int)(data.get("integrity"));
+                return result;
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getSignalStatus Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
     }
 
     private long playerGetElapsed() {

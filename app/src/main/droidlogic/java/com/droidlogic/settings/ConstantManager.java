@@ -23,9 +23,12 @@ public class ConstantManager {
     public static final String KEY_AUDIO_CODES_DES = "audio_codes";
     public static final String KEY_TRACK_PID = "pid";
     public static final String KEY_INFO = "info";
+    public static final String KEY_SIGNAL_STRENGTH = "signal_strength";
+    public static final String KEY_SIGNAL_QUALITY = "signal_quality";
 
     public static final String EVENT_STREAM_PI_FORMAT = "event_pi_format";
     public static final String EVENT_RESOURCE_BUSY = "event_resource_busy";
+    public static final String EVENT_SIGNAL_INFO = "event_signal_info";
 
     //show or hide overlay
     public static final String ACTION_TIF_CONTROL_OVERLAY = "tif_control_overlay";
