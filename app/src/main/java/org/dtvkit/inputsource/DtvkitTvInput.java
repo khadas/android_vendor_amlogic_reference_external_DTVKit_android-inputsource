@@ -682,6 +682,7 @@ public class DtvkitTvInput extends TvInputService {
             };
 
             playerSetTimeshiftBufferSize(timeshiftBufferSizeMins);
+            recordingAddDiskPath("/data/data/org.dtvkit.inputsource");
             recordingSetDefaultDisk("/data/data/org.dtvkit.inputsource");
             mDtvkitTvInputSessionCount++;
             mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
@@ -2767,15 +2768,28 @@ public class DtvkitTvInput extends TvInputService {
         }
     }
 
-    private boolean recordingSetDefaultDisk(String disk_mount_path) {
+    private boolean recordingSetDefaultDisk(String disk_path) {
         try {
-            Log.d(TAG, "setDefaultDisk: " + disk_mount_path);
+            Log.d(TAG, "setDefaultDisk: " + disk_path);
             JSONArray args = new JSONArray();
-            args.put(disk_mount_path);
+            args.put(disk_path);
             DtvkitGlueClient.getInstance().request("Recording.setDefaultDisk", args);
             return true;
         } catch (Exception e) {
             Log.e(TAG, "recordingSetDefaultDisk = " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean recordingAddDiskPath(String diskPath) {
+        try {
+            Log.d(TAG, "addDiskPath: " + diskPath);
+            JSONArray args = new JSONArray();
+            args.put(diskPath);
+            DtvkitGlueClient.getInstance().request("Recording.addDiskPath", args);
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "recordingAddDiskPath = " + e.getMessage());
             return false;
         }
     }
