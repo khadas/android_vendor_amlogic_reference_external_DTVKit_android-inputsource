@@ -22,7 +22,6 @@ import android.util.Log;
 import org.dtvkit.inputsource.DtvkitGlueClient;
 import org.dtvkit.inputsource.DataMananer;
 
-
 public class ParameterMananer {
 
     private static final String TAG = "ParameterMananer";
@@ -138,6 +137,9 @@ public class ParameterMananer {
     public static final String KEY_DTVKIT_ASSIST_AUDIO_LANG = "assist_audio_lang";
     public static final String KEY_DTVKIT_MAIN_SUBTITLE_LANG = "main_subtitle_lang";
     public static final String KEY_DTVKIT_ASSIST_SUBTITLE_LANG = "assist_subtitle_lang";*///save in dtvkit
+
+    //add for pvr record path setting
+    public static final String KEY_PVR_RECORD_PATH = "pvr_record_path";
 
     public ParameterMananer(Context context, DtvkitGlueClient client) {
         this.mContext = context;

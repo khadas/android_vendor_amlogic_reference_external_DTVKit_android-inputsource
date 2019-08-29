@@ -54,51 +54,51 @@
                 android:gravity="center_vertical" />
         </LinearLayout>
 
-		<LinearLayout
-		    android:id="@+id/main_audio_container"
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:layout_margin="10dp"
-		    android:orientation="horizontal"
-		    android:gravity="center_vertical" >
+        <LinearLayout
+            android:id="@+id/main_audio_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical" >
 
-		    <TextView
-		        android:id="@+id/main_audio_text"
-		        android:layout_width="150dp"
-		        android:layout_height="wrap_content"
-		        android:gravity="center_vertical"
-		        android:text="@string/strSettingsMainAudioLang" />
+            <TextView
+                android:id="@+id/main_audio_text"
+                android:layout_width="150dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:text="@string/strSettingsMainAudioLang" />
 
-		    <Spinner
-		        android:id="@+id/main_audio_spinner"
-		        android:layout_width="200dp"
-		        android:layout_height="wrap_content"
-		        android:gravity="center_vertical" />
-		</LinearLayout>
+            <Spinner
+                android:id="@+id/main_audio_spinner"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical" />
+        </LinearLayout>
 
-		<LinearLayout
-		    android:id="@+id/assist_audio_container"
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:orientation="horizontal"
-		    android:layout_margin="10dp"
-		    android:gravity="center_vertical" >
+        <LinearLayout
+            android:id="@+id/assist_audio_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_margin="10dp"
+            android:gravity="center_vertical" >
 
-		    <TextView
-		        android:id="@+id/assist_audio_text"
-		        android:layout_width="150dp"
-		        android:layout_height="wrap_content"
-		        android:gravity="center_vertical"
-		        android:text="@string/strSettingsAssistAudioLang" />
+            <TextView
+                android:id="@+id/assist_audio_text"
+                android:layout_width="150dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:text="@string/strSettingsAssistAudioLang" />
 
-		    <Spinner
-		        android:id="@+id/assist_audio_spinner"
-		        android:layout_width="200dp"
-		        android:layout_height="wrap_content"
-		        android:gravity="center_vertical" />
-		</LinearLayout>
+            <Spinner
+                android:id="@+id/assist_audio_spinner"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical" />
+        </LinearLayout>
 
-		<LinearLayout
+        <LinearLayout
             android:id="@+id/main_subtitle_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -140,6 +140,34 @@
                 android:layout_width="200dp"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/storage_select_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_margin="10dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/storage_select_text"
+                android:layout_width="150dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:text="@string/strSettingsStorageSelect" />
+
+            <Spinner
+                android:id="@+id/storage_select_spinner"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical" />
+
+            <Button
+                android:id="@+id/storage_refresh"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:text="@string/strSettingsRefresh"/>
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
