@@ -28,6 +28,7 @@ public class DtvkitGlueClient {
    // private IDTVKitServer mProxy = null;
     //private HALCallback mHALCallback;
     private OverlayTarget mTarget;
+    private AudioHandler mAudioHandler;
     // Mutex for all mutable shared state.
     private final Object mLock = new Object();
     private native void nativeconnectdtvkit(DtvkitGlueClient client);
@@ -64,8 +65,13 @@ public class DtvkitGlueClient {
             return;
         }
         synchronized (mHandlers) {
-            for (SignalHandler handler :mHandlers) {
-                handler.onSignal(resource, object);
+            if (resource.equals("AudioParamCB")) {
+                if (mAudioHandler != null)
+                    mAudioHandler.onEvent(resource, object);
+            } else {
+                for (SignalHandler handler :mHandlers) {
+                    handler.onSignal(resource, object);
+                }
             }
         }
     }
@@ -146,6 +152,11 @@ public class DtvkitGlueClient {
         }
     }
 */
+
+    interface AudioHandler {
+       void onEvent(String signal, JSONObject data);
+    }
+
     interface SignalHandler {
         void onSignal(String signal, JSONObject data);
     }
@@ -165,6 +176,10 @@ public class DtvkitGlueClient {
             mSingleton = new DtvkitGlueClient();
         }
         return mSingleton;
+    }
+
+    public void setAudioHandler(AudioHandler handler) {
+        mAudioHandler = handler;
     }
 
     public void registerSignalHandler(SignalHandler handler) {
