@@ -455,11 +455,10 @@ public class DtvkitTvInput extends TvInputService {
                 if (getFeatureSupportTimeshifting()
                         && timeshiftRecorderState != RecorderState.STOPPED) {
                     Log.i(TAG, "No recording path available, no recorder");
-                    notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
-
                     Bundle event = new Bundle();
                     event.putString(ConstantManager.KEY_INFO, "No recording path available, no recorder");
                     notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                    notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
                     return;
                 } else {
                     boolean returnToLive = timeshifting;
@@ -478,11 +477,10 @@ public class DtvkitTvInput extends TvInputService {
                 notifyTuned(uri);
             } else {
                 Log.i(TAG, "No recording path available, no tuner/demux");
-                notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
-
                 Bundle event = new Bundle();
                 event.putString(ConstantManager.KEY_INFO, "No recording path available, no tuner/demux");
                 notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
             }
         }
 
@@ -542,9 +540,14 @@ public class DtvkitTvInput extends TvInputService {
                 RecordedProgram.Builder builder;
                 Program program = getProgram(mProgram);
                 if (program == null) {
-                    program = getCurrentProgram(mChannel);
+                    //program = getCurrentProgram(mChannel);
                     if (program == null) {
+                        long id = -1;
+                        if (mChannel != null) {
+                            id = ContentUris.parseId(mChannel);
+                        }
                         builder = new RecordedProgram.Builder()
+                                .setChannelId(id)
                                 .setStartTimeUtcMillis(startRecordTimeMillis)
                                 .setEndTimeUtcMillis(endRecordTimeMillis);
                     } else {
@@ -707,7 +710,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onRelease() {
-            Log.i(TAG, "onRelease");
+            Log.i(TAG, "onRelease index = " + mCurrentDtvkitTvInputSessionIndex);
             //must destory mview,!!! we
             //will regist handle to client when
             //creat ciMenuView,so we need destory and
@@ -716,17 +719,18 @@ public class DtvkitTvInput extends TvInputService {
                 mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
             }
             //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
+            Log.i(TAG, "onRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }
 
         private void doDestroyOverlay() {
-            Log.i(TAG, "doDestroyOverlay");
+            Log.i(TAG, "doDestroyOverlayr index = " + mCurrentDtvkitTvInputSessionIndex);
             if (mView != null) {
                 mView.destroy();
             }
         }
 
         private void doRelease() {
-            Log.i(TAG, "doRelease");
+            Log.i(TAG, "doRelease index = " + mCurrentDtvkitTvInputSessionIndex);
             removeScheduleTimeshiftRecordingTask();
             scheduleTimeshiftRecording = false;
             timeshiftRecorderState = RecorderState.STOPPED;
@@ -737,6 +741,7 @@ public class DtvkitTvInput extends TvInputService {
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
+            Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }
 
         private void doSetSurface(Map<String, Object> surfaceInfo) {
@@ -1713,7 +1718,7 @@ public class DtvkitTvInput extends TvInputService {
                 mHandlerThreadHandle = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
                     @Override
                     public boolean handleMessage(Message msg) {
-                        Log.d(TAG, "mHandlerThreadHandle handleMessage:"+msg.what);
+                        Log.d(TAG, "mHandlerThreadHandle handleMessage:" + msg.what + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
                         switch (msg.what) {
                             case MSG_ON_TUNE:
                                 Uri channelUri = (Uri)msg.obj;
@@ -1909,7 +1914,7 @@ public class DtvkitTvInput extends TvInputService {
 
         private class MainHandler extends Handler {
             public void handleMessage(Message msg) {
-                Log.d(TAG, "MainHandler handleMessage:"+msg.what);
+                Log.d(TAG, "MainHandler handleMessage:" + msg.what + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
                 switch (msg.what) {
                     case MSG_MAIN_HANDLE_DESTROY_OVERLAY:
                         doDestroyOverlay();
@@ -1938,6 +1943,7 @@ public class DtvkitTvInput extends TvInputService {
             mHandlerThread = null;
             mHandlerThreadHandle = null;
             mMainHandle = null;
+            Log.d(TAG, "releaseWorkThread over");
         }
 
         protected boolean onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
