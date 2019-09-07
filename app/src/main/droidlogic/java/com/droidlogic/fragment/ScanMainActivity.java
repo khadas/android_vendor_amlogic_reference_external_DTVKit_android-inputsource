@@ -74,10 +74,10 @@ public class ScanMainActivity extends Activity {
     }
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        Log.d(TAG, "onKeyDown " + event);
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (mScanFragmentManager.isActive()) {
                 mScanFragmentManager.popSideFragment();
-                Log.d(TAG, "onKeyUp");
                 return true;
             }
         }
