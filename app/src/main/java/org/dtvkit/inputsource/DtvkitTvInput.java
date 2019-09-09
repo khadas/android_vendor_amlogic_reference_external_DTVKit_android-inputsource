@@ -770,7 +770,7 @@ public class DtvkitTvInput extends TvInputService {
             surfaceInfo.put(ConstantManager.KEY_TV_STREAM_CONFIG, config);
             if (mHandlerThreadHandle != null) {
                 boolean result = mHandlerThreadHandle.sendMessage(mHandlerThreadHandle.obtainMessage(MSG_SET_SURFACE, surfaceInfo));
-                Log.d(TAG, "sendDoReleaseMessage status = " + result + ", surface = " + surface + ", config = " + config);
+                Log.d(TAG, "sendSetSurfaceMessage status = " + result + ", surface = " + surface + ", config = " + config);
             } else {
                 Log.d(TAG, "sendSetSurfaceMessage null mHandlerThreadHandle");
             }
@@ -802,7 +802,7 @@ public class DtvkitTvInput extends TvInputService {
                             mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "0");
                     }
                 } else {
-                    if (mSurface != surface) {
+                    if (mSurface != null && mSurface != surface) {
                         Log.d(TAG, "TvView swithed,  onSetSurface null first");
                         //doRelease();
                         sendDoReleaseMessage();
@@ -813,7 +813,7 @@ public class DtvkitTvInput extends TvInputService {
                     createDecoder();
                     decoderRelease();
                     sendSetSurfaceMessage(surface, mConfigs[0]);
-                    surface = mSurface;
+                    mSurface = surface;
                     Log.d(TAG, "onSetSurface ok");
                 }
             }
@@ -853,8 +853,12 @@ public class DtvkitTvInput extends TvInputService {
                 return false;
             }
 
-            if (mHandlerThreadHandle != null)
-                mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 0, 0, channelUri).sendToTarget();
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.removeMessages(MSG_ON_TUNE);
+                Message mess = mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 0, 0, channelUri);
+                boolean info = mHandlerThreadHandle.sendMessage(mess);
+                Log.d(TAG, "sendMessage " + info);
+            }
 
             mTunedChannel = getChannel(channelUri);
 
@@ -1746,7 +1750,7 @@ public class DtvkitTvInput extends TvInputService {
                 mHandlerThreadHandle = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
                     @Override
                     public boolean handleMessage(Message msg) {
-                        Log.d(TAG, "mHandlerThreadHandle handleMessage:" + msg.what + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
+                        Log.d(TAG, "mHandlerThreadHandle [[[:" + msg.what + ", sessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
                         switch (msg.what) {
                             case MSG_ON_TUNE:
                                 Uri channelUri = (Uri)msg.obj;
@@ -1779,7 +1783,7 @@ public class DtvkitTvInput extends TvInputService {
                                 doRelease();
                                 break;
                             case MSG_RELEASE_WORK_THREAD:
-                                releaseWorkThread();
+                                finalReleaseInThread();
                                 break;
                             case MSG_GET_SIGNAL_STRENGTH:
                                 sendCurrentSignalInfomation();
@@ -1789,9 +1793,10 @@ public class DtvkitTvInput extends TvInputService {
                                 }
                                 break;
                             default:
-                                Log.d(TAG, "initWorkThread default");
+                                Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
                                 break;
                         }
+                        Log.d(TAG, "mHandlerThreadHandle    " + msg.what + ", sessionIndex" + mCurrentDtvkitTvInputSessionIndex + "done]]]");
                         return true;
                     }
                 });
@@ -1942,7 +1947,7 @@ public class DtvkitTvInput extends TvInputService {
 
         private class MainHandler extends Handler {
             public void handleMessage(Message msg) {
-                Log.d(TAG, "MainHandler handleMessage:" + msg.what + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
+                Log.d(TAG, "MainHandler [[[:" + msg.what + ", sessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
                 switch (msg.what) {
                     case MSG_MAIN_HANDLE_DESTROY_OVERLAY:
                         doDestroyOverlay();
@@ -1954,24 +1959,36 @@ public class DtvkitTvInput extends TvInputService {
                         Log.d(TAG, "MainHandler default");
                         break;
                 }
+                Log.d(TAG, "MainHandler    " + msg.what + ", sessionIndex = " + mCurrentDtvkitTvInputSessionIndex + "done]]]");
             }
         }
 
-        protected void releaseWorkThread() {
-            Log.d(TAG, "releaseWorkThread");
+        private void finalReleaseInThread() {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "finalReleaseInThread start");
+                    finalReleaseWorkThread();
+                    Log.d(TAG, "finalReleaseInThread end");
+                }
+            }).start();
+        }
+
+        private synchronized void finalReleaseWorkThread() {
+            Log.d(TAG, "finalReleaseWorkThread");
+            if (mMainHandle != null) {
+                mMainHandle.removeCallbacksAndMessages(null);
+            }
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeCallbacksAndMessages(null);
             }
             if (mHandlerThread != null) {
                 mHandlerThread.quit();
             }
-            if (mMainHandle != null) {
-                mMainHandle.removeCallbacksAndMessages(null);
-            }
+            mMainHandle = null;
             mHandlerThread = null;
             mHandlerThreadHandle = null;
-            mMainHandle = null;
-            Log.d(TAG, "releaseWorkThread over");
+            Log.d(TAG, "finalReleaseWorkThread over");
         }
 
         protected boolean onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
