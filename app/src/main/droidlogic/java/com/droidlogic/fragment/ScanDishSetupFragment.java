@@ -97,6 +97,9 @@ public class ScanDishSetupFragment extends Fragment {
     private final int MSG_START_TUNE_ACTION = 0;
     private final int MSG_STOP_TUNE_ACTION = 1;
     private final int MSG_STOP_RELEAS_ACTION = 2;
+    private final int VALUE_START_TUNE_DELAY = 200;
+    private boolean mIsStarted = false;
+    private boolean mIsReleasing = false;
 
     private void initHandlerThread() {
         mHandlerThread = new HandlerThread("check-message-coming");
@@ -107,11 +110,13 @@ public class ScanDishSetupFragment extends Fragment {
                 switch (msg.what) {
                     case MSG_START_TUNE_ACTION:
                         if (mParameterMananer != null) {
+                            mIsStarted = true;
                             mParameterMananer.startTuneAction();
                         }
                         break;
                     case MSG_STOP_TUNE_ACTION:
                         if (mParameterMananer != null) {
+                            mIsStarted = false;
                             mParameterMananer.stopTuneAction();
                         }
                         break;
@@ -235,6 +240,9 @@ public class ScanDishSetupFragment extends Fragment {
     }
 
     private void releaseHandler() {
+        Log.d(TAG, "releaseHandler");
+        mIsReleasing = true;
+        getActivity().finish();
         if (mThreadHandler != null) {
             mThreadHandler.removeCallbacksAndMessages(null);
             mThreadHandler = null;
@@ -249,9 +257,17 @@ public class ScanDishSetupFragment extends Fragment {
     @Override
     public void onStop() {
         super.onStop();
-        stopTune();
-        abortStrengthQualityUpdate();
-        releaseMessage();
+        if (mScheduled) {
+            abortStrengthQualityUpdate();
+        }
+        if (mIsStarted) {
+            mIsStarted = false;
+            stopTune();
+        }
+        if (!mIsReleasing) {
+            mIsReleasing = true;
+            releaseMessage();
+        }
         Log.d(TAG, "onStop");
     }
 
@@ -323,6 +339,7 @@ public class ScanDishSetupFragment extends Fragment {
 
     private void abortStrengthQualityUpdate() {
         if (mScheduled) {
+            mScheduled = false;
             task.cancel();
             timer.cancel();
             Log.d(TAG, "abortStrengthQualityUpdate");
@@ -665,7 +682,8 @@ public class ScanDishSetupFragment extends Fragment {
                                 }
                                 getActivity().startActivity(intent);*/
                                 //getActivity().startActivityForResult(intent, ScanMainActivity.REQUEST_CODE_START_SETUP_ACTIVITY);
-                                getActivity().finish();
+                                //getActivity().finish();
+                                stopAndRelease();
                                 break;
                             default:
                                 break;
@@ -754,7 +772,8 @@ public class ScanDishSetupFragment extends Fragment {
             if (mThreadHandler.hasMessages(MSG_START_TUNE_ACTION)) {
                 mThreadHandler.removeMessages(MSG_START_TUNE_ACTION);
             }
-            mThreadHandler.sendEmptyMessage(MSG_START_TUNE_ACTION);
+            Log.d(TAG, "sendEmptyMessage startTune");
+            mThreadHandler.sendEmptyMessageDelayed(MSG_START_TUNE_ACTION, VALUE_START_TUNE_DELAY);
         }
     }
 
@@ -763,12 +782,24 @@ public class ScanDishSetupFragment extends Fragment {
             if (mThreadHandler.hasMessages(MSG_START_TUNE_ACTION)) {
                 mThreadHandler.removeMessages(MSG_START_TUNE_ACTION);
             }
+            Log.d(TAG, "sendEmptyMessage stopTune");
             mThreadHandler.sendEmptyMessage(MSG_STOP_TUNE_ACTION);
         }
     }
 
+    private void stopAndRelease() {
+        Log.d(TAG, "stopAndRelease");
+        abortStrengthQualityUpdate();
+        stopTune();
+        releaseMessage();
+    }
+
     private void releaseMessage() {
+        Log.d(TAG, "releaseMessage");
         if (mThreadHandler != null) {
+            if (mThreadHandler.hasMessages(MSG_STOP_RELEAS_ACTION)) {
+                mThreadHandler.removeMessages(MSG_STOP_RELEAS_ACTION);
+            }
             mThreadHandler.sendEmptyMessage(MSG_STOP_RELEAS_ACTION);
         }
     }

@@ -1829,6 +1829,7 @@ public class ParameterMananer {
         JSONObject resultObj = null;
         try {
             JSONArray args = new JSONArray();
+            Log.i(TAG, "stopTuneAction:" + args.toString());
             resultObj = DtvkitGlueClient.getInstance().request("Dvbs.tuneActionStop", args);
             if (resultObj != null) {
                 Log.d(TAG, "stopTuneAction resultObj:" + resultObj.toString());
