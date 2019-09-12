@@ -11,6 +11,8 @@ import android.widget.RadioGroup;
 import android.widget.Button;
 import android.media.tv.TvInputInfo;
 
+import com.droidlogic.settings.ConstantManager;
+
 public class DtvkitDvbScanSelect extends Activity {
     private static final String TAG = "DtvkitDvbScanSelect";
 
@@ -79,11 +81,13 @@ public class DtvkitDvbScanSelect extends Activity {
             public void onClick(View v) {
                 Intent intent = new Intent();
                 String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
                 if (inputId != null) {
                     intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
                 }
                 intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_DVBT);
                 intent.putExtra(DataMananer.KEY_IS_DVBT, false);
+                intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
                 startActivityForResult(intent, REQUEST_CODE_START_DVBC_ACTIVITY);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_DVBC);
                 Log.d(TAG, "select_dvbc inputId = " + inputId);
@@ -95,11 +99,13 @@ public class DtvkitDvbScanSelect extends Activity {
             public void onClick(View v) {
                 Intent intent = new Intent();
                 String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
                 if (inputId != null) {
                     intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
                 }
                 intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_DVBT);
                 intent.putExtra(DataMananer.KEY_IS_DVBT, true);
+                intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
                 startActivityForResult(intent, REQUEST_CODE_START_DVBT_ACTIVITY);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_DVBT);
                 Log.d(TAG, "select_dvbt inputId = " + inputId);
@@ -111,10 +117,12 @@ public class DtvkitDvbScanSelect extends Activity {
             public void onClick(View v) {
                 Intent intent = new Intent();
                 String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
                 if (inputId != null) {
                     intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
                 }
                 intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_DVBS);
+                intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
                 startActivityForResult(intent, REQUEST_CODE_START_DVBS_ACTIVITY);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_DVBS);
                 Log.d(TAG, "select_dvbs inputId = " + inputId);
@@ -126,10 +134,12 @@ public class DtvkitDvbScanSelect extends Activity {
             public void onClick(View v) {
                 Intent intent = new Intent();
                 String inputId = getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
                 if (inputId != null) {
                     intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
                 }
                 intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_SETTINGS);
+                intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
                 startActivityForResult(intent, REQUEST_CODE_START_SETTINGS_ACTIVITY);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_SETTINGS);
                 Log.d(TAG, "start to set related language");

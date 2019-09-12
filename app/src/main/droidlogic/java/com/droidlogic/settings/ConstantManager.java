@@ -37,6 +37,17 @@ public class ConstantManager {
     public static final String KEY_SURFACE = "surface";
     public static final String KEY_TV_STREAM_CONFIG = "config";
 
+    //add for pvr delete control
+    public static final String ACTION_REMOVE_ALL_DVR_RECORDS = "droidlogic.intent.action.remove_all_dvr_records";
+    public static final String ACTION_DVR_RESPONSE = "droidlogic.intent.action.dvr_response";
+    public static final String KEY_DVR_DELETE_RESULT_LIST = "dvr_delete_result_list";
+    public static final String KEY_DTVKIT_SEARCH_TYPE = "dtvkit_search_type";//auto or manual
+    public static final String KEY_DTVKIT_SEARCH_TYPE_AUTO = "dtvkit_auto_search";//auto
+    public static final String KEY_DTVKIT_SEARCH_TYPE_MANUAL = "dtvkit_manual_search_type";//manual
+    public static final String KEY_LIVETV_PVR_STATUS = "livetv_pvr_status";//manual
+    public static final String VALUE_LIVETV_PVR_SCHEDULE_AVAILABLE = "livetv_pvr_schedule";
+    public static final String VALUE_LIVETV_PVR_RECORD_PROGRAM_AVAILABLE = "livetv_pvr_program";
+
     public static final String CONSTANT_QAA = "qaa";//Original Audio flag
     public static final String CONSTANT_ORIGINAL_AUDIO = "Original Audio";
     public static final String CONSTANT_UND_FLAG = "und";//undefined flag
@@ -58,24 +69,24 @@ public class ConstantManager {
     public static final String SYS_HEIGHT_PATH = "/sys/class/video/frame_height";
     public static final String SYS_PI_PATH = "/sys/class/deinterlace/di0/frame_format";//"/sys/class/video/frame_format";
 
-	//add define for subtitle type
-	public static final int ADB_SUBTITLE_TYPE_DVB  = 0x10;
-	public static final int ADB_SUBTITLE_TYPE_DVB_4_3 = 0x11;
-	public static final int ADB_SUBTITLE_TYPE_DVB_16_9 = 0x12;
-	public static final int ADB_SUBTITLE_TYPE_DVB_221_1 = 0x13;
-	public static final int ADB_SUBTITLE_TYPE_DVB_HD = 0x14;
-	public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING = 0x20;
-	public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_4_3 = 0x21;
-	public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_16_9 = 0x22;
-	public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_221_1 = 0x23;
-	public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_HD = 0x24;
+    //add define for subtitle type
+    public static final int ADB_SUBTITLE_TYPE_DVB  = 0x10;
+    public static final int ADB_SUBTITLE_TYPE_DVB_4_3 = 0x11;
+    public static final int ADB_SUBTITLE_TYPE_DVB_16_9 = 0x12;
+    public static final int ADB_SUBTITLE_TYPE_DVB_221_1 = 0x13;
+    public static final int ADB_SUBTITLE_TYPE_DVB_HD = 0x14;
+    public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING = 0x20;
+    public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_4_3 = 0x21;
+    public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_16_9 = 0x22;
+    public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_221_1 = 0x23;
+    public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_HD = 0x24;
 
-	//add define for telextet type
-	public static final int ADB_TELETEXT_TYPE_INITIAL = 0x01;
-	public static final int ADB_TELETEXT_TYPE_SUBTITLE = 0x02;
-	public static final int ADB_TELETEXT_TYPE_ADDITIONAL_INFO = 0x03;
-	public static final int ADB_TELETEXT_TYPE_SCHEDULE = 0x04;
-	public static final int ADB_TELETEXT_TYPE_SUBTITLE_HARD_HEARING = 0x05;
+    //add define for telextet type
+    public static final int ADB_TELETEXT_TYPE_INITIAL = 0x01;
+    public static final int ADB_TELETEXT_TYPE_SUBTITLE = 0x02;
+    public static final int ADB_TELETEXT_TYPE_ADDITIONAL_INFO = 0x03;
+    public static final int ADB_TELETEXT_TYPE_SCHEDULE = 0x04;
+    public static final int ADB_TELETEXT_TYPE_SUBTITLE_HARD_HEARING = 0x05;
 
     public static void ascendTrackInfoOderByPid(List<TvTrackInfo> list) {
         if (list != null) {

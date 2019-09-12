@@ -33,6 +33,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.droidlogic.settings.ConstantManager;
+
 import java.util.Locale;
 
 public class DtvkitDvbsSetup extends Activity {
@@ -46,6 +48,7 @@ public class DtvkitDvbsSetup extends Activity {
     private int mSearchType = -1;// 0 manual 1 auto
     private int mSearchDvbsType = -1;
     private boolean mSetUp = false;
+    private PvrStatusConfirmManager mPvrStatusConfirmManager = null;
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -109,16 +112,30 @@ public class DtvkitDvbsSetup extends Activity {
         setContentView(R.layout.satsetup);
 
         mDataMananer = new DataMananer(this);
+        mPvrStatusConfirmManager = new PvrStatusConfirmManager(this, mDataMananer);
+        Intent intent = getIntent();
+        if (intent != null) {
+            String status = intent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
+            mPvrStatusConfirmManager.setPvrStatus(status);
+            Log.d(TAG, "onCreate pvr status = " + status);
+        }
 
         final Button search = (Button)findViewById(R.id.startsearch);
         final Button stop = (Button)findViewById(R.id.stopsearch);
         final Button setup = (Button)findViewById(R.id.setup);
         search.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                search.setEnabled(false);
-                stop.setEnabled(true);
-                stop.requestFocus();
-                startSearch();
+                mPvrStatusConfirmManager.setSearchType(ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
+                boolean checkPvr = mPvrStatusConfirmManager.needDeletePvrRecordings();
+                if (checkPvr) {
+                    mPvrStatusConfirmManager.showDialogToAppoint(DtvkitDvbsSetup.this, false);
+                } else {
+                    mPvrStatusConfirmManager.sendDvrCommand(DtvkitDvbsSetup.this);
+                    search.setEnabled(false);
+                    stop.setEnabled(true);
+                    stop.requestFocus();
+                    startSearch();
+                }
             }
         });
         search.requestFocus();
@@ -135,7 +152,14 @@ public class DtvkitDvbsSetup extends Activity {
 
         setup.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                setUp();
+                mPvrStatusConfirmManager.setSearchType(ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
+                boolean checkPvr = mPvrStatusConfirmManager.needDeletePvrRecordings();
+                if (checkPvr) {
+                    mPvrStatusConfirmManager.showDialogToAppoint(DtvkitDvbsSetup.this, false);
+                } else {
+                    mPvrStatusConfirmManager.sendDvrCommand(DtvkitDvbsSetup.this);
+                    setUp();
+                }
             }
         });
 
@@ -269,12 +293,14 @@ public class DtvkitDvbsSetup extends Activity {
         super.onResume();
         Log.d(TAG, "onResume");
         mSetUp = false;
+        mPvrStatusConfirmManager.registerCommandReceiver();
     }
 
     @Override
     public void onPause() {
         super.onPause();
         Log.d(TAG, "onPause");
+        mPvrStatusConfirmManager.unRegisterCommandReceiver();
     }
 
     @Override
