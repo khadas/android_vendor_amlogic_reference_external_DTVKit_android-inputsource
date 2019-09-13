@@ -2328,6 +2328,8 @@ public class DtvkitTvInput extends TvInputService {
                     undefinedIndex++;
                 } else if (ConstantManager.CONSTANT_QAA.equalsIgnoreCase(audioLang)) {
                     audioLang = ConstantManager.CONSTANT_ORIGINAL_AUDIO;
+                } else if (ConstantManager.CONSTANT_QAD.equalsIgnoreCase(audioLang)) {
+                    audioLang = ConstantManager.CONSTANT_FRENCH;
                 }
                 track.setLanguage(audioLang);
                 if (audioStream.getBoolean("ad")) {
