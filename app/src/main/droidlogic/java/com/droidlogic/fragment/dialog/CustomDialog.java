@@ -812,10 +812,10 @@ public class CustomDialog/* extends AlertDialog*/ {
                     item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DISH_LIMITS_LIST[mParameterMananer.getIntParameters(mParameterMananer.KEY_DISEQC1_2_DISH_LIMITS_STATUS)]), false);
                     break;
                 case 3:
-                    item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), String.valueOf(mParameterMananer.getIntParameters(mParameterMananer.KEY_DISEQC1_2_DISH_EAST_LIMITS)), false);
+                    item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_DISPLAY, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), mContext.getString(R.string.parameter_diseqc1_2_press_to_limit_east), false);
                     break;
                 case 4:
-                    item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), String.valueOf(mParameterMananer.getIntParameters(mParameterMananer.KEY_DISEQC1_2_DISH_WEST_LIMITS)), false);
+                    item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_DISPLAY, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), mContext.getString(R.string.parameter_diseqc1_2_press_to_limit_west), false);
                     break;
                 case 5:
                     item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTTION_LIST[mParameterMananer.getIntParameters(mParameterMananer.KEY_DISEQC1_2_DISH_MOVE_DIRECTION)]), false);

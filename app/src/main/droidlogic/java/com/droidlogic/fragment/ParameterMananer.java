@@ -848,7 +848,7 @@ public class ParameterMananer {
         Log.d(TAG, "enableDishLimits->" + status);
     }
 
-    public void setDishLimits(int east, int west) {
+    /*public void setDishLimits(int east, int west) {
         try {
             JSONArray args1 = new JSONArray();
             args1.put(east);
@@ -864,6 +864,36 @@ public class ParameterMananer {
             e.printStackTrace();
         }
         Log.d(TAG, "setDishLimits east->" + east + ", west->" + west);
+    }*/
+
+    public void setDishELimits() {
+        try {
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.setDishEastLimits", new JSONArray());
+            if (resultObj != null) {
+                Log.d(TAG, "setDishELimits resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setDishELimits then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setDishELimits Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        Log.d(TAG, "setDishELimits east");
+    }
+
+    public void setDishWLimits() {
+        try {
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.setDishWestLimits", new JSONArray());
+            if (resultObj != null) {
+                Log.d(TAG, "setDishWLimits resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setDishWLimits then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setDishWLimits Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        Log.d(TAG, "setDishWLimits  west");
     }
 
     public String getSatelliteName(String name) {

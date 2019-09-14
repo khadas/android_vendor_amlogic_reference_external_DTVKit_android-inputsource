@@ -62,6 +62,8 @@
     <string name="parameter_diseqc1_2_dish_limits_status">Dish Limits Status</string>
     <string name="parameter_diseqc1_2_dish_limits_east">Set Dish Limits East</string>
     <string name="parameter_diseqc1_2_dish_limits_west">Set Dish Limits West</string>
+    <string name="parameter_diseqc1_2_press_to_limit_east">Press To Limit East</string>
+    <string name="parameter_diseqc1_2_press_to_limit_west">Press To Limit West</string>
     <string name="parameter_diseqc1_2_move_direction_east">east</string>
     <string name="parameter_diseqc1_2_move_direction_center">center</string>
     <string name="parameter_diseqc1_2_move_direction_west">west</string>

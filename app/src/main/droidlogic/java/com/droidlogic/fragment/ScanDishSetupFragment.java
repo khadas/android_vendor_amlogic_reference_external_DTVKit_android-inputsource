@@ -519,18 +519,24 @@ public class ScanDishSetupFragment extends Fragment {
                         mParameterMananer.saveIntParameters(parameterKey, diseqc1_2_position);
                         boolean needbreak = false;
                         switch (diseqc1_2_position) {
+                            case 3://dish limts east
+                                mParameterMananer.setDishELimits();
+                                needbreak = true;
+                                break;
+                            case 4://dish limts west
+                                mParameterMananer.setDishWLimits();
+                                needbreak = true;
+                                break;
                             case 7://move
                                 mParameterMananer.dishMove(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_MOVE_DIRECTION), mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_MOVE_STEP));
                                 needbreak = true;
                                 break;
                             case 9://save to position
                                 mParameterMananer.storeDishPosition(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION));
-                                startTune();
                                 needbreak = true;
                                 break;
                             case 10://move to position
                                 mParameterMananer.moveDishToPosition(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION));
-                                startTune();
                                 needbreak = true;
                                 break;
                             default:
@@ -549,9 +555,8 @@ public class ScanDishSetupFragment extends Fragment {
                             case 2://dish limts status
                                 mParameterMananer.saveIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_LIMITS_STATUS, "left".equals(data.getString("action")) ? 0 : 1);
                                 mParameterMananer.enableDishLimits(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_LIMITS_STATUS) == 1);
-                                startTune();
                                 break;
-                            case 3://dish limts east
+                            /*case 3://dish limts east
                                 int value = mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_EAST_LIMITS);
                                 if ("left".equals(data.getString("action"))) {
                                     if (value != 0) {
@@ -578,7 +583,7 @@ public class ScanDishSetupFragment extends Fragment {
                                 }
                                 mParameterMananer.saveIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_WEST_LIMITS, westvalue);
                                 mParameterMananer.setDishLimits(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_EAST_LIMITS), mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_WEST_LIMITS));
-                                break;
+                                break;*/
                             case 5://dish move direction
                                 int directionvalue = mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_MOVE_DIRECTION);
                                 if ("left".equals(data.getString("action"))) {
@@ -599,7 +604,7 @@ public class ScanDishSetupFragment extends Fragment {
                                         stepvalue = stepvalue - 1;
                                     }
                                 } else {
-                                    if (stepvalue != 180) {
+                                    if (stepvalue != 127) {
                                         stepvalue = stepvalue + 1;
                                     }
                                 }

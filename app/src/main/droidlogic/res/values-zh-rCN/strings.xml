@@ -61,6 +61,8 @@
     <string name="parameter_diseqc1_2_dish_limits_status">Dish限制状态</string>
     <string name="parameter_diseqc1_2_dish_limits_east">设置Dish西向限制</string>
     <string name="parameter_diseqc1_2_dish_limits_west">设置Dish东向限制</string>
+    <string name="parameter_diseqc1_2_press_to_limit_east">点击限制东向</string>
+    <string name="parameter_diseqc1_2_press_to_limit_west">点击限制西向</string>
     <string name="parameter_diseqc1_2_move_direction_east">东</string>
     <string name="parameter_diseqc1_2_move_direction_center">中</string>
     <string name="parameter_diseqc1_2_move_direction_west">西</string>
