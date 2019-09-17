@@ -1201,13 +1201,14 @@ public class DtvkitTvInput extends TvInputService {
             if (recordedProgram != null) {
                 playerState = PlayerState.PLAYING;
                 playerStop();
+                DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 if (playerPlay(recordedProgram.getRecordingDataUri()).equals("ok"))
                 {
-                    DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                     DtvkitGlueClient.getInstance().setAudioHandler(AHandler);
                 }
                 else
                 {
+                    DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
                 }
             }
