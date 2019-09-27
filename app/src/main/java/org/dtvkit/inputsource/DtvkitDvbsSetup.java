@@ -59,12 +59,6 @@ public class DtvkitDvbsSetup extends Activity {
                     getProgressBar().setProgress(progress);
                     setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress));
                 } else {
-                    mServiceList = getServiceList();
-                    mFoundServiceNumber = getFoundServiceNumber();
-                    if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
-                        Log.d(TAG, "onSignal mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
-                        mFoundServiceNumber = mServiceList.length();
-                    }
                     onSearchFinished();
                 }
             }
@@ -281,6 +275,7 @@ public class DtvkitDvbsSetup extends Activity {
             }
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_LIST, serviceListJsonArray);
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_FIRST_SERVICE, firstServiceName);
+            Log.d(TAG, "finish firstServiceName = " + firstServiceName);
             setResult(RESULT_OK, intent);
         } else {
             setResult(RESULT_CANCELED);
@@ -738,6 +733,13 @@ public class DtvkitDvbsSetup extends Activity {
             stopMonitoringSearch();
             setSearchStatus(e.getMessage());
             return;
+        }
+        //update search results as After the search is finished, the lcn will be reordered
+        mServiceList = getServiceList();
+        mFoundServiceNumber = getFoundServiceNumber();
+        if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
+            Log.d(TAG, "mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
+            mFoundServiceNumber = mServiceList.length();
         }
 
         setSearchStatus("Updating guide");

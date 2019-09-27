@@ -28,7 +28,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         try {
             JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServices", new JSONArray());
 
-            Log.i(TAG, obj.toString());
+            Log.i(TAG, "getChannels=" + obj.toString());
 
             JSONArray services = obj.getJSONArray("data");
 

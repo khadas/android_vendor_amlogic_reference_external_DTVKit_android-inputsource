@@ -68,12 +68,6 @@ public class DtvkitDvbtSetup extends Activity {
                     setSearchProgress(progress);
                     setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), String.format(Locale.ENGLISH, "Found %d services", found));
                 } else {
-                    mServiceList = getServiceList();
-                    mFoundServiceNumber = getFoundServiceNumber();
-                    if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
-                        Log.d(TAG, "onSignal mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
-                        mFoundServiceNumber = mServiceList.length();
-                    }
                     onSearchFinished();
                 }
             }
@@ -194,6 +188,7 @@ public class DtvkitDvbtSetup extends Activity {
             }
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_LIST, serviceListJsonArray);
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_FIRST_SERVICE, firstServiceName);
+            Log.d(TAG, "finish firstServiceName = " + firstServiceName);
             setResult(RESULT_OK, intent);
         } else {
             setResult(RESULT_CANCELED);
@@ -631,7 +626,13 @@ public class DtvkitDvbtSetup extends Activity {
             setSearchStatus("Failed to finish search", e.getMessage());
             return;
         }
-
+        //update search results as After the search is finished, the lcn will be reordered
+        mServiceList = getServiceList();
+        mFoundServiceNumber = getFoundServiceNumber();
+        if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
+            Log.d(TAG, "mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
+            mFoundServiceNumber = mServiceList.length();
+        }
         setSearchStatus("Updating guide", "");
         startMonitoringSync();
         // By default, gets all channels and 1 hour of programs (DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS)
