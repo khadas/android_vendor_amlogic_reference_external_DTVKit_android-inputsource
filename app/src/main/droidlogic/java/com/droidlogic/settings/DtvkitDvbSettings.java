@@ -12,7 +12,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.text.TextUtils;
 
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -192,9 +191,9 @@ public class DtvkitDvbSettings extends Activity {
         pvr_path.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                Log.d(TAG, "pvr_path onItemSelected position = " + position);
                 String saved = mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
                 String current = getCurrentStoragePath(position);
+                Log.d(TAG, "pvr_path onItemSelected previous = " + saved + ", new = " + current);
                 if (TextUtils.equals(current, saved)) {
                     Log.d(TAG, "pvr_path onItemSelected same path");
                     return;
@@ -275,7 +274,13 @@ public class DtvkitDvbSettings extends Activity {
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         pvr_path.setAdapter(adapter);
-        select = getCurrentStoragePosition(mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH));
+        String devicePath = mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
+        if (!SysSettingManager.isDeviceExist(devicePath)) {
+            select = 0;
+            mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, SysSettingManager.PVR_DEFAULT_PATH);
+        } else {
+            select = getCurrentStoragePosition(devicePath);
+        }
         pvr_path.setSelection(select);
     }
 

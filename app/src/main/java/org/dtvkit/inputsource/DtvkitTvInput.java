@@ -694,8 +694,13 @@ public class DtvkitTvInput extends TvInputService {
             };
 
             playerSetTimeshiftBufferSize(timeshiftBufferSizeMins);
-            recordingAddDiskPath(mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH)/*"/data/data/org.dtvkit.inputsource"*/);
-            recordingSetDefaultDisk(mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH)/*"/data/data/org.dtvkit.inputsource"*/);
+            String newPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
+            if (!SysSettingManager.isDeviceExist(newPath)) {
+                Log.d(TAG, "removable device has been moved and use default path");
+                newPath = "/data/data/org.dtvkit.inputsource";
+            }
+            recordingAddDiskPath(newPath);
+            recordingSetDefaultDisk(newPath);
             mDtvkitTvInputSessionCount++;
             mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
             initWorkThread();
