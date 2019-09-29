@@ -42,9 +42,22 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 data.put("hidden", service.getBoolean("hidden"));
                 data.put("network_id", service.getInt("network_id"));
                 data.put("frequency", service.getInt("freq"));
-                data.put("satellite", service.getString("sate_name"));
-                data.put("transponder", service.getString("transponder"));
-
+                JSONObject satellite = new JSONObject();
+                satellite.put("satellite_info_name", service.getString("sate_name"));
+                data.put("satellite_info", satellite.toString());
+                JSONObject transponder = new JSONObject();
+                String tranponderDisplay = service.getString("transponder");
+                transponder.put("transponder_info_display_name", tranponderDisplay);
+                if (tranponderDisplay != null) {
+                    String[] splitTransponder = tranponderDisplay.split("/");
+                    if (splitTransponder != null && splitTransponder.length == 3) {
+                        transponder.put("transponder_info_satellite_name", service.getString("sate_name"));
+                        transponder.put("transponder_info_frequency", splitTransponder[0]);
+                        transponder.put("transponder_info_polarity", splitTransponder[1]);
+                        transponder.put("transponder_info_symbol", splitTransponder[2]);
+                    }
+                }
+                data.put("transponder_info", transponder.toString());
                 channels.add(new Channel.Builder()
                         .setDisplayName(service.getString("name"))
                         .setDisplayNumber(String.format(Locale.ENGLISH, "%d", service.getInt("lcn")))

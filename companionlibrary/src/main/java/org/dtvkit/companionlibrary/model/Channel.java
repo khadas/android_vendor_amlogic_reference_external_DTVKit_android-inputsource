@@ -64,6 +64,7 @@ public final class Channel {
 
     //sync with ChannelInfo in droidlogic-tv.jar
     public static final String KEY_IS_FAVOURITE = "is_favourite";
+    public static final String KEY_FAVOURITE_INFO = "favourite_info";
     public static final String KEY_SET_FAVOURITE = "set_favourite";
     public static final String KEY_HIDDEN = "hidden";
     public static final String KEY_SET_HIDDEN = "set_hidden";

@@ -75,6 +75,7 @@ public class TvContractUtils {
         ArrayMap<Long, String> channelSetSkipMap = new ArrayMap<>();
         ArrayMap<Long, String> channelSkipValueMap = new ArrayMap<>();
         ArrayMap<Long, String> channelFavValueMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelFavListValueMap = new ArrayMap<>();
         ArrayMap<Long, String> channelSetDisPlayNameMap = new ArrayMap<>();
         ArrayMap<Long, String> channelSetDisPlayNumberMap = new ArrayMap<>();
         ArrayMap<Long, String> channelDisPlayNameValueMap = new ArrayMap<>();
@@ -92,6 +93,7 @@ public class TvContractUtils {
             String setFavFlag = "0";
             String setSkipFlag = "0";
             String favValue = "0";
+            String favListValue = "";
             String skipValue = "false";
             String setDisplayNameFlag = "0";
             String setDisplayNumberFlag = "0";
@@ -108,6 +110,7 @@ public class TvContractUtils {
                 setFavFlag = "0";
                 setSkipFlag = "0";
                 favValue = "0";
+                favListValue = "";
                 skipValue = "false";
                 setDisplayNameFlag = "0";
                 setDisplayNumberFlag = "0";
@@ -121,6 +124,7 @@ public class TvContractUtils {
                         setSkipFlag = (String)internalProviderData.get(Channel.KEY_SET_HIDDEN);
                         setFavFlag = (String)internalProviderData.get(Channel.KEY_SET_FAVOURITE);
                         favValue = (String)internalProviderData.get(Channel.KEY_IS_FAVOURITE);
+                        favListValue = (String)internalProviderData.get(Channel.KEY_FAVOURITE_INFO);
                         skipValue = (String)internalProviderData.get(Channel.KEY_HIDDEN);
                         setDisplayNameFlag = (String)internalProviderData.get(Channel.KEY_SET_DISPLAYNAME);
                         setDisplayNumberFlag = (String)internalProviderData.get(Channel.KEY_SET_DISPLAYNUMBER);
@@ -132,6 +136,9 @@ public class TvContractUtils {
                         }
                         if (favValue == null) {
                             favValue = "0";
+                        }
+                        if (favListValue == null) {
+                            favListValue = "";
                         }
                         if (skipValue == null) {
                             skipValue = "false";
@@ -154,6 +161,7 @@ public class TvContractUtils {
                 channelSetSkipMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setSkipFlag);
                 channelSkipValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, skipValue);
                 channelFavValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favValue);
+                channelFavListValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favListValue);
                 channelSetDisPlayNameMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNameFlag);
                 channelSetDisPlayNumberMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNumberFlag);
                 channelDisPlayNameValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, displayName);
@@ -196,6 +204,7 @@ public class TvContractUtils {
             String setFavFlag = channelSetFavMap.get(triplet);
             String setSkipFlag = channelSetSkipMap.get(triplet);
             String favValue = channelFavValueMap.get(triplet);
+            String favListValue = channelFavListValueMap.get(triplet);
             String skipValue = channelSkipValueMap.get(triplet);
             String setDisplayNameFlag = channelSetDisPlayNameMap.get(triplet);
             String setDisplayNumberFlag = channelSetDisPlayNumberMap.get(triplet);
@@ -211,6 +220,9 @@ public class TvContractUtils {
             }
             if (favValue == null) {
                 favValue = "0";
+            }
+            if (favListValue == null) {
+                favListValue = "";
             }
             if (skipValue == null) {
                 skipValue = "false";
@@ -240,10 +252,13 @@ public class TvContractUtils {
                 if ("1".equals(setFavFlag)) {
                     internalProviderData.put(Channel.KEY_SET_FAVOURITE, "1");
                     internalProviderData.put(Channel.KEY_IS_FAVOURITE, favValue);
+                    internalProviderData.put(Channel.KEY_FAVOURITE_INFO, favListValue);
                 } else {
                     internalProviderData.put(Channel.KEY_SET_FAVOURITE, "0");
                     String getFavValue = ((String)internalProviderData.get(Channel.KEY_IS_FAVOURITE));
+                    String getFavListValue = ((String)internalProviderData.get(Channel.KEY_FAVOURITE_INFO));
                     internalProviderData.put(Channel.KEY_IS_FAVOURITE, getFavValue == null ? "0" : getFavValue);
+                    internalProviderData.put(Channel.KEY_FAVOURITE_INFO, getFavListValue == null ? "" : getFavListValue);
                 }
                 if ("1".equals(setSkipFlag)) {
                     internalProviderData.put(Channel.KEY_SET_HIDDEN, "1");
