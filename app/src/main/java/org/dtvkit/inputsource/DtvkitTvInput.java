@@ -534,7 +534,7 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public void onStopRecording() {
             Log.i(TAG, "onStopRecording");
-
+            PropSettingManager.resetRecordFrequencyFlag();
             endRecordTimeMillis = System.currentTimeMillis();
             scheduleTimeshiftRecording = true;
             Log.d(TAG, "stop Recording:"+recordingUri);

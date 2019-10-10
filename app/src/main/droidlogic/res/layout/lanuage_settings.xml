@@ -196,6 +196,13 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:text="@string/strSettingsRefresh"/>
+
+            <CheckBox
+                android:id="@+id/record_full_frequency"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:text="@string/strSettingsPvrFullFrequency" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

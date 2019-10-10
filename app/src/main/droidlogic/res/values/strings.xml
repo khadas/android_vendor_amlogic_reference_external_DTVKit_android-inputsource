@@ -108,4 +108,5 @@
     <string name="strSettingsStorageSelect">PVR Storage Select:</string>
     <string name="strSettingsRefresh">Refresh</string>
     <string name="strSettingsPvrDefault">App Data</string>
+    <string name="strSettingsPvrFullFrequency">Record Frequency</string>
 </resources>

@@ -107,4 +107,5 @@
     <string name="strSettingsStorageSelect">PVR存储设备:</string>
     <string name="strSettingsRefresh">刷新</string>
     <string name="strSettingsPvrDefault">应用目录</string>
+    <string name="strSettingsPvrFullFrequency">录制频点</string>
 </resources>
