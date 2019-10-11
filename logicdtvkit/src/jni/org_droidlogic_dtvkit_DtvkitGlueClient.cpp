@@ -24,11 +24,10 @@
 #include <ui/GraphicBuffer.h>
 #include <gralloc_usage_ext.h>
 #include <hardware/gralloc1.h>
-
 #include "amlogic/am_gralloc_ext.h"
 
 #include "glue_client.h"
-#include "org_dtvkit_inputsource_DtvkitGlueClient.h"
+#include "org_droidlogic_dtvkit_DtvkitGlueClient.h"
 
 using namespace android;
 
@@ -283,7 +282,7 @@ static void SetSurface(JNIEnv *env, jclass thiz __unused, jobject jsurface) {
 
 static JNINativeMethod gMethods[] = {
 {
-    "nativeconnectdtvkit", "(Lorg/dtvkit/inputsource/DtvkitGlueClient;)V",
+    "nativeconnectdtvkit", "(Lorg/droidlogic/dtvkit/DtvkitGlueClient;)V",
     (void *) connectdtvkit
 },
 {
@@ -310,9 +309,9 @@ static JNINativeMethod gMethods[] = {
         var = env->GetMethodID(clazz, methodName, methodDescriptor); \
         LOG_FATAL_IF(! var, "Unable to find method " methodName);
 
-int register_org_dtvkit_inputsource_DtvkitGlueClient(JNIEnv *env)
+int register_org_droidlogic_dtvkit_DtvkitGlueClient(JNIEnv *env)
 {
-    static const char *const kClassPathName = "org/dtvkit/inputsource/DtvkitGlueClient";
+    static const char *const kClassPathName = "org/droidlogic/dtvkit/DtvkitGlueClient";
     jclass clazz;
     int rc;
     FIND_CLASS(clazz, kClassPathName);
@@ -349,7 +348,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved __unused)
     }
     assert(env != NULL);
     gJavaVM = vm;
-    if (register_org_dtvkit_inputsource_DtvkitGlueClient(env) < 0)
+    if (register_org_droidlogic_dtvkit_DtvkitGlueClient(env) < 0)
     {
         ALOGE("Can't register DtvkitGlueClient");
         goto bail;

@@ -10,6 +10,8 @@ import org.dtvkit.companionlibrary.model.Channel;
 import org.dtvkit.companionlibrary.model.EventPeriod;
 import org.dtvkit.companionlibrary.model.InternalProviderData;
 import org.dtvkit.companionlibrary.model.Program;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.ArrayList;

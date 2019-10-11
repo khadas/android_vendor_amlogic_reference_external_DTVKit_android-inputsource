@@ -1,4 +1,4 @@
-package org.dtvkit.inputsource;
+package org.droidlogic.dtvkit;
 
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -14,9 +14,6 @@ import android.view.SurfaceHolder;
 
 import java.util.ArrayList;
 
-import com.droidlogic.app.SystemControlManager;
-
-
 public class DtvkitGlueClient {
     private static final String TAG = "DtvkitGlueClient";
 
@@ -29,18 +26,13 @@ public class DtvkitGlueClient {
     //private HALCallback mHALCallback;
     private OverlayTarget mTarget;
     private AudioHandler mAudioHandler;
+    private SystemControlHandler mSysControlHandler;
     // Mutex for all mutable shared state.
     private final Object mLock = new Object();
     private native void nativeconnectdtvkit(DtvkitGlueClient client);
     private native void nativedisconnectdtvkit();
     private native void nativeSetSurface(Surface surface);
     private native String nativerequest(String resource, String json);
-
-    //Define file type
-    private final int SYSFS = 0;
-    private final int PROP = 1;
-
-    protected SystemControlManager mSystemControlManager;
 
     static {
         System.loadLibrary("dtvkit_jni");
@@ -153,21 +145,20 @@ public class DtvkitGlueClient {
     }
 */
 
-    interface AudioHandler {
+    public interface AudioHandler {
        void onEvent(String signal, JSONObject data);
     }
 
-    interface SignalHandler {
+    public interface SignalHandler {
         void onSignal(String signal, JSONObject data);
     }
 
-    interface OverlayTarget {
+    public interface OverlayTarget {
         void draw(int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, byte[] data);
     }
 
     protected DtvkitGlueClient() {
         // Singleton
-        mSystemControlManager = SystemControlManager.getInstance();
         nativeconnectdtvkit(this);
     }
 
@@ -217,28 +208,27 @@ public class DtvkitGlueClient {
     }
 
     public String readBySysControl(int ftype, String name) {
+        Log.i(TAG, "readBySysControl received!!! ftype" + ftype + ",name" + name);
         String value = null;
-        if (mSystemControlManager != null) {
-            if (ftype == SYSFS) {
-                value = mSystemControlManager.readSysFs(name);
-            } else if (ftype == PROP) {
-                value = mSystemControlManager.getProperty(name);
-            } else {
-                //printf error log
-            }
+        if (mSysControlHandler != null) {
+            value = mSysControlHandler.onReadSysFs(ftype, name);
         }
         return value;
     }
 
     public void writeBySysControl(int ftype, String name, String cmd) {
-        if (mSystemControlManager != null) {
-            if (ftype == SYSFS) {
-                mSystemControlManager.writeSysFs(name, cmd);
-            } else if (ftype == PROP) {
-                mSystemControlManager.setProperty(name, cmd);
-            } else {
-                //printf error log
-            }
+        Log.i(TAG, "writeBySysControl received!!! ftype" + ftype + ",name" + name + ",cmd" + cmd);
+        if (mSysControlHandler != null) {
+            mSysControlHandler.onWriteSysFs(ftype, name, cmd);
         }
+    }
+
+    public void setSystemControlHandler(SystemControlHandler l) {
+          mSysControlHandler = l;
+    }
+
+    public interface SystemControlHandler {
+        public String onReadSysFs(int ftype, String name);
+        public void onWriteSysFs(int ftype, String name, String cmd);
     }
 }

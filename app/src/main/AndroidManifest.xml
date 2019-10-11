@@ -33,6 +33,7 @@
         android:banner="@drawable/dtvkit">
 
         <uses-library android:name="droidlogic.software.core" />
+        <uses-library android:name="droidlogic.dtvkit.software.core" />
 
         <!--<activity android:name=".MainActivity">
             <intent-filter>

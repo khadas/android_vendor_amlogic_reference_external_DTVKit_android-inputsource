@@ -42,6 +42,7 @@ import java.util.List;
 
 import com.droidlogic.fragment.ParameterMananer;
 import com.droidlogic.settings.ConstantManager;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 public class DtvkitDvbtSetup extends Activity {
     private static final String TAG = "DtvkitDvbtSetup";

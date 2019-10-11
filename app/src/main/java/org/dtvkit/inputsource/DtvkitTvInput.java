@@ -59,6 +59,7 @@ import org.dtvkit.companionlibrary.model.InternalProviderData;
 import org.dtvkit.companionlibrary.model.Program;
 import org.dtvkit.companionlibrary.model.RecordedProgram;
 import org.dtvkit.companionlibrary.utils.TvContractUtils;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -120,6 +121,10 @@ public class DtvkitTvInput extends TvInputService {
     private DataMananer mDataMananer;
     private MediaCodec mMediaCodec1;
     private MediaCodec mMediaCodec2;
+    SystemControlManager mSystemControlManager;
+    //Define file type
+    private final int SYSFS = 0;
+    private final int PROP = 1;
 
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
@@ -173,6 +178,8 @@ public class DtvkitTvInput extends TvInputService {
         getApplicationContext().getSystemService(TvInputManager.class).updateTvInputInfo(builder.build());
         mSysSettingManager = new SysSettingManager(this);
         mDataMananer = new DataMananer(this);
+        mSystemControlManager = SystemControlManager.getInstance();
+        DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
     }
 
     @Override
@@ -182,6 +189,7 @@ public class DtvkitTvInput extends TvInputService {
         mContentResolver.unregisterContentObserver(mContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().disConnectDtvkitClient();
+        DtvkitGlueClient.getInstance().setSystemControlHandler(null);
         super.onDestroy();
     }
 
@@ -189,7 +197,6 @@ public class DtvkitTvInput extends TvInputService {
     public final Session onCreateSession(String inputId) {
         Log.i(TAG, "onCreateSession " + inputId);
         mSession = new DtvkitTvInputSession(this);
-        SystemControlManager mSystemControlManager = SystemControlManager.getInstance();
         mSystemControlManager.SetDtvKitSourceEnable(1);
         return mSession;
     }
@@ -3418,5 +3425,39 @@ public class DtvkitTvInput extends TvInputService {
 
         Log.e(TAG, "decoderRelease done");
     }
+
+    private final DtvkitGlueClient.SystemControlHandler mSysControlHandler = new DtvkitGlueClient.SystemControlHandler() {
+        @RequiresApi(api = Build.VERSION_CODES.M)
+        @Override
+        public String onReadSysFs(int ftype, String name) {
+            Log.d(TAG, "onReadSysFs");
+            String value = null;
+            if (mSystemControlManager != null) {
+                if (ftype == SYSFS) {
+                    value = mSystemControlManager.readSysFs(name);
+                } else if (ftype == PROP) {
+                    value = mSystemControlManager.getProperty(name);
+                } else {
+                    //printf error log
+                }
+           }
+           return value;
+        }
+
+        @RequiresApi(api = Build.VERSION_CODES.M)
+        @Override
+        public void onWriteSysFs(int ftype, String name, String cmd) {
+            Log.d(TAG, "onWriteSysFs");
+            if (mSystemControlManager != null) {
+                if (ftype == SYSFS) {
+                    mSystemControlManager.writeSysFs(name, cmd);
+                } else if (ftype == PROP) {
+                    mSystemControlManager.setProperty(name, cmd);
+                } else {
+                       //printf error log
+                }
+           }
+        }
+    };
 
 }

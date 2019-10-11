@@ -5,7 +5,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
-    org_dtvkit_inputsource_DtvkitGlueClient.cpp
+    org_droidlogic_dtvkit_DtvkitGlueClient.cpp
 
 $(warning $(JNI_H_INCLUDE))
 LOCAL_C_INCLUDES += $(JNI_H_INCLUDE) \
@@ -16,13 +16,13 @@ LOCAL_C_INCLUDES += $(JNI_H_INCLUDE) \
                     external/skia/include/core \
                     hardware/amlogic/gralloc \
 
-DVBCORE_DIRECTORY := $(LOCAL_PATH)/../../../../../DVBCore/
+DVBCORE_DIRECTORY := $(LOCAL_PATH)/../../../../DVBCore/
 HAVE_DVBCORE_DIRECTORY := $(shell test -d $(DVBCORE_DIRECTORY) && echo yes)
 ifeq ($(HAVE_DVBCORE_DIRECTORY),yes)
 $(warning "DVBCore directory exist")
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../android-rpcservice/apps/binder/inc
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../android-rpcservice/apps/binder/inc
 else
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../releaseDTVKit/rpcservice
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../releaseDTVKit/rpcservice
 endif
 
 LOCAL_MODULE := libdtvkit_jni

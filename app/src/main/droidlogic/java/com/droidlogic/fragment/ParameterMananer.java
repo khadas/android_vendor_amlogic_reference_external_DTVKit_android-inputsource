@@ -19,7 +19,7 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 
-import org.dtvkit.inputsource.DtvkitGlueClient;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.dtvkit.inputsource.DataMananer;
 
 public class ParameterMananer {
