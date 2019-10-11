@@ -24,6 +24,7 @@
 #include <ui/GraphicBuffer.h>
 #include <gralloc_usage_ext.h>
 #include <hardware/gralloc1.h>
+
 #include "amlogic/am_gralloc_ext.h"
 
 #include "glue_client.h"
@@ -37,6 +38,16 @@ static jmethodID notifyDvbCallback;
 static jmethodID gReadSysfsID;
 static jmethodID gWriteSysfsID;
 static jobject DtvkitObject;
+sp<Surface> mSurface;
+sp<NativeHandle> mSourceHandle;
+
+struct sideband_handle_t {
+    native_handle_t nativeHandle;
+    int identflag;
+    int usage;
+};
+
+struct sideband_handle_t *pTvStream = nullptr;
 
 static JNIEnv* getJniEnv(bool *needDetach) {
     int ret = -1;
@@ -220,42 +231,54 @@ static int updateNative(sp<ANativeWindow> nativeWin) {
     return nativeWin->queueBuffer_DEPRECATED(nativeWin.get(), buf);
 }
 
+
+static int getTvStream() {
+    int ret = -1;
+    if (pTvStream == nullptr) {
+        pTvStream = (struct sideband_handle_t *)native_handle_create(0, 2);
+        if (pTvStream == nullptr) {
+            ALOGE("tvstream can not be initialized");
+            return ret;
+        }
+    }
+    pTvStream->identflag = 0xabcdcdef; //magic word
+    pTvStream->usage = GRALLOC_USAGE_AML_VIDEO_OVERLAY;
+    return 0;
+}
+
 static void SetSurface(JNIEnv *env, jclass thiz __unused, jobject jsurface) {
-    sp<IGraphicBufferProducer> new_st = NULL;
     ALOGD("SetSurface");
+    sp<Surface> surface;
     if (jsurface) {
-        sp<Surface> surface(android_view_Surface_getSurface(env, jsurface));
+        surface = android_view_Surface_getSurface(env, jsurface);
 
-        if (surface != NULL) {
-            new_st = surface->getIGraphicBufferProducer();
-
-            if (new_st == NULL) {
-                jniThrowException(env, "java/lang/IllegalArgumentException",
-                                  "The surface does not have a binding SurfaceTexture!");
-                return;
-            }
-        } else {
+        if (surface == NULL) {
             jniThrowException(env, "java/lang/IllegalArgumentException",
                               "The surface has been released");
             return;
         }
     }
 
-    sp<ANativeWindow> tmpWindow = NULL;
-
-    if (new_st != NULL) {
-        tmpWindow = new Surface(new_st);
-        status_t err = native_window_api_connect(tmpWindow.get(),
-                       NATIVE_WINDOW_API_MEDIA);
-        ALOGI("set native window overlay");
-        native_window_set_usage(tmpWindow.get(),
-                                am_gralloc_get_video_overlay_producer_usage());
-        //native_window_set_usage(tmpWindow.get(), GRALLOC_USAGE_HW_TEXTURE |
-        //   GRALLOC_USAGE_EXTERNAL_DISP  | GRALLOC1_PRODUCER_USAGE_VIDEO_DECODER );
-        native_window_set_buffers_format(tmpWindow.get(), WINDOW_FORMAT_RGBA_8888);
-
-        updateNative(tmpWindow);
+    if (mSurface == surface) {
+        // Nothing to do
+        return;
     }
+
+    if (mSurface != NULL) {
+        if (Surface::isValid(mSurface)) {
+            mSurface->setSidebandStream(NULL);
+        }
+        mSurface.clear();
+    }
+
+    if (getTvStream() == 0) {
+        mSourceHandle = NativeHandle::create((native_handle_t*)pTvStream, false);
+        mSurface = surface;
+        if (mSurface != nullptr) {
+            mSurface->setSidebandStream(mSourceHandle);
+        }
+    }
+    return;
 }
 
 static JNINativeMethod gMethods[] = {
