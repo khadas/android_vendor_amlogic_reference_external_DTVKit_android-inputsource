@@ -13,8 +13,11 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.content.DialogInterface;
 import android.view.WindowManager;
-import android.util.TypedValue;
 import android.text.TextUtils;
+
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+
 
 import com.droidlogic.settings.ConstantManager;
 
@@ -27,6 +30,10 @@ public class PvrStatusConfirmManager {
     private Callback mCallback = null;
     private DataMananer mDataMananer;
     private String mSearchType = ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL;
+
+    public static final String KEY_PVR_CLEAR_FLAG = "pvr_clear_flag";
+    public static final String KEY_PVR_CLEAR_FLAG_FIRST = "first";
+    public static final String KEY_PVR_CLEAR_FLAG_SECOND = "second";
 
     private final BroadcastReceiver mDvrCommandReceiver = new BroadcastReceiver() {
         @Override
@@ -93,9 +100,10 @@ public class PvrStatusConfirmManager {
     public boolean needDeletePvrRecordings() {
         boolean result = false;
         result = isScheduleRecordingAvailable();
-        if (ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO.equals(mSearchType)) {
+        //check not started and in progress schedules only
+        /*if (ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO.equals(mSearchType)) {
             result = result || isRecordProgramAvailable();
-        }
+        }*/
         return result;
     }
 
@@ -229,15 +237,35 @@ public class PvrStatusConfirmManager {
     public void sendDvrCommand(Context context) {
         Log.d(TAG, "sendDvrCommand");
         String searchType = ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL;
-        if (ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO.equals(mSearchType)) {
+        //delete not started and in progress schedule for the moment
+        /*if (ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO.equals(mSearchType)) {
             searchType = ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO;
-        }
+        }*/
         Intent intent = new Intent(ConstantManager.ACTION_REMOVE_ALL_DVR_RECORDS);
         intent.putExtra(ConstantManager.KEY_DTVKIT_SEARCH_TYPE, searchType);
         if (context != null) {
             context.sendBroadcast(intent);
+            //modify pvr set flag after send command
+            String secondPvrFlag = read(context, KEY_PVR_CLEAR_FLAG);
+            if (!KEY_PVR_CLEAR_FLAG_SECOND.equals(secondPvrFlag)) {
+                store(context, KEY_PVR_CLEAR_FLAG, KEY_PVR_CLEAR_FLAG_SECOND);
+            }
         } else {
             Log.d(TAG, "sendDvrCommand null context");
         }
+    }
+
+    public static void store(Context context, String keyword, String content) {
+        SharedPreferences DealData = context.getSharedPreferences("pvr_info", 0);
+        Editor editor = DealData.edit();
+        editor.putString(keyword, content);
+        editor.commit();
+        Log.d(TAG, "store keyword: " + keyword + ",content: " + content);
+    }
+
+    public static String read(Context context, String keyword) {
+        SharedPreferences DealData = context.getSharedPreferences("pvr_info", 0);
+        Log.d(TAG, "read keyword: " + keyword + ",value: " + DealData.getString(keyword, null));
+        return DealData.getString(keyword, null);
     }
 }

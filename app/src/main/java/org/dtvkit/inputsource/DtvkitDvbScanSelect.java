@@ -76,18 +76,28 @@ public class DtvkitDvbScanSelect extends Activity {
     private void initLayout() {
         int index = mDataMananer.getIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY);
         Button dvbc = (Button)findViewById(R.id.select_dvbc);
+        final Intent intent = new Intent();
+        final String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+        final String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
+        if (inputId != null) {
+            intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
+        }
+        //init pvr set flag when inited
+        String firstPvrFlag = PvrStatusConfirmManager.read(this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
+        if (!PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(firstPvrFlag)) {
+            PvrStatusConfirmManager.store(this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST);
+        }
         dvbc.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent();
-                String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
-                String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
-                if (inputId != null) {
-                    intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
+                String pvrFlag = PvrStatusConfirmManager.read(DtvkitDvbScanSelect.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
+                if (pvrStatus != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
+                } else {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
                 }
                 intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_DVBT);
                 intent.putExtra(DataMananer.KEY_IS_DVBT, false);
-                intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
                 startActivityForResult(intent, REQUEST_CODE_START_DVBC_ACTIVITY);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_DVBC);
                 Log.d(TAG, "select_dvbc inputId = " + inputId);
@@ -97,15 +107,14 @@ public class DtvkitDvbScanSelect extends Activity {
         dvbt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent();
-                String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
-                String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
-                if (inputId != null) {
-                    intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
+                String pvrFlag = PvrStatusConfirmManager.read(DtvkitDvbScanSelect.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
+                if (pvrStatus != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
+                } else {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
                 }
                 intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_DVBT);
                 intent.putExtra(DataMananer.KEY_IS_DVBT, true);
-                intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
                 startActivityForResult(intent, REQUEST_CODE_START_DVBT_ACTIVITY);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_DVBT);
                 Log.d(TAG, "select_dvbt inputId = " + inputId);
@@ -115,14 +124,13 @@ public class DtvkitDvbScanSelect extends Activity {
         dvbs.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent();
-                String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
-                String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
-                if (inputId != null) {
-                    intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
+                String pvrFlag = PvrStatusConfirmManager.read(DtvkitDvbScanSelect.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
+                if (pvrStatus != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
+                } else {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
                 }
                 intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_DVBS);
-                intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
                 startActivityForResult(intent, REQUEST_CODE_START_DVBS_ACTIVITY);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_DVBS);
                 Log.d(TAG, "select_dvbs inputId = " + inputId);
@@ -132,14 +140,13 @@ public class DtvkitDvbScanSelect extends Activity {
         settings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent();
-                String inputId = getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
-                String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
-                if (inputId != null) {
-                    intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
+                String pvrFlag = PvrStatusConfirmManager.read(DtvkitDvbScanSelect.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
+                if (pvrStatus != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
+                } else {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
                 }
                 intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_SETTINGS);
-                intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
                 startActivityForResult(intent, REQUEST_CODE_START_SETTINGS_ACTIVITY);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_SETTINGS);
                 Log.d(TAG, "start to set related language");
