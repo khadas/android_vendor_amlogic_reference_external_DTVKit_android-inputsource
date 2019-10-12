@@ -35,6 +35,11 @@ import org.xmlpull.v1.XmlPullParserException;
 import android.content.Intent;
 
 import android.media.AudioManager;
+import android.media.AudioRoutesInfo;
+import android.media.AudioSystem;
+import android.media.IAudioRoutesObserver;
+import android.media.IAudioService;
+
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -52,6 +57,9 @@ import android.os.HandlerThread;
 import android.text.TextUtils;
 import android.widget.FrameLayout;
 import android.view.accessibility.CaptioningManager;
+import android.os.IBinder;
+import android.os.RemoteException;
+import android.os.ServiceManager;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.dtvkit.companionlibrary.model.Channel;
@@ -126,6 +134,42 @@ public class DtvkitTvInput extends TvInputService {
     private final int SYSFS = 0;
     private final int PROP = 1;
 
+    private IAudioService mAudioService;
+    private AudioRoutesInfo mCurAudioRoutesInfo;
+    private Runnable mHandleTvAudioRunnable;
+    private int mDelayTime;
+    private int mCurAudioFmt;
+    final IAudioRoutesObserver.Stub mAudioRoutesObserver = new IAudioRoutesObserver.Stub() {
+        @Override
+        public void dispatchAudioRoutesChanged(final AudioRoutesInfo newRoutes) {
+            if ((mSession != null && mSession.mTunedChannel != null &&
+                     mSession.mHandlerThreadHandle != null) &&
+                    ((newRoutes.mainType != mCurAudioRoutesInfo.mainType) ||
+                        (!newRoutes.toString().equals(mCurAudioRoutesInfo.toString())))) {
+                mCurAudioRoutesInfo = newRoutes;
+                mSession.mHandlerThreadHandle.removeCallbacks(mHandleTvAudioRunnable);
+                mDelayTime = newRoutes.mainType != AudioRoutesInfo.MAIN_HDMI ? 500 : 1500;
+                mHandleTvAudioRunnable = new Runnable() {
+                    public void run() {
+                        AudioSystem.setParameters("tuner_in=dtv");
+                        AudioSystem.setParameters("fmt=" + mCurAudioFmt);
+                        AudioSystem.setParameters("has_dtv_video=" +
+                                (mSession.mTunedChannel.getServiceType().equals("SERVICE_TYPE_AUDIO_VIDEO") ? "1" : "0"));
+                        AudioSystem.setParameters("cmd=1");
+                    }
+                };
+                try {
+                    mSession.mHandlerThreadHandle.postDelayed(mHandleTvAudioRunnable,
+                            mAudioService.isBluetoothA2dpOn() ? mDelayTime + 2000 : mDelayTime);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            } else if (mSession == null) {
+                mCurAudioRoutesInfo = newRoutes;
+            }
+        }
+    };
+
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
     }
@@ -180,6 +224,15 @@ public class DtvkitTvInput extends TvInputService {
         mDataMananer = new DataMananer(this);
         mSystemControlManager = SystemControlManager.getInstance();
         DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
+
+        /*for AudioRoutes change*/
+        IBinder b = ServiceManager.getService(Context.AUDIO_SERVICE);
+        mAudioService = IAudioService.Stub.asInterface(b);
+        try {
+            mCurAudioRoutesInfo = mAudioService.startWatchingRoutes(mAudioRoutesObserver);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -772,6 +825,7 @@ public class DtvkitTvInput extends TvInputService {
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
+            mCurAudioFmt = -2;
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }
 
@@ -1427,6 +1481,7 @@ public class DtvkitTvInput extends TvInputService {
                             audioManager.setParameters("fmt="+param1);
                             audioManager.setParameters("has_dtv_video="+param2);
                             audioManager.setParameters("cmd="+cmd);
+                            mCurAudioFmt = param1;
                             break;
                         case ADEC_PAUSE_DECODE:
                             audioManager.setParameters("cmd="+cmd);
@@ -1441,6 +1496,7 @@ public class DtvkitTvInput extends TvInputService {
                             audioManager.setParameters("cmd="+cmd);
                             audioManager.setParameters("fmt="+param1);
                             audioManager.setParameters("pid="+param2);
+                            mCurAudioFmt = param1;
                             break;
                         case ADEC_SET_VOLUME:
                             audioManager.setParameters("cmd="+cmd);
