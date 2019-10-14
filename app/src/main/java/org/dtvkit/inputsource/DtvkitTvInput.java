@@ -3430,7 +3430,6 @@ public class DtvkitTvInput extends TvInputService {
         @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
         public String onReadSysFs(int ftype, String name) {
-            Log.d(TAG, "onReadSysFs");
             String value = null;
             if (mSystemControlManager != null) {
                 if (ftype == SYSFS) {
@@ -3447,7 +3446,6 @@ public class DtvkitTvInput extends TvInputService {
         @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
         public void onWriteSysFs(int ftype, String name, String cmd) {
-            Log.d(TAG, "onWriteSysFs");
             if (mSystemControlManager != null) {
                 if (ftype == SYSFS) {
                     mSystemControlManager.writeSysFs(name, cmd);

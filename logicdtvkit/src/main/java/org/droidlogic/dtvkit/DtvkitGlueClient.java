@@ -208,7 +208,6 @@ public class DtvkitGlueClient {
     }
 
     public String readBySysControl(int ftype, String name) {
-        Log.i(TAG, "readBySysControl received!!! ftype" + ftype + ",name" + name);
         String value = null;
         if (mSysControlHandler != null) {
             value = mSysControlHandler.onReadSysFs(ftype, name);
@@ -217,7 +216,6 @@ public class DtvkitGlueClient {
     }
 
     public void writeBySysControl(int ftype, String name, String cmd) {
-        Log.i(TAG, "writeBySysControl received!!! ftype" + ftype + ",name" + name + ",cmd" + cmd);
         if (mSysControlHandler != null) {
             mSysControlHandler.onWriteSysFs(ftype, name, cmd);
         }
