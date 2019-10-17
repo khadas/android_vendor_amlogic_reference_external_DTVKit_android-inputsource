@@ -22,8 +22,6 @@
 #include <gui/Surface.h>
 #include <gui/IGraphicBufferProducer.h>
 #include <ui/GraphicBuffer.h>
-#include <gralloc_usage_ext.h>
-#include <hardware/gralloc1.h>
 #include "amlogic/am_gralloc_ext.h"
 
 #include "glue_client.h"
@@ -40,17 +38,7 @@ static jobject DtvkitObject;
 sp<Surface> mSurface;
 sp<NativeHandle> mSourceHandle;
 
-struct sideband_handle_t {
-    native_handle_t nativeHandle;
-    int identflag;
-    int usage;
-};
-
-struct sideband_handle_t *pTvStream = nullptr;
-
-//for mediaplayer
-#define MEDIACODEC_PLAYER
-sp<IGraphicBufferProducer> new_st = NULL;
+native_handle_t *pTvStream = nullptr;
 
 static JNIEnv* getJniEnv(bool *needDetach) {
     int ret = -1;
@@ -238,43 +226,30 @@ static int updateNative(sp<ANativeWindow> nativeWin) {
 static int getTvStream() {
     int ret = -1;
     if (pTvStream == nullptr) {
-        pTvStream = (struct sideband_handle_t *)native_handle_create(0, 2);
+        pTvStream = am_gralloc_create_sideband_handle(AM_TV_SIDEBAND, 1);
         if (pTvStream == nullptr) {
             ALOGE("tvstream can not be initialized");
             return ret;
         }
     }
-    pTvStream->identflag = 0xabcdcdef; //magic word
-    pTvStream->usage = GRALLOC_USAGE_AML_VIDEO_OVERLAY;
     return 0;
 }
 
 static void SetSurface(JNIEnv *env, jclass thiz __unused, jobject jsurface) {
-
     ALOGD("SetSurface");
     sp<Surface> surface;
     if (jsurface) {
-        //sp<Surface> surface(android_view_Surface_getSurface(env, jsurface));
         surface = android_view_Surface_getSurface(env, jsurface);
+
         if (surface == NULL) {
             jniThrowException(env, "java/lang/IllegalArgumentException",
                               "The surface has been released");
             return;
         }
-        new_st = surface->getIGraphicBufferProducer();
     }
 
-#ifdef MEDIACODEC_PLAYER
-    //set new_st to dtvplayer and rendor video.
-    if (1) {
-        ALOGI("set native window surface");
-        Glue_client::getInstance()->SetSurface(0/*path*/, (void *)new_st.get());
-        return;
-    }
-#else
-
-#endif
     if (mSurface == surface) {
+        // Nothing to do
         return;
     }
 
@@ -286,7 +261,7 @@ static void SetSurface(JNIEnv *env, jclass thiz __unused, jobject jsurface) {
     }
 
     if (getTvStream() == 0) {
-        mSourceHandle = NativeHandle::create((native_handle_t*)pTvStream, false);
+        mSourceHandle = NativeHandle::create(pTvStream, false);
         mSurface = surface;
         if (mSurface != nullptr) {
             mSurface->setSidebandStream(mSourceHandle);

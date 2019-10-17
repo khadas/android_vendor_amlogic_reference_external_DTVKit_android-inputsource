@@ -37,7 +37,7 @@ LOCAL_SHARED_LIBRARIES :=  \
     libnativehelper \
     libdtvkitserver
 
-LOCAL_STATIC_LIBRARIES := libamgralloc_ext_static
+LOCAL_STATIC_LIBRARIES := libamgralloc_ext_static@2
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_TAGS := optional
 
