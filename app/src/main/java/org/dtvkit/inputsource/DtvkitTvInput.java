@@ -550,20 +550,18 @@ public class DtvkitTvInput extends TvInputService {
                 long recordingDurationMillis = endRecordTimeMillis - startRecordTimeMillis;
                 RecordedProgram.Builder builder;
                 Program program = getProgram(mProgram);
+                Channel channel = getChannel(mChannel);
+                //program = getCurrentProgram(mChannel);
                 if (program == null) {
-                    //program = getCurrentProgram(mChannel);
-                    if (program == null) {
-                        long id = -1;
-                        if (mChannel != null) {
-                            id = ContentUris.parseId(mChannel);
-                        }
-                        builder = new RecordedProgram.Builder()
-                                .setChannelId(id)
-                                .setStartTimeUtcMillis(startRecordTimeMillis)
-                                .setEndTimeUtcMillis(endRecordTimeMillis);
-                    } else {
-                        builder = new RecordedProgram.Builder(program);
+                    long id = -1;
+                    if (channel != null) {
+                        id = channel.getId();
                     }
+                    builder = new RecordedProgram.Builder()
+                            .setChannelId(id)
+                            .setTitle(channel != null ? channel.getDisplayName() : null)
+                            .setStartTimeUtcMillis(startRecordTimeMillis)
+                            .setEndTimeUtcMillis(endRecordTimeMillis);
                 } else {
                     builder = new RecordedProgram.Builder(program);
                 }
@@ -617,6 +615,19 @@ public class DtvkitTvInput extends TvInputService {
                 }
             }
             return program;
+        }
+
+        private Channel getChannel(Uri uri) {
+            Channel channel = null;
+            if (uri != null) {
+                Cursor cursor = mContext.getContentResolver().query(uri, Channel.PROJECTION, null, null, null);
+                if (cursor != null) {
+                    while (cursor.moveToNext()) {
+                        channel = Channel.fromCursor(cursor);
+                    }
+                }
+            }
+            return channel;
         }
 
         private Program getCurrentProgram(Uri channelUri) {
