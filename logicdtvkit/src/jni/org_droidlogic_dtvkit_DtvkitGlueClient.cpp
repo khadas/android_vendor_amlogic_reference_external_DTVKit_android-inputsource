@@ -48,6 +48,10 @@ struct sideband_handle_t {
 
 struct sideband_handle_t *pTvStream = nullptr;
 
+//for mediaplayer
+#define MEDIACODEC_PLAYER
+sp<IGraphicBufferProducer> new_st = NULL;
+
 static JNIEnv* getJniEnv(bool *needDetach) {
     int ret = -1;
     JNIEnv *env = NULL;
@@ -246,20 +250,31 @@ static int getTvStream() {
 }
 
 static void SetSurface(JNIEnv *env, jclass thiz __unused, jobject jsurface) {
+
     ALOGD("SetSurface");
     sp<Surface> surface;
     if (jsurface) {
+        //sp<Surface> surface(android_view_Surface_getSurface(env, jsurface));
         surface = android_view_Surface_getSurface(env, jsurface);
-
         if (surface == NULL) {
             jniThrowException(env, "java/lang/IllegalArgumentException",
                               "The surface has been released");
             return;
         }
+        new_st = surface->getIGraphicBufferProducer();
     }
 
+#ifdef MEDIACODEC_PLAYER
+    //set new_st to dtvplayer and rendor video.
+    if (1) {
+        ALOGI("set native window surface");
+        Glue_client::getInstance()->SetSurface(0/*path*/, (void *)new_st.get());
+        return;
+    }
+#else
+
+#endif
     if (mSurface == surface) {
-        // Nothing to do
         return;
     }
 
