@@ -1538,6 +1538,13 @@ public class DtvkitTvInput extends TvInputService {
                                 Log.i(TAG, "dvbrecording currentPosition = " + currentPosition + "as date = " + ConvertSettingManager.convertLongToDate(startPosition));
                                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_AVAILABLE);
                             }
+                            else if (type.equals("dvbtimeshifting")) {
+                                if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
+                                    notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
+                                } else {
+                                    notifyVideoAvailable();
+                                }
+                            }
                             playerState = PlayerState.PLAYING;
                             break;
                         case "blocked":
