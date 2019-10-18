@@ -60,6 +60,9 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                     }
                 }
                 data.put("transponder_info", transponder.toString());
+                data.put("video_pid", service.getInt("video_pid"));
+                data.put("video_codec", service.getString("video_codec"));
+                data.put("is_data", service.getBoolean("is_data"));
                 channels.add(new Channel.Builder()
                         .setDisplayName(service.getString("name"))
                         .setDisplayNumber(String.format(Locale.ENGLISH, "%d", service.getInt("lcn")))
@@ -73,7 +76,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             }
 
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "getChannels Exception = " + e.getMessage());
         }
 
         return channels;

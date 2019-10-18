@@ -55,6 +55,37 @@ public class ConstantManager {
     public static final String CONSTANT_QAD = "qad";
     public static final String CONSTANT_FRENCH = "french";
 
+    //add for trackinfo
+    public static final String SYS_VIDEO_DECODE_PATH = "/sys/class/vdec/vdec_status";
+    public static final String SYS_VIDEO_DECODE_VIDEO_WIDTH_PREFIX = "frame width :";
+    public static final String SYS_VIDEO_DECODE_VIDEO_WIDTH_SUFFIX = "frame height";
+    public static final String SYS_VIDEO_DECODE_VIDEO_HEIGHT_PREFIX = "frame height :";
+    public static final String SYS_VIDEO_DECODE_VIDEO_HEIGHT_SUFFIX = "frame rate";
+    public static final String SYS_VIDEO_DECODE_VIDEO_FRAME_RATE_PREFIX = "frame rate :";
+    public static final String SYS_VIDEO_DECODE_VIDEO_FRAME_RATE_SUFFIX = "fps";
+    //video
+    public static final String KEY_TVINPUTINFO_VIDEO_WIDTH = "video_width";
+    public static final String KEY_TVINPUTINFO_VIDEO_HEIGHT = "video_height";
+    public static final String KEY_TVINPUTINFO_VIDEO_FRAME_RATE = "video_frame_rate";
+    public static final String KEY_TVINPUTINFO_VIDEO_FORMAT = "video_format";
+    public static final String KEY_TVINPUTINFO_VIDEO_FRAME_FORMAT = "video_frame_format";
+    public static final String KEY_TVINPUTINFO_VIDEO_CODEC = "video_codec";
+    public static final String VALUE_TVINPUTINFO_VIDEO_INTERLACE = "I";
+    public static final String VALUE_TVINPUTINFO_VIDEO_PROGRESSIVE = "P";
+    //audio
+    public static final String KEY_TVINPUTINFO_AUDIO_INDEX = "audio_index";
+    public static final String KEY_TVINPUTINFO_AUDIO_AD = "audio_ad";
+    public static final String KEY_TVINPUTINFO_AUDIO_CODEC = "audio_codec";
+    public static final String KEY_TVINPUTINFO_AUDIO_SAMPLING_RATE = "audio_sampling_rate";
+    public static final String KEY_TVINPUTINFO_AUDIO_CHANNEL = "audio_channel";
+    public static final String AUDIO_PATCH_COMMAND_GET_SAMPLING_RATE = "sample_rate";
+    public static final String AUDIO_PATCH_COMMAND_GET_AUDIO_CHANNEL = "channel_nums";
+    public static final String AUDIO_PATCH_COMMAND_GET_AUDIO_CHANNEL_CONFIGURE = "channel_configuration";
+    //subtitle
+    public static final String KEY_TVINPUTINFO_SUBTITLE_INDEX = "subtitle_index";
+    public static final String KEY_TVINPUTINFO_SUBTITLE_IS_TELETEXT = "is_teletext";
+    public static final String KEY_TVINPUTINFO_SUBTITLE_IS_HARD_HEARING = "is_hard_hearing";
+
     public static final Map<String, String> PI_TO_VIDEO_FORMAT_MAP = new HashMap<>();
     static {
         PI_TO_VIDEO_FORMAT_MAP.put("interlace", "I");
@@ -68,6 +99,7 @@ public class ConstantManager {
     public static final String CONSTANT_FORMAT_INTERLACE = "interlace";
     public static final String CONSTANT_FORMAT_COMRPESSED = "Compressed";
 
+    public static final String SYS_WIDTH_PATH = "/sys/class/video/frame_width";
     public static final String SYS_HEIGHT_PATH = "/sys/class/video/frame_height";
     public static final String SYS_PI_PATH = "/sys/class/deinterlace/di0/frame_format";//"/sys/class/video/frame_format";
 

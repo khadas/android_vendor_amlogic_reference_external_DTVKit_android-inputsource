@@ -331,6 +331,50 @@ public class TvContractUtils {
         }
     }
 
+    public static boolean updateSingleChannelColumn(ContentResolver contentResolver, long id, String columnKey, Object value) {
+        boolean ret = false;
+        if (id == -1 || TextUtils.isEmpty(columnKey) || contentResolver == null) {
+            return ret;
+        }
+        String[] projection = {columnKey};
+        Uri channelsUri = TvContract.buildChannelUri(id);
+        Cursor cursor = null;
+        ContentValues values = null;
+        try {
+            cursor = contentResolver.query(channelsUri, projection, Channels._ID + "=?", new String[]{String.valueOf(id)}, null);
+            while (cursor != null && cursor.moveToNext()) {
+                values = new ContentValues();
+                if (value instanceof byte[]) {
+                    values.put(columnKey, (byte[])value);
+                } else if (value instanceof String) {
+                    values.put(columnKey, (String)value);
+                } else if (value instanceof Integer) {
+                    values.put(columnKey, (Integer)value);
+                } else {
+                    Log.i(TAG, "updateChannelInternalProviderData unkown data type");
+                    return ret;
+                }
+                ret = true;
+                contentResolver.update(channelsUri, values, null, null);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.i(TAG, "updateSingleColumn mContentResolver operation Exception = " + e.getMessage());
+        }
+        try {
+            if (cursor != null) {
+                cursor.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.i(TAG, "updateSingleColumn cursor.close() Exception = " + e.getMessage());
+        }
+        if (DEBUG)
+            Log.d(TAG, "updateSingleColumn " + (ret ? "found" : "notfound")
+                    + " _id:" + id + " key:" + columnKey + " value:" + value);
+        return ret;
+    }
+
     /**
      * Builds a map of available channels.
      *

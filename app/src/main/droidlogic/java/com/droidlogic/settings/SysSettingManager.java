@@ -48,24 +48,132 @@ public class SysSettingManager {
     public String getVideoFormatFromSys() {
         String result = "";
         String height = readSysFs(ConstantManager.SYS_HEIGHT_PATH);
-        String pi = readSysFs(ConstantManager.SYS_PI_PATH);
-        if (!TextUtils.isEmpty(height) && !"NA".equals(height) && !TextUtils.isEmpty(pi) && !"null".equals(pi) && !"NA".equals(pi)) {
-            if (pi.startsWith(ConstantManager.CONSTANT_FORMAT_INTERLACE)) {
-                result = height + ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_INTERLACE);
-            } else if (pi.startsWith(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE)) {
-                result = height + ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
-            } else if (pi.startsWith(ConstantManager.CONSTANT_FORMAT_COMRPESSED)) {//Compressed may exist with progressive or interlace
-                result = height + ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
-            } else {
-                result = height + ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
-            }
-        } else if ("NA".equals(height) && "NA".equals(pi)) {
-            result = "";
-        } else {
-            result = height + ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
+        String frameFormat = parseFrameFormatStrFromDi0Path();
+        if (!TextUtils.isEmpty(height) && !"NA".equals(height)) {
+            result = height + frameFormat;
         }
         if (DEBUG) {
             Log.d(TAG, "getVideoFormatFromSys result = " + result);
+        }
+        return result;
+    }
+
+    public String getVideodecodeInfo() {
+        String result = "";
+        result = readSysFs(ConstantManager.SYS_VIDEO_DECODE_PATH);
+        if (DEBUG) {
+            Log.d(TAG, "getVideodecodeInfo result = " + result);
+        }
+        return result;
+    }
+
+    public int parseWidthFromVdecStatus(String vdecInfo) {
+        int result = 0;
+        String temp = parseMatchedInfoFromVdecStatus(ConstantManager.SYS_VIDEO_DECODE_VIDEO_WIDTH_PREFIX, ConstantManager.SYS_VIDEO_DECODE_VIDEO_WIDTH_SUFFIX, vdecInfo);
+        if (!TextUtils.isEmpty(temp) && TextUtils.isDigitsOnly(temp)) {
+            result = Integer.valueOf(temp);
+        }
+        if (DEBUG) {
+            Log.d(TAG, "parseWidthFromVdecStatus result = " + result);
+        }
+        return result;
+    }
+
+    public int parseHeightFromVdecStatus(String vdecInfo) {
+        int result = 0;
+        String temp = parseMatchedInfoFromVdecStatus(ConstantManager.SYS_VIDEO_DECODE_VIDEO_HEIGHT_PREFIX, ConstantManager.SYS_VIDEO_DECODE_VIDEO_HEIGHT_SUFFIX, vdecInfo);
+        if (!TextUtils.isEmpty(temp) && TextUtils.isDigitsOnly(temp)) {
+            result = Integer.valueOf(temp);
+        }
+        if (DEBUG) {
+            Log.d(TAG, "parseHeightFromVdecStatus result = " + result);
+        }
+        return result;
+    }
+
+    public float parseFrameRateStrFromVdecStatus(String vdecInfo) {
+        float result = 0f;
+        String temp = parseMatchedInfoFromVdecStatus(ConstantManager.SYS_VIDEO_DECODE_VIDEO_FRAME_RATE_PREFIX, ConstantManager.SYS_VIDEO_DECODE_VIDEO_FRAME_RATE_SUFFIX, vdecInfo);
+        try {
+            result = Float.valueOf(temp);
+        } catch (Exception e) {
+            Log.e(TAG, "parseFrameRateStrFromVdecStatus Exception = " + e.getMessage());
+        }
+        if (DEBUG) {
+            Log.d(TAG, "parseFrameRateStrFromVdecStatus result = " + result);
+        }
+        return result;
+    }
+
+    private String parseMatchedInfoFromVdecStatus(String startStr, String endStr, String value) {
+        /*vdec_status example:
+            vdec channel 0 statistics:
+              device name : ammvdec_mpeg12
+              frame width : 720
+             frame height : 576
+               frame rate : 25 fps
+                 bit rate : 0 kbps
+                   status : 6
+                frame dur : 3840
+               frame data : 12 KB
+              frame count : 426441
+               drop count : 0
+            fra err count : 62
+             hw err count : 0
+               total data : 2742089 KB
+            ratio_control : 9000
+        */
+        String result = "";
+        if (!TextUtils.isEmpty(startStr) && !TextUtils.isEmpty(endStr) && !TextUtils.isEmpty(value)) {
+            int start = value.indexOf(startStr);//example:"frame rate : "
+            int end = value.indexOf(endStr, start);//example:" fps"
+            //deal diffrent next line symbol
+            if (start != -1 && end != -1) {
+                String sub = value.substring(start, end);
+                if (sub != null) {
+                    byte[] byteValue = sub.getBytes();
+                    if (byteValue != null && byteValue.length >= 2) {
+                        byte temp1 = byteValue[byteValue.length - 1];
+                        byte temp2 = byteValue[byteValue.length - 2];
+                        if ('\r' == temp2 && '\n' == temp1) {
+                            end = end -2;
+                        } else if ('\r' != temp2 && '\n' == temp1) {
+                            end = end -1;
+                        }
+                    }
+                }
+            }
+            int preLength = startStr.length();//example:"frame rate : "
+            if (start != -1 && end != -1 && (start + preLength) < end) {
+                String sub = value.substring(start + preLength, end);
+                if (sub != null && sub.length() > 0) {
+                    sub = sub.trim();
+                }
+                //Log.d(TAG, "parseMatchedInfo = " + sub);
+                result = sub;
+            }
+        }
+        return result;
+    }
+
+    public String parseFrameFormatStrFromDi0Path() {
+        String result = "";
+        String frameFormat = readSysFs(ConstantManager.SYS_PI_PATH);
+        if (!TextUtils.isEmpty(frameFormat) && !"null".equals(frameFormat) && !"NA".equals(frameFormat)) {
+            if (frameFormat.startsWith(ConstantManager.CONSTANT_FORMAT_INTERLACE)) {
+                result = ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_INTERLACE);
+            } else if (frameFormat.startsWith(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE)) {
+                result = ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
+            } else if (frameFormat.startsWith(ConstantManager.CONSTANT_FORMAT_COMRPESSED)) {//Compressed may exist with progressive or interlace
+                result = ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
+            } else {
+                result = ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
+            }
+        } else {
+            result = ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
+        }
+        if (DEBUG) {
+            Log.d(TAG, "parseFrameFormatStrFromDi0Path result = " + result);
         }
         return result;
     }
