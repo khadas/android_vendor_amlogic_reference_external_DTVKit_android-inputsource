@@ -2509,20 +2509,21 @@ public class DtvkitTvInput extends TvInputService {
                 bundle.putInt(ConstantManager.KEY_TVINPUTINFO_VIDEO_HEIGHT, videoHeight);
                 bundle.putFloat(ConstantManager.KEY_TVINPUTINFO_VIDEO_FRAME_RATE, videoFrameRate);
                 bundle.putString(ConstantManager.KEY_TVINPUTINFO_VIDEO_FRAME_FORMAT, videoFrameFormat != null ? videoFrameFormat : "");
+                //video format framework example "VIDEO_FORMAT_360P" "VIDEO_FORMAT_576I"
+                String videoFormat = tunedChannel != null ? tunedChannel.getVideoFormat() : "";
                 if (tunedChannel != null) {
                     //update video format such as VIDEO_FORMAT_1080P VIDEO_FORMAT_1080I
                     String buildVideoFormat = "VIDEO_FORMAT_" + videoHeight + videoFrameFormat;
                     if (videoHeight > 0 && !TextUtils.equals(buildVideoFormat, tunedChannel.getVideoFormat())) {
+                        videoFormat = buildVideoFormat;
+                        bundle.putString(ConstantManager.KEY_TVINPUTINFO_VIDEO_FORMAT, videoFormat != null ? videoFormat : "");
                         TvContractUtils.updateSingleChannelColumn(DtvkitTvInput.this.getContentResolver(), tunedChannel.getId(), TvContract.Channels.COLUMN_VIDEO_FORMAT, buildVideoFormat);
                     }
                 }
             }
             //get values from db
-            //video format framework example "VIDEO_FORMAT_360P" "VIDEO_FORMAT_576I"
-            String videoFormat = tunedChannel != null ? tunedChannel.getVideoFormat() : "";
             String videoCodec = tunedChannel != null ? tunedChannel.getVideoCodec() : "";
             //set value
-            bundle.putString(ConstantManager.KEY_TVINPUTINFO_VIDEO_FORMAT, videoFormat != null ? videoFormat : "");
             bundle.putString(ConstantManager.KEY_TVINPUTINFO_VIDEO_CODEC, videoCodec != null ? videoCodec : "");
             track.setExtra(bundle);
             //buid track
@@ -2576,8 +2577,13 @@ public class DtvkitTvInput extends TvInputService {
                 bundle.putInt(ConstantManager.KEY_TRACK_PID, pid);
                 if (detailsAvailable) {
                     //can only be gotten after decode finished
-                    bundle.putInt(ConstantManager.KEY_TVINPUTINFO_AUDIO_SAMPLING_RATE, getAudioSamplingRateFromAudioPatch(pid));
-                    bundle.putInt(ConstantManager.KEY_TVINPUTINFO_AUDIO_CHANNEL, getAudioChannelFromAudioPatch(pid));
+                    int sampleRate = getAudioSamplingRateFromAudioPatch(pid);
+                    int audioChannel = getAudioChannelFromAudioPatch(pid);
+                    bundle.putInt(ConstantManager.KEY_TVINPUTINFO_AUDIO_SAMPLING_RATE, sampleRate);
+                    bundle.putInt(ConstantManager.KEY_TVINPUTINFO_AUDIO_CHANNEL, audioChannel);
+                    bundle.putInt(ConstantManager.AUDIO_PATCH_COMMAND_GET_AUDIO_CHANNEL_CONFIGURE, getAudioChannelConfigureFromAudioPatch(pid));
+                    track.setAudioChannelCount(audioChannel);
+                    track.setAudioSampleRate(sampleRate);
                 }
                 bundle.putInt(ConstantManager.KEY_TVINPUTINFO_AUDIO_INDEX, audioStream.getInt("index"));
                 track.setExtra(bundle);
@@ -2596,9 +2602,15 @@ public class DtvkitTvInput extends TvInputService {
         int result = 0;
         AudioManager audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
         String temp = audioManager.getParameters(ConstantManager.AUDIO_PATCH_COMMAND_GET_SAMPLING_RATE);
-        //Log.d(TAG, "getAudioSamplingRateFromAudioPatch need add command in audio patch");
+        //sampling rate result "sample_rate=4800"
+        //Log.d(TAG, "getAudioSamplingRateFromAudioPatch result = " + temp);
         try {
-            result = Integer.valueOf(temp);
+            if (temp != null) {
+                String[] splitInfo = temp.split("=");
+                if (splitInfo != null && splitInfo.length == 2 && "sample_rate".equals(splitInfo[0])) {
+                    result = Integer.valueOf(splitInfo[1]);
+                }
+            }
         } catch (Exception e) {
             Log.e(TAG, "getAudioSamplingRateFromAudioPatch Exception = " + e.getMessage());
         }
@@ -2609,10 +2621,16 @@ public class DtvkitTvInput extends TvInputService {
     private int getAudioChannelFromAudioPatch(int audioPid) {
         int result = 0;
         AudioManager audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
-        String temp = audioManager.getParameters(ConstantManager.AUDIO_PATCH_COMMAND_GET_SAMPLING_RATE);
-        //Log.d(TAG, "getAudioChannelFromAudioPatch need add command in audio patch");
+        String temp = audioManager.getParameters(ConstantManager.AUDIO_PATCH_COMMAND_GET_AUDIO_CHANNEL);
+        //channel num result "channel_nums=2"
+        //Log.d(TAG, "getAudioChannelFromAudioPatch result = " + temp);
         try {
-            result = Integer.valueOf(temp);
+            if (temp != null) {
+                String[] splitInfo = temp.split("=");
+                if (splitInfo != null && splitInfo.length == 2 && "channel_nums".equals(splitInfo[0])) {
+                    result = Integer.valueOf(splitInfo[1]);
+                }
+            }
         } catch (Exception e) {
             Log.e(TAG, "getAudioChannelFromAudioPatch Exception = " + e.getMessage());
         }
@@ -2620,7 +2638,8 @@ public class DtvkitTvInput extends TvInputService {
         return result;
     }
 
-    private String getAudioChannelConfigureFromAudioPatch(int audioPid) {
+    private int getAudioChannelConfigureFromAudioPatch(int audioPid) {
+        int result = 0;
         //defines in audio patch
         //typedef enum {
         //    TIF_HAL_PLAYBACK_AUDIO_SOURCE_CHANNEL_CONFIGURATION_UNKNOWN = 0,
@@ -2638,12 +2657,17 @@ public class DtvkitTvInput extends TvInputService {
         //   TIF_HAL_PLAYBACK_AUDIO_SOURCE_CHANNEL_CONFIGURATION_L_C_R_SL_SR_RL_RR_LFE, /**< Left, center, right, surround left, surround right, rear left, rear right and lfe */
         //    TIF_HAL_PLAYBACK_AUDIO_SOURCE_CHANNEL_CONFIGURATION_7_1 = TIF_HAL_PLAYBACK_AUDIO_SOURCE_CHANNEL_CONFIGURATION_L_C_R_SL_SR_RL_RR_LFE
         //} TIF_HAL_Playback_AudioSourceChannelConfiguration_t;
-        String result = "";
+        //channel_configuration result = "channel_configuration=1";
         AudioManager audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
         String temp = audioManager.getParameters(ConstantManager.AUDIO_PATCH_COMMAND_GET_AUDIO_CHANNEL_CONFIGURE);
         //Log.d(TAG, "getAudioChannelConfigureFromAudioPatch need add command in audio patch");
         try {
-            result = temp;
+            if (temp != null) {
+                String[] splitInfo = temp.split("=");
+                if (splitInfo != null && splitInfo.length == 2 && "channel_configuration".equals(splitInfo[0])) {
+                    result = Integer.valueOf(splitInfo[1]);
+                }
+            }
         } catch (Exception e) {
             Log.e(TAG, "getAudioChannelConfigureFromAudioPatch Exception = " + e.getMessage());
         }
