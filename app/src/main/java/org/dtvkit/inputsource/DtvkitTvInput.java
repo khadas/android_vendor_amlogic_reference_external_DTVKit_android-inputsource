@@ -11,6 +11,7 @@ import android.graphics.Rect;
 import android.graphics.PorterDuff;
 import android.graphics.Paint;
 import android.database.Cursor;
+import android.graphics.SurfaceTexture;
 import android.media.PlaybackParams;
 import android.media.tv.TvContentRating;
 import android.media.tv.TvContract;
@@ -53,6 +54,7 @@ import android.util.Log;
 import android.util.LongSparseArray;
 import android.view.Surface;
 import android.view.View;
+import android.view.TextureView;
 import android.view.KeyEvent;
 import android.os.HandlerThread;
 import android.text.TextUtils;
@@ -372,9 +374,8 @@ public class DtvkitTvInput extends TvInputService {
     }
 
     private class DtvkitOverlayView extends FrameLayout {
-
-        private NativeOverlayView nativeOverlayView;
         private CiMenuView ciOverlayView;
+        private TextureView Textview;
         private int w;
         private int h;
 
@@ -384,23 +385,24 @@ public class DtvkitTvInput extends TvInputService {
             super(context);
 
             Log.i(TAG, "onCreateDtvkitOverlayView");
-
-            nativeOverlayView = new NativeOverlayView(getContext());
+            Textview = new TextureView(getContext());
             ciOverlayView = new CiMenuView(getContext());
 
-            this.addView(nativeOverlayView);
+            Textview.setSurfaceTextureListener(new OverlayTextureListener());
+            this.addView(Textview);
             this.addView(ciOverlayView);
         }
 
         public void destroy() {
+            Textview.setSurfaceTextureListener(null);
+            removeView(Textview);
             ciOverlayView.destroy();
-            removeView(nativeOverlayView);
             removeView(ciOverlayView);
         }
 
         public void hideOverLay() {
-            if (nativeOverlayView != null) {
-                nativeOverlayView.setVisibility(View.GONE);
+            if (Textview != null) {
+                Textview.setVisibility(View.GONE);
             }
             if (ciOverlayView != null) {
                 ciOverlayView.setVisibility(View.GONE);
@@ -409,8 +411,8 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         public void showOverLay() {
-            if (nativeOverlayView != null) {
-                nativeOverlayView.setVisibility(View.VISIBLE);
+            if (Textview != null) {
+                Textview.setVisibility(View.VISIBLE);
             }
             if (ciOverlayView != null) {
                 ciOverlayView.setVisibility(View.VISIBLE);
@@ -419,9 +421,7 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         public void setSize(int width, int height) {
-            w = width;
-            h = height;
-            nativeOverlayView.setSize(width, height);
+
         }
 
         public boolean handleKeyDown(int keyCode, KeyEvent event) {
@@ -466,126 +466,6 @@ public class DtvkitTvInput extends TvInputService {
                 Log.e(TAG, e.getMessage());
             }
             return used;
-        }
-    }
-
-    class NativeOverlayView extends View
-    {
-        Bitmap overlay1 = null;
-        Bitmap overlay2 = null;
-        Bitmap overlay_update = null;
-        Bitmap overlay_draw = null;
-        Bitmap region = null;
-        int region_width = 0;
-        int region_height = 0;
-        int left = 0;
-        int top = 0;
-        int width = 0;
-        int height = 0;
-        Rect src, dst;
-
-        Semaphore sem = new Semaphore(1);
-
-        private final DtvkitGlueClient.OverlayTarget mTarget = new DtvkitGlueClient.OverlayTarget() {
-            @Override
-            public void draw(int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, byte[] data) {
-                if (overlay1 == null) {
-                    /* TODO The overlay size should come from the tif (and be updated on onOverlayViewSizeChanged) */
-                    /* Create 2 layers for double buffering */
-                    overlay1 = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
-                    overlay2 = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
-
-                    overlay_draw = overlay1;
-                    overlay_update = overlay2;
-
-                    /* Clear the overlay that will be drawn initially */
-                    Canvas canvas = new Canvas(overlay_draw);
-                    canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                }
-
-                /* TODO Temporary private usage of API. Add explicit methods if keeping this mechanism */
-                if (src_width == 0 || src_height == 0) {
-                    if (dst_width == 9999) {
-                        /* 9999 dst_width indicates the overlay should be cleared */
-                        Canvas canvas = new Canvas(overlay_update);
-                        canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                    }
-                    else if (dst_height == 9999) {
-                        /* 9999 dst_height indicates the drawn regions should be displayed on the overlay */
-                        /* The update layer is now ready to be displayed so switch the overlays
-                         * and use the other one for the next update */
-                        sem.acquireUninterruptibly();
-                        Bitmap temp = overlay_draw;
-                        overlay_draw = overlay_update;
-                        src = new Rect(0, 0, overlay_draw.getWidth(), overlay_draw.getHeight());
-                        overlay_update = temp;
-                        sem.release();
-                        postInvalidate();
-                        return;
-                    }
-                    else {
-                        /* 0 dst_width and 0 dst_height indicates to add the region to overlay */
-                        if (region != null) {
-                            Canvas canvas = new Canvas(overlay_update);
-                            Rect src = new Rect(0, 0, region_width, region_height);
-                            Rect dst = new Rect(left, top, left + width, top + height);
-                            Paint paint = new Paint();
-                            paint.setAntiAlias(true);
-                            paint.setFilterBitmap(true);
-                            paint.setDither(true);
-                            canvas.drawBitmap(region, src, dst, paint);
-                            region = null;
-                        }
-                    }
-                    return;
-                }
-
-                int part_bottom = 0;
-                if (region == null) {
-                    /* TODO Create temporary region buffer using region_width and overlay height */
-                    region_width = src_width;
-                    region_height = src_height;
-                    region = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
-                    left = dst_x;
-                    top = dst_y;
-                    width = dst_width;
-                    height = dst_height;
-                }
-                else {
-                    part_bottom = region_height;
-                    region_height += src_height;
-                }
-
-                /* Build an array of ARGB_8888 pixels as signed ints and add this part to the region */
-                int[] colors = new int[src_width * src_height];
-                for (int i = 0, j = 0; i < src_width * src_height; i++, j += 4) {
-                   colors[i] = (((int)data[j]&0xFF) << 24) | (((int)data[j+1]&0xFF) << 16) |
-                      (((int)data[j+2]&0xFF) << 8) | ((int)data[j+3]&0xFF);
-                }
-                Bitmap part = Bitmap.createBitmap(colors, 0, src_width, src_width, src_height, Bitmap.Config.ARGB_8888);
-                Canvas canvas = new Canvas(region);
-                canvas.drawBitmap(part, 0, part_bottom, null);
-            }
-        };
-
-        public NativeOverlayView(Context context) {
-            super(context);
-            DtvkitGlueClient.getInstance().setOverlayTarget(mTarget);
-        }
-
-        public void setSize(int width, int height) {
-            dst = new Rect(0, 0, width, height);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas)
-        {
-            super.onDraw(canvas);
-            sem.acquireUninterruptibly();
-            if (overlay_draw != null) {
-                canvas.drawBitmap(overlay_draw, src, dst, null);
-            }
-            sem.release();
         }
     }
 
@@ -804,6 +684,24 @@ public class DtvkitTvInput extends TvInputService {
         }
     }
 
+    class OverlayTextureListener implements TextureView.SurfaceTextureListener {
+       @Override
+       public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
+           Log.i(TAG, "onSurfaceTextureAvailable");
+           DtvkitGlueClient.getInstance().setGraphicBufferProducer(surfaceTexture);
+       }
+       @Override
+       public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
+       }
+       @Override
+       public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
+           return false;
+       }
+       @Override
+       public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+       }
+    }
+
     class DtvkitTvInputSession extends TvInputService.Session               {
         private static final String TAG = "DtvkitTvInputSession";
         private static final int ADEC_START_DECODE = 1;
@@ -839,9 +737,6 @@ public class DtvkitTvInput extends TvInputService {
         private boolean mBlocked = false;
         private int mSignalStrength = 0;
         private int mSignalQuality = 0;
-        private boolean mMediaCodecPlay = false;
-        private static final String TV_TF_DTV_MEDIACODECPLAY = "tv.tf.dtv.mediaCodecPlay";
-
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -853,9 +748,6 @@ public class DtvkitTvInput extends TvInputService {
             numActiveRecordings = recordingGetNumActiveRecordings();
             Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
 
-            String mcodec = mSystemControlManager.getProperty(TV_TF_DTV_MEDIACODECPLAY);
-            mMediaCodecPlay = Boolean.parseBoolean(mcodec);
-            Log.i(TAG, "media codec used:" + mMediaCodecPlay + " str:"+mcodec);
             if (numRecorders == 0) {
                 updateRecorderNumber();
             }
@@ -912,8 +804,7 @@ public class DtvkitTvInput extends TvInputService {
                 if (null != mView)
                     layoutSurface(0, 0, mView.w, mView.h);
             } else {
-                if (null != mSysSettingManager
-                    && mMediaCodecPlay == false)
+                if (null != mSysSettingManager)
                     mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "1");
             }
         }
@@ -1001,8 +892,7 @@ public class DtvkitTvInput extends TvInputService {
                         mSurface = null;
                         //doRelease();
                         sendDoReleaseMessage();
-                        if (null != mSysSettingManager
-                            && mMediaCodecPlay == false)
+                        if (null != mSysSettingManager)
                             mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "0");
                     }
                 } else {
@@ -1023,7 +913,7 @@ public class DtvkitTvInput extends TvInputService {
                 }
             }
             //set surface to mediaplayer
-            DtvkitGlueClient.getInstance().setDisplay(surface);
+            //DtvkitGlueClient.getInstance().setDisplay(surface);
             return true;
         }
 
