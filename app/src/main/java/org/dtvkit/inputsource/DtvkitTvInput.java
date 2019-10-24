@@ -24,6 +24,7 @@ import android.content.BroadcastReceiver;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
+import android.content.ContentProviderClient;
 import android.media.tv.TvInputHardwareInfo;
 import android.media.tv.TvInputManager.Hardware;
 import android.media.tv.TvInputManager.HardwareCallback;
@@ -195,6 +196,23 @@ public class DtvkitTvInput extends TvInputService {
         }
     };
 
+    protected final BroadcastReceiver mBootBroadcastReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null) {
+                String action = intent.getAction();
+                if (action.equals(Intent.ACTION_LOCKED_BOOT_COMPLETED)) {
+                    Log.d(TAG, "onReceive ACTION_LOCKED_BOOT_COMPLETED");
+                    //can't init here as storage may not be ready
+                } else if (action.equals(Intent.ACTION_BOOT_COMPLETED )) {
+                    Log.d(TAG, "onReceive ACTION_BOOT_COMPLETED");
+                    initInThread();
+                }
+            }
+        }
+    };
+
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onCreate() {
@@ -203,13 +221,105 @@ public class DtvkitTvInput extends TvInputService {
         mTvInputManager = (TvInputManager)this.getSystemService(Context.TV_INPUT_SERVICE);
         mContentResolver = getContentResolver();
         mContentResolver.registerContentObserver(TvContract.Channels.CONTENT_URI, true, mContentObserver);
-        onChannelsChanged();
 
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED);
         intentFilter.addAction(TvInputManager.ACTION_PARENTAL_CONTROLS_ENABLED_CHANGED);
         registerReceiver(mParentalControlsBroadcastReceiver, intentFilter);
 
+        IntentFilter intentFilter1 = new IntentFilter();
+        intentFilter1.addAction(Intent.ACTION_LOCKED_BOOT_COMPLETED);
+        intentFilter1.addAction(Intent.ACTION_BOOT_COMPLETED);
+        registerReceiver(mBootBroadcastReceiver, intentFilter1);
+        /*for AudioRoutes change*/
+        IBinder b = ServiceManager.getService(Context.AUDIO_SERVICE);
+        mAudioService = IAudioService.Stub.asInterface(b);
+        try {
+            mCurAudioRoutesInfo = mAudioService.startWatchingRoutes(mAudioRoutesObserver);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        chcekTvProviderInThread();
+    }
+
+    private boolean mIsInited = false;
+    private boolean mIsUpdated = false;
+    private int mCheckTvProviderTimeOut = 5 * 1000;//10s
+
+    private boolean chcekTvProviderAvailable() {
+        boolean result = false;
+        ContentProviderClient tvProvider = this.getContentResolver().acquireContentProviderClient(TvContract.AUTHORITY);
+        if (tvProvider != null) {
+            result = true;
+        }
+        return result;
+    }
+
+    private void chcekTvProviderInThread() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "chcekTvProviderInThread start");
+                while (true) {
+                    if (chcekTvProviderAvailable()) {
+                        Log.d(TAG, "chcekTvProviderInThread ok");
+                        init();
+                        break;
+                    }
+                    try {
+                        Thread.sleep(10);
+                    } catch (Exception e) {
+                        Log.d(TAG, "chcekTvProviderInThread sleep error");
+                        break;
+                    }
+                    mCheckTvProviderTimeOut -= 10;
+                    if (mCheckTvProviderTimeOut < 0) {
+                        Log.d(TAG, "chcekTvProviderInThread timeout");
+                        break;
+                    } else if (mCheckTvProviderTimeOut % 500 == 0) {//update per 500ms
+                        Log.d(TAG, "chcekTvProviderInThread wait count = " + ((5 * 1000 - mCheckTvProviderTimeOut) / 10));
+                    }
+                }
+                Log.d(TAG, "chcekTvProviderInThread end");
+            }
+        }).start();
+    }
+
+    private synchronized void init() {
+        if (mIsInited) {
+            Log.d(TAG, "init already");
+            return;
+        }
+        Log.d(TAG, "init start");
+        mSysSettingManager = new SysSettingManager(this);
+        mDataMananer = new DataMananer(this);
+        onChannelsChanged();
+        Log.d(TAG, "init stage 1");
+        updateRecorderNumber();
+        Log.d(TAG, "init stage 2");
+        mSystemControlManager = SystemControlManager.getInstance();
+        DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
+        Log.d(TAG, "init end");
+        mIsInited = true;
+    }
+
+    private void initInThread() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "initInThread start");
+                init();
+                Log.d(TAG, "initInThread end");
+            }
+        }).start();
+    }
+
+    private synchronized void updateRecorderNumber() {
+        if (mIsUpdated) {
+            Log.d(TAG, "updateRecorderNumber already");
+            return;
+        }
+        Log.d(TAG, "updateRecorderNumber start");
         TvInputInfo.Builder builder = new TvInputInfo.Builder(getApplicationContext(), new ComponentName(getApplicationContext(), DtvkitTvInput.class));
         numRecorders = recordingGetNumRecorders();
         if (numRecorders > 0) {
@@ -222,25 +332,24 @@ public class DtvkitTvInput extends TvInputService {
                     .setTunerCount(1);
         }
         getApplicationContext().getSystemService(TvInputManager.class).updateTvInputInfo(builder.build());
-        mSysSettingManager = new SysSettingManager(this);
-        mDataMananer = new DataMananer(this);
-        mSystemControlManager = SystemControlManager.getInstance();
-        DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
+    }
 
-        /*for AudioRoutes change*/
-        IBinder b = ServiceManager.getService(Context.AUDIO_SERVICE);
-        mAudioService = IAudioService.Stub.asInterface(b);
-        try {
-            mCurAudioRoutesInfo = mAudioService.startWatchingRoutes(mAudioRoutesObserver);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+    private void updateRecorderNumberInThread() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "updateRecorderNumberInThread start");
+                updateRecorderNumber();
+                Log.d(TAG, "updateRecorderNumberInThread end");
+            }
+        }).start();
     }
 
     @Override
     public void onDestroy() {
         Log.i(TAG, "onDestroy");
         unregisterReceiver(mParentalControlsBroadcastReceiver);
+        unregisterReceiver(mBootBroadcastReceiver);
         mContentResolver.unregisterContentObserver(mContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().disConnectDtvkitClient();
@@ -251,6 +360,7 @@ public class DtvkitTvInput extends TvInputService {
     @Override
     public final Session onCreateSession(String inputId) {
         Log.i(TAG, "onCreateSession " + inputId);
+        init();
         mSession = new DtvkitTvInputSession(this);
         mSystemControlManager.SetDtvKitSourceEnable(1);
         return mSession;
@@ -484,6 +594,7 @@ public class DtvkitTvInput extends TvInputService {
     public TvInputService.RecordingSession onCreateRecordingSession(String inputId)
     {
         Log.i(TAG, "onCreateRecordingSession");
+        init();
         return new DtvkitRecordingSession(this, inputId);
     }
 
@@ -503,6 +614,9 @@ public class DtvkitTvInput extends TvInputService {
             super(context);
             mContext = context;
             mInputId = inputId;
+            if (numRecorders == 0) {
+                updateRecorderNumber();
+            }
             Log.i(TAG, "DtvkitRecordingSession");
         }
 
@@ -742,7 +856,9 @@ public class DtvkitTvInput extends TvInputService {
             String mcodec = mSystemControlManager.getProperty(TV_TF_DTV_MEDIACODECPLAY);
             mMediaCodecPlay = Boolean.parseBoolean(mcodec);
             Log.i(TAG, "media codec used:" + mMediaCodecPlay + " str:"+mcodec);
-
+            if (numRecorders == 0) {
+                updateRecorderNumber();
+            }
             if (numActiveRecordings < numRecorders) {
                 timeshiftAvailable = true;
             } else {
