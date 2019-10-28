@@ -133,7 +133,7 @@ public abstract class EpgSyncJobService extends JobService {
     private static final int PERIODIC_SYNC_JOB_ID = 0;
     private static final int REQUEST_SYNC_JOB_ID = 1;
     private static final int BATCH_OPERATION_COUNT = 100;
-    private static final long OVERRIDE_DEADLINE_MILLIS = 1000;  // 1 second
+    private static final long OVERRIDE_DEADLINE_MILLIS = 0L;  // 1 second
     private static final String BUNDLE_KEY_SYNC_NOW_NEXT = "BUNDLE_KEY_SYNC_NOW_NEXT";
     private static final String BUNDLE_KEY_SYNC_CHANNEL_ONLY = "BUNDLE_KEY_SYNC_CHANNEL_ONLY";
     public static final String BUNDLE_KEY_SYNC_SEARCHED_CHANNEL = "BUNDLE_KEY_SYNC_SEARCHED_CHANNEL";
