@@ -68,7 +68,8 @@ public class TvContractUtils {
      * @param channels The updated list of channels.
      * @hide
      */
-    public static void updateChannels(Context context, String inputId, List<Channel> channels) {
+
+    public static void updateChannels(Context context, String inputId, boolean isSearched, List<Channel> channels) {
         // Create a map from original network ID to channel row ID for existing channels.
         ArrayMap<Long, Long> channelMap = new ArrayMap<>();
         ArrayMap<Long, String> channelSetFavMap = new ArrayMap<>();
@@ -157,15 +158,17 @@ public class TvContractUtils {
                 }
 
                 channelMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, rowId);
-                channelSetFavMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setFavFlag);
-                channelSetSkipMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setSkipFlag);
-                channelSkipValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, skipValue);
-                channelFavValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favValue);
-                channelFavListValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favListValue);
-                channelSetDisPlayNameMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNameFlag);
-                channelSetDisPlayNumberMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNumberFlag);
-                channelDisPlayNameValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, displayName);
-                channelDisPlayNumberValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, displayNumber);
+                if (!isSearched) {
+                    channelSetFavMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setFavFlag);
+                    channelSetSkipMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setSkipFlag);
+                    channelSkipValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, skipValue);
+                    channelFavValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favValue);
+                    channelFavListValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favListValue);
+                    channelSetDisPlayNameMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNameFlag);
+                    channelSetDisPlayNumberMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNumberFlag);
+                    channelDisPlayNameValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, displayName);
+                    channelDisPlayNumberValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, displayNumber);
+                }
             }
         } catch (Exception e) {
             Log.e(TAG, "updateChannels query Failed = " + e.getMessage());
