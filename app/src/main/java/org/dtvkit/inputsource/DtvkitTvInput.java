@@ -503,6 +503,10 @@ public class DtvkitTvInput extends TvInputService {
         private boolean mStarted = false;
         private int mPath = -1;
 
+        private final Handler mRecordingProcessHandler;
+
+        protected static final int MSG_RECORD_STOP_RECORDING = 1;
+
         @RequiresApi(api = Build.VERSION_CODES.N)
         public DtvkitRecordingSession(Context context, String inputId) {
             super(context);
@@ -511,6 +515,21 @@ public class DtvkitTvInput extends TvInputService {
             if (numRecorders == 0) {
                 updateRecorderNumber();
             }
+
+            HandlerThread handlerThread = new HandlerThread(TAG);
+            handlerThread.start();
+            mRecordingProcessHandler = new Handler(handlerThread.getLooper(), new Handler.Callback() {
+                @Override
+                public boolean handleMessage(Message msg) {
+                    switch (msg.what) {
+                    case MSG_RECORD_STOP_RECORDING:
+                        execStopRecording();
+                    break;
+                    }
+                    return true;
+                }
+            });
+
             Log.i(TAG, "DtvkitRecordingSession");
         }
 
@@ -617,6 +636,10 @@ public class DtvkitTvInput extends TvInputService {
                     Log.i(TAG, "record error insufficient space");
                     notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
                 }
+                else if (recordingResponse.toString().equals("Limited by minimum free disk space")) {
+                    Log.i(TAG, "record error min free limited");
+                    notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
+                }
                 else {
                     Log.i(TAG, "record error unknown");
                     notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
@@ -635,13 +658,20 @@ public class DtvkitTvInput extends TvInputService {
             Log.i(TAG, "onStopRecording");
 
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
-
-            endRecordTimeMillis = System.currentTimeMillis();
-            scheduleTimeshiftRecording = true;
-            Log.d(TAG, "stop Recording:"+recordingUri);
             if (!recordingStopRecording(recordingUri)) {
                 notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
             } else {
+                mRecordingProcessHandler.obtainMessage(MSG_RECORD_STOP_RECORDING).sendToTarget();
+            }
+            mStarted = false;
+        }
+
+        private void execStopRecording() {
+            endRecordTimeMillis = System.currentTimeMillis();
+            scheduleTimeshiftRecording = true;
+            Log.d(TAG, "stop Recording:"+recordingUri);
+            if (recordingUri != null)
+            {
                 long recordingDurationMillis = endRecordTimeMillis - startRecordTimeMillis;
                 RecordedProgram.Builder builder;
                 Program program = getProgram(mProgram);
@@ -666,11 +696,10 @@ public class DtvkitTvInput extends TvInputService {
                         .build();
                 notifyRecordingStopped(mContext.getContentResolver().insert(TvContract.RecordedPrograms.CONTENT_URI,
                         recording.toContentValues()));
+
+                recordingUri = null;
             }
             //PropSettingManager.resetRecordFrequencyFlag();
-
-            recordingUri = null;
-            mStarted = false;
         }
 
         @Override
@@ -682,13 +711,16 @@ public class DtvkitTvInput extends TvInputService {
                 uri = getProgramInternalDvbUri(getProgram(mProgram));
             } else if (mChannel != null) {
                 uri = getChannelInternalDvbUri(getChannel(mChannel)) + ";0000";
-            } else if (!mStarted && mTuned) {
-                recordingUntune(mPath);
             } else {
                 return;
             }
 
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
+
+            if (!mStarted && mTuned) {
+                recordingUntune(mPath);
+                return;
+            }
 
             JSONArray scheduledRecordings = recordingGetListOfScheduledRecordings();
             if (scheduledRecordings != null) {
@@ -759,6 +791,13 @@ public class DtvkitTvInput extends TvInputService {
                                 notifyTuned(mChannel);
                         break;
                     }
+                } else if (signal.equals("RecordingStatusChanged")) {
+                    if (!recordingIsRecordingPathActive(data, mPath)) {
+                        Log.d(TAG, "RecordingStatusChanged, stopped[path:"+mPath+"]");
+                        mRecordingProcessHandler.obtainMessage(MSG_RECORD_STOP_RECORDING).sendToTarget();
+                    }
+                } else if (signal.equals("RecordingDiskFull")) {
+                    notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
                 }
             }
         };
@@ -1938,6 +1977,10 @@ public class DtvkitTvInput extends TvInputService {
                       mhegSuspend();
                       mhegStartService(dvbUri);
                    }
+                }
+                else if (signal.equals("RecordingDiskFull"))
+                {
+                    /*free disk space excceds the property's setting*/
                 }
             }
         };
@@ -3619,6 +3662,29 @@ public class DtvkitTvInput extends TvInputService {
        }
        return activeRecordings;
    }
+
+   private boolean recordingIsRecordingPathActive(JSONObject recordingStatus, int path) {
+       boolean active = false;
+       if (recordingStatus != null) {
+            try {
+                JSONArray activeRecordings = null;
+                activeRecordings = recordingStatus.getJSONArray("activerecordings");
+                if (activeRecordings != null) {
+                    for (int i = 0; i < activeRecordings.length(); i++) {
+                        int activePath = activeRecordings.getJSONObject(i).getInt("path");
+                        if (activePath == path) {
+                            active = true;
+                            break;
+                        }
+                    }
+                }
+            } catch (JSONException e) {
+                Log.e(TAG, e.getMessage());
+            }
+       }
+       return active;
+   }
+
 
    private int recordingGetNumActiveRecordings() {
         int numRecordings = 0;
