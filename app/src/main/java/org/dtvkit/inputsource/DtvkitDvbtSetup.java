@@ -64,6 +64,7 @@ public class DtvkitDvbtSetup extends Activity {
 
             if ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged"))) {
                 int progress = getSearchProcess(data);
+                Log.d(TAG, "onSignal progress = " + progress);
                 if (progress < 100) {
                     int found = getFoundServiceNumber();
                     setSearchProgress(progress);
