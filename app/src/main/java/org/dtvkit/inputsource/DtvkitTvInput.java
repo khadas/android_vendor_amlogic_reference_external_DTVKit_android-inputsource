@@ -940,14 +940,19 @@ public class DtvkitTvInput extends TvInputService {
             //will regist handle to client when
             //creat ciMenuView,so we need destory and
             //unregist handle.
-            /*if (mMainHandle != null) {
-                mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
-            }*/
-            //do release directly
-            releaseSignalHandler();
-            finalReleaseWorkThread();
-            doDestroyOverlay();
-
+            if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain) {
+                //release by message queue for current session
+                if (mMainHandle != null) {
+                    mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
+                } else {
+                    Log.i(TAG, "onRelease mMainHandle == null");
+                }
+            } else {
+                //release directly as new session has created
+                releaseSignalHandler();
+                finalReleaseWorkThread();
+                doDestroyOverlay();
+            }
             //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
             Log.i(TAG, "onRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }

@@ -56,6 +56,7 @@ public class DtvkitDvbsSetup extends Activity {
         public void onSignal(String signal, JSONObject data) {
             if (signal.equals("DvbsStatusChanged")) {
                 int progress = getSearchProcess(data);
+                Log.d(TAG, "onSignal progress = " + progress);
                 if (progress < 100) {
                     getProgressBar().setProgress(progress);
                     setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress));
