@@ -488,6 +488,10 @@ public class DtvkitTvInput extends TvInputService {
         private long startRecordTimeMillis = 0;
         private long endRecordTimeMillis = 0;
         private String recordingUri = null;
+        private boolean tunedNotified = false;
+        private boolean mTuned = false;
+        private boolean mStarted = false;
+        private int mPath = -1;
 
         @RequiresApi(api = Build.VERSION_CODES.N)
         public DtvkitRecordingSession(Context context, String inputId) {
@@ -508,6 +512,10 @@ public class DtvkitTvInput extends TvInputService {
                 notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
                 return;
             }
+
+            tunedNotified = false;
+            mTuned = false;
+            mStarted = false;
 
             removeScheduleTimeshiftRecordingTask();
             numActiveRecordings = recordingGetNumActiveRecordings();
@@ -531,12 +539,39 @@ public class DtvkitTvInput extends TvInputService {
                 }
             }
 
+            boolean available = false;
+
             mChannel = uri;
             Channel channel = getChannel(uri);
             if (recordingCheckAvailability(getChannelInternalDvbUri(channel))) {
                 Log.i(TAG, "recording path available");
-                notifyTuned(uri);
-            } else {
+                StringBuffer tuneResponse = new StringBuffer();
+
+                DtvkitGlueClient.getInstance().registerSignalHandler(mRecordingHandler);
+
+                JSONObject tuneStat = recordingTune(getChannelInternalDvbUri(channel), tuneResponse);
+                if (tuneStat != null) {
+                    mTuned = getRecordingTuned(tuneStat);
+                    mPath = getRecordingTunePath(tuneStat);
+                    if (mTuned) {
+                        Log.i(TAG, "recording tuned ok.");
+                        notifyTuned(uri);
+                        tunedNotified = true;
+                    } else {
+                        Log.i(TAG, "recording (path:" + mPath + ") tunning...");
+                    }
+                    available = true;
+                } else {
+                    if (tuneResponse.toString().equals("Failed to get a tuner to record")) {
+                        Log.i(TAG, "record error no tuner to record");
+                    }
+                    else if (tuneResponse.toString().equals("Invalid resource")) {
+                        Log.i(TAG, "record error invalid channel");
+                    }
+                }
+            }
+
+            if (!available) {
                 Log.i(TAG, "No recording path available, no tuner/demux");
                 Bundle event = new Bundle();
                 event.putString(ConstantManager.KEY_INFO, "No recording path available, no tuner/demux");
@@ -566,14 +601,11 @@ public class DtvkitTvInput extends TvInputService {
                 durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
             }
             StringBuffer recordingResponse = new StringBuffer();
-            if (!recordingStartRecording(dvbUri, recordingResponse)) {
+            Log.i(TAG, "startRecording path:" + mPath);
+            if (!recordingStartRecording(dvbUri, mPath, recordingResponse)) {
                 if (recordingResponse.toString().equals("May not be enough space on disk")) {
                     Log.i(TAG, "record error insufficient space");
                     notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
-                }
-                else if (recordingResponse.toString().equals("Failed to get a tuner to record")) {
-                    Log.i(TAG, "record error no tuner to record");
-                    notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
                 }
                 else {
                     Log.i(TAG, "record error unknown");
@@ -582,6 +614,7 @@ public class DtvkitTvInput extends TvInputService {
             }
             else
             {
+                mStarted = true;
                 recordingUri = recordingResponse.toString();
                 Log.i(TAG, "Recording started:"+recordingUri);
             }
@@ -590,6 +623,9 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public void onStopRecording() {
             Log.i(TAG, "onStopRecording");
+
+            DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
+
             endRecordTimeMillis = System.currentTimeMillis();
             scheduleTimeshiftRecording = true;
             Log.d(TAG, "stop Recording:"+recordingUri);
@@ -622,6 +658,9 @@ public class DtvkitTvInput extends TvInputService {
                         recording.toContentValues()));
             }
             //PropSettingManager.resetRecordFrequencyFlag();
+
+            recordingUri = null;
+            mStarted = false;
         }
 
         @Override
@@ -633,9 +672,13 @@ public class DtvkitTvInput extends TvInputService {
                 uri = getProgramInternalDvbUri(getProgram(mProgram));
             } else if (mChannel != null) {
                 uri = getChannelInternalDvbUri(getChannel(mChannel)) + ";0000";
+            } else if (!mStarted && mTuned) {
+                recordingUntune(mPath);
             } else {
                 return;
             }
+
+            DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
 
             JSONArray scheduledRecordings = recordingGetListOfScheduledRecordings();
             if (scheduledRecordings != null) {
@@ -682,6 +725,33 @@ public class DtvkitTvInput extends TvInputService {
         private Program getCurrentProgram(Uri channelUri) {
             return TvContractUtils.getCurrentProgram(mContext.getContentResolver(), channelUri);
         }
+
+        private final DtvkitGlueClient.SignalHandler mRecordingHandler = new DtvkitGlueClient.SignalHandler() {
+            @RequiresApi(api = Build.VERSION_CODES.M)
+            @Override
+            public void onSignal(String signal, JSONObject data) {
+                Log.i(TAG, "recording onSignal: " + signal + " : " + data.toString());
+                if (signal.equals("TuneStatusChanged")) {
+                    String state = "fail";
+                    int path = -1;
+                    try {
+                        state = data.getString("state");
+                        path = data.getInt("path");
+                    } catch (JSONException ignore) {
+                    }
+                    Log.i(TAG, "tune to: "+ path + ", " + state);
+                    if (path != mPath)
+                        return;
+
+                    switch (state) {
+                        case "ok":
+                            if (!tunedNotified)
+                                notifyTuned(mChannel);
+                        break;
+                    }
+                }
+            }
+        };
     }
 
     class OverlayTextureListener implements TextureView.SurfaceTextureListener {
@@ -3412,10 +3482,11 @@ public class DtvkitTvInput extends TvInputService {
        return response;
    }
 
-   private boolean recordingStartRecording(String dvbUri, StringBuffer response) {
+   private boolean recordingStartRecording(String dvbUri, int path, StringBuffer response) {
        try {
            JSONArray args = new JSONArray();
            args.put(dvbUri);
+           args.put(path);
            response.insert(0, DtvkitGlueClient.getInstance().request("Recording.startRecording", args).getString("data"));
            return true;
        } catch (Exception e) {
@@ -3447,6 +3518,50 @@ public class DtvkitTvInput extends TvInputService {
            return false;
        }
        return true;
+   }
+
+   private JSONObject recordingTune(String dvbUri, StringBuffer response) {
+       JSONObject tune = null;
+       try {
+           JSONArray args = new JSONArray();
+           args.put(dvbUri);
+           tune = DtvkitGlueClient.getInstance().request("Recording.tune", args).getJSONObject("data");
+           Log.d(TAG, "recordingTune: "+ tune.toString());
+       } catch (Exception e) {
+           Log.e(TAG, e.getMessage());
+           response.insert(0, e.getMessage());
+       }
+       return tune;
+   }
+
+   private boolean recordingUntune(int path) {
+       try {
+           JSONArray args = new JSONArray();
+           args.put(path);
+           DtvkitGlueClient.getInstance().request("Recording.unTune", args).get("data");
+       } catch (Exception e) {
+           Log.e(TAG, e.getMessage());
+       }
+       return true;
+   }
+
+
+   private int getRecordingTunePath(JSONObject tuneStat) {
+      int path = -1;
+      try {
+          path = (tuneStat != null ? tuneStat.getInt("path") : 255);
+      } catch (Exception e) {
+      }
+      return path;
+   }
+
+   private boolean getRecordingTuned(JSONObject tuneStat) {
+      boolean tuned = false;
+      try {
+          tuned = (tuneStat != null ? tuneStat.getBoolean("tuned") : false);
+      } catch (Exception e) {
+      }
+      return tuned;
    }
 
    private String getProgramInternalRecordingUri() {
