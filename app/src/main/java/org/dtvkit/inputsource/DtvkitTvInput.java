@@ -116,6 +116,7 @@ public class DtvkitTvInput extends TvInputService {
     private Surface mSurface;
     private SysSettingManager mSysSettingManager = null;
     private DtvkitTvInputSession mSession;
+    protected HandlerThread mHandlerThread = null;
 
     private enum PlayerState {
         STOPPED, PLAYING
@@ -220,6 +221,9 @@ public class DtvkitTvInput extends TvInputService {
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "onCreate");
+        // Create background thread
+        mHandlerThread = new HandlerThread("DtvkitInputWorker");
+        mHandlerThread.start();
         mTvInputManager = (TvInputManager)this.getSystemService(Context.TV_INPUT_SERVICE);
         mContentResolver = getContentResolver();
         mContentResolver.registerContentObserver(TvContract.Channels.CONTENT_URI, true, mContentObserver);
@@ -349,6 +353,7 @@ public class DtvkitTvInput extends TvInputService {
 
     @Override
     public void onDestroy() {
+        super.onDestroy();
         Log.i(TAG, "onDestroy");
         unregisterReceiver(mParentalControlsBroadcastReceiver);
         unregisterReceiver(mBootBroadcastReceiver);
@@ -356,13 +361,18 @@ public class DtvkitTvInput extends TvInputService {
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().disConnectDtvkitClient();
         DtvkitGlueClient.getInstance().setSystemControlHandler(null);
-        super.onDestroy();
+        mHandlerThread.quit();
+        mHandlerThread = null;
     }
 
     @Override
     public final Session onCreateSession(String inputId) {
         Log.i(TAG, "onCreateSession " + inputId);
         init();
+        if (mSession != null) {
+            mSession.releaseSignalHandler();
+            mSession.finalReleaseWorkThread();
+        }
         mSession = new DtvkitTvInputSession(this);
         mSystemControlManager.SetDtvKitSourceEnable(1);
         return mSession;
@@ -798,7 +808,6 @@ public class DtvkitTvInput extends TvInputService {
         private int timeshiftBufferSizeMins = 60;
         DtvkitOverlayView mView = null;
         private long mCurrentDtvkitTvInputSessionIndex = 0;
-        protected HandlerThread mHandlerThread = null;
         protected Handler mHandlerThreadHandle = null;
         protected Handler mMainHandle = null;
         private boolean mIsMain = false;
@@ -868,6 +877,12 @@ public class DtvkitTvInput extends TvInputService {
         public void onSetMain(boolean isMain) {
             Log.d(TAG, "onSetMain, isMain: " + isMain +" mCurrentDtvkitTvInputSessionIndex is " + mCurrentDtvkitTvInputSessionIndex);
             mIsMain = isMain;
+            //isMain status may be set to true by livetv after switch to luncher
+            if (mCurrentDtvkitTvInputSessionIndex < mDtvkitTvInputSessionCount) {
+                mIsMain = false;
+            } else if (mCurrentDtvkitTvInputSessionIndex == mDtvkitTvInputSessionCount) {
+                mIsMain = true;
+            }
             if (!mIsMain) {
                 if (null != mSysSettingManager)
                     mSysSettingManager.writeSysFs("/sys/class/video/disable_video", "1");
@@ -886,9 +901,14 @@ public class DtvkitTvInput extends TvInputService {
             //will regist handle to client when
             //creat ciMenuView,so we need destory and
             //unregist handle.
-            if (mMainHandle != null) {
+            /*if (mMainHandle != null) {
                 mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
-            }
+            }*/
+            //do release directly
+            releaseSignalHandler();
+            finalReleaseWorkThread();
+            doDestroyOverlay();
+
             //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
             Log.i(TAG, "onRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }
@@ -911,12 +931,17 @@ public class DtvkitTvInput extends TvInputService {
             playerStop();
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
-            DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
+            //DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
             mCurAudioFmt = -2;
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }
 
+        private void releaseSignalHandler() {
+            DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
+        }
+
         private void doSetSurface(Map<String, Object> surfaceInfo) {
+            Log.i(TAG, "doSetSurface index = " + mCurrentDtvkitTvInputSessionIndex);
             if (surfaceInfo == null) {
                 Log.d(TAG, "doSetSurface null parameter");
                 return;
@@ -951,10 +976,11 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public boolean onSetSurface(Surface surface) {
-            Log.i(TAG, "onSetSurface " + surface + ", mDtvkitTvInputSessionCount = " + mDtvkitTvInputSessionCount + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
+            Log.i(TAG, "onSetSurface " + surface + ", mIsMain = " + mIsMain + ", mDtvkitTvInputSessionCount = " + mDtvkitTvInputSessionCount + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
             if (null != mHardware && mConfigs.length > 0) {
                 if (null == surface) {
-                    if (mIsMain) {
+                    //isMain status may be set to true by livetv after switch to luncher
+                    if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain) {
                         setOverlayViewEnabled(false);
                         //mHardware.setSurface(null, null);
                         sendSetSurfaceMessage(null, null);
@@ -977,9 +1003,7 @@ public class DtvkitTvInput extends TvInputService {
                     createDecoder();
                     decoderRelease();
                     sendSetSurfaceMessage(surface, mConfigs[0]);
-
                     mSurface = surface;
-                    Log.d(TAG, "onSetSurface ok");
                 }
             }
             //set surface to mediaplayer
@@ -989,11 +1013,12 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onSurfaceChanged(int format, int width, int height) {
-            Log.i(TAG, "onSurfaceChanged " + format + ", " + width + ", " + height);
+            Log.i(TAG, "onSurfaceChanged " + format + ", " + width + ", " + height + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             //playerSetRectangle(0, 0, width, height);
         }
 
         public View onCreateOverlayView() {
+            Log.i(TAG, "onCreateOverlayView index = " + mCurrentDtvkitTvInputSessionIndex);
             if (mView == null) {
                 mView = new DtvkitOverlayView(mContext);
             }
@@ -1002,7 +1027,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onOverlayViewSizeChanged(int width, int height) {
-            Log.i(TAG, "onOverlayViewSizeChanged " + width + ", " + height);
+            Log.i(TAG, "onOverlayViewSizeChanged " + width + ", " + height + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             if (mView == null) {
                 mView = new DtvkitOverlayView(mContext);
             }
@@ -1014,7 +1039,7 @@ public class DtvkitTvInput extends TvInputService {
         @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
         public boolean onTune(Uri channelUri) {
-            Log.i(TAG, "onTune " + channelUri);
+            Log.i(TAG, "onTune " + channelUri + "index = " + mCurrentDtvkitTvInputSessionIndex);
             if (ContentUris.parseId(channelUri) == -1) {
                 Log.e(TAG, "DtvkitTvInputSession onTune invalid channelUri = " + channelUri);
                 return false;
@@ -1038,7 +1063,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onSetStreamVolume(float volume) {
-            Log.i(TAG, "onSetStreamVolume " + volume + ", mute " + (volume == 0.0f));
+            Log.i(TAG, "onSetStreamVolume " + volume + ", mute " + (volume == 0.0f) + "index = " + mCurrentDtvkitTvInputSessionIndex);
             //playerSetVolume((int) (volume * 100));
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_BLOCK_MUTE_OR_UNMUTE);
@@ -1049,6 +1074,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onSetCaptionEnabled(boolean enabled) {
+            Log.i(TAG, "onSetCaptionEnabled " + enabled + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             if (true) {
                 Log.i(TAG, "caption switch will be controlled by mCaptionManager switch");
                 return;
@@ -1060,7 +1086,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public boolean onSelectTrack(int type, String trackId) {
-            Log.i(TAG, "onSelectTrack " + type + ", " + trackId);
+            Log.i(TAG, "onSelectTrack " + type + ", " + trackId + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             if (type == TvTrackInfo.TYPE_AUDIO) {
                 if (playerSelectAudioTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
                     notifyTrackSelected(type, trackId);
@@ -1187,7 +1213,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onAppPrivateCommand(String action, Bundle data) {
-            Log.i(TAG, "onAppPrivateCommand " + action + ", " + data);
+            Log.i(TAG, "onAppPrivateCommand " + action + ", " + data + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             if ("action_teletext_start".equals(action) && data != null) {
                 boolean start = data.getBoolean("action_teletext_start", false);
                 Log.d(TAG, "do private cmd: action_teletext_start: "+ start);
@@ -1559,7 +1585,7 @@ public class DtvkitTvInput extends TvInputService {
             @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onEvent(String signal, JSONObject data) {
-                Log.i(TAG, "onSignal: " + signal + " : " + data.toString());
+                Log.i(TAG, "onSignal: " + signal + " : " + data.toString() + ", index = " + mCurrentDtvkitTvInputSessionIndex);
                 if (signal.equals("AudioParamCB")) {
                     int cmd = 0, param1 = 0, param2 = 0;
                     AudioManager audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
@@ -1625,7 +1651,7 @@ public class DtvkitTvInput extends TvInputService {
             @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onSignal(String signal, JSONObject data) {
-                Log.i(TAG, "onSignal: " + signal + " : " + data.toString());
+                Log.i(TAG, "onSignal: " + signal + " : " + data.toString() + ", index = " + mCurrentDtvkitTvInputSessionIndex);
                 // TODO notifyTracksChanged(List<TvTrackInfo> tracks)
                 if (signal.equals("PlayerStatusChanged")) {
                     String state = "off";
@@ -1936,72 +1962,68 @@ public class DtvkitTvInput extends TvInputService {
 
         protected void initWorkThread() {
             Log.d(TAG, "initWorkThread");
-            if (mHandlerThread == null) {
-                mHandlerThread = new HandlerThread("DtvkitInputWorker");
-                mHandlerThread.start();
-                mHandlerThreadHandle = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
-                    @Override
-                    public boolean handleMessage(Message msg) {
-                        Log.d(TAG, "mHandlerThreadHandle [[[:" + msg.what + ", sessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
-                        switch (msg.what) {
-                            case MSG_ON_TUNE:
-                                Uri channelUri = (Uri)msg.obj;
-                                boolean mhegTune = msg.arg1 == 0 ? false : true;
-                                if (channelUri != null) {
-                                    onTuneByHandlerThreadHandle(channelUri, mhegTune);
-                                }
-                                break;
-                            case MSG_CHECK_RESOLUTION:
-                                if (!checkRealTimeResolution()) {
-                                    if (mHandlerThreadHandle != null)
-                                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
-                                }
-                                break;
-                            case MSG_CHECK_PARENTAL_CONTROL:
-                                updateParentalControlExt();
+            mHandlerThreadHandle = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
+                @Override
+                public boolean handleMessage(Message msg) {
+                    Log.d(TAG, "mHandlerThreadHandle [[[:" + msg.what + ", sessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
+                    switch (msg.what) {
+                        case MSG_ON_TUNE:
+                            Uri channelUri = (Uri)msg.obj;
+                            boolean mhegTune = msg.arg1 == 0 ? false : true;
+                            if (channelUri != null) {
+                                onTuneByHandlerThreadHandle(channelUri, mhegTune);
+                            }
+                            break;
+                        case MSG_CHECK_RESOLUTION:
+                            if (!checkRealTimeResolution()) {
+                                if (mHandlerThreadHandle != null)
+                                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
+                            }
+                            break;
+                        case MSG_CHECK_PARENTAL_CONTROL:
+                            updateParentalControlExt();
+                            if (mHandlerThreadHandle != null) {
+                                mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
+                                mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
+                            }
+                            break;
+                        case MSG_BLOCK_MUTE_OR_UNMUTE:
+                            boolean mute = msg.arg1 == 0 ? false : true;
+                            setBlockMute(mute);
+                            break;
+                        case MSG_SET_SURFACE:
+                            doSetSurface((Map<String, Object>)msg.obj);
+                            break;
+                        case MSG_DO_RELEASE:
+                            doRelease();
+                            break;
+                        case MSG_RELEASE_WORK_THREAD:
+                            finalReleaseInThread();
+                            break;
+                        case MSG_GET_SIGNAL_STRENGTH:
+                            sendCurrentSignalInfomation();
+                            if (mHandlerThreadHandle != null) {
+                                mHandlerThreadHandle.removeMessages(MSG_GET_SIGNAL_STRENGTH);
+                                mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_GET_SIGNAL_STRENGTH, MSG_GET_SIGNAL_STRENGTH_PERIOD);//check signal per 1s
+                            }
+                            break;
+                        case MSG_UPDATE_TRACKINFO:
+                            if (!checkTrackInfoUpdate()) {
                                 if (mHandlerThreadHandle != null) {
-                                    mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
-                                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
+                                    mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
+                                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
                                 }
-                                break;
-                            case MSG_BLOCK_MUTE_OR_UNMUTE:
-                                boolean mute = msg.arg1 == 0 ? false : true;
-                                setBlockMute(mute);
-                                break;
-                            case MSG_SET_SURFACE:
-                                doSetSurface((Map<String, Object>)msg.obj);
-                                break;
-                            case MSG_DO_RELEASE:
-                                doRelease();
-                                break;
-                            case MSG_RELEASE_WORK_THREAD:
-                                finalReleaseInThread();
-                                break;
-                            case MSG_GET_SIGNAL_STRENGTH:
-                                sendCurrentSignalInfomation();
-                                if (mHandlerThreadHandle != null) {
-                                    mHandlerThreadHandle.removeMessages(MSG_GET_SIGNAL_STRENGTH);
-                                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_GET_SIGNAL_STRENGTH, MSG_GET_SIGNAL_STRENGTH_PERIOD);//check signal per 1s
-                                }
-                                break;
-                            case MSG_UPDATE_TRACKINFO:
-                                if (!checkTrackInfoUpdate()) {
-                                    if (mHandlerThreadHandle != null) {
-                                        mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
-                                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
-                                    }
-                                }
-                                break;
-                            default:
-                                Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
-                                break;
-                        }
-                        Log.d(TAG, "mHandlerThreadHandle    " + msg.what + ", sessionIndex" + mCurrentDtvkitTvInputSessionIndex + "done]]]");
-                        return true;
+                            }
+                            break;
+                        default:
+                            Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
+                            break;
                     }
-                });
-                mMainHandle = new MainHandler();
-            }
+                    Log.d(TAG, "mHandlerThreadHandle    " + msg.what + ", sessionIndex" + mCurrentDtvkitTvInputSessionIndex + "done]]]");
+                    return true;
+                }
+            });
+            mMainHandle = new MainHandler();
         }
 
         private void syncParentControlSetting() {
@@ -2129,6 +2151,7 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         private void setBlockMute(boolean mute) {
+            Log.d(TAG, "setBlockMute = " + mute + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             AudioManager audioManager = null;
             if (mContext != null) {
                 audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
@@ -2164,6 +2187,7 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         private void finalReleaseInThread() {
+            Log.d(TAG, "finalReleaseInThread index = " + mCurrentDtvkitTvInputSessionIndex);
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -2175,24 +2199,20 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         private synchronized void finalReleaseWorkThread() {
-            Log.d(TAG, "finalReleaseWorkThread");
+            Log.d(TAG, "finalReleaseWorkThread index = " + mCurrentDtvkitTvInputSessionIndex);
             if (mMainHandle != null) {
                 mMainHandle.removeCallbacksAndMessages(null);
             }
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeCallbacksAndMessages(null);
             }
-            if (mHandlerThread != null) {
-                mHandlerThread.quit();
-            }
             mMainHandle = null;
-            mHandlerThread = null;
             mHandlerThreadHandle = null;
             Log.d(TAG, "finalReleaseWorkThread over");
         }
 
         protected boolean onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
-            Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri);
+            Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + "index = " + mCurrentDtvkitTvInputSessionIndex);
             if (ContentUris.parseId(channelUri) == -1) {
                 Log.e(TAG, "onTuneByHandlerThreadHandle invalid channelUri = " + channelUri);
                 return false;
