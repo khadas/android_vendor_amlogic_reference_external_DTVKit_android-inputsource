@@ -29,7 +29,7 @@ static struct bcmsideband_ctx *context = NULL;
 #include <gui/Surface.h>
 #include <gui/IGraphicBufferProducer.h>
 #include <ui/GraphicBuffer.h>
-#include <gralloc_usage_ext.h>
+#include <amlogic/am_gralloc_ext.h>
 #endif
 
 static jboolean set = JNI_FALSE;
@@ -79,36 +79,54 @@ namespace android
         return nativeWin->queueBuffer_DEPRECATED(nativeWin.get(), buf);
     }
 
-    static void setSurface(JNIEnv *env, jobject thiz, jobject jsurface) {
-        sp<IGraphicBufferProducer> new_st = NULL;
+    native_handle_t *pTvStream = nullptr;
+    sp<Surface> mSurface;
+    sp<NativeHandle> mSourceHandle;
+    static int getTvStream() {
+        int ret = -1;
+        if (pTvStream == nullptr) {
+            pTvStream = am_gralloc_create_sideband_handle(AM_TV_SIDEBAND, 1);
+            if (pTvStream == nullptr) {
+                ALOGE("tvstream can not be initialized");
+                return ret;
+            }
+        }
+        return 0;
+    }
+
+    static void setSurface(JNIEnv *env, jclass thiz __unused, jobject jsurface) {
+        ALOGD("SetSurface");
+        sp<Surface> surface;
         if (jsurface) {
-            sp<Surface> surface(android_view_Surface_getSurface(env, jsurface));
-            if (surface != NULL) {
-                new_st = surface->getIGraphicBufferProducer();
-                if (new_st == NULL) {
-                    jniThrowException(env, "java/lang/IllegalArgumentException",
-                        "The surface does not have a binding SurfaceTexture!");
-                    return;
-                }
-            } else {
+            surface = android_view_Surface_getSurface(env, jsurface);
+
+            if (surface == NULL) {
                 jniThrowException(env, "java/lang/IllegalArgumentException",
-                        "The surface has been released");
+                                  "The surface has been released");
                 return;
             }
         }
 
-        sp<ANativeWindow> tmpWindow = NULL;
-        if (new_st != NULL) {
-            tmpWindow = new Surface(new_st);
-            status_t err = native_window_api_connect(tmpWindow.get(),
-                NATIVE_WINDOW_API_MEDIA);
-            ALOGI("set native window overlay");
-            native_window_set_usage(tmpWindow.get(), GRALLOC_USAGE_HW_TEXTURE |
-                GRALLOC_USAGE_EXTERNAL_DISP  | GRALLOC_USAGE_AML_VIDEO_OVERLAY);
-            native_window_set_buffers_format(tmpWindow.get(), WINDOW_FORMAT_RGBA_8888);
-
-            updateNative(tmpWindow);
+        if (mSurface == surface) {
+            // Nothing to do
+            return;
         }
+
+        if (mSurface != NULL) {
+            if (Surface::isValid(mSurface)) {
+                mSurface->setSidebandStream(NULL);
+            }
+            mSurface.clear();
+        }
+
+        if (getTvStream() == 0) {
+            mSourceHandle = NativeHandle::create(pTvStream, false);
+            mSurface = surface;
+            if (mSurface != nullptr) {
+                mSurface->setSidebandStream(mSourceHandle);
+            }
+        }
+        return;
     }
 }
 using namespace android;
