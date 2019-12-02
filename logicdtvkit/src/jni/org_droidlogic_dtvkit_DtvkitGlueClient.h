@@ -19,7 +19,7 @@
 #include <jni.h>
 #include <JNIHelp.h>
 #include <android_runtime/AndroidRuntime.h>
-#include <utils/Log.h>
+#include <log/log.h>
 #include <ScopedLocalRef.h>
 #include "android_runtime/Log.h"
 

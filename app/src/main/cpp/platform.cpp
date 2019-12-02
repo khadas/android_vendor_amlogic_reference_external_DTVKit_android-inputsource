@@ -21,7 +21,7 @@ static struct bcmsideband_ctx *context = NULL;
 #include <jni.h>
 #include <JNIHelp.h>
 
-#include <utils/Log.h>
+#include <log/log.h>
 #include <utils/KeyedVector.h>
 #include <android_runtime/AndroidRuntime.h>
 #include <android_runtime/android_view_Surface.h>
