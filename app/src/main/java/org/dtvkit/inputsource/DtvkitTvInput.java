@@ -1954,6 +1954,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 } else {
                                     notifyVideoAvailable();
                                 }
+
+                                if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
+                                    playerSetSubtitlesOn(true);
+                                }
+
                                 List<TvTrackInfo> tracks = playerGetTracks(mTunedChannel, false);
                                 if (!tracks.equals(mTunedTracks)) {
                                     mTunedTracks = tracks;
@@ -2595,9 +2600,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 DtvkitGlueClient.getInstance().setAudioHandler(AHandler);
+                /*
                 if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
                     playerSetSubtitlesOn(true);
                 }
+                */
                 playerInitAssociateDualSupport();
             } else {
                 mTunedChannel = null;
