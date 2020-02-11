@@ -581,8 +581,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             if (ciOverlayView.handleKeyUp(keyCode, event) || mhegTookKey) {
                 result = true;
-            }
-            else {
+            } else {
                 result = false;
             }
             mhegTookKey = false;
@@ -1949,7 +1948,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public boolean onKeyDown(int keyCode, KeyEvent event) {
             boolean used;
 
-            Log.i(TAG, "onKeyDown " + keyCode);
+            Log.i(TAG, "onKeyDown " + event);
 
             /* It's possible for a keypress to be registered before the overlay is created */
             if (mView == null) {
@@ -1957,6 +1956,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             else {
                 if (mView.handleKeyDown(keyCode, event)) {
+                    used = true;
+                } else if (isTeletextNeedKeyCode(keyCode) && playerIsTeletextOn()) {
                     used = true;
                 } else {
                    used = super.onKeyDown(keyCode, event);
@@ -1970,7 +1971,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public boolean onKeyUp(int keyCode, KeyEvent event) {
             boolean used;
 
-            Log.i(TAG, "onKeyUp " + keyCode);
+            Log.i(TAG, "onKeyUp " + event);
 
             /* It's possible for a keypress to be registered before the overlay is created */
             if (mView == null) {
@@ -1979,12 +1980,51 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             else {
                 if (mView.handleKeyUp(keyCode, event)) {
                     used = true;
+                } else if (isTeletextNeedKeyCode(keyCode) && playerIsTeletextOn()) {
+                    dealTeletextKeyCode(keyCode);
+                    used = true;
                 } else {
                     used = super.onKeyUp(keyCode, event);
                 }
             }
 
             return used;
+        }
+
+        private boolean isTeletextNeedKeyCode(int keyCode) {
+            return keyCode == KeyEvent.KEYCODE_BACK ||
+                    keyCode == KeyEvent.KEYCODE_PROG_RED ||
+                    keyCode == KeyEvent.KEYCODE_PROG_GREEN ||
+                    keyCode == KeyEvent.KEYCODE_PROG_YELLOW ||
+                    keyCode == KeyEvent.KEYCODE_PROG_BLUE;
+        }
+
+        private void dealTeletextKeyCode(int keyCode) {
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_BACK:
+                    Log.d(TAG, "dealTeletextKeyCode close teletext");
+                    playerSetTeletextOn(false, -1);
+                    notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
+                    break;
+                case KeyEvent.KEYCODE_PROG_RED:
+                    Log.d(TAG, "dealTeletextKeyCode quick_navigate_1");
+                    playerNotifyTeletextEvent(0);
+                    break;
+                case KeyEvent.KEYCODE_PROG_GREEN:
+                    Log.d(TAG, "dealTeletextKeyCode quick_navigate_2");
+                    playerNotifyTeletextEvent(1);
+                    break;
+                case KeyEvent.KEYCODE_PROG_YELLOW:
+                    Log.d(TAG, "dealTeletextKeyCode quick_navigate_3");
+                    playerNotifyTeletextEvent(2);
+                    break;
+                case KeyEvent.KEYCODE_PROG_BLUE:
+                    Log.d(TAG, "dealTeletextKeyCode quick_navigate_4");
+                    playerNotifyTeletextEvent(3);
+                    break;
+                default:
+                    break;
+            }
         }
 
         private final DtvkitGlueClient.AudioHandler AHandler = new DtvkitGlueClient.AudioHandler() {
