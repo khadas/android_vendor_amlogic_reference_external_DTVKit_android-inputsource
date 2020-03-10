@@ -1463,17 +1463,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //isMain status may be set to true by livetv after switch to luncher
             if (mCurrentDtvkitTvInputSessionIndex < mDtvkitTvInputSessionCount) {
                 mIsMain = false;
-            } else if (mCurrentDtvkitTvInputSessionIndex == mDtvkitTvInputSessionCount) {
-                mIsMain = true;
             }
             if (!mIsMain) {
-                if (null != mSysSettingManager)
-                    mSysSettingManager.writeSysFs("/sys/class/video/disable_video", "1");
-                if (null != mView)
-                    layoutSurface(0, 0, mView.w, mView.h);
+                 writeSysFs("/sys/class/video/disable_video", "1");
+                //if (null != mView)
+                    //layoutSurface(0, 0, mView.w, mView.h);
             } else {
-                if (null != mSysSettingManager)
-                    mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "1");
+                    writeSysFs("/sys/class/video/video_inuse", "1");
             }
         }
 
@@ -1576,8 +1572,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         mSurface = null;
                         //doRelease();
                         sendDoReleaseMessage();
-                        if (null != mSysSettingManager)
-                            mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "0");
+                        writeSysFs("/sys/class/video/video_inuse", "0");
                     }
                 } else {
                     if (mSurface != null && mSurface != surface) {
@@ -2621,6 +2616,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                SysContManager.writeSysFs("/sys/class/video/crop", crop);
                            }
                        layoutSurface(left,top,right,bottom);
+                       if (mHandlerThreadHandle != null) {
+                          mHandlerThreadHandle.removeMessages(MSG_ENABLE_VIDEO);
+                          mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_ENABLE_VIDEO, 40);
+                       }
                    }
                 }
                 else if (signal.equals("ServiceRetuned"))
@@ -2680,6 +2679,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_RELEASE_WORK_THREAD = 7;
         protected static final int MSG_GET_SIGNAL_STRENGTH = 8;
         protected static final int MSG_UPDATE_TRACKINFO = 9;
+        protected static final int MSG_ENABLE_VIDEO = 10;
         protected static final int MSG_SET_UNBLOCK = 11;
         protected static final int MSG_CHECK_REC_PATH = 12;
 
@@ -2755,6 +2755,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
                                 }
                             }
+                            break;
+                        case MSG_ENABLE_VIDEO:
+                             writeSysFs("/sys/class/video/video_global_output", "1");
                             break;
                         case MSG_SET_UNBLOCK:
                             if (msg.obj != null && msg.obj instanceof TvContentRating) {
@@ -3073,6 +3076,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else {
                 mhegStop();
             }
+
+            writeSysFs("/sys/class/video/video_global_output", "0");
 
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
             playerStopTeletext();//no need to save teletext select status
@@ -5095,6 +5100,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         params.height = WindowManager.LayoutParams.WRAP_CONTENT;
         alert.getWindow().setAttributes(params);
         alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
+  }
+
+  private void writeSysFs(String path, String value) {
+        if (null != mSysSettingManager)
+            mSysSettingManager.writeSysFs(path, value);
   }
 
 }
