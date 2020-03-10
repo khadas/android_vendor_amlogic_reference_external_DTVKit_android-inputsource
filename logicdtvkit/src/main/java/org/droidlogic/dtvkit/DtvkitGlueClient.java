@@ -45,13 +45,8 @@ public class DtvkitGlueClient {
             return;
         }
         synchronized (mHandlers) {
-            if (resource.equals("AudioParamCB")) {
-                if (mAudioHandler != null)
-                    mAudioHandler.onEvent(resource, object);
-            } else {
-                for (SignalHandler handler :mHandlers) {
-                    handler.onSignal(resource, object);
-                }
+            for (SignalHandler handler :mHandlers) {
+                handler.onSignal(resource, object);
             }
         }
     }
@@ -90,10 +85,6 @@ public class DtvkitGlueClient {
             mSingleton = new DtvkitGlueClient();
         }
         return mSingleton;
-    }
-
-    public void setAudioHandler(AudioHandler handler) {
-        mAudioHandler = handler;
     }
 
     public void registerSignalHandler(SignalHandler handler) {

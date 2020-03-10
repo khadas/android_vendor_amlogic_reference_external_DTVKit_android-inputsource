@@ -50,10 +50,6 @@ import org.xmlpull.v1.XmlPullParserException;
 import android.content.Intent;
 
 import android.media.AudioManager;
-import android.media.AudioRoutesInfo;
-import android.media.AudioSystem;
-import android.media.IAudioRoutesObserver;
-import android.media.IAudioService;
 
 import android.net.Uri;
 import android.os.Build;
@@ -73,9 +69,6 @@ import android.os.HandlerThread;
 import android.text.TextUtils;
 import android.widget.FrameLayout;
 import android.view.accessibility.CaptioningManager;
-import android.os.IBinder;
-import android.os.RemoteException;
-import android.os.ServiceManager;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.view.WindowManager;
@@ -172,42 +165,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private final int SYSFS = 0;
     private final int PROP = 1;
 
-    private IAudioService mAudioService;
-    private AudioRoutesInfo mCurAudioRoutesInfo;
-    private Runnable mHandleTvAudioRunnable;
-    private int mDelayTime;
-    private int mCurAudioFmt;
-    final IAudioRoutesObserver.Stub mAudioRoutesObserver = new IAudioRoutesObserver.Stub() {
-        @Override
-        public void dispatchAudioRoutesChanged(final AudioRoutesInfo newRoutes) {
-            if ((mSession != null && mSession.mTunedChannel != null &&
-                     mSession.mHandlerThreadHandle != null) &&
-                    ((newRoutes.mainType != mCurAudioRoutesInfo.mainType) ||
-                        (!newRoutes.toString().equals(mCurAudioRoutesInfo.toString())))) {
-                mCurAudioRoutesInfo = newRoutes;
-                mSession.mHandlerThreadHandle.removeCallbacks(mHandleTvAudioRunnable);
-                mDelayTime = newRoutes.mainType != AudioRoutesInfo.MAIN_HDMI ? 500 : 1500;
-                mHandleTvAudioRunnable = new Runnable() {
-                    public void run() {
-                        AudioSystem.setParameters("tuner_in=dtv");
-                        AudioSystem.setParameters("fmt=" + mCurAudioFmt);
-                        AudioSystem.setParameters("has_dtv_video=" +
-                                (mSession.mTunedChannel.getServiceType().equals("SERVICE_TYPE_AUDIO_VIDEO") ? "1" : "0"));
-                        AudioSystem.setParameters("cmd=1");
-                    }
-                };
-                try {
-                    mSession.mHandlerThreadHandle.postDelayed(mHandleTvAudioRunnable,
-                            mAudioService.isBluetoothA2dpOn() ? mDelayTime + 2000 : mDelayTime);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                mCurAudioRoutesInfo = newRoutes;
-            }
-        }
-    };
-
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
     }
@@ -269,14 +226,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         intentFilter1.addAction(Intent.ACTION_LOCKED_BOOT_COMPLETED);
         intentFilter1.addAction(Intent.ACTION_BOOT_COMPLETED);
         registerReceiver(mBootBroadcastReceiver, intentFilter1);
-        /*for AudioRoutes change*/
-        IBinder b = ServiceManager.getService(Context.AUDIO_SERVICE);
-        mAudioService = IAudioService.Stub.asInterface(b);
-        try {
-            mCurAudioRoutesInfo = mAudioService.startWatchingRoutes(mAudioRoutesObserver);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
         chcekTvProviderInThread();
     }
 
@@ -1387,16 +1336,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     class DtvkitTvInputSession extends TvInputService.Session               {
         private static final String TAG = "DtvkitTvInputSession";
-        private static final int ADEC_START_DECODE = 1;
-        private static final int ADEC_PAUSE_DECODE = 2;
-        private static final int ADEC_RESUME_DECODE = 3;
-        private static final int ADEC_STOP_DECODE = 4;
-        private static final int ADEC_SET_DECODE_AD = 5;
-        private static final int ADEC_SET_VOLUME = 6;
-        private static final int ADEC_SET_MUTE = 7;
-        private static final int ADEC_SET_OUTPUT_MODE = 8;
-        private static final int ADEC_SET_PRE_GAIN = 9;
-        private static final int ADEC_SET_PRE_MUTE = 10;
         private boolean mhegTookKey = false;
         private Channel mTunedChannel = null;
         private List<TvTrackInfo> mTunedTracks = null;
@@ -1516,7 +1455,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             playerStop();
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
-            mCurAudioFmt = -2;
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }
 
@@ -1995,7 +1933,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
                         mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
                     }
-                    DtvkitGlueClient.getInstance().setAudioHandler(AHandler);
                 }
                 else
                 {
@@ -2259,103 +2196,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     break;
             }
         }
-
-        private final DtvkitGlueClient.AudioHandler AHandler = new DtvkitGlueClient.AudioHandler() {
-            @RequiresApi(api = Build.VERSION_CODES.M)
-            @Override
-            public void onEvent(String signal, JSONObject data) {
-                Log.i(TAG, "onSignal: " + signal + " : " + data.toString() + ", index = " + mCurrentDtvkitTvInputSessionIndex);
-                if (signal.equals("AudioParamCB")) {
-                    int cmd = 0, param1 = 0, param2 = 0;
-                    AudioManager audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
-                    try {
-                        cmd = data.getInt("audio_status");
-                        param1 = data.getInt("audio_param1");
-                        param2 = data.getInt("audio_param2");
-                    } catch (JSONException ignore) {
-                        Log.e(TAG, ignore.getMessage());
-                    }
-                    //Log.d(TAG, "cmd ="+cmd+" param1 ="+param1+" param2 ="+param2);
-                    switch (cmd) {
-                        case ADEC_START_DECODE:
-                            audioManager.setParameters("fmt="+param1);
-                            audioManager.setParameters("has_dtv_video="+param2);
-                            audioManager.setParameters("cmd="+cmd);
-                            Log.d(TAG, "AHandler setParameters ADEC_START_DECODE:fmt=" + param1
-                                    + ",has_dtv_video=" + param2 + "," + "cmd=" + cmd);
-                            mCurAudioFmt = param1;
-                            break;
-                        case ADEC_PAUSE_DECODE:
-                            audioManager.setParameters("cmd="+cmd);
-                            Log.d(TAG, "AHandler setParameters ADEC_PAUSE_DECODE:cmd=" + cmd);
-                            break;
-                        case ADEC_RESUME_DECODE:
-                            audioManager.setParameters("cmd="+cmd);
-                            Log.d(TAG, "AHandler setParameters ADEC_RESUME_DECODE:cmd=" + cmd);
-                            break;
-                        case ADEC_STOP_DECODE:
-                            audioManager.setParameters("cmd="+cmd);
-                            Log.d(TAG, "AHandler setParameters ADEC_STOP_DECODE:cmd=" + cmd);
-                            break;
-                        case ADEC_SET_DECODE_AD:
-                            if (mAudioADAutoStart) {
-                                if (param2 == 0) {
-                                    //close ad
-                                    setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 0);
-                                    setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
-                                } else if (param2 != 0 && param2 != 0x1fff) {
-                                    //valid ad pid
-                                    setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 1);
-                                    setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 1);
-                                    setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
-                                } else {
-                                    Log.d(TAG, "AHandler setParameters ADEC_SET_DECODE_AD unkown pid");
-                                }
-                            }
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("subafmt="+param1);
-                            audioManager.setParameters("subapid="+param2);
-                            Log.d(TAG, "AHandler setParameters ADEC_SET_DECODE_AD:cmd=" + cmd
-                                    + ",subafmt=" + param1 + ",subapid=" + param2);
-                            mCurAudioFmt = param1;
-                            break;
-                        case ADEC_SET_VOLUME:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("vol="+param1);
-                            Log.d(TAG, "AHandler setParameters ADEC_SET_VOLUME:cmd=" + cmd
-                                    + ",vol=" + param1);
-                            break;
-                        case ADEC_SET_MUTE:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("mute="+param1);
-                            Log.d(TAG, "AHandler setParameters ADEC_SET_MUTE:cmd=" + cmd
-                                    + ",mute=" + param1);
-                            break;
-                        case ADEC_SET_OUTPUT_MODE:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("mode="+param1);
-                            Log.d(TAG, "AHandler setParameters ADEC_SET_OUTPUT_MODE:cmd=" + cmd
-                                    + ",mode=" + param1);
-                            break;
-                        case ADEC_SET_PRE_GAIN:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("gain="+param1);
-                            Log.d(TAG, "AHandler setParameters ADEC_SET_PRE_GAIN:cmd=" + cmd
-                                    + ",gain=" + param1);
-                            break;
-                        case ADEC_SET_PRE_MUTE:
-                            audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("mute="+param1);
-                            Log.d(TAG, "AHandler setParameters ADEC_SET_PRE_MUTE:cmd=" + cmd
-                                    + ",mute=" + param1);
-                            break;
-                        default:
-                            Log.i(TAG,"AHandler setParameters unkown audio cmd!");
-                            break;
-                    }
-                }
-            }
-        };
 
         private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
             @RequiresApi(api = Build.VERSION_CODES.M)
@@ -3115,7 +2955,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
                 }
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
-                DtvkitGlueClient.getInstance().setAudioHandler(AHandler);
                 /*
                 if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
                     playerSetSubtitlesOn(true);
