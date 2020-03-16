@@ -200,7 +200,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
-            } else if (mSession == null) {
+            } else {
                 mCurAudioRoutesInfo = newRoutes;
             }
         }
