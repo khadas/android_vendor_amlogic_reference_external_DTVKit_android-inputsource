@@ -2982,7 +2982,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
                 //setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 0);
                 //if (adOn) {
-                    setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 0);
+                    //setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 0);
                 //}
             }
             result = true;
