@@ -77,7 +77,6 @@ public class DtvkitGlueClient {
 
     protected DtvkitGlueClient() {
         // Singleton
-        nativeconnectdtvkit(this);
     }
 
     public static DtvkitGlueClient getInstance() {
@@ -85,6 +84,18 @@ public class DtvkitGlueClient {
             mSingleton = new DtvkitGlueClient();
         }
         return mSingleton;
+    }
+
+    public void connectDtvkit() {
+        try {
+            nativeconnectdtvkit(this);
+        } catch(Exception e) {
+            Log.d(TAG, "exception:" + e);
+        }
+    }
+
+    public void setAudioHandler(AudioHandler handler) {
+        mAudioHandler = handler;
     }
 
     public void registerSignalHandler(SignalHandler handler) {
@@ -132,6 +143,7 @@ public class DtvkitGlueClient {
     }
 
     public void setSystemControlHandler(SystemControlHandler l) {
+          Log.d(TAG, "SysControl l = " + l);
           mSysControlHandler = l;
     }
 
