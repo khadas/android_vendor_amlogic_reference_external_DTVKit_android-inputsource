@@ -226,13 +226,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         intentFilter1.addAction(Intent.ACTION_LOCKED_BOOT_COMPLETED);
         intentFilter1.addAction(Intent.ACTION_BOOT_COMPLETED);
         registerReceiver(mBootBroadcastReceiver, intentFilter1);
-
-        mSystemControlManager = SystemControlManager.getInstance();
-        mSystemControlEvent = new SystemControlEvent(this);
-        mSystemControlEvent.setDisplayModeListener(this);
-        mSystemControlManager.setListener(mSystemControlEvent);
-        DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
-        DtvkitGlueClient.getInstance().connectDtvkit();
         chcekTvProviderInThread();
     }
 
@@ -291,6 +284,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         Log.d(TAG, "init stage 1");
         updateRecorderNumber();
         Log.d(TAG, "init stage 2");
+        mSystemControlManager = SystemControlManager.getInstance();
+        mSystemControlEvent = new SystemControlEvent(this);
+        mSystemControlEvent.setDisplayModeListener(this);
+        mSystemControlManager.setListener(mSystemControlEvent);
+        DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
         DtvkitGlueClient.getInstance().registerSignalHandler(mRecordingManagerHandler);
         mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
         checkDtvkitSatelliteUpdateStatusInThread();
