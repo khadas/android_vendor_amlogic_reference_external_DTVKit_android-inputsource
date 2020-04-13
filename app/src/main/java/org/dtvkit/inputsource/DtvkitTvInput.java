@@ -2964,12 +2964,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }*/
             }
             mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
+            DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             if (playerPlay(dvbUri, mAudioADAutoStart).equals("ok")) {
                 if (mHandlerThreadHandle != null) {
                     mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
                 }
-                DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 /*
                 if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
                     playerSetSubtitlesOn(true);
@@ -2985,6 +2985,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Bundle event = new Bundle();
                 event.putString(ConstantManager.KEY_INFO, "No play path available");
                 notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
             }
             Log.i(TAG, "onTuneByHandlerThreadHandle Done");
             return mTunedChannel != null;
