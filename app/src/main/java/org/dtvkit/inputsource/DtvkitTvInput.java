@@ -3129,6 +3129,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                     }
                 }
+            } else {
+                notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
             }
         }
 
@@ -4729,7 +4731,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
 
     private boolean getFeatureSupportTimeshifting() {
-        return !PropSettingManager.getBoolean("tv.dtv.tf.disable", false);
+        return !PropSettingManager.getBoolean(PropSettingManager.TIMESHIFT_DISABLE, false);
     }
 
     private boolean getFeatureCasReady() {
