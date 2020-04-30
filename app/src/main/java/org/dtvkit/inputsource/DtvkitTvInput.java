@@ -1446,6 +1446,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private PlayerState playerState = PlayerState.STOPPED;
         private boolean timeshiftAvailable = false;
         private int timeshiftBufferSizeMins = 60;
+        private int timeshiftBufferSizeMBs = 0;
         DtvkitOverlayView mView = null;
         private long mCurrentDtvkitTvInputSessionIndex = 0;
         protected Handler mHandlerThreadHandle = null;
@@ -1486,7 +1487,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             };
 
-            playerSetTimeshiftBufferSize(timeshiftBufferSizeMins);
+            playerSetTimeshiftBufferSize(getTimeshiftBufferSizeMins(), getTimeshiftBufferSizeMBs());
             resetRecordingPath();
             mDtvkitTvInputSessionCount++;
             mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
@@ -2137,24 +2138,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         public long onTimeShiftGetStartPosition() {
             if (timeshiftRecorderState != RecorderState.STOPPED) {
-                Log.i(TAG, "requesting timeshift recorder status");
-                long length = 0;
-                JSONObject timeshiftRecorderStatus = playerGetTimeshiftRecorderStatus();
-                if (originalStartPosition != 0 && originalStartPosition != TvInputManager.TIME_SHIFT_INVALID_TIME) {
-                    startPosition = originalStartPosition + PropSettingManager.getStreamTimeDiff();
-                }
-                if (timeshiftRecorderStatus != null) {
-                    try {
-                        length = timeshiftRecorderStatus.getLong("length");
-                    } catch (JSONException e) {
-                        Log.e(TAG, e.getMessage());
-                    }
-                }
+                long truncated = playerGetElapsedAndTruncated()[1] * 1000;
+                long diff = PropSettingManager.getStreamTimeDiff();
 
-                if (length > (timeshiftBufferSizeMins * 60)) {
-                    startPosition = originalStartPosition + ((length - (timeshiftBufferSizeMins * 60)) * 1000);
-                    Log.i(TAG, "new start position: " + startPosition);
+                if (originalStartPosition != 0 && originalStartPosition != TvInputManager.TIME_SHIFT_INVALID_TIME) {
+                    startPosition = originalStartPosition + truncated + diff;
                 }
+                Log.i(TAG, "timeshifting. start position: " + startPosition + ", (truncated:" + truncated + ", diff:" + diff + ")ms");
             }
             Log.i(TAG, "onTimeShiftGetStartPosition startPosition:" + startPosition + ", as date = " + ConvertSettingManager.convertLongToDate(startPosition));
             return startPosition;
@@ -2167,8 +2157,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.i(TAG, "playing back record program. current position: " + currentPosition);
                 }
             } else if (timeshifting) {
-                currentPosition = (playerGetElapsed() * 1000) + originalStartPosition + PropSettingManager.getStreamTimeDiff();
-                Log.i(TAG, "timeshifting. current position: " + currentPosition);
+                long elapsed = playerGetElapsed() * 1000;
+                long diff = PropSettingManager.getStreamTimeDiff();
+                currentPosition = elapsed + originalStartPosition + diff;
+                Log.i(TAG, "timeshifting. current position: " + currentPosition + ", (elapsed:" + elapsed + ", diff:" + diff + ")ms");
             } else if (startPosition == TvInputManager.TIME_SHIFT_INVALID_TIME) {
                 currentPosition = TvInputManager.TIME_SHIFT_INVALID_TIME;
                 Log.i(TAG, "Invalid time. Current position: " + currentPosition);
@@ -2393,7 +2385,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             else if (type.equals("dvbrecording")) {
                                 setBlockMute(false);
                                 startPosition = originalStartPosition = 0; // start position is always 0 when playing back recorded program
-                                currentPosition = playerGetElapsed(data) * 1000;
+                                currentPosition = playerGetElapsedAndTruncated(data)[0] * 1000;
                                 Log.i(TAG, "dvbrecording currentPosition = " + currentPosition + "as date = " + ConvertSettingManager.convertLongToDate(startPosition));
                                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_AVAILABLE);
                             }
@@ -3332,6 +3324,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mHandlerThreadHandle.removeMessages(MSG_TRY_START_TIMESHIFT);
                 mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_TRY_START_TIMESHIFT, 1000);
             }
+        }
+
+        private int getTimeshiftBufferSizeMins() {
+            return PropSettingManager.getInt("vendor.tv.dtv.tf.mins", timeshiftBufferSizeMins);
+        }
+
+        private int getTimeshiftBufferSizeMBs() {
+            return PropSettingManager.getInt("vendor.tv.dtv.tf.mbs", timeshiftBufferSizeMBs);
         }
     }
 
@@ -4379,22 +4379,29 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private long playerGetElapsed() {
-        return playerGetElapsed(playerGetStatus());
+        return playerGetElapsedAndTruncated(playerGetStatus())[0];
     }
 
-    private long playerGetElapsed(JSONObject playerStatus) {
-        long elapsed = 0;
+    private long[] playerGetElapsedAndTruncated() {
+        return playerGetElapsedAndTruncated(playerGetStatus());
+    }
+
+    private long[] playerGetElapsedAndTruncated(JSONObject playerStatus) {
+        long[] result = {0, 0};
         if (playerStatus != null) {
             try {
                 JSONObject content = playerStatus.getJSONObject("content");
                 if (content.has("elapsed")) {
-                    elapsed = content.getLong("elapsed");
+                    result[0] = content.getLong("elapsed");
+                }
+                if (content.has("truncated")) {
+                    result[1] = content.getLong("truncated");
                 }
             } catch (JSONException e) {
-                Log.e(TAG, "playerGetElapsed = " + e.getMessage());
+                Log.e(TAG, "playerGetElapsedAndTruncated = " + e.getMessage());
             }
         }
-        return elapsed;
+        return result;
     }
 
     private JSONObject playerGetTimeshiftRecorderStatus() {
@@ -4408,21 +4415,50 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         return response;
     }
 
-    private int playerGetTimeshiftBufferSize() {
-        int timeshiftBufferSize = 0;
+    private JSONObject playerGetTimeshiftBufferSize() {
+        JSONObject response = null;
         try {
             JSONArray args = new JSONArray();
-            timeshiftBufferSize = DtvkitGlueClient.getInstance().request("Player.getTimeshiftBufferSize", args).getInt("data");
+            response = DtvkitGlueClient.getInstance().request("Player.getTimeshiftBufferSize", args);
         } catch (Exception e) {
             Log.e(TAG, "playerGetTimeshiftBufferSize = " + e.getMessage());
+        }
+        return response;
+    }
+
+    private int playerGetTimeshiftBufferSizeMins() {
+        int timeshiftBufferSize = 0;
+        JSONObject sizeObj = playerGetTimeshiftBufferSize();
+        if (sizeObj != null) {
+            try {
+                if (sizeObj.has("mins"))
+                    timeshiftBufferSize = sizeObj.getInt("mins");
+            } catch (Exception e) {
+                Log.e(TAG, "playerGetTimeshiftBufferSizeMins = " + e.getMessage());
+            }
         }
         return timeshiftBufferSize;
     }
 
-    private boolean playerSetTimeshiftBufferSize(int timeshiftBufferSize) {
+    private int playerGetTimeshiftBufferSizeMegabytes() {
+        int timeshiftBufferSize = 0;
+        JSONObject sizeObj = playerGetTimeshiftBufferSize();
+        if (sizeObj != null) {
+            try {
+                if (sizeObj.has("mbs"))
+                    timeshiftBufferSize = sizeObj.getInt("mbs");
+            } catch (Exception e) {
+                Log.e(TAG, "playerGetTimeshiftBufferSizeMegabytes = " + e.getMessage());
+            }
+        }
+        return timeshiftBufferSize;
+    }
+
+    private boolean playerSetTimeshiftBufferSize(int timeshiftBufferSizeMins, int timeshiftBufferSizeMBs) {
         try {
             JSONArray args = new JSONArray();
-            args.put(timeshiftBufferSize);
+            args.put(timeshiftBufferSizeMins);
+            args.put(timeshiftBufferSizeMBs);
             DtvkitGlueClient.getInstance().request("Player.setTimeshiftBufferSize", args);
             return true;
         } catch (Exception e) {
