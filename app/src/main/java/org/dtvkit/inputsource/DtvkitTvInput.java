@@ -833,6 +833,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private String mInputId = null;
         private long startRecordTimeMillis = 0;
         private long endRecordTimeMillis = 0;
+        private long startRecordSystemTimeMillis = 0;
+        private long endRecordSystemTimeMillis = 0;
         private String recordingUri = null;
         private Uri mRecordedProgramUri = null;
         private boolean tunedNotified = false;
@@ -1053,13 +1055,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Program program = getProgram(uri);
             if (program != null) {
                 startRecordTimeMillis = program.getStartTimeUtcMillis();
-                long currentTimeMillis = System.currentTimeMillis();
-                if (currentTimeMillis > startRecordTimeMillis) {
-                    startRecordTimeMillis = currentTimeMillis;
-                }
+                startRecordSystemTimeMillis = System.currentTimeMillis();
                 dvbUri = getProgramInternalDvbUri(program);
             } else {
-                startRecordTimeMillis = System.currentTimeMillis();
+                startRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);
+                startRecordSystemTimeMillis = System.currentTimeMillis();
                 dvbUri = getChannelInternalDvbUri(getChannel(mChannel));
                 durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
             }
@@ -1100,6 +1100,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
                     boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 0));
                     Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+                    if (result) {
+                        mRecordStopAndSaveReceived = true;
+                    }
                 } else {
                     Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
                 }
@@ -1116,13 +1119,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         private void updateRecordingToDb(boolean insert, boolean check) {
-            mRecordStopAndSaveReceived = true;
-            endRecordTimeMillis = System.currentTimeMillis();
+            endRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);
+            endRecordSystemTimeMillis = System.currentTimeMillis();
             scheduleTimeshiftRecording = true;
             Log.d(TAG, "updateRecordingToDb:"+recordingUri);
             if (recordingUri != null)
             {
-                long recordingDurationMillis = endRecordTimeMillis - startRecordTimeMillis;
+                long recordingDurationMillis = endRecordSystemTimeMillis - startRecordSystemTimeMillis;
                 RecordedProgram.Builder builder = null;
                 InternalProviderData data = null;
                 Program program = getProgram(mProgram);
@@ -1140,7 +1143,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 .setChannelId(id)
                                 .setTitle(channel != null ? channel.getDisplayName() : null)
                                 .setStartTimeUtcMillis(startRecordTimeMillis)
-                                .setEndTimeUtcMillis(endRecordTimeMillis);
+                                .setEndTimeUtcMillis(startRecordTimeMillis + recordingDurationMillis/*endRecordTimeMillis*/);//stream card may playback
                     } else {
                         builder = new RecordedProgram.Builder(program);
                     }
@@ -1179,7 +1182,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (mRecordedProgramUri != null) {
                         ContentValues values = new ContentValues();
                         if (endRecordTimeMillis > -1) {
-                            values.put(TvContract.RecordedPrograms.COLUMN_END_TIME_UTC_MILLIS, endRecordTimeMillis);
+                            values.put(TvContract.RecordedPrograms.COLUMN_END_TIME_UTC_MILLIS, startRecordTimeMillis + recordingDurationMillis/*endRecordTimeMillis*/);//stream card may playback
                         }
                         if (recordingDurationMillis > 0) {
                             values.put(TvContract.RecordedPrograms.COLUMN_RECORDING_DURATION_MILLIS, recordingDurationMillis);
@@ -1195,6 +1198,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (!check) {
                     Log.i(TAG, "updateRecordingToDb notifystop mRecordedProgramUri = " + mRecordedProgramUri + " index = " + mCurrentRecordIndex);
                     notifyRecordingStopped(mRecordedProgramUri);
+                    if (mRecordStopAndSaveReceived || mStarted) {
+                        if (mRecordingProcessHandler != null) {
+                            mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
+                            boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_DO_FINALRELEASE);
+                            Log.d(TAG, "updateRecordingToDb sendMessage result = " + result + ", index = " + mCurrentRecordIndex);
+                        } else {
+                            Log.i(TAG, "updateRecordingToDb sendMessage null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
+                        }
+                    }
                 }
                 if (mRecordingProcessHandler != null) {
                     if (check) {
@@ -1311,9 +1323,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     arg2 = 1;
                 }
                 boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, arg1, arg2));
-                Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+                Log.d(TAG, "updateRecordProgramInfo sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
             } else {
-                Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
+                Log.i(TAG, "updateRecordProgramInfo sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
             }
         }
 
@@ -1370,6 +1382,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
                             boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 0));
                             Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+                            if (result) {
+                                mRecordStopAndSaveReceived = true;
+                            }
                         } else {
                             Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
                         }
