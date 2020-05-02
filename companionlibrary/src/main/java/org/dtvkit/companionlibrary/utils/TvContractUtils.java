@@ -59,6 +59,7 @@ public class TvContractUtils {
     public static final String PREFERENCES_FILE_KEY = "org.dtvkit.companionlibrary";
     private static final String TAG = "TvContractUtils";
     private static final boolean DEBUG = true;
+    private static final int BATCH_OPERATION_COUNT = 50;
 
     /**
      * Updates the list of available channels.
@@ -310,10 +311,21 @@ public class TvContractUtils {
                 logos.put(TvContract.buildChannelLogoUri(uri), channel.getChannelLogo());
             }*/
         }
-        try {
-            resolver.applyBatch(TvContract.AUTHORITY, ops);
-        } catch (Exception e) {
-            Log.e(TAG, "updateChannels Failed = " + e.getMessage());
+        for (int i = 0; i < ops.size(); i += BATCH_OPERATION_COUNT) {
+            int toIndex =
+                    (i + BATCH_OPERATION_COUNT) > ops.size()
+                            ? ops.size()
+                            : (i + BATCH_OPERATION_COUNT);
+            ArrayList<ContentProviderOperation> batchOps =
+                    new ArrayList<>(ops.subList(i, toIndex));
+            if (DEBUG) {
+                Log.d(TAG, "updateChannels from fromIndex " + i + " to " + toIndex);
+            }
+            try {
+                resolver.applyBatch(TvContract.AUTHORITY, batchOps);
+            } catch (Exception e) {
+                Log.e(TAG, "updateChannels Failed = " + e.getMessage());
+            }
         }
         ops.clear();
         if (!logos.isEmpty()) {

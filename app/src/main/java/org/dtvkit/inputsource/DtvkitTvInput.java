@@ -630,13 +630,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         ArrayList<RecordedProgram> recordingsInDB = new ArrayList();
         ArrayList<RecordedProgram> recordingsResetInvalidInDB = new ArrayList();
         ArrayList<RecordedProgram> recordingsResetValidInDB = new ArrayList();
+        Cursor cursor = null;
 
-        Cursor cursor = mContentResolver.query(TvContract.RecordedPrograms.CONTENT_URI, RecordedProgram.PROJECTION, null, null, TvContract.RecordedPrograms._ID + " DESC");
-        if (cursor != null) {
-            while (cursor.moveToNext()) {
+        try {
+            cursor = mContentResolver.query(TvContract.RecordedPrograms.CONTENT_URI, RecordedProgram.PROJECTION, null, null, TvContract.RecordedPrograms._ID + " DESC");
+            while (null != cursor && cursor.moveToNext()) {
                 recordingsInDB.add(RecordedProgram.fromCursor(cursor));
             }
+        } catch (Exception e) {
+            Log.e(TAG, "RecordingPrograms query Failed = " + e.getMessage());
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
+
         JSONArray recordings = recordingGetListOfRecordings();
 
         Log.d(TAG, "recordings: db[" + recordingsInDB.size() + "] dtvkit[" + recordings.length() + "]");
@@ -1283,12 +1291,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private Program getProgram(Uri uri) {
             Program program = null;
-            if (uri != null) {
-                Cursor cursor = mContext.getContentResolver().query(uri, Program.PROJECTION, null, null, null);
+            Cursor cursor = null;
+            try {
+                if (uri != null) {
+                    cursor = mContext.getContentResolver().query(uri, Program.PROJECTION, null, null, null);
+                }
+                while (null != cursor && cursor.moveToNext()) {
+                    program = Program.fromCursor(cursor);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "getProgram query Failed = " + e.getMessage());
+            } finally {
                 if (cursor != null) {
-                    while (cursor.moveToNext()) {
-                        program = Program.fromCursor(cursor);
-                    }
+                    cursor.close();
                 }
             }
             return program;
@@ -1296,12 +1311,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private Channel getChannel(Uri uri) {
             Channel channel = null;
-            if (uri != null) {
-                Cursor cursor = mContext.getContentResolver().query(uri, Channel.PROJECTION, null, null, null);
+            Cursor cursor = null;
+            try {
+                if (uri != null) {
+                    cursor = mContext.getContentResolver().query(uri, Channel.PROJECTION, null, null, null);
+                }
+                while (null != cursor && cursor.moveToNext()) {
+                    channel = Channel.fromCursor(cursor);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "getChannel query Failed = " + e.getMessage());
+            } finally {
                 if (cursor != null) {
-                    while (cursor.moveToNext()) {
-                        channel = Channel.fromCursor(cursor);
-                    }
+                    cursor.close();
                 }
             }
             return channel;
@@ -1331,14 +1353,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private RecordedProgram getRecordProgram(String recordDataUri) {
             RecordedProgram result = null;
-            if (recordDataUri != null) {
-                Cursor cursor = mContext.getContentResolver().query(TvContract.RecordedPrograms.CONTENT_URI, RecordedProgram.PROJECTION,
+            Cursor cursor = null;
+            try {
+                if (recordDataUri != null) {
+                    cursor = mContext.getContentResolver().query(TvContract.RecordedPrograms.CONTENT_URI, RecordedProgram.PROJECTION,
                         TvContract.RecordedPrograms.COLUMN_RECORDING_DATA_URI + "=?", new String[]{recordDataUri}, null);
+                }
+                while (null != cursor && cursor.moveToNext()) {
+                    result = RecordedProgram.fromCursor(cursor);
+                    break;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "getRecordProgram query Failed = " + e.getMessage());
+            } finally {
                 if (cursor != null) {
-                    while (cursor.moveToNext()) {
-                        result = RecordedProgram.fromCursor(cursor);
-                        break;
-                    }
+                    cursor.close();
                 }
             }
             return result;
@@ -2133,12 +2162,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private RecordedProgram getRecordedProgram(Uri uri) {
             RecordedProgram recordedProgram = null;
-            if (uri != null) {
-                Cursor cursor = mContext.getContentResolver().query(uri, RecordedProgram.PROJECTION, null, null, null);
+            Cursor cursor = null;
+            try {
+                if (uri != null) {
+                    cursor = mContext.getContentResolver().query(uri, RecordedProgram.PROJECTION, null, null, null);
+                }
+                while (null != cursor && cursor.moveToNext()) {
+                    recordedProgram = RecordedProgram.fromCursor(cursor);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "getRecordedProgram query Failed = " + e.getMessage());
+            } finally {
                 if (cursor != null) {
-                    while (cursor.moveToNext()) {
-                        recordedProgram = RecordedProgram.fromCursor(cursor);
-                    }
+                    cursor.close();
                 }
             }
             return recordedProgram;
@@ -4728,36 +4764,48 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
        new Thread(new Runnable() {
            @Override
            public void run() {
-               Cursor cursor = mContentResolver.query(TvContract.RecordedPrograms.CONTENT_URI, RecordedProgram.PROJECTION, null, null, TvContract.RecordedPrograms._ID + " DESC");
-               JSONArray recordings = recordingGetListOfRecordings();
-               JSONArray activeRecordings = recordingGetActiveRecordings();
+               Cursor cursor = null;
+               JSONArray recordings = null;
+               JSONArray activeRecordings = null;
 
-               if (recordings != null && cursor != null) {
-                   for (int i = 0; i < recordings.length(); i++) {
-                       try {
-                           String uri = recordings.getJSONObject(i).getString("uri");
+               try {
+                   cursor = mContentResolver.query(TvContract.RecordedPrograms.CONTENT_URI, RecordedProgram.PROJECTION, null, null, TvContract.RecordedPrograms._ID + " DESC");
+                   recordings = recordingGetListOfRecordings();
+                   activeRecordings = recordingGetActiveRecordings();
 
-                           if (activeRecordings != null && activeRecordings.length() > 0) {
-                               boolean activeRecording = false;
-                               for (int j = 0; j < activeRecordings.length(); j++) {
-                                   if (uri.equals(activeRecordings.getJSONObject(j).getString("uri"))) {
-                                       activeRecording = true;
-                                       break;
+                   if (recordings != null && cursor != null) {
+                       for (int i = 0; i < recordings.length(); i++) {
+                           try {
+                               String uri = recordings.getJSONObject(i).getString("uri");
+
+                               if (activeRecordings != null && activeRecordings.length() > 0) {
+                                   boolean activeRecording = false;
+                                   for (int j = 0; j < activeRecordings.length(); j++) {
+                                       if (uri.equals(activeRecordings.getJSONObject(j).getString("uri"))) {
+                                           activeRecording = true;
+                                           break;
+                                       }
+                                   }
+                                   if (activeRecording) {
+                                       continue;
                                    }
                                }
-                               if (activeRecording) {
-                                   continue;
+
+                               if (!checkRecordingExists(uri, cursor)) {
+                                   Log.d(TAG, "remove invalid recording: "+uri);
+                                   recordingRemoveRecording(uri);
                                }
-                           }
 
-                           if (!checkRecordingExists(uri, cursor)) {
-                               Log.d(TAG, "remove invalid recording: "+uri);
-                               recordingRemoveRecording(uri);
+                           } catch (JSONException e) {
+                               Log.e(TAG, e.getMessage());
                            }
-
-                       } catch (JSONException e) {
-                           Log.e(TAG, e.getMessage());
                        }
+                   }
+               } catch (Exception e) {
+                   Log.e(TAG, "RecordedPrograms query Failed = " + e.getMessage());
+               } finally {
+                   if (cursor != null) {
+                       cursor.close();
                    }
                }
            }

@@ -132,7 +132,7 @@ public abstract class EpgSyncJobService extends JobService {
 
     private static final int PERIODIC_SYNC_JOB_ID = 0;
     private static final int REQUEST_SYNC_JOB_ID = 1;
-    private static final int BATCH_OPERATION_COUNT = 100;
+    private static final int BATCH_OPERATION_COUNT = 50;
     private static final long OVERRIDE_DEADLINE_MILLIS = 0L;  // 1 second
     private static final String BUNDLE_KEY_SYNC_NOW_NEXT = "BUNDLE_KEY_SYNC_NOW_NEXT";
     private static final String BUNDLE_KEY_SYNC_CHANNEL_ONLY = "BUNDLE_KEY_SYNC_CHANNEL_ONLY";
@@ -608,6 +608,7 @@ public abstract class EpgSyncJobService extends JobService {
                 }
                 // Throttle the batch operation not to cause TransactionTooLargeException.
                 if (ops.size() > BATCH_OPERATION_COUNT || newProgramsIndex >= fetchedProgramsCount) {
+                    if (DEBUG) Log.e(TAG, "updatePrograms number " + ops.size());
                     try {
                         mContext.getContentResolver().applyBatch(TvContract.AUTHORITY, ops);
                     } catch (RemoteException | OperationApplicationException e) {
