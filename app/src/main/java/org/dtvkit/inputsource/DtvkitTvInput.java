@@ -2088,6 +2088,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (timeMs == startPosition) {
                     seekToBeginning = true;
                 }
+                /*
+                  The mheg may hold an external_control in the dtvkit,
+                  which upset the normal av process following, so stop it first,
+                  thus, mheg will not be valid since here to the next onTune.
+                */
+                mhegStop();
                 playerPlayTimeshiftRecording(false, !seekToBeginning);
             } else if (timeshiftRecorderState == RecorderState.RECORDING && timeshifting) {
                 playerSeekTo((timeMs - (originalStartPosition + PropSettingManager.getStreamTimeDiff())) / 1000);
@@ -2105,6 +2111,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (speed != playSpeed) {
                 if (timeshiftRecorderState == RecorderState.RECORDING && !timeshifting) {
                     timeshifting = true;
+                    /*
+                      The mheg may hold an external_control in the dtvkit,
+                      which upset the normal av process following, so stop it first,
+                      thus, mheg will not be valid since here to the next onTune.
+                    */
+                    mhegStop();
                     playerPlayTimeshiftRecording(false, true);
                 }
 
