@@ -45,6 +45,7 @@ import android.text.TextUtils;
 import java.io.IOException;
 import org.xmlpull.v1.XmlPullParserException;
 import android.content.Intent;
+import java.io.File;
 
 import android.media.AudioManager;
 
@@ -54,6 +55,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Looper;
+import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
@@ -3327,10 +3329,23 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }
 
+    private boolean isMountedPathAvailable(String path) {
+        boolean result = false;
+        if (TextUtils.isEmpty(path)) {
+            return result;
+        }
+        String volumeState = Environment.getExternalStorageState(new File(path));
+        if (TextUtils.equals(volumeState, Environment.MEDIA_MOUNTED)) {
+            result = true;
+        }
+        Log.d(TAG, "isMountedPathAvailable path = " + path + ", volumeState = " + volumeState + ", result = " + result);
+        return result;
+    }
+
     private boolean resetRecordingPath() {
         String newPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
         boolean changed = false;
-        if (!SysSettingManager.isDeviceExist(newPath)) {
+        if (!isMountedPathAvailable(SysSettingManager.convertMediaPathToMountedPath(newPath))) {
             Log.d(TAG, "removable device has been moved and use default path");
             newPath = DataMananer.PVR_DEFAULT_PATH;
             mDataMananer.saveStringParameters(DataMananer.KEY_PVR_RECORD_PATH, newPath);
