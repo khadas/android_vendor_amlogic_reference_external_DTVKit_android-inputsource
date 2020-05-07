@@ -965,12 +965,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public void onRelease() {
+            try {
             if (mRecordingProcessHandler != null) {
                 mRecordingProcessHandler.removeMessages(MSG_RECORD_ONRELEASE);
                 boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_ONRELEASE);
                 Log.d(TAG, "onRelease sendMessage result " + result + ", index = " + mCurrentRecordIndex);
             } else {
                 Log.i(TAG, "onRelease null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
+            }
+            } catch (Exception e) {
+                Log.d(TAG, "released already");
             }
         }
 
