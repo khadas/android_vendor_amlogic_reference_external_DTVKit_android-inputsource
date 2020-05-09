@@ -136,6 +136,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     protected int mAudioADMixingLevel = 50;
 
     private boolean mDvbNetworkChangeSearchStatus = false;
+    private boolean mParentControlMute = false;
 
     private enum PlayerState {
         STOPPED, PLAYING
@@ -2383,6 +2384,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 monitorRecordingPath(true);
                             }
                             else if (type.equals("dvbrecording")) {
+                                setBlockMute(false);
                                 startPosition = originalStartPosition = 0; // start position is always 0 when playing back recorded program
                                 currentPosition = playerGetElapsed(data) * 1000;
                                 Log.i(TAG, "dvbrecording currentPosition = " + currentPosition + "as date = " + ConvertSettingManager.convertLongToDate(startPosition));
@@ -2919,18 +2921,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private void setBlockMute(boolean mute) {
             Log.d(TAG, "setBlockMute = " + mute + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             AudioManager audioManager = null;
-            if (mContext != null) {
-                audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
-            }
-            if (audioManager != null) {
-                Log.d(TAG, "setBlockMute = " + mute);
-                if (mute) {
-                    audioManager.setParameters("parental_control_av_mute=true");
-                } else {
-                    audioManager.setParameters("parental_control_av_mute=false");
+            if (mParentControlMute != mute) {
+                if (mContext != null) {
+                    audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
                 }
-            } else {
-                Log.i(TAG, "setBlockMute can't get audioManager");
+                if (audioManager != null) {
+                    Log.d(TAG, "setBlockMute = " + mute);
+                    if (mute) {
+                        audioManager.setParameters("parental_control_av_mute=true");
+                    } else {
+                        audioManager.setParameters("parental_control_av_mute=false");
+                    }
+                    mParentControlMute = mute;
+                } else {
+                    Log.i(TAG, "setBlockMute can't get audioManager");
+                }
             }
         }
 
