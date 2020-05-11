@@ -88,6 +88,7 @@ public class DtvkitDvbSettings extends Activity {
         Spinner pvr_path = (Spinner)findViewById(R.id.storage_select_spinner);
         Button refresh = (Button)findViewById(R.id.storage_refresh);
         CheckBox recordFrequency = (CheckBox)findViewById(R.id.record_full_frequency);
+        CheckBox adSupport = (CheckBox)findViewById(R.id.ad_audio_checkbox);
         initSpinnerParameter();
         if (update) {
             Log.d(TAG, "initLayout update");
@@ -250,6 +251,11 @@ public class DtvkitDvbSettings extends Activity {
                 }
             }
         });
+        adSupport.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                mParameterMananer.saveIntParameters(ParameterMananer.TV_KEY_AD_SWITCH, adSupport.isChecked() ? 1 : 0);
+            }
+        });
     }
 
     private void initSpinnerParameter() {
@@ -261,6 +267,7 @@ public class DtvkitDvbSettings extends Activity {
         Spinner hearing_impaired = (Spinner)findViewById(R.id.hearing_impaired_spinner);
         Spinner pvr_path = (Spinner)findViewById(R.id.storage_select_spinner);
         CheckBox recordFrequency = (CheckBox)findViewById(R.id.record_full_frequency);
+        CheckBox adSupport = (CheckBox)findViewById(R.id.ad_audio_checkbox);
         List<String> list = null;
         ArrayAdapter<String> adapter = null;
         int select = 0;
@@ -321,6 +328,7 @@ public class DtvkitDvbSettings extends Activity {
         pvr_path.setSelection(select);
         String pvrRecordMode = PropSettingManager.getString(PropSettingManager.PVR_RECORD_MODE, PropSettingManager.PVR_RECORD_MODE_CHANNEL);
         recordFrequency.setChecked(PropSettingManager.PVR_RECORD_MODE_FREQUENCY.equals(pvrRecordMode) ? true : false);
+        adSupport.setChecked(mParameterMananer.getIntParameters(ParameterMananer.TV_KEY_AD_SWITCH) == 1 ? true : false);
     }
 
     private List<String> getHearingImpairedOption() {

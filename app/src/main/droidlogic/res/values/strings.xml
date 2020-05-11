@@ -109,4 +109,6 @@
     <string name="strSettingsRefresh">Refresh</string>
     <string name="strSettingsPvrDefault">App Data</string>
     <string name="strSettingsPvrFullFrequency">Record Frequency</string>
+    <string name="strSettingsAdAudio">Associate Audio:</string>
+    <string name="strSettingsAdAudio_enable">Enable</string>
 </resources>

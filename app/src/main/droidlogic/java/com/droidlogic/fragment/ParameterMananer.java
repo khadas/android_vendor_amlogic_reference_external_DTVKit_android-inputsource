@@ -142,6 +142,9 @@ public class ParameterMananer {
     //add for pvr record path setting
     public static final String KEY_PVR_RECORD_PATH = "pvr_record_path";
 
+    //add for associate audio setting
+    public static final String TV_KEY_AD_SWITCH = "ad_switch";
+
     public ParameterMananer(Context context, DtvkitGlueClient client) {
         this.mContext = context;
         this.mDtvkitGlueClient = client;

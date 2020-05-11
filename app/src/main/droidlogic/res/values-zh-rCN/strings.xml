@@ -108,4 +108,6 @@
     <string name="strSettingsRefresh">刷新</string>
     <string name="strSettingsPvrDefault">应用目录</string>
     <string name="strSettingsPvrFullFrequency">录制频点</string>
+    <string name="strSettingsAdAudio">辅助音:</string>
+    <string name="strSettingsAdAudio_enable">开</string>
 </resources>
