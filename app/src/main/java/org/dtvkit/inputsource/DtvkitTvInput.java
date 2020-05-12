@@ -525,6 +525,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
+        public void setTeletextMix(boolean status){
+            if (status)
+                nativeOverlayView.setSize(1920/2, 0, 1920, 1080);
+            else
+                nativeOverlayView.setSize(0, 0, 1920, 1080);
+        }
+
         public void showScrambledText(String text) {
             if (mText != null && mRelativeLayout != null) {
                 Log.d(TAG, "showText");
@@ -811,6 +818,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         public void setSize(int width, int height) {
             dst = new Rect(0, 0, width, height);
+        }
+
+        public void setSize(int left, int top, int right, int bottom) {
+            dst = new Rect(left, top, right, bottom);
         }
 
         @Override
