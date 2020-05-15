@@ -2862,7 +2862,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if ((rating < 4 || rating > 18 || age < rating) && mBlocked)
                     {
                         notifyContentAllowed();
-                        setBlockMute(false);
+                        //change mute status by application
+                        //setBlockMute(false);
                         mBlocked = false;
                     }
                     else if (rating >= 4 && rating <= 18 && age >= rating)
@@ -2872,7 +2873,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", Rating));
                         if (!mBlocked)
                         {
-                            setBlockMute(true);
+                            //change mute status by application
+                            //setBlockMute(true);
                             mBlocked = true;
                         }
                     }
@@ -2883,7 +2885,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             else if (mBlocked)
             {
                 notifyContentAllowed();
-                setBlockMute(false);
+                //change mute status by application
+                //setBlockMute(false);
                 mBlocked = false;
             }
         }
@@ -2951,7 +2954,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mBlocked = false;
             setParentalControlOn(false);
             notifyContentAllowed();
-            setBlockMute(false);
+            //change mute status by application
+            //setBlockMute(false);
         }
 
         private boolean playerInitAssociateDualSupport() {
@@ -3087,7 +3091,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mBlocked)
             {
                 notifyContentAllowed();
-                setBlockMute(false);
+                //change mute status by application
+                //setBlockMute(false);
                 mBlocked = false;
             }
             if (mTvInputManager != null) {
