@@ -26,18 +26,18 @@ LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/aidl
 LOCAL_SRC_FILES := $(call all-subdir-java-files) $(call all-subdir-Iaidl-files)
 
 #TARGET_BUILD_APPS := inputsource # for normal app (embedded ndk jni)
-LOCAL_JNI_SHARED_LIBRARIES := libplatform
-LOCAL_REQUIRED_MODULES := libplatform
-LOCAL_CERTIFICATE := platform
+#LOCAL_JNI_SHARED_LIBRARIES := libplatform
+#LOCAL_REQUIRED_MODULES := libplatform
+#LOCAL_CERTIFICATE := platform
 LOCAL_PROGUARD_ENABLED := disabled
 
-
+LOCAL_JNI_SHARED_LIBRARIES := libdtvkit_jni
 LOCAL_JAVA_LIBRARIES += droidlogic droidlogic-dtvkit
+LOCAL_DEX_PREOPT := false
+LOCAL_VENDOR_MODULE := true
 
-LOCAL_CERTIFICATE := platform
-LOCAL_PRODUCT_MODULE := true
-
-LOCAL_PRIVATE_PLATFORM_APIS := true
+#LOCAL_PRIVATE_PLATFORM_APIS := true
 include $(BUILD_PACKAGE)
 include $(call all-makefiles-under, $(LOCAL_PATH))
+
 

@@ -16,5 +16,5 @@
 
 <permissions>
     <library name="droidlogic.dtvkit.software.core"
-            file="/product/framework/droidlogic-dtvkit.jar" />
+            file="/vendor/framework/droidlogic-dtvkit.jar" />
 </permissions>

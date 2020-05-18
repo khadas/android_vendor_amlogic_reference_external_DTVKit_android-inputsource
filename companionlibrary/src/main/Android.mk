@@ -13,6 +13,7 @@ LOCAL_STATIC_JAVA_LIBRARIES += \
    android-support-v7-appcompat
 
 LOCAL_SRC_FILES := $(call all-subdir-java-files)
+LOCAL_VENDOR_MODULE := true
 
 include $(BUILD_STATIC_JAVA_LIBRARY)
 

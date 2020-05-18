@@ -289,7 +289,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mSystemControlEvent = new SystemControlEvent(this);
         mSystemControlEvent.setDisplayModeListener(this);
         mSystemControlManager.setListener(mSystemControlEvent);
-        DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
+        //DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
         DtvkitGlueClient.getInstance().registerSignalHandler(mRecordingManagerHandler);
         mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
         checkDtvkitSatelliteUpdateStatusInThread();
@@ -389,8 +389,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mContentResolver.unregisterContentObserver(mContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingManagerHandler);
-        DtvkitGlueClient.getInstance().disConnectDtvkitClient();
-        DtvkitGlueClient.getInstance().setSystemControlHandler(null);
+        //DtvkitGlueClient.getInstance().setSystemControlHandler(null);
         mHandlerThread.getLooper().quitSafely();
         mHandlerThread = null;
         mInputThreadHandler.removeCallbacksAndMessages(null);
@@ -3108,6 +3107,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             writeSysFs("/sys/class/video/video_global_output", "0");
 
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
+
             playerStopTeletext();//no need to save teletext select status
             playerStop();
             playerSetSubtitlesOn(false);
@@ -5079,7 +5079,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
         setInputId(mTvInputInfo.getId());
-        mHardware = mTvInputManager.acquireTvInputHardware(19,mHardwareCallback,mTvInputInfo);
+        mHardware = mTvInputManager.acquireTvInputHardware(19, mTvInputInfo, mHardwareCallback);
         return mTvInputInfo;
     }
 
@@ -5177,6 +5177,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         Log.e(TAG, "decoderRelease done");
     }
 
+/*
     private final DtvkitGlueClient.SystemControlHandler mSysControlHandler = new DtvkitGlueClient.SystemControlHandler() {
         @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
@@ -5207,7 +5208,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
            }
         }
-    };
+    }; */
 
     private void showSearchConfirmDialog(final Context context, final Channel channel) {
         if (context == null || channel == null) {

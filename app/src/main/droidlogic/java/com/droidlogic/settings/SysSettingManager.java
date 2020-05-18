@@ -21,7 +21,7 @@ public class SysSettingManager {
     private static final String TAG = "SysSettingManager";
     private static final boolean DEBUG = true;
 
-    public static final String PVR_DEFAULT_PATH = "/data/data/org.dtvkit.inputsource";
+    public static final String PVR_DEFAULT_PATH = "/data/vendor/dtvkit";
 
     protected SystemControlManager mSystemControlManager;
     private FileListManager mFileListManager;

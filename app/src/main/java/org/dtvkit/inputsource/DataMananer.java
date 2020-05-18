@@ -15,6 +15,8 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.provider.Settings;
 
+import com.droidlogic.app.DataProviderManager;
+
 public class DataMananer {
 
     private static final String TAG = "DataMananer";
@@ -168,7 +170,7 @@ public class DataMananer {
 
     //add for pvr record path setting
     public static final String KEY_PVR_RECORD_PATH = "pvr_record_path";
-    public static final String PVR_DEFAULT_PATH = "/data/data/org.dtvkit.inputsource";
+    public static final String PVR_DEFAULT_PATH = "/data/vendor/dtvkit";
 
     //audio ad
     public static final String TV_KEY_AD_SWITCH = "ad_switch";
@@ -185,7 +187,8 @@ public class DataMananer {
     }
 
     public void saveIntParameters(String key, int value) {
-        Settings.System.putInt(mContext.getContentResolver(), key, value);
+        //Settings.Global.putInt(mContext.getContentResolver(), key, value);
+        DataProviderManager.putIntValue(this.mContext, key, value);
     }
 
     public int getIntParameters(String key) {
@@ -297,13 +300,15 @@ public class DataMananer {
                 defValue = 0;
                 break;
         }
-        int result = Settings.System.getInt(mContext.getContentResolver(), key, defValue);
+        //int result = Settings.System.getInt(mContext.getContentResolver(), key, defValue);
+        int result = DataProviderManager.getIntValue(this.mContext, key, defValue);
         //Log.d(TAG, "getIntParameters key = " + key + ", defValue = " + defValue);
         return result;
     }
 
     public void saveStringParameters(String key, String value) {
-        Settings.System.putString(mContext.getContentResolver(), key, value);
+        //Settings.Global.putString(mContext.getContentResolver(), key, value);
+        DataProviderManager.putStringValue(this.mContext, key, value);
     }
 
     public String getStringParameters(String key) {
@@ -367,7 +372,8 @@ public class DataMananer {
                 defValue = "";
                 break;
         }
-        String result = Settings.System.getString(mContext.getContentResolver(), key);
+        //String result = Settings.System.getString(mContext.getContentResolver(), key);
+        String result = DataProviderManager.getStringValue(this.mContext, key, defValue);
         Log.d(TAG, "getStringParameters key = " + key + ", result = " + result);
         if (TextUtils.isEmpty(result)) {
             result = defValue;

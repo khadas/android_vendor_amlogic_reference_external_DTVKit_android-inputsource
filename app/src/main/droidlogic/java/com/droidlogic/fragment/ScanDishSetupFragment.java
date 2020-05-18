@@ -36,8 +36,6 @@ import android.widget.ProgressBar;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
-import android.annotation.NonNull;
-import android.annotation.Nullable;
 import android.widget.Toast;
 
 import org.dtvkit.inputsource.R;
@@ -153,7 +151,7 @@ public class ScanDishSetupFragment extends Fragment {
     }
 
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         initHandlerThread();
         Log.d(TAG, "onCreate");

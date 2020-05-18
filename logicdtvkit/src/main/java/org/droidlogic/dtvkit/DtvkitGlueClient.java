@@ -26,12 +26,13 @@ public class DtvkitGlueClient {
     //private HALCallback mHALCallback;
     private OverlayTarget mTarget;
     private AudioHandler mAudioHandler;
-    private SystemControlHandler mSysControlHandler;
+   // private SystemControlHandler mSysControlHandler;
     // Mutex for all mutable shared state.
     private final Object mLock = new Object();
     private native void nativeconnectdtvkit(DtvkitGlueClient client);
     private native void nativedisconnectdtvkit();
     private native void nativeSetSurface(Surface surface);
+    private native void nativeSetSurfaceToPlayer(Surface surface);
     private native String nativerequest(String resource, String json);
 
     static {
@@ -198,6 +199,7 @@ public class DtvkitGlueClient {
         }
     }
 
+/*
     public String readBySysControl(int ftype, String name) {
         String value = null;
         if (mSysControlHandler != null) {
@@ -220,4 +222,5 @@ public class DtvkitGlueClient {
         public String onReadSysFs(int ftype, String name);
         public void onWriteSysFs(int ftype, String name, String cmd);
     }
+    */
 }

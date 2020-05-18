@@ -36,5 +36,5 @@ endif
 
 LOCAL_SRC_FILES := platform.cpp
 
-include $(BUILD_SHARED_LIBRARY)
+#include $(BUILD_SHARED_LIBRARY)
 
