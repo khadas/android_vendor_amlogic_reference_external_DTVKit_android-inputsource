@@ -1517,6 +1517,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //will regist handle to client when
             //creat ciMenuView,so we need destory and
             //unregist handle.
+            mSystemControlManager.SetDtvKitSourceEnable(0);
             releaseSignalHandler();
             if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain) {
                 //release by message queue for current session
