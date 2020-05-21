@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
+import android.widget.LinearLayout;
 
 import org.dtvkit.inputsource.R;
 
@@ -52,6 +53,7 @@ public class ItemAdapter extends BaseAdapter {
                 convertView = LayoutInflater.from(mContext).inflate(R.layout.list_item_parameter,parent,false);
             }
             holder = new ViewHolder();
+            holder.container = (LinearLayout) convertView.findViewById(R.id.textview_title);
             holder.select = (TextView) convertView.findViewById(R.id.item_select);
             holder.textview2 = (TextView) convertView.findViewById(R.id.textview_second);
             holder.leftarray = (TextView) convertView.findViewById(R.id.left_array_text);
@@ -63,14 +65,29 @@ public class ItemAdapter extends BaseAdapter {
         }
 
         int editstatus = mData.get(position).getEditStatus();
+        boolean enable = mData.get(position).isEnable();
         if (editstatus == ItemDetail.NONE_EDIT) {
             holder.select.setVisibility(View.INVISIBLE);
             holder.leftarray.setVisibility(View.GONE);
             holder.rightarray.setVisibility(View.GONE);
         } else if (editstatus == ItemDetail.SWITCH_EDIT) {
             holder.select.setVisibility(View.INVISIBLE);
-            holder.leftarray.setVisibility(View.VISIBLE);
-            holder.rightarray.setVisibility(View.VISIBLE);
+            //holder.leftarray.setVisibility(View.VISIBLE);
+            //holder.rightarray.setVisibility(View.VISIBLE);
+            //hide array when can't be edited
+            if (enable) {
+                holder.textview2.setEnabled(true);
+                holder.leftarray.setEnabled(true);
+                holder.rightarray.setEnabled(true);
+                holder.leftarray.setVisibility(View.VISIBLE);
+                holder.rightarray.setVisibility(View.VISIBLE);
+            } else {
+                holder.textview2.setEnabled(false);
+                holder.leftarray.setEnabled(false);
+                holder.rightarray.setEnabled(false);
+                holder.leftarray.setVisibility(View.INVISIBLE);
+                holder.rightarray.setVisibility(View.INVISIBLE);
+            }
         } else {
             holder.select.setVisibility(View.VISIBLE);
             holder.leftarray.setVisibility(View.GONE);
@@ -101,6 +118,7 @@ public class ItemAdapter extends BaseAdapter {
         private String mFirstText;
         private String mSecondText;
         private boolean mIsSatellite = true;
+        private boolean mEnable = true;
 
         public static final int NONE_EDIT = 0;
         public static final int SELECT_EDIT = 1;
@@ -129,6 +147,10 @@ public class ItemAdapter extends BaseAdapter {
             return mSecondText;
         }
 
+        public boolean isEnable() {
+            return mEnable;
+        }
+
         public void setEditStatus(int editstatus) {
             this.mEditStatus = editstatus;
         }
@@ -141,10 +163,15 @@ public class ItemAdapter extends BaseAdapter {
             this.mSecondText = second;
         }
 
+        public void setEnable(boolean enable) {
+            this.mEnable = enable;
+        }
+
         public boolean isSatelliteList() {return this.mIsSatellite;}
     }
 
     public class ViewHolder{
+        LinearLayout container;
         TextView select;
         TextView textview2;
         TextView leftarray;

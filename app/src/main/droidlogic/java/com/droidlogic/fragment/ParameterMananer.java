@@ -124,7 +124,7 @@ public class ParameterMananer {
     public static final int KEY_POSITION_DEFAULT_VALUE_INDEX = 0;
 
     public static final int KEY_LNB_POWER_DEFAULT_VALUE_INDEX = 1;
-    public static final int KEY_22_KHZ_DEFAULT_VALUE_INDEX = 0;
+    public static final int KEY_22_KHZ_DEFAULT_VALUE_INDEX = 1;
     public static final int KEY_TONE_BURST_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_DISEQC1_0_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_DISEQC1_1_DEFAULT_VALUE_INDEX = 0;
@@ -441,6 +441,22 @@ public class ParameterMananer {
                     value = "---";
                 }
                 list.add(new ItemDetail(ItemDetail.NONE_EDIT, parametertype.get(i), value, false));
+            } else if (i == 4 || i == 5) {
+                String value = parametervalue.get(i);
+                int lnbType = getIntParameters(KEY_LNB_TYPE);
+                Log.d(TAG, "getCompleteParameterList lnbType = " + lnbType);
+                //don't display lnbpower value if lnb type is not customed
+                if (i == 4 && lnbType != 2) {
+                    value = "---";
+                }
+                ItemDetail itemDetail = new ItemDetail(ItemDetail.SWITCH_EDIT, parametertype.get(i), value, false);
+                //disble lnb power and 22khz when lnb type is not customed
+                if (lnbType == 2) {
+                    itemDetail.setEnable(true);
+                } else {
+                    itemDetail.setEnable(false);
+                }
+                list.add(itemDetail);
             } else {
                 list.add(new ItemDetail(ItemDetail.SWITCH_EDIT, parametertype.get(i), parametervalue.get(i), false));
             }

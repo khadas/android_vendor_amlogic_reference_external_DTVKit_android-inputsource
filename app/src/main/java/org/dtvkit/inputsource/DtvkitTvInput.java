@@ -2474,6 +2474,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 else if (signal.equals("DvbNetworkChange") || signal.equals("DvbUpdatedService"))
                 {
                     Log.i(TAG, "DvbNetworkChange or DvbUpdatedService");
+                    //currently support dvbc dvbt dvbt2 only
+                    String channelSignalType = null;
+                    if (mTunedChannel != null) {
+                        try {
+                            channelSignalType = mTunedChannel.getInternalProviderData().get("channel_signal_type").toString();
+                        } catch (Exception e) {
+                            Log.i(TAG, "DvbNetworkChange or DvbUpdatedService get channel_signal_type Exception " + e.getMessage());
+                        }
+                    }
+                    if (!TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2)) {
+                        Log.d(TAG, "DvbNetworkChange or DvbUpdatedService not dvbc or dvbt and is " + channelSignalType);
+                        return;
+                    }
                     if (!mDvbNetworkChangeSearchStatus) {
                         mDvbNetworkChangeSearchStatus = true;
                         sendDoReleaseMessage();

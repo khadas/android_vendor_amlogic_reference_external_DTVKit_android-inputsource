@@ -401,7 +401,13 @@ public class ScanDishSetupFragment extends Fragment {
             switch (parameterKey) {
                 case ParameterMananer.KEY_LNB_TYPE:
                     if (data != null && "selected".equals(data.getString("action"))) {
-                        mParameterMananer.saveIntParameters(parameterKey, data.getInt("position"));
+                        int lnbType = data.getInt("position");
+                        mParameterMananer.saveIntParameters(parameterKey, lnbType);
+                        if (lnbType == 0 || lnbType == 2) {
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_22_KHZ, 0);
+                        } else if (lnbType == 1) {
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_22_KHZ, 1);
+                        }
                         if (mCurrentCustomDialog != null && TextUtils.equals(parameterKey, mCurrentCustomDialog.getDialogKey())) {
                             mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(), mCurrentCustomDialog.getDialogKey(), data.getInt("position"));
                             //mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
@@ -501,6 +507,13 @@ public class ScanDishSetupFragment extends Fragment {
                     break;
                 case ParameterMananer.KEY_LNB_POWER:
                 case ParameterMananer.KEY_22_KHZ:
+                    int lnbType = mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_TYPE);
+                    if (lnbType != 2) {
+                        Log.d(TAG, "onStatusChange KEY_LNB_POWER or KEY_22_KHZ can only be set under customed lnb type");
+                        break;
+                    } else {
+                        Log.d(TAG, "onStatusChange KEY_LNB_POWER or KEY_22_KHZ can be set lnbType = " + lnbType);
+                    }
                 case ParameterMananer.KEY_TONE_BURST:
                 case ParameterMananer.KEY_DISEQC1_0:
                 case ParameterMananer.KEY_DISEQC1_1:
@@ -879,6 +892,15 @@ public class ScanDishSetupFragment extends Fragment {
                 if (position == 0 || position == 1) {
                     Log.d(TAG, "satellite or transponder no sub menu");
                     return;
+                }
+                int lnbType = mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_TYPE);
+                if ((position == 4 || position == 5)) {
+                    if (lnbType != 2) {
+                        Log.d(TAG, "onListItemSelected KEY_LNB_POWER or KEY_22_KHZ can only be set under customed lnb type");
+                        return;
+                    } else {
+                        Log.d(TAG, "onListItemSelected KEY_LNB_POWER or KEY_22_KHZ can be set");
+                    }
                 }
                 mCurrentCustomDialog = mDialogManager.buildItemDialogById(position, mSingleSelectDialogCallBack);
                 if (mCurrentCustomDialog != null) {
