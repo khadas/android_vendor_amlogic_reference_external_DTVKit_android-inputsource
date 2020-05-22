@@ -2378,9 +2378,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
                                 initSubtitleOrTeletextIfNeed();
 
-                                resetRecordingPath();
-                                tryStartTimeshifting();
-                                monitorRecordingPath(true);
+                                monitorTimeshiftRecordingPathAndTryRestart(true, true, true);
                             }
                             else if (type.equals("dvbrecording")) {
                                 setBlockMute(false);
@@ -2735,14 +2733,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             }
                             break;
                         case MSG_CHECK_REC_PATH:
-                            if (resetRecordingPath()) {
+                            if (resetRecordingPath() || (msg.arg2 != 0)/*start*/) {
                                 /* path changed */
                                 tryStartTimeshifting();
                             }
-                            if (mHandlerThreadHandle != null) {
-                                mHandlerThreadHandle.removeMessages(MSG_CHECK_REC_PATH);
-                                mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_REC_PATH, MSG_CHECK_REC_PATH_PERIOD);
-                            }
+                            monitorTimeshiftRecordingPathAndTryRestart(true, false, false);
                             break;
                         case MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG:
                             if (mMainHandle != null) {
@@ -3310,12 +3305,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        private void monitorRecordingPath(boolean on) {
+        private void monitorTimeshiftRecordingPathAndTryRestart(boolean on, boolean now, boolean start) {
             /*monitor the rec path*/
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_CHECK_REC_PATH);
-                if (on)
-                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_REC_PATH, MSG_CHECK_REC_PATH_PERIOD);
+                if (on) {
+                    Message mess = mHandlerThreadHandle.obtainMessage(MSG_CHECK_REC_PATH, now ? 1 : 0, start ? 1 : 0);
+                    boolean info = mHandlerThreadHandle.sendMessageDelayed(mess, now ? 0 : MSG_CHECK_REC_PATH_PERIOD);
+                }
             }
         }
 
