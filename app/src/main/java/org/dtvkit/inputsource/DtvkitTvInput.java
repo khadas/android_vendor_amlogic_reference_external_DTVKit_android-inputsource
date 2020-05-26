@@ -2127,13 +2127,23 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public long onTimeShiftGetCurrentPosition() {
             if (startPosition == 0) /* Playing back recorded program */ {
                 if (playerState == PlayerState.PLAYING) {
-                    currentPosition = playerGetElapsed() * 1000;
+                    long e_t_l[] = playerGetElapsedAndTruncated();
+                    long length = e_t_l[2] * 1000;
+                    currentPosition = e_t_l[0] * 1000;
+                    if ((length - currentPosition) < 1000)
+                        currentPosition = recordedProgram.getRecordingDurationMillis();
                     Log.i(TAG, "playing back record program. current position: " + currentPosition);
                 }
             } else if (timeshifting) {
-                long elapsed = playerGetElapsed() * 1000;
+                long e_t_l[] = playerGetElapsedAndTruncated();
+                long elapsed = e_t_l[0] * 1000;
+                long length = e_t_l[2] * 1000;
                 long diff = PropSettingManager.getStreamTimeDiff();
-                currentPosition = elapsed + originalStartPosition + diff;
+
+                if ((length - elapsed) < 1000)
+                   currentPosition = PropSettingManager.getCurrentStreamTime(true);
+                else
+                   currentPosition = elapsed + originalStartPosition + diff;
                 Log.i(TAG, "timeshifting. current position: " + currentPosition + ", (elapsed:" + elapsed + ", diff:" + diff + ")ms");
             } else if (startPosition == TvInputManager.TIME_SHIFT_INVALID_TIME) {
                 currentPosition = TvInputManager.TIME_SHIFT_INVALID_TIME;
@@ -4495,7 +4505,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private long[] playerGetElapsedAndTruncated(JSONObject playerStatus) {
-        long[] result = {0, 0};
+        long[] result = {0, 0, 0};
         if (playerStatus != null) {
             try {
                 JSONObject content = playerStatus.getJSONObject("content");
@@ -4504,6 +4514,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 if (content.has("truncated")) {
                     result[1] = content.getLong("truncated");
+                }
+                if (content.has("length")) {
+                    result[2] = content.getLong("length");
                 }
             } catch (JSONException e) {
                 Log.e(TAG, "playerGetElapsedAndTruncated = " + e.getMessage());
