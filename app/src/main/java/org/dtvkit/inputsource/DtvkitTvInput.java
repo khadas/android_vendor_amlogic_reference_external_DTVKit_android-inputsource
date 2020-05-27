@@ -2904,9 +2904,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (audioManager != null) {
                     Log.d(TAG, "setBlockMute = " + mute);
                     if (mute) {
-                        audioManager.setParameters("parental_control_av_mute=true");
+                        audioManager.setParameters("TV-Mute=1");
                     } else {
-                        audioManager.setParameters("parental_control_av_mute=false");
+                        audioManager.setParameters("TV-Mute=0");
                     }
                     mParentControlMute = mute;
                 } else {
