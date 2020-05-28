@@ -1426,7 +1426,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                     }
                 } else if (signal.equals("RecordingDiskFull")) {
-                    notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
+                    //notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
                 }
             }
         };
@@ -2587,6 +2587,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 else if (signal.equals("RecordingDiskFull"))
                 {
                     /*free disk space excceds the property's setting*/
+                    Bundle event = new Bundle();
+                    event.putString(ConstantManager.KEY_INFO, "Stop timeshift or DVR due to insufficient storage");
+                    notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
                 }
             }
         };
