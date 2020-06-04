@@ -1468,6 +1468,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private boolean mBlocked = false;
         private int mSignalStrength = 0;
         private int mSignalQuality = 0;
+        private int m_surface_left = 0;
+        private int m_surface_right = 0;
+        private int m_surface_top = 0;
+        private int m_surface_bottom = 0;
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -2548,6 +2552,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                SysContManager.writeSysFs("/sys/class/video/crop", crop);
                            }
                        layoutSurface(left,top,right,bottom);
+                       m_surface_left = left;
+                       m_surface_right = right;
+                       m_surface_top = top;
+                       m_surface_bottom = bottom;
                        if (mHandlerThreadHandle != null) {
                           mHandlerThreadHandle.removeMessages(MSG_ENABLE_VIDEO);
                           mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_ENABLE_VIDEO, 40);
@@ -2601,6 +2609,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Bundle event = new Bundle();
                     event.putString(ConstantManager.KEY_INFO, "Stop timeshift or DVR due to insufficient storage");
                     notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                }
+                else if (signal.equals("tt_mix_separate"))
+                {
+                    mHandlerThreadHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_SEPARATE);
+                }
+                else if (signal.equals("tt_mix_normal"))
+                {
+                    mHandlerThreadHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
                 }
             }
         };
@@ -2710,6 +2726,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             if (msg.obj != null && msg.obj instanceof TvContentRating) {
                                 setUnBlock((TvContentRating)msg.obj);
                             }
+                            break;
+                        case MSG_SET_TELETEXT_MIX_NORMAL:
+                            mView.setTeletextMix(false);
+                            layoutSurface(m_surface_left,m_surface_top,m_surface_right,m_surface_bottom);
+                            break;
+                        case MSG_SET_TELETEXT_MIX_SEPARATE:
+                            mView.setTeletextMix(true);
+                            layoutSurface(m_surface_left,m_surface_bottom/3,m_surface_right/2,m_surface_bottom/3*2);
                             break;
                         case MSG_CHECK_REC_PATH:
                             if (resetRecordingPath() || (msg.arg2 != 0)/*start*/) {
