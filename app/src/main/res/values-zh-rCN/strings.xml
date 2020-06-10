@@ -85,4 +85,10 @@
     <!-- play -->
     <string name="play_scrambled">加密</string>
 
+    <!-- ci authentication -->
+    <string name="play_ci_authentication">Ci plus 认证中，请稍后!</string>
+    <string name="ci_profile_update_available">CI 有更新</string>
+    <string name="ci_profile_channel_updating">CI 频道正在更新，请稍后!</string>
+    <string name="ci_profile_channel_update_confirm">更新</string>
+    <string name="ci_profile_channel_update_cancel">取消</string>
 </resources>

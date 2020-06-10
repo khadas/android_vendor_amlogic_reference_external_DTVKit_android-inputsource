@@ -555,6 +555,49 @@ public class TvContractUtils {
     }
 
     /**
+     * Returns the {@link Channel} with specified id.
+     * @param resolver {@link ContentResolver} used to query database.
+     * @param originalNetworkId of channel.
+     * @param transportStreamId of channel.
+     * @param serviceId of channel.
+     * @return An channel object with specified id.
+     */
+    public static Channel getChannelByNetworkTransportServiceId(ContentResolver resolver, int originalNetworkId, int transportStreamId, int serviceId) {
+        Channel result = null;
+        Cursor cursor = null;
+        try {
+            cursor = resolver.query(Channels.CONTENT_URI, Channel.PROJECTION, null, null, null);
+            if (cursor == null || cursor.getCount() == 0) {
+                Log.w(TAG, "getChannelByNetworkTransportServiceId No channels");
+                return result;
+            }
+            Channel channel = null;
+            int neworkId = 0;
+            int streamId = 0;
+            int service = 0;
+            while (cursor.moveToNext()) {
+                channel = Channel.fromCursor(cursor);
+                if (channel != null) {
+                    neworkId = channel.getOriginalNetworkId();
+                    streamId = channel.getTransportStreamId();
+                    service = channel.getServiceId();
+                    if (neworkId == originalNetworkId && streamId == transportStreamId && serviceId == service) {
+                        result = channel;
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "getChannelByNetworkTransportServiceId Exception " + e.getMessage());
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return result;
+    }
+
+    /**
      * Returns the current list of programs on a given channel.
      *
      * @param resolver Application's ContentResolver.
@@ -799,5 +842,41 @@ public class TvContractUtils {
             }
             return result;
         }
+    }
+
+    public static String getStringFromChannelInternalProviderData(Channel channel, String key, String defaultVal) {
+        String result = defaultVal;
+        try {
+            if (channel != null) {
+                result = (String)channel.getInternalProviderData().get(key);
+            }
+        } catch(Exception e) {
+            Log.i(TAG, "getStringFromChannelInternalProviderData Exception " + e.getMessage());
+        }
+        return result;
+    }
+
+    public static boolean getBooleanFromChannelInternalProviderData(Channel channel, String key, boolean defaultVal) {
+        boolean result = defaultVal;
+        try {
+            if (channel != null) {
+                result = (boolean)channel.getInternalProviderData().get(key);
+            }
+        } catch(Exception e) {
+            Log.i(TAG, "getBooleanFromChannelInternalProviderData Exception " + e.getMessage());
+        }
+        return result;
+    }
+
+    public static int getIntFromChannelInternalProviderData(Channel channel, String key, int defaultVal) {
+        int result = defaultVal;
+        try {
+            if (channel != null) {
+                result = (int)channel.getInternalProviderData().get(key);
+            }
+        } catch(Exception e) {
+            Log.i(TAG, "getIntFromChannelInternalProviderData Exception " + e.getMessage());
+        }
+        return result;
     }
 }

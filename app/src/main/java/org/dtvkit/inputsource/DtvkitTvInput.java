@@ -183,6 +183,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     // Mutex for all mutable shared state.
     private final Object mLock = new Object();
 
+    //ci authentication
+    private boolean mCiAuthenticatedStatus = false;
+
     private enum PlayerState {
         STOPPED, PLAYING
     }
@@ -299,6 +302,95 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     };
 
+    protected final BroadcastReceiver mCiTestBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_TEST, false)) {
+                Log.d(TAG, "TEST_CASE intent = " + (intent != null ? intent.getExtras() : null));
+                if (intent != null) {
+                    try {
+                        String action = intent.getAction();
+                        if (ConstantManager.ACTION_CI_PLUS_INFO.equals(action)) {
+                            String command = intent.getStringExtra(ConstantManager.CI_PLUS_COMMAND);
+                            DtvkitTvInputSession mainSession = getMainTunerSession();
+                            switch (command) {
+                                case ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_REQUEST:
+                                    //op search request
+                                    //am broadcast -a ci_plus_info --es command "search_request" --ei search_module 1
+                                    showToast(ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_REQUEST);
+                                    if (mainSession != null) {
+                                        Bundle request = new Bundle();
+                                        request.putInt(ConstantManager.VALUE_CI_PLUS_SEARCH_MODULE, intent.getIntExtra(ConstantManager.VALUE_CI_PLUS_SEARCH_MODULE, -1));
+                                        request.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_REQUEST);
+                                        mainSession.sendBundleToAppByTif(action, request);
+                                    }
+                                    break;
+                                case ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_FINISHED:
+                                    //op search finished
+                                    //am broadcast -a ci_plus_info --es command "search_finished"
+                                    showToast(ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_FINISHED);
+                                    if (mainSession != null) {
+                                        Bundle request = new Bundle();
+                                        request.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_FINISHED);
+                                        mainSession.sendBundleToAppByTif(action, request);
+                                    }
+                                    break;
+                                case ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED:
+                                    //op search finished
+                                    //am broadcast -a ci_plus_info --es command "channel_updated"
+                                    showToast(ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED);
+                                    if (mainSession != null) {
+                                        Bundle request = new Bundle();
+                                        request.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED);
+                                        mainSession.sendBundleToAppByTif(action, request);
+                                    }
+                                    break;
+                                case ConstantManager.VALUE_CI_PLUS_COMMAND_HOST_CONTROL:
+                                    //op search finished
+                                    //am broadcast -a ci_plus_info --es command "host_control" --el host_control_channel 1 --es tune_type "service_tune"
+                                    showToast(ConstantManager.VALUE_CI_PLUS_COMMAND_HOST_CONTROL);
+                                    if (mainSession != null) {
+                                        Bundle request = new Bundle();
+                                        request.putLong(ConstantManager.VALUE_CI_PLUS_CHANNEL, intent.getLongExtra(ConstantManager.VALUE_CI_PLUS_CHANNEL, -1));
+                                        request.putString(ConstantManager.VALUE_CI_PLUS_TUNE_TYPE, intent.getStringExtra(ConstantManager.VALUE_CI_PLUS_TUNE_TYPE));
+                                        request.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_HOST_CONTROL);
+                                        mainSession.sendBundleToAppByTif(action, request);
+                                    }
+                                    break;
+                                case ConstantManager.VALUE_CI_PLUS_COMMAND_IGNORE_INPUT:
+                                    //op search finished
+                                    //am broadcast -a ci_plus_info --es command "ignore_input"
+                                    showToast(ConstantManager.VALUE_CI_PLUS_COMMAND_IGNORE_INPUT);
+                                    if (mainSession != null) {
+                                        Bundle request = new Bundle();
+                                        request.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_IGNORE_INPUT);
+                                        mainSession.sendBundleToAppByTif(action, request);
+                                    }
+                                    break;
+                                case ConstantManager.VALUE_CI_PLUS_COMMAND_RECEIVE_INPUT:
+                                    //op search finished
+                                    //am broadcast -a ci_plus_info --es command "receive_input"
+                                    showToast(ConstantManager.VALUE_CI_PLUS_COMMAND_RECEIVE_INPUT);
+                                    if (mainSession != null) {
+                                        Bundle request = new Bundle();
+                                        request.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_RECEIVE_INPUT);
+                                        mainSession.sendBundleToAppByTif(action, request);
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.d(TAG, "mCiTestBroadcastReceiver Exception = " + e.getMessage());
+                    }
+                }
+            } else {
+                Log.d(TAG, "TEST_CASE hasn't been enabled");
+            }
+        }
+    };
+
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onCreate() {
@@ -328,6 +420,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         IntentFilter intentFilter2 = new IntentFilter();
         intentFilter2.addAction(intenAction);
         registerReceiver(mAutomaticSearchingReceiver, intentFilter2);
+
+        IntentFilter intentFilter3 = new IntentFilter();
+        intentFilter3.addAction(ConstantManager.ACTION_CI_PLUS_INFO);
+        registerReceiver(mCiTestBroadcastReceiver, intentFilter3);
         sendEmptyMessageToInputThreadHandler(MSG_START_CA_SETTINGS_SERVICE);
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY);
     }
@@ -621,6 +717,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         unregisterReceiver(mParentalControlsBroadcastReceiver);
         unregisterReceiver(mBootBroadcastReceiver);
         unregisterReceiver(mAutomaticSearchingReceiver);
+        unregisterReceiver(mCiTestBroadcastReceiver);
         mContentResolver.unregisterContentObserver(mContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingManagerHandler);
@@ -1614,11 +1711,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mStarted = false;
 
             DtvkitTvInputSession session = getMainTunerSession();
-            boolean seiDesign = getFeatureSupportSeiTvApp();
+            boolean seiDesign = getFeatureSupportNewTvApp();
             if (session != null) {
                 session.removeScheduleTimeshiftRecordingTask();
                 //need to reset record path as path may be set suring playing
-                if (getFeatureSupportSeiTvApp()) {
+                if (getFeatureSupportNewTvApp()) {
                     resetRecordingPath();
                 }
             } else {
@@ -2190,6 +2287,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     class DtvkitTvInputSession extends TvInputService.Session               {
         private static final String TAG = "DtvkitTvInputSession";
         private boolean mhegTookKey = false;
+        private Channel mPreviousTunedChannel = null;
         private Channel mTunedChannel = null;
         private List<TvTrackInfo> mTunedTracks = null;
         protected final Context mContext;
@@ -2507,6 +2605,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "sendMessage " + info);
             }
 
+            mPreviousTunedChannel = mTunedChannel;
             mTunedChannel = getChannel(channelUri);
 
             Log.i(TAG, "onTune will be Done in onTuneByHandlerThreadHandle");
@@ -2598,6 +2697,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
 
             if (!mIsPip) {
+                if (tunedChannel != null) {
+                    String previousCiNumber = null;
+                    if (mPreviousTunedChannel != null) {
+                        previousCiNumber = TvContractUtils.getStringFromChannelInternalProviderData(mPreviousTunedChannel, Channel.KEY_CHANNEL_CI_NUMBER, null);
+                    }
+                    String ciNumber = TvContractUtils.getStringFromChannelInternalProviderData(tunedChannel, Channel.KEY_CHANNEL_CI_NUMBER, null);
+                    if (!TextUtils.equals(previousCiNumber, ciNumber)) {
+                        Log.i(TAG, "onTuneByHandlerThreadHandle ci changed = " + ciNumber + "(" + (ciNumber == null ? "not ci channel" : "ci channel)"));
+                        playerNotifyCiProfileEvent(ciNumber);
+                    } else {
+                        Log.i(TAG, "onTuneByHandlerThreadHandle ci (" + (ciNumber == null ? "not ci channel" : "same ciNumber") + ")");
+                    }
+                }
                 if (mhegTune) {
                     mhegSuspend();
                     if (mhegGetNextTuneInfo(dvbUri) == 0)
@@ -2605,7 +2717,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else {
                     mhegStop();
                 }
-                playerStopTeletext();//no need to save teletext select status
+                //playerStopTeletext();//no need to save teletext select status
                 if (!supportFullPipFccArchitecture) {
                     playerStop();
                 } else if (mPreviousBufferUri == null && mNextBufferUri == null) {
@@ -3268,6 +3380,23 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         sendMsgTryStopTimeshift(0);
                     }
                 }
+            } else if (TextUtils.equals("delete_profile", action)) {
+                String ciNumber = data.getString("ci_number");
+                Log.d(TAG, "do private cmd:"+ "delete_profile" + ", ciNumber:" + ciNumber);
+            } else if (TextUtils.equals("focus_info", action)) {
+                boolean isProfile = data.getBoolean("is_profile");
+                String ciNumber = data.getString("ci_number");
+                Log.d(TAG, "do private cmd:"+ "focus_info" + ", isProfile:" + isProfile + ", ciNumber:" + ciNumber);
+                playerNotifyCiProfileEvent(ciNumber);
+            } else if (TextUtils.equals(ConstantManager.ACTION_CI_PLUS_INFO, action)) {
+                String command = data.getString(ConstantManager.CI_PLUS_COMMAND);
+                if (ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_REQUEST.equals(command)) {
+                    int module = data.getInt(ConstantManager.VALUE_CI_PLUS_SEARCH_MODULE);
+                    Log.d(TAG, "do private cmd:"+ action + " module = " + module);
+                    doOperatorSearch(module);
+                } else {
+                    Log.d(TAG, "do private cmd:"+ action + " none");
+                }
             }
         }
 
@@ -3401,6 +3530,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.i(TAG, "onKeyDown skip as search action is raised");
                 return true;
             }
+            if (mCiAuthenticatedStatus) {
+                Log.i(TAG, "onKeyDown skip as ci Authentication");
+                showToast(R.string.play_ci_authentication);
+                return true;
+            }
             /* It's possible for a keypress to be registered before the overlay is created */
             if (mView == null) {
                 used = super.onKeyDown(keyCode, event);
@@ -3425,6 +3559,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.i(TAG, "onKeyUp " + event);
             if (mDvbNetworkChangeSearchStatus) {
                 Log.i(TAG, "onKeyUp skip as search action is raised");
+                return true;
+            }
+            if (mCiAuthenticatedStatus) {
+                Log.i(TAG, "onKeyDown skip as ci Authentication");
+                showToast(R.string.play_ci_authentication);
                 return true;
             }
             /* It's possible for a keypress to be registered before the overlay is created */
@@ -3801,6 +3940,109 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     checkAndUpdateLcn();
                     EpgSyncJobService.requestImmediateSync(mContext, mInputId, false, true, sync);
                 }
+                else if (signal.equals("CiplusUpdateService"))
+                {
+                    //update CiOpSearchRequest search result
+                    Log.i(TAG, "CiplusUpdateService");
+                    ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
+                    EpgSyncJobService.requestImmediateSync(mContext, mInputId, false, false, sync);
+                    //notify update result after 3s
+                    if (mHandlerThreadHandle != null) {
+                        mHandlerThreadHandle.removeMessages(MSG_CI_UPDATE_PROFILE_OVER);
+                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CI_UPDATE_PROFILE_OVER, MSG_CI_UPDATE_PROFILE_OVER_DELAY);
+                    }
+                }
+                else if (signal.equals("CiTuneServiceInfo"))
+                {
+                    //tuned by dtvkit directly and then notify app
+                    int s_id = 0, t_id = 0, onet_id = 0;
+                    String tune_type = "";
+                    try {
+                        s_id = data.getInt("s_id");
+                        t_id = data.getInt("t_id");
+                        onet_id = data.getInt("onet_id");
+                        tune_type = data.getString("tune_type");
+                    } catch (JSONException e) {
+                        Log.e(TAG, "CiTuneServiceInfo JSONException = " + e.getMessage());
+                    }
+                    if (ConstantManager.VALUE_CI_PLUS_TUNE_TYPE_SERVICE.equals(tune_type)) {
+                        Log.d(TAG, "CiTuneServiceInfo s_id " + s_id + " t_id " + t_id + " onet_id " + onet_id + " tune_type " + tune_type);
+                        Channel foundChannelById = TvContractUtils.getChannelByNetworkTransportServiceId(mContext.getContentResolver(), onet_id, t_id, s_id);
+                        if (foundChannelById != null) {
+                            Bundle channelBundle = new Bundle();
+                            channelBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_HOST_CONTROL);
+                            channelBundle.putString(ConstantManager.VALUE_CI_PLUS_TUNE_TYPE, ConstantManager.VALUE_CI_PLUS_TUNE_TYPE_SERVICE);
+                            channelBundle.putLong(ConstantManager.VALUE_CI_PLUS_CHANNEL, foundChannelById.getId());
+                            sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, channelBundle);
+                        } else {
+                            Log.d(TAG, "CiTuneServiceInfo hasn't found such channel");
+                        }
+                    } else if (ConstantManager.VALUE_CI_PLUS_TUNE_TYPE_TRANSPORT.equals(tune_type)) {
+                        Log.d(TAG, "CiTuneServiceInfo s_id transport_tune");
+                        Bundle channelBundle = new Bundle();
+                        channelBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_HOST_CONTROL);
+                        channelBundle.putString(ConstantManager.VALUE_CI_PLUS_TUNE_TYPE, ConstantManager.VALUE_CI_PLUS_TUNE_TYPE_TRANSPORT);
+                        channelBundle.putLong(ConstantManager.VALUE_CI_PLUS_CHANNEL, -1);
+                        sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, channelBundle);
+                    }
+                }
+                else if (signal.equals("CiOpSearchRequest")) {
+                    //tell app to search related module
+                    try {
+                        int module = data.getInt("data");
+                        Log.d(TAG, "Ci operator request, need yes/no. module no. " + module);
+                        if (PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_SEARCH_TEST, false)) {
+                            if (mMainHandle != null) {
+                                mMainHandle.removeMessages(MSG_CI_UPDATE_PROFILE_CONFIRM);
+                                mMainHandle.sendMessageDelayed(mMainHandle.obtainMessage(MSG_CI_UPDATE_PROFILE_CONFIRM, module, 0), MSG_SHOW_STREAM_CHANGE_DELAY);
+                            }
+                        } else {
+                            Bundle searchBundle = new Bundle();
+                            searchBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_REQUEST);
+                            searchBundle.putInt(ConstantManager.VALUE_CI_PLUS_SEARCH_MODULE, module);
+                            sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, searchBundle);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "CiOpSearchRequest Exception = " + e.getMessage());
+                    }
+                }
+                else if (signal.equals("CiOpSearchFinished")) {
+                    // only a status and skip it for the moment
+                    try {
+                        Log.d(TAG, "Ci operator search has finished");
+                        Bundle finishBundle = new Bundle();
+                        finishBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_FINISHED);
+                        sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, finishBundle);
+                    } catch (Exception e) {
+                        Log.e(TAG, "CiOpSearchFinished Exception = " + e.getMessage());
+                    }
+                }
+                else if (signal.equals("IgnoreUserInput")) {
+                    //tell app to disable key event
+                    try {
+                        String event = data.getString("data");
+                        Log.d(TAG, "System is doing " + event + " can not handle user input");
+                        Bundle inputBundle = new Bundle();
+                        inputBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_IGNORE_INPUT);
+                        inputBundle.putString(ConstantManager.VALUE_CI_PLUS_EVENT_DETAIL, event);
+                        sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, inputBundle);
+                        mCiAuthenticatedStatus = true;
+                    } catch (Exception e) {
+                        Log.d(TAG, "IgnoreUserInput Exception = " + e.getMessage());
+                    }
+                }
+                else if (signal.equals("ReceiveUserInput")) {
+                    //tell app to key event can work normally
+                    try {
+                        Log.d(TAG, "Work complete, input can received now");
+                        Bundle inputBundle = new Bundle();
+                        inputBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_RECEIVE_INPUT);
+                        sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, inputBundle);
+                        mCiAuthenticatedStatus = false;
+                    } catch (Exception e) {
+                        Log.d(TAG, "IgnoreUserInput Exception = " + e.getMessage());
+                    }
+                }
                 else if (signal.equals("DvbNetworkChange") || signal.equals("DvbUpdatedService"))
                 {
                     Log.i(TAG, "DvbNetworkChange or DvbUpdatedService");
@@ -4040,6 +4282,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_START_MHEG5 = 40;
         protected static final int MSG_STOP_MHEG5 = 41;
 
+        //ci plus update
+        protected static final int MSG_CI_UPDATE_PROFILE_OVER = 50;
+        protected static final int MSG_CI_UPDATE_PROFILE_CONFIRM = 51;
+        protected static final int MSG_CI_UPDATE_PROFILE_OVER_DELAY = 3000;//3S
+
         protected static final int MSG_CHECK_RESOLUTION_PERIOD = 1000;//MS
         protected static final int MSG_UPDATE_TRACKINFO_DELAY = 2000;//MS
         protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 2000;//MS
@@ -4194,6 +4441,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             break;
                         case MSG_STOP_MHEG5:
                             mhegStop();
+                            break;
+                        case MSG_CI_UPDATE_PROFILE_OVER:
+                            Bundle updateEvent = new Bundle();
+                            updateEvent.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED);
+                            sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, updateEvent);
                             break;
                         default:
                             Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
@@ -4501,6 +4753,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         break;
                     case MSG_EVENT_SUBTITLE_OPENED:
                         initSubtitleOrTeletextIfNeed();
+                        break;
+                    case MSG_CI_UPDATE_PROFILE_CONFIRM:
+                        showOpSearchConfirmDialog(DtvkitTvInput.this, msg.arg1);
                         break;
                     default:
                         Log.d(TAG, "MainHandler default");
@@ -4955,6 +5210,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             }
         }
+
+        private void sendBundleToAppByTif(String action, Bundle event) {
+            Log.d(TAG, "sendBundleToAppByTif action = " + action + ", event = " + event);
+            notifySessionEvent(action, event);
+        }
     }
 
     private boolean resetRecordingPath() {
@@ -4962,13 +5222,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         boolean changed = false;
 
         String path = SysSettingManager.convertMediaPathToMountedPath(newPath);
-        if (!TextUtils.isEmpty(path) && !SysSettingManager.isMountedPathAvailable(path) && !getFeatureSupportSeiTvApp()) {
+        if (!TextUtils.isEmpty(path) && !SysSettingManager.isMountedPathAvailable(path) && !getFeatureSupportNewTvApp()) {
             Log.d(TAG, "removable device has been moved and use default path");
             newPath = DataMananer.PVR_DEFAULT_PATH;
             mDataMananer.saveStringParameters(DataMananer.KEY_PVR_RECORD_PATH, newPath);
             changed = true;
         }
-        if (getFeatureSupportSeiTvApp()) {
+        if (getFeatureSupportNewTvApp()) {
             if (TextUtils.isEmpty(newPath) || DataMananer.PVR_DEFAULT_PATH.equals(newPath)) {
                 Log.d(TAG, "sei livetv support removable storage only");
                 return false;
@@ -5995,6 +6255,25 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         } catch (Exception e) {
             Log.e(TAG, "playerNotifyCiProfileEvent = " + e.getMessage());
             result = false;
+        }
+        return result;
+    }
+
+    private boolean doOperatorSearch(int module) {
+        boolean result = false;
+        Log.d(TAG, "doOperatorSearch: " + module);
+        try {
+            JSONArray args = new JSONArray();
+            args.put(module);
+            JSONObject resp = DtvkitGlueClient.getInstance().request("Player.doOperatorSearch", args);
+            if (resp != null) {
+                result = resp.optBoolean("data");
+            }
+             if (!result) {
+                Log.d(TAG, "doOperatorSearch not ok: " + resp.optString("data", ""));
+             }
+        } catch (Exception e) {
+            Log.e(TAG, "doOperatorSearch Exception = " + e.getMessage());
         }
         return result;
     }
@@ -7099,16 +7378,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         return PropSettingManager.getBoolean(PropSettingManager.ENABLE_FILL_SURFACE, false);
     }
 
-    private boolean getFeatureSupportSeiTvApp() {
-        return PropSettingManager.getBoolean(PropSettingManager.MATCH_SEI_TVAPP_ENABLE, false);
+    private boolean getFeatureSupportNewTvApp() {
+        return PropSettingManager.getBoolean(PropSettingManager.MATCH_NEW_TVAPP_ENABLE, true);
     }
 
     private boolean getFeatureSupportCaptioningManager() {
-        return !getFeatureSupportSeiTvApp() && PropSettingManager.getBoolean(PropSettingManager.CAPTIONING_MANAGER_ENABLE, true);
+        return !getFeatureSupportNewTvApp() && PropSettingManager.getBoolean(PropSettingManager.CAPTIONING_MANAGER_ENABLE, true);
     }
 
     private boolean getFeatureSupportManualTimeshift() {
-        return getFeatureSupportSeiTvApp() || PropSettingManager.getBoolean(PropSettingManager.MANUAL_TIMESHIFT_ENABLE, false);
+        return getFeatureSupportNewTvApp() || PropSettingManager.getBoolean(PropSettingManager.MANUAL_TIMESHIFT_ENABLE, false);
     }
 
     /*
@@ -7655,6 +7934,61 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime/*wakeAt*/, mAlarmIntent);
             }
         }
+    }
 
+    private void showToast(int stringRes) {
+        Toast.makeText(DtvkitTvInput.this, stringRes, Toast.LENGTH_SHORT).show();
+    }
+
+    private void showToast(String str) {
+        Toast.makeText(DtvkitTvInput.this, str, Toast.LENGTH_SHORT).show();
+    }
+
+    private void showOpSearchConfirmDialog(final Context context, int module) {
+        if (context == null || module == -1) {
+            Log.d(TAG, "showOpSearchConfirmDialog null context or module");
+            return;
+        }
+        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        final AlertDialog alert = builder.create();
+        final View dialogView = View.inflate(context, R.layout.confirm_search, null);
+        final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
+        final Button confirm = (Button) dialogView.findViewById(R.id.confirm);
+        final Button cancel = (Button) dialogView.findViewById(R.id.cancel);
+
+        title.setText(R.string.ci_profile_update_available);
+        confirm.setText(R.string.ci_profile_channel_update_confirm);
+        cancel.setText(R.string.ci_profile_channel_update_cancel);
+        confirm.requestFocus();
+        cancel.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alert.dismiss();
+            }
+        });
+        confirm.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                confirm.setEnabled(false);
+                cancel.setEnabled(false);
+                title.setText(R.string.ci_profile_channel_updating);
+                doOperatorSearch(module);
+                alert.dismiss();
+            }
+        });
+        alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                Log.d(TAG, "showOpSearchConfirmDialog onDismiss");
+            }
+        });
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        alert.setView(dialogView);
+        alert.show();
+        WindowManager.LayoutParams params = alert.getWindow().getAttributes();
+        params.width = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 500, context.getResources().getDisplayMetrics());
+        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        alert.getWindow().setAttributes(params);
+        alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
     }
 }

@@ -78,6 +78,11 @@ public final class Channel {
     public static final String FIXED_SIGNAL_TYPE_DVBT = "DVB-T";
     public static final String FIXED_SIGNAL_TYPE_DVBT2 = "DVB-T2";
 
+    //add for ci card
+    public static final String KEY_CHANNEL_CI_NUMBER = "ci_number";
+    public static final String KEY_CHANNEL_PROFILE = "profile_name";
+    public static final String KEY_CHANNEL_PROFILE_SELECTABLE = "profile_selectable";
+
     private String mVideoCodec;
 
     private Channel() {

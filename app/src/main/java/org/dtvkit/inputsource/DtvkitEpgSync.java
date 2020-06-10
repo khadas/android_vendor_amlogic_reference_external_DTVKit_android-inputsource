@@ -11,6 +11,7 @@ import org.dtvkit.companionlibrary.model.EventPeriod;
 import org.dtvkit.companionlibrary.model.InternalProviderData;
 import org.dtvkit.companionlibrary.model.Program;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+import com.droidlogic.settings.PropSettingManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -64,6 +65,18 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 data.put("video_codec", service.getString("video_codec"));
                 data.put("is_data", service.getBoolean("is_data"));
                 data.put("channel_signal_type", service.getString("sig_name"));
+                if (PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_ADD_TEST, false) && (i % 3 != 0)) {
+                    int countFlag = i % 3;
+                    data.put("ci_number", "ci_number" + countFlag);
+                    data.put("profile_name", "profile_name" + countFlag);
+                    data.put("profile_selectable", "");
+                    data.put("slot_id", "slot_id" + countFlag);
+                } else {
+                    tryToPutStringToInternalProviderData(data, "ci_number", service, "ci_number");
+                    tryToPutStringToInternalProviderData(data, "profile_name", service, "profile_name");
+                    tryToPutStringToInternalProviderData(data, "profile_selectable", service, "profile_selectable");
+                    tryToPutStringToInternalProviderData(data, "slot_id", service, "slot_id");
+                }
                 channels.add(new Channel.Builder()
                         .setDisplayName(service.getString("name"))
                         .setDisplayNumber(String.format(Locale.ENGLISH, "%d", service.getInt("lcn")))
@@ -299,5 +312,31 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         }
 
         return ratings_arry;
+    }
+
+    private boolean tryToPutStringToInternalProviderData(InternalProviderData data, String key1, JSONObject obj, String key2) {
+        boolean result = false;
+        if (data != null && obj != null && key1 != null && key2 != null) {
+            try {
+                data.put(key1, obj.getString(key2));
+                result = true;
+            } catch (Exception e) {
+                Log.e(TAG, "tryToPutStringToInternalProviderData key2 = " + key2 + "Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    private boolean tryToPutIntToInternalProviderData(InternalProviderData data, String key1, JSONObject obj, String key2) {
+        boolean result = false;
+        if (data != null && obj != null && key1 != null && key2 != null) {
+            try {
+                data.put(key1, obj.getInt(key2));
+                result = true;
+            } catch (Exception e) {
+                Log.e(TAG, "tryToPutIntToInternalProviderData key2 = " + key2 + "Exception = " + e.getMessage());
+            }
+        }
+        return result;
     }
 }

@@ -92,6 +92,24 @@ public class ConstantManager {
     public static final String KEY_TVINPUTINFO_SUBTITLE_INDEX = "subtitle_index";
     public static final String KEY_TVINPUTINFO_SUBTITLE_IS_TELETEXT = "is_teletext";
     public static final String KEY_TVINPUTINFO_SUBTITLE_IS_HARD_HEARING = "is_hard_hearing";
+    //ci plus
+    public static final String ACTION_CI_PLUS_INFO = "ci_plus_info";
+    public static final String CI_PLUS_COMMAND = "command";
+    public static final String VALUE_CI_PLUS_COMMAND_SEARCH_REQUEST = "search_request";
+    public static final String VALUE_CI_PLUS_COMMAND_SEARCH_FINISHED = "search_finished";
+    public static final String VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED = "channel_updated";
+    public static final String VALUE_CI_PLUS_COMMAND_HOST_CONTROL = "host_control";
+    public static final String VALUE_CI_PLUS_COMMAND_IGNORE_INPUT = "ignore_input";
+    public static final String VALUE_CI_PLUS_COMMAND_RECEIVE_INPUT = "receive_input";
+    public static final String VALUE_CI_PLUS_SEARCH_MODULE = "search_module";
+    public static final String VALUE_CI_PLUS_CHANNEL = "host_control_channel";
+    public static final String VALUE_CI_PLUS_TUNE_TYPE = "tune_type";
+    public static final String VALUE_CI_PLUS_TUNE_TYPE_SERVICE = "service_tune";
+    public static final String VALUE_CI_PLUS_TUNE_TYPE_TRANSPORT= "transport_tune";
+    public static final String VALUE_CI_PLUS_EVENT_DETAIL = "event_detail";
+    public static final String VALUE_CI_CARD_SLOT = "ci_card_slot";
+    public static final String VALUE_CI_CAM_CARD_ID = "ci_cam_card_id";
+    public static final String VALUE_CI_CAM_CARD_STATUS = "ci_cam_card_status";
 
     public static final Map<String, String> PI_TO_VIDEO_FORMAT_MAP = new HashMap<>();
     static {

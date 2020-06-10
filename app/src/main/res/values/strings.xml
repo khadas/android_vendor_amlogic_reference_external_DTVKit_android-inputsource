@@ -110,4 +110,11 @@
 
     <!-- play -->
     <string name="play_scrambled">Scrambled</string>
+
+    <!-- ci authentication -->
+    <string name="play_ci_authentication">Ci plus authenticating, please wait !</string>
+    <string name="ci_profile_update_available">CI Update Available</string>
+    <string name="ci_profile_channel_updating">CI channels updating, please wait !</string>
+    <string name="ci_profile_channel_update_confirm">update</string>
+    <string name="ci_profile_channel_update_cancel">cancel</string>
 </resources>
