@@ -125,7 +125,7 @@ public class ConstantManager {
     public static final int ADB_TELETEXT_TYPE_SUBTITLE_HARD_HEARING = 0x05;
 
     //add dtvkit satellite
-    public static final String DTVKIT_SATELLITE_DATA = "/vendor/etc/tvconfig/dtvkit/satellite.json";
+    public static final String DTVKIT_SATELLITE_DATA = "/odm/etc/tvconfig/dtvkit/satellite.json";
 
     public static void ascendTrackInfoOderByPid(List<TvTrackInfo> list) {
         if (list != null) {
