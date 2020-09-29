@@ -28,7 +28,7 @@ LOCAL_SRC_FILES := $(call all-subdir-java-files) $(call all-subdir-Iaidl-files)
 #TARGET_BUILD_APPS := inputsource # for normal app (embedded ndk jni)
 #LOCAL_JNI_SHARED_LIBRARIES := libplatform
 #LOCAL_REQUIRED_MODULES := libplatform
-#LOCAL_CERTIFICATE := platform
+LOCAL_CERTIFICATE := platform
 LOCAL_PROGUARD_ENABLED := disabled
 
 LOCAL_JNI_SHARED_LIBRARIES := libdtvkit_jni
@@ -39,5 +39,4 @@ LOCAL_VENDOR_MODULE := true
 #LOCAL_PRIVATE_PLATFORM_APIS := true
 include $(BUILD_PACKAGE)
 include $(call all-makefiles-under, $(LOCAL_PATH))
-
 

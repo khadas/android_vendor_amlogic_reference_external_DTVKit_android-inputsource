@@ -16,12 +16,14 @@ import com.droidlogic.fragment.dialog.CustomDialog;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.provider.Settings;
+//import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.dtvkit.inputsource.DataMananer;
+
+import com.droidlogic.app.DataProviderManager;
 
 public class ParameterMananer {
 
@@ -470,7 +472,8 @@ public class ParameterMananer {
         SharedPreferences.Editor editor = sp.edit();
         editor.putInt(key, value);
         editor.commit();*/
-        Settings.System.putInt(mContext.getContentResolver(), key, value);
+        //Settings.System.putInt(mContext.getContentResolver(), key, value);
+        DataProviderManager.putIntValue(mContext, key, value);
     }
 
     public int getIntParameters(String key) {
@@ -544,7 +547,8 @@ public class ParameterMananer {
         }
         /*SharedPreferences sp = mContext.getSharedPreferences("dish_parameter", Context.MODE_PRIVATE);
         return sp.getInt(key, defValue);*/
-        return Settings.System.getInt(mContext.getContentResolver(), key, defValue);
+        //return Settings.System.getInt(mContext.getContentResolver(), key, defValue);
+        return DataProviderManager.getIntValue(mContext, key, defValue);
     }
 
     public void saveStringParameters(String key, String value) {
@@ -552,7 +556,8 @@ public class ParameterMananer {
         SharedPreferences.Editor editor = sp.edit();
         editor.putString(key, value);
         editor.commit();*/
-        Settings.System.putString(mContext.getContentResolver(), key, value);
+        //Settings.System.putString(mContext.getContentResolver(), key, value);
+        DataProviderManager.putStringValue(mContext, key, value);
     }
 
     public String getStringParameters(String key) {
@@ -618,7 +623,8 @@ public class ParameterMananer {
         }
         /*SharedPreferences sp = mContext.getSharedPreferences("dish_parameter", Context.MODE_PRIVATE);
         String result = sp.getString(key, defValue);*/
-        String result = Settings.System.getString(mContext.getContentResolver(), key);
+        //String result = Settings.System.getString(mContext.getContentResolver(), key);
+        String result = DataProviderManager.getStringValue(mContext, key, defValue);
         Log.d(TAG, "getStringParameters key = " + key + ", result = " + result);
         if (TextUtils.isEmpty(result)) {
             result = defValue;

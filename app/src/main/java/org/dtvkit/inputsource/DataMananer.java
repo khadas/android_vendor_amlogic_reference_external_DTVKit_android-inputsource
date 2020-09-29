@@ -13,7 +13,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.util.Log;
-import android.provider.Settings;
+//import android.provider.Settings;
 
 import com.droidlogic.app.DataProviderManager;
 
