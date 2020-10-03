@@ -7,8 +7,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
     org_droidlogic_dtvkit_DtvkitGlueClient.cpp
 
-LOCAL_C_INCLUDES += $(JNI_H_INCLUDE) \
-    frameworks/base/core/jni/include \
+LOCAL_C_INCLUDES += frameworks/base/core/jni/include \
     system/libhidl/transport/include/hidl \
     system/libhidl/libhidlmemory/include \
     system/libhidl/libhidlcache/include \
@@ -17,6 +16,7 @@ LOCAL_C_INCLUDES += $(JNI_H_INCLUDE) \
     $(LOCAL_PATH)/../../../app/src/main/client
 
 LOCAL_MODULE := libdtvkit_jni
+LOCAL_HEADER_LIBRARIES := jni_headers
 LOCAL_SHARED_LIBRARIES :=  \
     vendor.amlogic.hardware.dtvkitserver@1.0 \
     android.hidl.memory@1.0 \

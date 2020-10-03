@@ -19,7 +19,7 @@ static struct bcmsideband_ctx *context = NULL;
 #include <unistd.h>
 
 #include <jni.h>
-#include <JNIHelp.h>
+#include <libnativehelper/JNIHelp.h>
 
 #include <log/log.h>
 #include <utils/KeyedVector.h>

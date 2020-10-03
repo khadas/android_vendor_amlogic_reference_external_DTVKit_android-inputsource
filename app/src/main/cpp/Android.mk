@@ -17,11 +17,11 @@ LOCAL_CFLAGS += -DPLATFORM_BROADCOM
 endif
 ifeq (amlogic,$(DTVKITSOURCE_PLATFORM))
 LOCAL_CFLAGS += -DPLATFORM_AMLOGIC
-LOCAL_C_INCLUDES += $(JNI_H_INCLUDE) hardware/amlogic/gralloc \
+LOCAL_C_INCLUDES += hardware/amlogic/gralloc \
     frameworks/base/include \
-    frameworks/native/include \
-    libnativehelper/include/nativehelper
+    frameworks/native/include
 
+LOCAL_HEADER_LIBRARIES := jni_headers
 LOCAL_SHARED_LIBRARIES += \
     libcutils \
     libutils \
