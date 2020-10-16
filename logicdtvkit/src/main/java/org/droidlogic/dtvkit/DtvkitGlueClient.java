@@ -27,6 +27,7 @@ public class DtvkitGlueClient {
     private OverlayTarget mTarget;
     private AudioHandler mAudioHandler;
    // private SystemControlHandler mSysControlHandler;
+    private SubtitleListener mListener;
     // Mutex for all mutable shared state.
     private final Object mLock = new Object();
     private native void nativeconnectdtvkit(DtvkitGlueClient client);
@@ -34,6 +35,12 @@ public class DtvkitGlueClient {
     private native void nativeSetSurface(Surface surface);
     private native void nativeSetSurfaceToPlayer(Surface surface);
     private native String nativerequest(String resource, String json);
+    private native void native_attachSubtitleCtl(int flag);
+    private native void native_detachSubtitleCtl();
+    private native boolean nativeIsdbtSupport();
+    private native void native_UnCrypt(String src, String dest);
+    private native void native_openUserData();
+    private native void native_closeUserData();
 
     static {
         System.loadLibrary("dtvkit_jni");
@@ -46,6 +53,29 @@ public class DtvkitGlueClient {
          if (mTarget != null) {
             mTarget.draw(width, height, dstx, dsty, dstwidth, dstheight, data);
          }
+    }
+
+    public void notifySubtitleCallbackEx(int type, int width, int height, int dstx, int dsty, int dstwidth, int dstheight, int[] data)
+    {
+         Log.d(TAG, "notifySubtitleCallBackEx received!!! width = " + width + ", heigth = " + height);
+         if (mListener != null) {
+            mListener.drawEx(type, width, height, dstx, dsty, dstwidth, dstheight, data);
+         }
+    }
+
+    public void notifySubtitleCbCtlEx(int pause)
+    {
+         Log.d(TAG, "notifySubtitleCbCtlEx received!!! pause = " + pause);
+         if (mListener != null) {
+            mListener.pauseEx(pause);
+         }
+    }
+
+    public void notifyCCSubtitleCallbackEx(boolean bshow, String json) {
+        Log.d(TAG, "notifyCCSubtitleCallbackEx received!!!" + json);
+        if (mListener != null) {
+            mListener.drawCC(bshow, json);
+        }
     }
 
     public void notifyDvbCallback(String resource, String json) {
@@ -64,12 +94,24 @@ public class DtvkitGlueClient {
         }
     }
 
+    public void notifyMixVideoEventCallback(int event) {
+        Log.d(TAG, "notifyMixVideoEventCallback received!!! event =" + event);
+        if (mListener != null) {
+            mListener.mixVideoEvent(event);
+        }
+    }
+
+   public void doUnCrypt(String src, String dest) {
+        native_UnCrypt(src, dest);
+   }
+
    public void setDisplay(Surface sh) {
         nativeSetSurface(sh);
    }
 
    public void disConnectDtvkitClient() {
         nativedisconnectdtvkit();
+        native_detachSubtitleCtl();
    }
 
 
@@ -153,6 +195,13 @@ public class DtvkitGlueClient {
         void draw(int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, byte[] data);
     }
 
+    public interface SubtitleListener {
+        void drawEx(int parserType, int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, int[] data);
+        void pauseEx(int pause);
+        void drawCC(boolean bshow, String json);
+        void mixVideoEvent(int event);
+    }
+
     protected DtvkitGlueClient() {
         // Singleton
         nativeconnectdtvkit(this);
@@ -183,6 +232,10 @@ public class DtvkitGlueClient {
 
     public void setOverlayTarget(OverlayTarget target) {
         mTarget = target;
+    }
+
+    public void setSubtileListener(SubtitleListener Listener) {
+        mListener = Listener;
     }
 
     public JSONObject request(String resource, JSONArray arguments) throws Exception {
@@ -223,4 +276,19 @@ public class DtvkitGlueClient {
         public void onWriteSysFs(int ftype, String name, String cmd);
     }
     */
+    public void attachSubtitleCtl(int flag) {
+        native_attachSubtitleCtl(flag);
+    }
+
+    public boolean isdbtSupport() {
+        return nativeIsdbtSupport();
+    }
+
+    public void openUserData() {
+        native_openUserData();
+    }
+
+    public void closeUserData() {
+        native_closeUserData();
+    }
 }

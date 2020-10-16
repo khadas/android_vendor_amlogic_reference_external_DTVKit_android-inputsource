@@ -96,6 +96,14 @@ std::string DTVKitHidlClient::request(const std::string& resource, const std::st
     return result;
 }
 
+void DTVKitHidlClient::setAfd(int afd) {
+    mDTVKitServer->setAfd(afd);
+}
+
+void DTVKitHidlClient::setSubtitleFlag(int flag) {
+    mDTVKitServer->setSubtitleFlag(flag);
+}
+
 Return<void> DTVKitHidlClient::DTVKitHidlCallback::notifyCallback(const DTVKitHidlParcel& hidlParcel) {
     ALOGD("[%s] notifyCallback msgType = %d", __FUNCTION__, hidlParcel.msgType);
     sp<DTVKitListener> listener;
@@ -115,6 +123,21 @@ Return<void> DTVKitHidlClient::DTVKitHidlCallback::notifyCallback(const DTVKitHi
     }
 
     parcel.mem = hidlParcel.mem;
+
+    //to subtitleserver subtitle info
+    parcel.funname = hidlParcel.funname;
+    parcel.is_dvb_subt = hidlParcel.isDvbSubt;
+    parcel.pid         = hidlParcel.pid;
+    parcel.subt_type   = hidlParcel.subt_type;
+    parcel.demux_num   = hidlParcel.demux_num;
+    if (parcel.is_dvb_subt) {
+        parcel.subt.cpage = hidlParcel.subt.cpage;
+        parcel.subt.apage = hidlParcel.subt.apage;
+    } else {
+        parcel.ttxt.magazine = (uint8_t)hidlParcel.ttxt.magazine;
+        parcel.ttxt.page     = (uint8_t)hidlParcel.ttxt.page;
+    }
+    parcel.event_type = hidlParcel.event_type;
 
     if (listener != NULL) {
         listener->notify(parcel);

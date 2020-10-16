@@ -59,7 +59,7 @@ public final class Channel {
     private String mAppLinkIntentUri;
     private byte[] mInternalProviderData;
     private String mNetworkAffiliation;
-    private int mSearchable;
+    private int mSearchable = 1;//default searchable
     private String mServiceType;
 
     //sync with ChannelInfo in droidlogic-tv.jar

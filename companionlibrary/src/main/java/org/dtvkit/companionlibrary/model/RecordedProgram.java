@@ -109,6 +109,7 @@ public class RecordedProgram {
     //define key
     public static final String RECORD_FILE_PATH = "record_file_path";
     public static final String RECORD_STORAGE_EXIST = "record_sotrage_exist";
+    public static final String RECORD_SERVICE_TYPE = "record_service_type";
 
     private RecordedProgram() {
         this.mChannelId = INVALID_INT_VALUE;

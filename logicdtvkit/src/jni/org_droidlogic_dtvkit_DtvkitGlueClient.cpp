@@ -25,7 +25,7 @@
 //#include <gralloc_usage_ext.h>
 //#include <hardware/gralloc1.h>
 //#include "amlogic/am_gralloc_ext.h"
-
+#include <dlfcn.h>
 #include <android/hidl/memory/1.0/IMemory.h>
 #include <hidlmemory/mapping.h>
 #include "org_droidlogic_dtvkit_DtvkitGlueClient.h"
@@ -37,12 +37,65 @@ static JavaVM   *gJavaVM = NULL;
 sp<DTVKitClientJni> mpDtvkitJni;
 static jmethodID notifySubtitleCallback;
 static jmethodID notifyDvbCallback;
-static jobject gDvbCallbackObj;
-static jobject gSubtitleCallbackObj;
+static jobject DtvkitObject;
 //sp<Surface> mSurface;
 //sp<NativeHandle> mSourceHandle;
 
-native_handle_t *pTvStream = nullptr;
+static jmethodID notifySubtitleCallbackEx;
+static jmethodID notifySubtitleCbCtlEx;
+static jmethodID notifyCCSubtitleCallbackEx;
+static jmethodID notifyMixVideoEventCallback;
+
+sp<amlogic::SubtitleServerClient> mSubContext;
+static jboolean g_bSubStatus = false;
+
+#define DTVKIT_SUBTITLE_ADD_OFFSET 4
+#define SUBTITLE_DEMUX_SOURCE 4
+#define SUBTITLE_SCTE27_SOURCE 1
+
+#define SUBTITLE_SUB_TYPE_DVB    1
+#define SUBTITLE_SUB_TYPE_TTXSUB 2
+#define SUBTITLE_SUB_TYPE_SCTE   3
+#define SUBTITLE_SUB_TYPE_TTX    4
+
+#define SUBTITLE_SUB_TYPE_CLOSED_CAPTION 10
+#define TT_EVENT_INDEXPAGE 14
+#define TT_EVENT_GO_TO_PAGE 30
+#define TT_EVENT_GO_TO_SUBTITLE 31
+
+static void postSubtitleDataEx(int type, int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, const char *data);
+static void clearSubtitleDataEx();
+static void setAFDToDVBCore(uint8_t afd);
+static void postMixVideoEvent(int event);
+static void setSubtitleOn(int pid, int type, int magazine, int page, int demuxId);
+static void setSubtitleOff();
+static void setSubtitlePause();
+static void setSubtitleResume();
+static void notitySubtitleTeletextEvent(int eventType);
+
+
+void SubtitleDataListenerImpl::onSubtitleEvent(const char *data, int size, int parserType,
+            int x, int y, int width, int height,
+            int videoWidth, int videoHeight, int cmd) {
+    if (cmd) {
+        postSubtitleDataEx(parserType, width, height, x, y, videoWidth, videoHeight, data);
+    } else {
+        clearSubtitleDataEx();
+    }
+}
+
+void SubtitleDataListenerImpl::onSubtitleAfdEvent(int afd) {
+    setAFDToDVBCore(afd);
+
+}
+
+void SubtitleDataListenerImpl::onMixVideoEvent(int val) {
+    postMixVideoEvent(val);
+}
+
+void SubtitleDataListenerImpl::onServerDied() {
+    ALOGE("subtitle client server died");
+}
 
 static JNIEnv* getJniEnv(bool *needDetach) {
     int ret = -1;
@@ -67,7 +120,15 @@ static void DetachJniEnv() {
 }
 
 
-static void sendSubtitleData(int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, uint8_t* data)
+static void setSubtitleStatus(bool bOn) {
+    g_bSubStatus = bOn;
+}
+
+static jboolean getSubtitleStatus() {
+    return g_bSubStatus;
+}
+
+static void postSubtitleData(int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, uint8_t* data)
 {
     ALOGD("callback sendSubtitleData data = %p", data);
     bool attached = false;
@@ -78,10 +139,10 @@ static void sendSubtitleData(int width, int height, int dst_x, int dst_y, int ds
             //ScopedLocalRef<jbyteArray> array (env, env->NewByteArray(width * height * 4));
             jbyteArray array = env->NewByteArray(width * height * 4);
             env->SetByteArrayRegion(array, 0, width * height * 4, (jbyte*)data);
-            env->CallVoidMethod(gSubtitleCallbackObj, notifySubtitleCallback, width, height, dst_x, dst_y, dst_width, dst_height, array);
+            env->CallVoidMethod(DtvkitObject, notifySubtitleCallback, width, height, dst_x, dst_y, dst_width, dst_height, array);
             env->DeleteLocalRef(array);
         } else {
-            env->CallVoidMethod(gSubtitleCallbackObj, notifySubtitleCallback, width, height, dst_x, dst_y, dst_width, dst_height, NULL);
+            env->CallVoidMethod(DtvkitObject, notifySubtitleCallback, width, height, dst_x, dst_y, dst_width, dst_height, NULL);
         }
     }
     if (attached) {
@@ -89,7 +150,89 @@ static void sendSubtitleData(int width, int height, int dst_x, int dst_y, int ds
     }
 }
 
-static void sendDvbParam(const std::string& resource, const std::string json) {
+static void postSubtitleDataEx(int type, int width, int height, int dst_x, int dst_y, int dst_width, int dst_height,const char *data)
+{
+    //ALOGD("callback sendSubtitleData data = %p", data);
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
+    bool bSubOn = getSubtitleStatus();
+    if (!bSubOn) return;
+
+    if (env != NULL) {
+        if (type == SUBTITLE_SUB_TYPE_CLOSED_CAPTION) {
+            jstring jccData = env->NewStringUTF((char *)data);
+            env->CallVoidMethod(DtvkitObject, notifyCCSubtitleCallbackEx, true, jccData);
+            env->DeleteLocalRef(jccData);
+        } else {
+            if (width != 0 || height != 0) {
+                //ScopedLocalRef<jintArray> array (env, env->NewIntArray(width * height));
+                jintArray array = env->NewIntArray(width * height);
+                env->SetIntArrayRegion(array, 0, width * height, (jint*)data);
+                env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, type, 0, 0, dst_x, dst_y, 9999, 0, NULL);
+                env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, type, width, height, dst_x, dst_y,
+                   dst_width, dst_height, array);
+                env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, type, 0, 0, dst_x, dst_y, 0, 0, NULL);
+                env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, type, 0, 0, dst_x, dst_y, 0, 9999, NULL);
+            } else {
+                env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, type, width, height, dst_x, dst_y,
+                   dst_width, dst_height, NULL);
+                }
+        }
+    }
+    if (attached) {
+        DetachJniEnv();
+    }
+}
+
+static void clearSubtitleDataEx()
+{
+    //ALOGD("callback sendSubtitleData data = %p", data);
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
+
+    if (env != NULL) {
+        env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, 0, 0, 0, 0, 0, 9999, 0, NULL);
+        env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, 0, 0, 0, 0, 0, 0, 9999, NULL);
+    }
+    if (attached) {
+        DetachJniEnv();
+    }
+}
+
+static void clearCCSubtitleData()
+{
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
+    if (env != NULL) {
+        env->CallVoidMethod(DtvkitObject, notifyCCSubtitleCallbackEx, false, NULL);
+    }
+
+    if (attached) {
+        DetachJniEnv();
+    }
+
+}
+
+static void setAFDToDVBCore(uint8_t afd) {
+    ALOGV("AFD value = 0x%xdfrom subtitleserver", afd);
+    if (mpDtvkitJni != NULL)
+        mpDtvkitJni->setAfd(afd);
+}
+
+static void postMixVideoEvent(int event) {
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
+
+    if (env != NULL) {
+        env->CallVoidMethod(DtvkitObject, notifyMixVideoEventCallback, event);
+    }
+    if (attached) {
+        DetachJniEnv();
+    }
+
+}
+
+static void postDvbParam(const std::string& resource, const std::string json) {
     ALOGD("-callback senddvbparam resource:%s, json:%s", resource.c_str(), json.c_str());
     bool attached = false;
     JNIEnv *env = getJniEnv(&attached);
@@ -100,7 +243,7 @@ static void sendDvbParam(const std::string& resource, const std::string json) {
         //ScopedLocalRef<jstring> jjson((env),  (env)->NewStringUTF(json.c_str()));
         jstring jresource = env->NewStringUTF(resource.c_str());
         jstring jjson     = env->NewStringUTF(json.c_str());
-        env->CallVoidMethod(gDvbCallbackObj, notifyDvbCallback, jresource, jjson);
+        env->CallVoidMethod(DtvkitObject, notifyDvbCallback, jresource, jjson);
         env->DeleteLocalRef(jresource);
         env->DeleteLocalRef(jjson);
     }
@@ -130,10 +273,18 @@ std::string DTVKitClientJni::request(const std::string& resource, const std::str
     return mDkSession->request(resource, json);
 }
 
+void DTVKitClientJni::setAfd(int afd) {
+    mDkSession->setAfd(afd);
+}
+
+void DTVKitClientJni::setSubtitleFlag(int flag) {
+    mDkSession->setSubtitleFlag(flag);
+}
+
 void DTVKitClientJni::notify(const parcel_t &parcel) {
     AutoMutex _l(mLock);
     ALOGD("notify msgType = %d", parcel.msgType);
-    if (parcel.msgType == DRAW) {
+    if (parcel.msgType == DTVKIT_DRAW) {
         datablock_t datablock;
         datablock.width      = parcel.bodyInt[0];
         datablock.height     = parcel.bodyInt[1];
@@ -153,12 +304,11 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
             memory->commit();
             //int size = memory->getSize();
 
-            sendSubtitleData(datablock.width, datablock.height, datablock.dst_x, datablock.dst_y,
+            postSubtitleData(datablock.width, datablock.height, datablock.dst_x, datablock.dst_y,
             datablock.dst_width, datablock.dst_height, data);
         } else {
-            sendSubtitleData(datablock.width, datablock.height, datablock.dst_x, datablock.dst_y,
+            postSubtitleData(datablock.width, datablock.height, datablock.dst_x, datablock.dst_y,
             datablock.dst_width, datablock.dst_height, NULL);
-
         }
     }
 
@@ -166,24 +316,61 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
         dvbparam_t dvbparam;
         dvbparam.resource = parcel.bodyString[0];
         dvbparam.json     = parcel.bodyString[1];
-        sendDvbParam(dvbparam.resource, dvbparam.json);
+        postDvbParam(dvbparam.resource, dvbparam.json);
     }
 
+    if (parcel.msgType == SUBSERVER_DRAW) {
+        switch (parcel.funname) {
+            case SUBTITLE_START:
+            {
+                ALOGD("funname =%d, isdvbsubt = %d, pid = %d,  subt_type = %d, cpage = %d, apage = %d", parcel.funname,
+                parcel.is_dvb_subt, parcel.pid, parcel.subt_type, parcel.subt.cpage, parcel.subt.apage);
+                if (parcel.is_dvb_subt || parcel.pid == 0) { //pid =0 defaul cc
+                    setSubtitleOn(parcel.pid, parcel.subt_type, parcel.subt.cpage, parcel.subt.apage, parcel.demux_num);
+                } else {
+                    ALOGD("parcel.ttxt.magazine = %d, parcel.ttxt.page = %d", parcel.ttxt.magazine, parcel.ttxt.page);
+                    setSubtitleOn(parcel.pid, parcel.subt_type, parcel.ttxt.magazine, parcel.ttxt.page,
+                    parcel.demux_num);
+                }
+            }
+            break;
+            case SUBTITLE_STOP:
+                setSubtitleOff();
+            break;
+            case SUBTITLE_PAUSE:
+                setSubtitlePause();
+            break;
+            case SUBTITLE_RESUME:
+                setSubtitleResume();
+            break;
+            case TELETEXT_EVENT:
+                ALOGD("event type = %d", parcel.event_type);
+                notitySubtitleTeletextEvent(parcel.event_type);
+            break;
+            default:
+                ALOGD("get funname = %d", parcel.funname);
+            break;
+        }
+    }
+}
+
+static void getSubtitleListenerImpl() {
+    if (mSubContext == nullptr) {
+        mSubContext = new SubtitleServerClient(false, new SubtitleDataListenerImpl(), OpenType::TYPE_APPSDK);
+    }
 }
 
 static void connectdtvkit(JNIEnv *env, jclass clazz __unused, jobject obj)
 {
     ALOGI("ref dtvkit");
     mpDtvkitJni  =  DTVKitClientJni::GetInstance();
-    gDvbCallbackObj = env->NewGlobalRef(obj);
-    gSubtitleCallbackObj = env->NewGlobalRef(obj);
+    DtvkitObject = env->NewGlobalRef(obj);
 }
 
 static void disconnectdtvkit(JNIEnv *env, jclass clazz __unused)
 {
     ALOGI("disconnect dtvkit");
-    env->DeleteGlobalRef(gDvbCallbackObj);
-    env->DeleteGlobalRef(gSubtitleCallbackObj);
+    env->DeleteGlobalRef(DtvkitObject);
 }
 
 static jstring request(JNIEnv *env, jclass clazz __unused, jstring jresource, jstring jjson) {
@@ -197,6 +384,155 @@ static jstring request(JNIEnv *env, jclass clazz __unused, jstring jresource, js
     env->ReleaseStringUTFChars(jresource, resource);
     env->ReleaseStringUTFChars(jjson, json);
     return env->NewStringUTF(result.c_str());
+}
+
+static void setSubtitleOff()
+{
+    if (mSubContext != nullptr)
+    {
+        ALOGD("SubtitleServiceCtl:setSubtitleOff to subtitle client.");
+        setSubtitleStatus(false);
+        mSubContext->close();
+    }
+    clearSubtitleDataEx();
+}
+
+static void setSubtitleOn(int pid, int type, int magazine, int page, int demuxId)
+{
+    if (mSubContext != nullptr) {
+        setSubtitleOff();
+        if (type == SUBTITLE_SUB_TYPE_CLOSED_CAPTION) {
+            clearCCSubtitleData();
+        }
+    }
+    ALOGD("SubtitleServiceCtl:setSubtitleOn with.pid=%d, type=%d,magazine=%d, page=%d, demuxId = %d.",
+        pid, type, magazine, page, demuxId);
+
+    setSubtitleStatus(true);
+    if (type == SUBTITLE_SUB_TYPE_TTX || type == SUBTITLE_SUB_TYPE_TTXSUB) {
+        mSubContext->setSubType(SUBTITLE_SUB_TYPE_TTXSUB + DTVKIT_SUBTITLE_ADD_OFFSET);
+    } else {
+        mSubContext->setSubType(type + DTVKIT_SUBTITLE_ADD_OFFSET);
+    }
+    mSubContext->setSubPid(pid);
+    int iotType = SUBTITLE_DEMUX_SOURCE;
+    //if (type == SUBTITLE_SUB_TYPE_SCTE) {
+    //    iotType = SUBTITLE_SCTE27_SOURCE;
+    //}
+    if (demuxId != 0) {
+        iotType = (demuxId << 16 | iotType);
+    }
+    if (mSubContext->open("", iotType))
+    {
+        if ((type == SUBTITLE_SUB_TYPE_TTX)) {
+            mSubContext->ttControl(TT_EVENT_GO_TO_PAGE, magazine, page, 0, 0);
+        } else if (type == SUBTITLE_SUB_TYPE_TTXSUB) {
+            mSubContext->ttControl(TT_EVENT_GO_TO_SUBTITLE, magazine, page, 0, 0);
+        }
+    }
+
+}
+
+static void notitySubtitleTeletextEvent(int eventType)
+{
+    ALOGD("notitySubtitleTeletextEvent event:%d", eventType);
+
+    if (mSubContext != nullptr)
+    {
+        mSubContext->ttControl(eventType, -1, -1, -1, -1); //now subtitleserver according to event to control
+    }
+}
+
+static void setSubtitlePause()
+{
+   bool attached = false;
+    if (mSubContext != nullptr)
+    {
+        ALOGD("SubtitleServiceCtl:setSubtitlePause to subtitle client.");
+        JNIEnv *env = getJniEnv(&attached);
+        if (env != NULL) {
+            env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, 0, 0, 0, 0, 0, 9999, 0, NULL);
+            env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, 0, 0, 0, 0, 0, 0, 9999, NULL);
+            env->CallVoidMethod(DtvkitObject, notifySubtitleCbCtlEx, 1);
+        }
+
+        if (attached) {
+            DetachJniEnv();
+        }
+    }
+}
+
+static void setSubtitleResume()
+{
+   bool attached = false;
+    if (mSubContext != nullptr)
+    {
+        ALOGD("SubtitleServiceCtl:setSubtitleResume to subtitle client.");
+        JNIEnv *env = getJniEnv(&attached);
+        if (env != NULL) {
+            env->CallVoidMethod(DtvkitObject, notifySubtitleCbCtlEx, 0);
+        }
+
+        if (attached) {
+            DetachJniEnv();
+        }
+    }
+}
+
+static void attachSubtitleCtl(JNIEnv *env, jclass clazz __unused, jint flag)
+{
+    ALOGV("SubtitleServiceCtl:attachSubtitleCtl.");
+    getSubtitleListenerImpl();
+    if (mpDtvkitJni != NULL)
+        mpDtvkitJni->setSubtitleFlag(flag);
+}
+
+static void detachSubtitleCtl(JNIEnv *env, jclass clazz __unused)
+{
+   ALOGV("SubtitleServiceCtl:detachSubtitleCtl.");
+   if (mpDtvkitJni != NULL)
+        mpDtvkitJni->setSubtitleFlag(0);
+}
+
+static bool getIsdbtSupport(JNIEnv *env, jclass clazz __unused)
+{
+#ifdef SUPPORT_ISDBT
+    return true;
+#else
+    return false;
+#endif
+}
+
+static void nativeUnCrypt(JNIEnv *env, jclass clazz, jstring src, jstring dest) {
+    const char *FONT_VENDOR_LIB = "/vendor/lib/libvendorfont.so";
+    const char *FONT_PRODUCT_LIB = "/product/lib/libvendorfont.so";
+
+    // TODO: maybe we need some smart method to get the lib.
+    void *handle = dlopen(FONT_PRODUCT_LIB, RTLD_NOW);
+    if (handle == nullptr) {
+        handle = dlopen(FONT_VENDOR_LIB, RTLD_NOW);
+    }
+
+    if (handle == nullptr) {
+        ALOGE(" nativeUnCrypt error! cannot open uncrypto lib");
+    }
+
+    typedef void (*fnFontRelease)(const char*, const char*);
+    fnFontRelease fn = (fnFontRelease)dlsym(handle, "vendor_font_release");
+    if (fn == nullptr) {
+        ALOGE(" nativeUnCrypt error! cannot locate symbol vendor_font_release in uncrypto lib");
+        dlclose(handle);
+        return;
+    }
+
+    const char *srcstr = (const char *)env->GetStringUTFChars(src, NULL);
+    const char *deststr = (const char *)env->GetStringUTFChars(dest, NULL);
+
+    fn(srcstr, deststr);
+    dlclose(handle);
+
+    (env)->ReleaseStringUTFChars(src, (const char *)srcstr);
+    (env)->ReleaseStringUTFChars(dest, (const char *)deststr);
 }
 
 /*
@@ -257,6 +593,17 @@ static void SetSurface(JNIEnv *env, jclass thiz, jobject jsurface) {
     }
 }
 */
+static void openUserData() {
+    if (mSubContext != nullptr) {
+        mSubContext->userDataOpen();
+    }
+}
+
+static void closeUserData() {
+    if (mSubContext != nullptr) {
+        mSubContext->userDataClose();
+    }
+}
 
 static JNINativeMethod gMethods[] = {
 {
@@ -277,7 +624,30 @@ static JNINativeMethod gMethods[] = {
     "nativerequest", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     (void*) request
 },
-
+{
+    "native_attachSubtitleCtl", "(I)V",
+    (void*) attachSubtitleCtl
+},
+{
+   "native_detachSubtitleCtl", "()V",
+   (void*) detachSubtitleCtl
+},
+{
+    "native_UnCrypt", "(Ljava/lang/String;Ljava/lang/String;)V",
+    (void *)nativeUnCrypt
+},
+{
+    "nativeIsdbtSupport", "()Z",
+    (void*) getIsdbtSupport
+},
+{
+   "native_openUserData", "()V",
+   (void*) openUserData
+},
+{
+  "native_closeUserData", "()V",
+  (void*) closeUserData
+},
 };
 
 
@@ -289,7 +659,7 @@ static JNINativeMethod gMethods[] = {
         var = env->GetMethodID(clazz, methodName, methodDescriptor); \
         LOG_FATAL_IF(! var, "Unable to find method " methodName);
 
-int register_org_droidlogc_dtvkit_inputsource_DtvkitGlueClient(JNIEnv *env)
+int register_org_droidlogic_dtvkit_DtvkitGlueClient(JNIEnv *env)
 {
     static const char *const kClassPathName = "org/droidlogic/dtvkit/DtvkitGlueClient";
     jclass clazz;
@@ -310,6 +680,10 @@ int register_org_droidlogc_dtvkit_inputsource_DtvkitGlueClient(JNIEnv *env)
 
     GET_METHOD_ID(notifyDvbCallback, clazz, "notifyDvbCallback", "(Ljava/lang/String;Ljava/lang/String;)V");
     GET_METHOD_ID(notifySubtitleCallback, clazz, "notifySubtitleCallback", "(IIIIII[B)V");
+    GET_METHOD_ID(notifySubtitleCallbackEx, clazz, "notifySubtitleCallbackEx", "(IIIIIII[I)V");
+    GET_METHOD_ID(notifySubtitleCbCtlEx, clazz, "notifySubtitleCbCtlEx", "(I)V");
+    GET_METHOD_ID(notifyCCSubtitleCallbackEx, clazz, "notifyCCSubtitleCallbackEx", "(ZLjava/lang/String;)V");
+    GET_METHOD_ID(notifyMixVideoEventCallback, clazz, "notifyMixVideoEventCallback", "(I)V");
     return rc;
 }
 
@@ -325,7 +699,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved __unused)
     }
     assert(env != NULL);
     gJavaVM = vm;
-    if (register_org_droidlogc_dtvkit_inputsource_DtvkitGlueClient(env) < 0)
+    if (register_org_droidlogic_dtvkit_DtvkitGlueClient(env) < 0)
     {
         ALOGE("Can't register DtvkitGlueClient");
         goto bail;

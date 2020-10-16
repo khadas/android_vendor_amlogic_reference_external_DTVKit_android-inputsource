@@ -69,8 +69,12 @@ import android.widget.FrameLayout;
 import android.view.accessibility.CaptioningManager;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.os.SystemProperties;
+import android.widget.Toast;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.dtvkit.companionlibrary.model.Channel;
@@ -94,6 +98,7 @@ import com.droidlogic.fragment.ParameterMananer;
 //import com.droidlogic.app.tv.TvControlManager;
 import com.droidlogic.app.SystemControlManager;
 import com.droidlogic.app.SystemControlEvent;
+import com.droidlogic.app.CCSubtitleView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -104,8 +109,18 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 import android.media.MediaCodec;
+
+import java.io.InputStream;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.io.IOException;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipException;
+import java.util.zip.ZipEntry;
+import java.util.Enumeration;
 
 
 public class DtvkitTvInput extends TvInputService implements SystemControlEvent.DisplayModeListener  {
@@ -121,6 +136,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private static final int ASPECT_MODE_CUSTOM = 5;
     private static final int DISPLAY_MODE_NORMAL = 6;
     private int retry_times = RETRY_TIMES;
+
+    private static final int TTX_MODE_NORMAL = 0;
+    private static final int TTX_MODE_TRANSPARENT = 1;
+    private static final int TTX_MODE_SEPARATE = 2;
 
     TvInputInfo mTvInputInfo = null;
     protected Hardware mHardware;
@@ -146,6 +165,25 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private enum RecorderState {
         STOPPED, STARTING, RECORDING
     }
+    private enum State {
+        NO, YES, DISABLED
+    }
+    private class AvailableState {
+        AvailableState() { state = State.NO; }
+        public void setYes() { setYes(false); }
+        public void setNo() { setNo(false); }
+        public void setYes(boolean force) { set(State.YES, force); }
+        public void setNo(boolean force) { set(State.NO, force); }
+        public void disable() { set(State.DISABLED, true); }
+        public boolean isAvailable() { return state == State.YES; }
+        public String toString() { return state == State.NO ? "no" : (state == State.YES ? "yes" : "disabled"); }
+
+        private void set(State stat, boolean force) {
+            if (force || state != State.DISABLED)
+                state = stat;
+        }
+        private State state;
+    }
     private RecorderState timeshiftRecorderState = RecorderState.STOPPED;
     private boolean timeshifting = false;
     private int numRecorders = 0;
@@ -166,6 +204,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private boolean recordingPending = false;
 
+    private static String unZipDirStr = "vendorfont";
+    private static String uncryptDirStr = "font";
+    private static String fonts = "font";
+
+    public final int SUBCTL_HK_DVBSUB = 0x02;
+    public final int SUBCTL_HK_TTXSUB = 0x04;
+    public final int SUBCTL_HK_SCTE27 = 0x08;
+    public final int SUBCTL_HK_TTXPAG = 0x10;
+    public final int SUBCTL_HK_CC     = 0x20;
+    public final int SUBCTL_HK_MHEG5S = 0x40;
+    public final int Default_SubCtlFlg = (SUBCTL_HK_DVBSUB|SUBCTL_HK_SCTE27
+                                         |SUBCTL_HK_TTXSUB|SUBCTL_HK_TTXPAG
+                                         /*SUBCTL_HK_CC*/);
+
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
     }
@@ -177,14 +229,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             String action = intent.getAction();
             if (action.equals(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED)
                    || action.equals(TvInputManager.ACTION_PARENTAL_CONTROLS_ENABLED_CHANGED)) {
-               boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
-               Log.d(TAG, "BLOCKED_RATINGS_CHANGED isParentControlEnabled = " + isParentControlEnabled);
-               /*if (isParentControlEnabled != getParentalControlOn()) {
-                   setParentalControlOn(isParentControlEnabled);
-               }
-               if (isParentControlEnabled && mSession != null) {
-                   mSession.syncParentControlSetting();
-               }*/
+                boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
+                Log.d(TAG, "BLOCKED_RATINGS_CHANGED isParentControlEnabled = " + isParentControlEnabled);
+                //use osd to hide video instead
+                /*if (isParentControlEnabled != getParentalControlOn()) {
+                    setParentalControlOn(isParentControlEnabled);
+                }
+                if (isParentControlEnabled && mSession != null) {
+                    mSession.syncParentControlSetting();
+                }*/
             }
         }
     };
@@ -273,12 +326,22 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }).start();
     }
 
+    private int getSubtitleFlag() {
+       return SystemProperties.getInt("persist.vendor.tif.subtitleflg", Default_SubCtlFlg);
+    }
     private synchronized void init() {
         if (mIsInited) {
             Log.d(TAG, "init already");
             return;
         }
         Log.d(TAG, "init start");
+        int subFlg = getSubtitleFlag();
+        if (subFlg >= SUBCTL_HK_DVBSUB) {
+            DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
+            if ((subFlg & SUBCTL_HK_CC) == SUBCTL_HK_CC) {
+                initFont(); //init closed caption font
+            }
+        }
         mSysSettingManager = new SysSettingManager(this);
         mDataMananer = new DataMananer(this);
         onChannelsChanged();
@@ -307,6 +370,81 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "initInThread end");
             }
         }).start();
+    }
+
+    private void initFont() {
+        File uncryteDir = new File(this.getDataDir(), uncryptDirStr);
+        if (uncryteDir == null || uncryteDir.listFiles() == null || uncryteDir.listFiles().length == 0 ) {
+            unzipUncry(uncryteDir);
+         }
+    }
+
+    private void unzipUncry(File uncryteDir) {
+        File zipFile = new File(this.getDataDir(), "fonts.zip");
+        File unZipDir = new File(this.getDataDir(), unZipDirStr);
+        try {
+            copyToFileOrThrow(this.getAssets().open(fonts), zipFile);
+            upZipFile(zipFile, unZipDir.getCanonicalPath());
+            uncryteDir.mkdirs();
+            DtvkitGlueClient.getInstance().doUnCrypt(unZipDir.getCanonicalPath()+"/", uncryteDir.getCanonicalPath()+"/");
+        } catch(IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void copyToFileOrThrow(InputStream inputStream, File destFile)
+            throws IOException {
+        if (destFile.exists()) {
+            destFile.delete();
+        }
+        FileOutputStream out = new FileOutputStream(destFile);
+        try {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) >= 0) {
+                out.write(buffer, 0, bytesRead);
+            }
+        } finally {
+            out.flush();
+            try {
+                out.getFD().sync();
+            } catch (IOException e) {
+            }
+            out.close();
+        }
+    }
+
+    private  void upZipFile(File zipFile, String folderPath)
+            throws ZipException, IOException {
+            File desDir = new File(folderPath);
+            if (!desDir.exists()) {
+                desDir.mkdirs();
+            }
+            ZipFile zf = new ZipFile(zipFile);
+            for (Enumeration<?> entries = zf.entries(); entries.hasMoreElements();) {
+                ZipEntry entry = ((ZipEntry) entries.nextElement());
+                InputStream in = zf.getInputStream(entry);
+                String str = folderPath;
+                File desFile = new File(str, java.net.URLEncoder.encode(
+                        entry.getName(), "UTF-8"));
+                if (!desFile.exists()) {
+                    File fileParentDir = desFile.getParentFile();
+                    if (!fileParentDir.exists()) {
+                        fileParentDir.mkdirs();
+                    }
+                }
+                OutputStream out = new FileOutputStream(desFile);
+                byte buffer[] = new byte[1024 * 1024];
+                int realLength = in.read(buffer);
+                while (realLength != -1) {
+                    out.write(buffer, 0, realLength);
+                    realLength = in.read(buffer);
+                }
+
+                out.close();
+                in.close();
+
+            }
     }
 
     private synchronized void updateRecorderNumber() {
@@ -442,32 +580,42 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private CiMenuView ciOverlayView;
         private TextView mText;
         private RelativeLayout mRelativeLayout;
+        private CCSubtitleView mCCSubView = null;
+        private SubtitleServerView mSubServerView = null;
         private int w;
         private int h;
 
         private boolean mhegTookKey = false;
 
-        public DtvkitOverlayView(Context context) {
+        public DtvkitOverlayView(Context context,       Handler mainHandler) {
             super(context);
 
             Log.i(TAG, "onCreateDtvkitOverlayView");
 
             nativeOverlayView = new NativeOverlayView(getContext());
             ciOverlayView = new CiMenuView(getContext());
-
+            mSubServerView = new SubtitleServerView(getContext(), mainHandler);
+            mCCSubView     = new CCSubtitleView(getContext());
+            this.addView(mSubServerView);
             this.addView(nativeOverlayView);
+            this.addView(mCCSubView);
             this.addView(ciOverlayView);
             initRelativeLayout();
         }
 
         public void destroy() {
             ciOverlayView.destroy();
+            removeView(mSubServerView);
             removeView(nativeOverlayView);
             removeView(ciOverlayView);
             removeView(mRelativeLayout);
+            removeView(mCCSubView);
         }
 
         public void hideOverLay() {
+            if (mSubServerView != null) {
+                mSubServerView.setVisibility(View.GONE);
+            }
             if (nativeOverlayView != null) {
                 nativeOverlayView.setVisibility(View.GONE);
             }
@@ -480,10 +628,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mRelativeLayout != null) {
                 mRelativeLayout.setVisibility(View.GONE);
             }
+
+            if (mCCSubView != null) {
+                mCCSubView.hide();
+            }
+
             setVisibility(View.GONE);
         }
 
         public void showOverLay() {
+            if (mSubServerView != null) {
+                mSubServerView.setVisibility(View.VISIBLE);
+            }
+
             if (nativeOverlayView != null) {
                 nativeOverlayView.setVisibility(View.VISIBLE);
             }
@@ -495,6 +652,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             if (mRelativeLayout != null) {
                 mRelativeLayout.setVisibility(View.VISIBLE);
+            }
+
+            if (mCCSubView != null) {
+                mCCSubView.setVisibility(View.VISIBLE);
             }
             setVisibility(View.VISIBLE);
         }
@@ -524,11 +685,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        public void setTeletextMix(boolean status){
-            if (status)
-                nativeOverlayView.setSize(1920/2, 0, 1920, 1080);
-            else
-                nativeOverlayView.setSize(0, 0, 1920, 1080);
+        public void setTeletextMix(int status){
+            int subFlg = getSubtitleFlag();
+            if (subFlg >= SUBCTL_HK_DVBSUB) {
+                mSubServerView.setTeletexTransparent(status == TTX_MODE_TRANSPARENT);
+                if (status == TTX_MODE_SEPARATE) {
+                    mSubServerView.setSize(1920/2, 0, 1920, 1080);
+                } else {
+                    mSubServerView.setSize(0, 0, 1920, 1080);
+                }
+            } else
+                if (status == TTX_MODE_SEPARATE) {
+                    nativeOverlayView.setSize(1920/2, 0, 1920, 1080);
+                } else {
+                    nativeOverlayView.setSize(0, 0, 1920, 1080);
+                }
         }
 
         public void showScrambledText(String text) {
@@ -555,6 +726,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             w = width;
             h = height;
             nativeOverlayView.setSize(width, height);
+            mSubServerView.setSize(width, height);
+        }
+
+        public void showCCSubtitle(String json) {
+             if (mCCSubView != null) {
+                 mCCSubView.showJsonStr(json);
+             }
+        }
+
+        public void hideCCSubtitle() {
+            if (mCCSubView != null) {
+                mCCSubView.hide();
+            }
         }
 
         public boolean handleKeyDown(int keyCode, KeyEvent event) {
@@ -711,6 +895,218 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }
 
+    class SubtitleServerView extends View {
+        Bitmap overlay1 = null;
+        Bitmap overlay2 = null;
+        Bitmap overlay_update = null;
+        Bitmap overlay_draw = null;
+        Bitmap region = null;
+        int region_width = 0;
+        int region_height = 0;
+        int left = 0;
+        int top = 0;
+        int width = 0;
+        int height = 0;
+        Rect src, dst;
+        private Handler mHandler = null;
+
+        int mPauseExDraw = 0;
+        boolean mTtxTransparent = false;
+        static final int SUBTITLE_SUB_TYPE_DVB  = 5;
+        static final int SUBTITLE_SUB_TYPE_TTX  = 9;
+        static final int SUBTITLE_SUB_TYPE_CLOSED_CATPTION = 10;
+        static final int SUBTITLE_SUB_TYPE_SCTE = 11;
+        static final int TTX_FIXED_WIDTH = 480;
+        static final int TTX_FIXED_HEIGHT = 525;
+
+        static final int MSG_SUBTITLE_SHOW_CLOSED_CAPTION = 5;
+        protected static final int MSG_SET_TELETEXT_MIX_NORMAL = 6;
+        protected static final int MSG_SET_TELETEXT_MIX_TRANSPARENT = 7;
+        protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 8;
+
+        Semaphore sem = new Semaphore(1);
+        private final DtvkitGlueClient.SubtitleListener mSubListener = new DtvkitGlueClient.SubtitleListener() {
+            @Override
+            public void drawEx(int parserType, int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, int[] data) {
+                Log.v(TAG, "SubtitleServiceDraw: type= "+ parserType + ", srcw= " + src_width +
+               ", srch= " + src_height + ", x= " + dst_x + ", y= " + dst_y +
+               ", dstw= " + dst_width + ", dsth= " + dst_height + ", pause= " + mPauseExDraw);
+                if (mPauseExDraw > 0) {
+                    return;
+                }
+
+                if (overlay1 == null) {
+                    /* TODO The overlay size should come from the tif (and be updated on onOverlayViewSizeChanged) */
+                    /* Create 2 layers for double buffering */
+                    overlay1 = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
+                    overlay2 = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
+
+                    overlay_draw = overlay1;
+                    overlay_update = overlay2;
+
+                    /* Clear the overlay that will be drawn initially */
+                    Canvas canvas = new Canvas(overlay_draw);
+                    canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+                }
+
+                /* TODO Temporary private usage of API. Add explicit methods if keeping this mechanism */
+                if (src_width == 0 || src_height == 0) {
+                    if (dst_width == 9999) {
+                        /* 9999 dst_width indicates the overlay should be cleared */
+                        Canvas canvas = new Canvas(overlay_update);
+                        canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+                    }
+                    else if (dst_height == 9999) {
+                        /* 9999 dst_height indicates the drawn regions should be displayed on the overlay */
+                        /* The update layer is now ready to be displayed so switch the overlays
+                         * and use the other one for the next update */
+                        sem.acquireUninterruptibly();
+                        Bitmap temp = overlay_draw;
+                        overlay_draw = overlay_update;
+                        src = new Rect(0, 0, overlay_draw.getWidth(), overlay_draw.getHeight());
+                        overlay_update = temp;
+                        sem.release();
+                        postInvalidate();
+                        return;
+                    }
+                    else {
+                        /* 0 dst_width and 0 dst_height indicates to add the region to overlay */
+                        if (region != null) {
+                            float scaleX = (float)(overlay_draw.getWidth())/(float)(width);
+                            float scaleY = (float)(overlay_draw.getHeight())/(float)(height);
+                            float ttxScaleVideo = 1.0f;
+                            float ttxScaleDst   = 1.0f;
+                            boolean ttxPageTmpTrans = (dst_x == 1);//ttx not use x,y as coords
+                            Canvas canvas = new Canvas(overlay_update);
+                            Rect src_l = new Rect(0, 0, region_width, region_height);
+                            Rect dst_l;
+                            int l = left;
+                            int t = top;
+                            int w = region_width;
+                            int h = region_height;
+                            if (parserType == SUBTITLE_SUB_TYPE_TTX) {
+                                l = (width - TTX_FIXED_WIDTH)/2;
+                                t = (height - TTX_FIXED_HEIGHT)/2;
+                                w = TTX_FIXED_WIDTH;
+                                h= TTX_FIXED_HEIGHT;
+                                if (playerIsTeletextOn() && !mTtxTransparent && !ttxPageTmpTrans) {
+                                    canvas.drawColor(0xFF000000);
+                                }
+                            }
+                            dst_l = new Rect((int)(l*scaleX), (int)(t*scaleY),
+                                    (int)((w + l)*scaleX),
+                                    (int)((h + t)*scaleY));
+                            Log.d(TAG, "SubtitleServiceDraw: dst_l left=" + dst_l.left + ", top=" + dst_l.top
+                                + ", right=" + dst_l.right + ", bottom=" + dst_l.bottom);
+
+                            Paint paint = new Paint();
+                            paint.setAntiAlias(true);
+                            paint.setFilterBitmap(true);
+                            paint.setDither(true);
+                            canvas.drawBitmap(region, src_l, dst_l, paint);
+                            region = null;
+                        }
+                    }
+                    return;
+                }
+
+                int part_bottom = 0;
+                if (region == null) {
+                    /* TODO Create temporary region buffer using region_width and overlay height */
+                    region_width = src_width;
+                    region_height = src_height;
+                    region = Bitmap.createBitmap(region_width, region_height, Bitmap.Config.ARGB_8888);
+                    left = dst_x;
+                    top = dst_y;
+                    width = (dst_width == 0)?region_width:dst_width;
+                    height = (dst_height == 0)?region_height:dst_height;
+                    if (parserType == SUBTITLE_SUB_TYPE_TTX) {
+                        width = 720;
+                        height  =576;
+                    }
+                }
+                else {
+                    part_bottom = region_height;
+                    region_height += src_height;
+                }
+
+                /* Build an array of ARGB_8888 pixels as signed ints and add this part to the region */
+                Bitmap part = Bitmap.createBitmap(data, 0, src_width, src_width, src_height, Bitmap.Config.ARGB_8888);
+                Canvas canvas = new Canvas(region);
+                canvas.drawBitmap(part, 0, 0, null);
+            }
+
+            @Override
+            public void pauseEx(int pause) {
+                mPauseExDraw = pause;
+            }
+
+            @Override
+            public void drawCC(boolean bshow, String json) {
+                if (mHandler != null) {
+                    Message msg = mHandler.obtainMessage();
+                    msg.what = MSG_SUBTITLE_SHOW_CLOSED_CAPTION;
+                    msg.obj  = json;
+                    msg.arg1 = bshow == false ? 0 : 1;
+                    mHandler.sendMessage(msg);
+                }
+            }
+
+            private int eventToMsg(int event) {
+                switch (event) {
+                    case 0:
+                        return MSG_SET_TELETEXT_MIX_NORMAL;
+                    case 1:
+                        return MSG_SET_TELETEXT_MIX_TRANSPARENT;
+                    case 2:
+                        return MSG_SET_TELETEXT_MIX_SEPARATE;
+                }
+                return MSG_SET_TELETEXT_MIX_NORMAL;
+            }
+
+            @Override
+            public void mixVideoEvent(int event) {
+                if (mHandler != null) {
+                    Message msg = mHandler.obtainMessage();
+                    msg.what = eventToMsg(event);
+                    mHandler.sendMessage(msg);
+                }
+
+            }
+        };
+
+        public SubtitleServerView(Context context, Handler mainHandler) {
+            super(context);
+            mHandler = mainHandler;
+            DtvkitGlueClient.getInstance().setSubtileListener(mSubListener);
+        }
+
+        public void setSize(int width, int height) {
+            dst = new Rect(0, 0, width, height);
+            postInvalidate();
+        }
+
+        public void setSize(int left, int top, int right, int bottom) {
+            dst = new Rect(left, top, right, bottom);
+            postInvalidate();
+        }
+
+        public void setTeletexTransparent(boolean mode) {
+            mTtxTransparent = mode;
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas)
+        {
+            super.onDraw(canvas);
+            sem.acquireUninterruptibly();
+            if (overlay_draw != null) {
+                canvas.drawBitmap(overlay_draw, src, dst, null);
+            }
+            sem.release();
+        }
+    }
+
     class NativeOverlayView extends View
     {
         Bitmap overlay1 = null;
@@ -725,6 +1121,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         int width = 0;
         int height = 0;
         Rect src, dst;
+
+        int mPauseExDraw = 0;
+        static final int SUBTITLE_SUB_TYPE_DVB  = 5;
+        static final int SUBTITLE_SUB_TYPE_TTX  = 9;
+        static final int SUBTITLE_SUB_TYPE_SCTE = 11;
+        static final int TTX_BOTTOM_MARGIN = 50;
 
         Semaphore sem = new Semaphore(1);
 
@@ -865,6 +1267,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private Handler mRecordingProcessHandler = null;
         private long mCurrentRecordIndex = 0;
         private boolean mRecordStopAndSaveReceived = false;
+        private boolean mIsNonAvProgram = false;
 
         protected static final int MSG_RECORD_ONTUNE = 0;
         protected static final int MSG_RECORD_ONSTART = 1;
@@ -916,7 +1319,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         case MSG_RECORD_UPDATE_RECORDING:{
                             boolean insert = (msg.arg1 == 1);
                             boolean check = (msg.arg2 == 1);
-                            updateRecordingToDb(insert, check);
+                            updateRecordingToDb(insert, check, msg.obj);
                             break;
                         }
                         case MSG_RECORD_ONRELEASE:{
@@ -1143,7 +1546,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        private void updateRecordingToDb(boolean insert, boolean check) {
+        private void updateRecordingToDb(boolean insert, boolean check, Object obj) {
             endRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);
             endRecordSystemTimeMillis = System.currentTimeMillis();
             scheduleTimeshiftRecording = true;
@@ -1184,6 +1587,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     try {
                         data.put(RecordedProgram.RECORD_FILE_PATH, currentPath);
                         data.put(RecordedProgram.RECORD_STORAGE_EXIST, pathExist);
+                        if (channel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
+                            data.put(RecordedProgram.RECORD_SERVICE_TYPE, "audio_only");
+                        }
                     } catch (Exception e) {
                         Log.e(TAG, "updateRecordingToDb update InternalProviderData Exception = " + e.getMessage());
                     }
@@ -1212,6 +1618,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         if (recordingDurationMillis > 0) {
                             values.put(TvContract.RecordedPrograms.COLUMN_RECORDING_DURATION_MILLIS, recordingDurationMillis);
                         }
+                        TvContentRating[] oldContentRatings = null;
+                        TvContentRating[] currentContentRatings = null;
+                        TvContentRating[] newContentRatings = null;
+                        if (obj != null && obj instanceof RecordedProgram) {
+                            oldContentRatings = ((RecordedProgram)obj).getContentRatings();
+                        }
+                        if (program != null) {
+                            currentContentRatings = program.getContentRatings();
+                        }
+                        if (currentContentRatings != null) {
+                            newContentRatings = updateRecordProgramRatings(oldContentRatings, currentContentRatings);
+                        }
+                        if (newContentRatings != null) {
+                            values.put(TvContract.RecordedPrograms.COLUMN_CONTENT_RATING, TvContractUtils.contentRatingsToString(newContentRatings));
+                        }
                         mContext.getContentResolver().update(mRecordedProgramUri,
                                 values, null, null);
                     } else {
@@ -1221,25 +1642,38 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
                 //recordingUri = null;
                 if (!check) {
-                    Log.i(TAG, "updateRecordingToDb notifystop mRecordedProgramUri = " + mRecordedProgramUri + " index = " + mCurrentRecordIndex);
-                    notifyRecordingStopped(mRecordedProgramUri);
-                    if (mRecordStopAndSaveReceived || mStarted) {
-                        if (mRecordingProcessHandler != null) {
+                    boolean delete = false;
+                    if (obj != null && obj instanceof Bundle) {
+                        delete = ((Bundle)obj).getBoolean("delete", false);
+                    }
+                    if (delete) {
+                        Log.d(TAG, "updateRecordingToDb delete" + " index = " + mCurrentRecordIndex);
+                        recordingStopRecording(recordingUri);
+                        recordingRemoveRecording(recordingUri);
+                        if (mRecordedProgramUri != null)
+                            mContext.getContentResolver().delete(mRecordedProgramUri, null, null);
+                        if (mRecordingProcessHandler != null)
                             mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
-                            boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_DO_FINALRELEASE);
-                            Log.d(TAG, "updateRecordingToDb sendMessage result = " + result + ", index = " + mCurrentRecordIndex);
-                        } else {
-                            Log.i(TAG, "updateRecordingToDb sendMessage null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
+                    } else {
+                        Log.d(TAG, "updateRecordingToDb notifystop mRecordedProgramUri = " + mRecordedProgramUri + " index = " + mCurrentRecordIndex);
+                        notifyRecordingStopped(mRecordedProgramUri);
+                        if (mRecordStopAndSaveReceived || mStarted) {
+                            if (mRecordingProcessHandler != null) {
+                                mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
+                                boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_DO_FINALRELEASE);
+                                Log.d(TAG, "updateRecordingToDb sendMessage result = " + result + ", index = " + mCurrentRecordIndex);
+                            } else {
+                                Log.i(TAG, "updateRecordingToDb sendMessage null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
+                            }
                         }
                     }
-                }
-                if (mRecordingProcessHandler != null) {
-                    if (check) {
+                } else {
+                    if (mRecordingProcessHandler != null) {
                         boolean result = mRecordingProcessHandler.sendMessageDelayed(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 1), MSG_RECORD_UPDATE_RECORD_PERIOD);
                         Log.d(TAG, "updateRecordingToDb continue sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+                    } else {
+                        Log.i(TAG, "updateRecordingToDb sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
                     }
-                } else {
-                    Log.i(TAG, "updateRecordingToDb sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
                 }
             }
             //PropSettingManager.resetRecordFrequencyFlag();
@@ -1260,13 +1694,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
-            if (mStarted && !mRecordStopAndSaveReceived) {
+            if ((mStarted && !mRecordStopAndSaveReceived) || mIsNonAvProgram) {
                 if (mRecordingProcessHandler != null) {
+                    Bundle b = null;
+                    if (mIsNonAvProgram) {
+                        b = new Bundle();
+                        b.putBoolean("delete", true);
+                        Log.d(TAG, "doRelease none Av Program");
+                    }
+                    //need update and stop record directly
+                    updateRecordingToDb(false, false, b);
                     mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
                     mRecordingProcessHandler.removeMessages(MSG_RECORD_DO_FINALRELEASE);
-                    boolean result1 = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 0));
-                    boolean result2 = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_DO_FINALRELEASE);
-                    Log.d(TAG, "doRelease sendMessage result1 = " + result1 + ", result2 = " + result1 + ", index = " + mCurrentRecordIndex);
+                    boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_DO_FINALRELEASE);
+                    Log.d(TAG, "doRelease sendMessage result = " + result + ", index = " + mCurrentRecordIndex);
                 } else {
                     Log.i(TAG, "doRelease sendMessage null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
                 }
@@ -1361,7 +1802,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     arg1 = 1;
                     arg2 = 1;
                 }
-                boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, arg1, arg2));
+                boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, arg1, arg2, searchedRecordedProgram));
                 Log.d(TAG, "updateRecordProgramInfo sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
             } else {
                 Log.i(TAG, "updateRecordProgramInfo sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
@@ -1390,12 +1831,63 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return result;
         }
 
+        private TvContentRating[] updateRecordProgramRatings(TvContentRating[] oldRatings, TvContentRating[] newRatings) {
+            TvContentRating[] result = null;
+            List<TvContentRating> allRatings = null;
+            if (newRatings != null && newRatings.length > 0) {
+                if (oldRatings == null || oldRatings.length == 0) {
+                    result = newRatings;
+                } else {
+                    allRatings = new ArrayList(Arrays.asList(oldRatings));
+                    for (TvContentRating tempNew : newRatings) {
+                        if (!containsRating(oldRatings, tempNew)) {
+                            allRatings.add(tempNew);
+                        }
+                    }
+                    result = (TvContentRating[])(allRatings.toArray());
+                }
+            }
+            return result;
+        }
+
+        private boolean containsRating(TvContentRating[] ratings, TvContentRating rating) {
+            boolean result = false;
+            if (ratings != null && ratings.length > 0 && rating != null) {
+                for (TvContentRating temp : ratings) {
+                    if (rating.equals(temp)) {
+                        result = true;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+
         private Program getCurrentProgram(Uri channelUri) {
             return TvContractUtils.getCurrentProgram(mContext.getContentResolver(), channelUri);
         }
 
         private Program getCurrentStreamProgram(Uri channelUri, long streamTime) {
             return TvContractUtils.getCurrentProgramExt(mContext.getContentResolver(), channelUri, streamTime);
+        }
+
+        private void stopRecording(boolean delete) {
+            Bundle b = null;
+
+            if (delete) {
+                b = new Bundle();
+                b.putBoolean("delete", true);
+            }
+            if (mRecordingProcessHandler != null) {
+                mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
+                boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 0, b));
+                Log.d(TAG, "stopRecording sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+                if (result) {
+                    mRecordStopAndSaveReceived = true;
+                }
+            } else {
+                Log.i(TAG, "stopRecording sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
+            }
         }
 
         private final DtvkitGlueClient.SignalHandler mRecordingHandler = new DtvkitGlueClient.SignalHandler() {
@@ -1424,19 +1916,37 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else if (signal.equals("RecordingStatusChanged")) {
                     if (!recordingIsRecordingPathActive(data, mPath)) {
                         Log.d(TAG, "RecordingStatusChanged, stopped[path:"+mPath+"]");
-                        if (mRecordingProcessHandler != null) {
-                            mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
-                            boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 0));
-                            Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
-                            if (result) {
-                                mRecordStopAndSaveReceived = true;
+                        stopRecording(false);
+                    }
+                    else if (checkActiveRecordings(recordingGetActiveRecordings(data),
+                        /*check the record_av_only rule*/
+                        new Predicate<JSONObject> () {
+                            @Override
+                            public boolean test(JSONObject recording) {
+                                if (TextUtils.equals(recording.optString("serviceuri", "null"), getChannelInternalDvbUri(getChannel(mChannel)).toString())
+                                    && getFeatureSupportRecordAVServiceOnly()
+                                    && !recording.optBoolean("is_av", true))
+                                {
+                                    return true;
+                                }
+                                return false;
                             }
-                        } else {
-                            Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
-                        }
+                        }))
+                    {
+                        /*stop the recording*/
+                        Log.i(TAG, "recording stopped due to non-AV service, feature rec_av_only enabled");
+                        //stop recording in release by flag mIsNonAvProgram as record may be starting when receive this message
+                        mIsNonAvProgram = true;
+                        //stopRecording(true);
+
+                        Bundle event = new Bundle();
+                        event.putString(ConstantManager.KEY_INFO, "not allowed to record a non-av service");
+                        notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                        notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
                     }
                 } else if (signal.equals("RecordingDiskFull")) {
-                    //notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
+                    //tell application to deal current running pvr
+                    notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
                 }
             }
         };
@@ -1454,7 +1964,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private long currentPosition = TvInputManager.TIME_SHIFT_INVALID_TIME;
         private float playSpeed = 0;
         private PlayerState playerState = PlayerState.STOPPED;
-        private boolean timeshiftAvailable = false;
+        private AvailableState timeshiftAvailable = new AvailableState();
         private int timeshiftBufferSizeMins = 60;
         private int timeshiftBufferSizeMBs = 0;
         DtvkitOverlayView mView = null;
@@ -1471,6 +1981,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private int m_surface_right = 0;
         private int m_surface_top = 0;
         private int m_surface_bottom = 0;
+        private boolean mTeleTextMixNormal = true;
+        private int dvrSubtitleFlag = 0;
+        private MountEventReceiver mMediaReceiver;
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -1486,9 +1999,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 updateRecorderNumber();
             }
             if (numActiveRecordings < numRecorders) {
-                timeshiftAvailable = true;
+                timeshiftAvailable.setYes(true);
             } else {
-                timeshiftAvailable = false;
+                timeshiftAvailable.setNo(true);
             }
 
             timeshiftRecordRunnable = new Runnable() {
@@ -1506,6 +2019,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mDtvkitTvInputSessionCount++;
             mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
             initWorkThread();
+            mMediaReceiver = new MountEventReceiver();
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction(Intent.ACTION_MEDIA_REMOVED);
+            intentFilter.addAction(Intent.ACTION_MEDIA_EJECT);
+            intentFilter.addDataScheme("file");
+            mContext.registerReceiver(mMediaReceiver, intentFilter);
         }
 
         @Override
@@ -1547,6 +2066,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 doDestroyOverlay();
             }
             //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
+            mContext.unregisterReceiver(mMediaReceiver);
+            mMediaReceiver = null;
             Log.i(TAG, "onRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }
 
@@ -1564,6 +2085,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             scheduleTimeshiftRecording = false;
             timeshiftRecorderState = RecorderState.STOPPED;
             timeshifting = false;
+            dvrSubtitleFlag = 0;
             mhegStop();
             playerStopTimeshiftRecording(false);
             playerStop();
@@ -1635,8 +2157,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         sendSetSurfaceMessage(null, null);
                     }
                     //mHardware.setSurface(surface, mConfigs[0]);
-                    createDecoder();
-                    decoderRelease();
+                    //createDecoder();
+                    //decoderRelease();
                     sendSetSurfaceMessage(surface, mConfigs[0]);
                     mSurface = surface;
                 }
@@ -1655,7 +2177,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public View onCreateOverlayView() {
             Log.i(TAG, "onCreateOverlayView index = " + mCurrentDtvkitTvInputSessionIndex);
             if (mView == null) {
-                mView = new DtvkitOverlayView(mContext);
+                mView = new DtvkitOverlayView(mContext, mMainHandle);
             }
             return mView;
         }
@@ -1663,7 +2185,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         @Override
         public void onOverlayViewSizeChanged(int width, int height) {
             if (mView == null) {
-                mView = new DtvkitOverlayView(mContext);
+                mView = new DtvkitOverlayView(mContext, mMainHandle);
             }
             playerSetRectangle(0, 0, width, height);
             mView.setSize(width, height);
@@ -1680,8 +2202,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             if (mMainHandle != null) {
                 mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
+                mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
+                mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
             }
-
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_ON_TUNE);
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 0, 0, channelUri);
@@ -1724,6 +2247,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         @Override
         public boolean onSelectTrack(int type, String trackId) {
             Log.i(TAG, "onSelectTrack " + type + ", " + trackId + ", index = " + mCurrentDtvkitTvInputSessionIndex);
+            boolean result = false;
+            if (mHandlerThreadHandle != null) {
+                Message mess = mHandlerThreadHandle.obtainMessage(MSG_SELECT_TRACK, type, 0, trackId);
+                result = mHandlerThreadHandle.sendMessage(mess);
+                Log.d(TAG, "onSelectTrack sendMessage result " + result);
+            }
+            return result;
+        }
+
+        private boolean doSelectTrack(int type, String trackId) {
+            boolean result = false;
+            Log.i(TAG, "doSelectTrack " + type + ", " + trackId + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             if (type == TvTrackInfo.TYPE_AUDIO) {
                 if (playerSelectAudioTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
                     notifyTrackSelected(type, trackId);
@@ -1732,7 +2267,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
                         mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
                     }
-                    return true;
+                    result = true;
                 }
             } else if (type == TvTrackInfo.TYPE_SUBTITLE) {
                 String sourceTrackId = trackId;
@@ -1757,7 +2292,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (TextUtils.isEmpty(trackId) || !TextUtils.isDigitsOnly(trackId)) {
                         //notifyTrackSelected(type, sourceTrackId);
                         Log.d(TAG, "need trackId that only contains number sourceTrackId = " + sourceTrackId + ", trackId = " + trackId);
-                        return false;
+                        result = false;
+                        return result;
                     }
                 }
                 if (mCaptioningManager.isEnabled() && selectSubtitleOrTeletext(isTele, subType, trackId)) {
@@ -1766,8 +2302,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.d(TAG, "onSelectTrack mCaptioningManager closed or invlid sub");
                     notifyTrackSelected(type, null);
                 }
+                result = true;
             }
-            return false;
+            return result;
         }
 
         private boolean selectSubtitleOrTeletext(int istele, int type, String indexId) {
@@ -1807,7 +2344,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         boolean setTeleOn = playerSetTeletextOn(true, Integer.parseInt(indexId));
                         Log.d(TAG, "selectSubtitleOrTeletext start setTeleOn = " + setTeleOn);
                     } else {
-                        boolean startTele = playerSelectTeletextTrack(Integer.parseInt(indexId));
+                        boolean startTele = false;
+                        if ((getSubtitleFlag() & SUBCTL_HK_TTXPAG) == SUBCTL_HK_TTXPAG) {
+                            startTele = playerSetTeletextOn(true, Integer.parseInt(indexId));
+                        }else {
+                            startTele = playerSelectTeletextTrack(Integer.parseInt(indexId));
+                        }
                         Log.d(TAG, "selectSubtitleOrTeletext set setTeleOn = " + startTele);
                     }
                 }
@@ -1830,11 +2372,38 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (isSubOn) {
                 notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, subTrackId);
             } else if (isTeleOn) {
-                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, teleTrackId);
+                //notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, teleTrackId);//marked it, because dvbcore don't keep teletext on/off status;
             } else {
                 notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
             }
             return true;
+        }
+
+        private void updateTrackAndSelect(int isDvrPlaying) {
+            boolean retuneSubtile = true;
+
+            if ((isDvrPlaying == 1) && (dvrSubtitleFlag == 1)) {
+                retuneSubtile = false;
+            }
+
+            if (retuneSubtile
+                && (mCaptioningManager != null && mCaptioningManager.isEnabled())) {
+                    playerSetSubtitlesOn(true);
+                    if (isDvrPlaying == 1) {
+                        dvrSubtitleFlag = 1;
+                    }
+            }
+
+            List<TvTrackInfo> tracks = playerGetTracks(mTunedChannel, false);
+            if (!tracks.equals(mTunedTracks)) {
+                mTunedTracks = tracks;
+                Log.d(TAG, "updateTrackAndSelect update new mTunedTracks");
+            }
+            notifyTracksChanged(mTunedTracks);
+            int audioTrack = playerGetSelectedAudioTrack();
+            Log.i(TAG, "updateTrackAndSelect audio track selected: " + audioTrack);
+            notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(audioTrack));
+            initSubtitleOrTeletextIfNeed();
         }
 
         @Override
@@ -1853,6 +2422,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             super.notifyVideoAvailable();
             if (mMainHandle != null) {
                 mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
+            }
+
+            int subFlg = getSubtitleFlag();
+            if (mMainHandle != null && subFlg >= SUBCTL_HK_DVBSUB) {
+                Message msg = mMainHandle.obtainMessage(MSG_SUBTITLE_SHOW_CLOSED_CAPTION, 0, 0, null);
+                mMainHandle.sendMessage(msg);
             }
         }
 
@@ -2025,6 +2600,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (actiondown) {
                     playerNotifyTeletextEvent(28);
                 }
+            }  else if ("clock".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("clock", false);
+                Log.d(TAG, "do private cmd: clock: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(29);
+                }
             } else if (ConstantManager.ACTION_TIF_CONTROL_OVERLAY.equals(action)) {
                 boolean show = data.getBoolean(ConstantManager.KEY_TIF_OVERLAY_SHOW_STATUS, false);
                 Log.d(TAG, "do private cmd:"+ ConstantManager.ACTION_TIF_CONTROL_OVERLAY + ", show:" + show);
@@ -2070,7 +2651,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_RESUME);
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_TIMESHIFT_RESUME, 0, 0, null);
                 boolean info = mHandlerThreadHandle.sendMessage(mess);
-                Log.d(TAG, "onTimeShiftPause sendMessage " + info);
+                Log.d(TAG, "onTimeShiftResume sendMessage " + info);
             }
         }
 
@@ -2080,7 +2661,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_SEEK);
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_TIMESHIFT_SEEK, 0, 0, timeMs);
                 boolean info = mHandlerThreadHandle.sendMessage(mess);
-                Log.d(TAG, "onTimeShiftPause sendMessage " + info);
+                Log.d(TAG, "onTimeShiftSeekTo sendMessage " + info);
             }
         }
 
@@ -2255,6 +2836,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.d(TAG, "dealTeletextKeyCode close teletext");
                     playerSetTeletextOn(false, -1);
                     notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
+                    if (!mTeleTextMixNormal) {
+                        mTeleTextMixNormal = true;
+                        mView.setTeletextMix(TTX_MODE_NORMAL);
+                        layoutSurface(m_surface_left,m_surface_top,m_surface_right,m_surface_bottom);
+                    }
                     break;
                 case KeyEvent.KEYCODE_PROG_RED:
                     Log.d(TAG, "dealTeletextKeyCode quick_navigate_1");
@@ -2332,19 +2918,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 } else {
                                     notifyVideoAvailable();
                                 }
-
-                                if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
-                                    playerSetSubtitlesOn(true);
+                                //update track info in message queue
+                                if (mHandlerThreadHandle != null) {
+                                    mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKS_AND_SELECT);
+                                    Message msg = mHandlerThreadHandle.obtainMessage(MSG_UPDATE_TRACKS_AND_SELECT);
+                                    msg.arg1 = 0;
+                                    mHandlerThreadHandle.sendMessageDelayed(msg, 0);
                                 }
-
-                                List<TvTrackInfo> tracks = playerGetTracks(mTunedChannel, false);
-                                if (!tracks.equals(mTunedTracks)) {
-                                    mTunedTracks = tracks;
-                                    // TODO Also for service changed event
-                                    Log.d(TAG, "update new mTunedTracks");
-                                }
-                                notifyTracksChanged(mTunedTracks);
-
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO)) {
                                     if (mHandlerThreadHandle != null) {
                                         mHandlerThreadHandle.removeMessages(MSG_CHECK_RESOLUTION);
@@ -2357,10 +2937,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
                                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
                                 }
-                                Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
-                                notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
-                                initSubtitleOrTeletextIfNeed();
-
                                 monitorTimeshiftRecordingPathAndTryRestart(true, true, true);
                             }
                             else if (type.equals("dvbrecording")) {
@@ -2369,6 +2945,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 currentPosition = playerGetElapsedAndTruncated(data)[0] * 1000;
                                 Log.i(TAG, "dvbrecording currentPosition = " + currentPosition + "as date = " + ConvertSettingManager.convertLongToDate(startPosition));
                                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_AVAILABLE);
+                                //update track info in message queue
+                                if (mHandlerThreadHandle != null) {
+                                    mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKS_AND_SELECT);
+                                    Message msg = mHandlerThreadHandle.obtainMessage(MSG_UPDATE_TRACKS_AND_SELECT);
+                                    msg.arg1 = 1;
+                                    mHandlerThreadHandle.sendMessageDelayed(msg, 0);
+                                }
                             }
                             else if (type.equals("dvbtimeshifting")) {
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
@@ -2396,6 +2979,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
                                 Log.d(TAG, "close teletext when badsignal received");
                             }
+                            if (mMainHandle != null) {
+                                mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
+                                mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
+                            }
                             break;
                         case "off":
                             if (timeshiftRecorderState != RecorderState.STOPPED) {
@@ -2406,6 +2993,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                             }
                             playerState = PlayerState.STOPPED;
+                            dvrSubtitleFlag = 0;
                             if (recordedProgram != null) {
                                /*trigger the playback exit*/
                                currentPosition = recordedProgram.getRecordingDurationMillis();
@@ -2413,6 +3001,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
                             break;
                         case "starting":
+                           notifyVideoAvailable();
                            Log.i(TAG, "mhegStart " + dvbUri);
                            if (mhegStartService(dvbUri) != -1)
                            {
@@ -2454,11 +3043,47 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 } else if (signal.equals("RecordingStatusChanged")) {
                     JSONArray activeRecordings = recordingGetActiveRecordings(data);
+
                     if (activeRecordings != null && activeRecordings.length() < numRecorders &&
                             timeshiftRecorderState == RecorderState.STOPPED && scheduleTimeshiftRecording) {
-                        timeshiftAvailable = true;
+                        timeshiftAvailable.setYes();
                         /*no scheduling, taken over by MSG_CHECK_REC_PATH*/
                         //scheduleTimeshiftRecordingTask();
+                    }
+
+                    if (checkActiveRecordings(activeRecordings,
+                        new Predicate<JSONObject> () {
+                            @Override
+                            public boolean test(JSONObject recording) {
+                                if (TextUtils.equals(
+                                        recording.optString("serviceuri", "null"),
+                                        TvContract.buildChannelUri(mTunedChannel.getId()).toString()
+                                        )
+                                    && getFeatureSupportRecordAVServiceOnly()
+                                    && !recording.optBoolean("is_av", true))
+                                {
+                                    return true;
+                                }
+                                return false;
+                            }
+                        }))
+                    {
+                        Log.i(TAG, "timeshift stopped due to non-AV Service, feature rec_av_only enabled.");
+
+                        Bundle event = new Bundle();
+                        event.putString(ConstantManager.KEY_INFO, "not allowed to record a non-av service");
+                        notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                        /*notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);*/
+
+                        /*timeshiftAvailable will be disabled further in this tune*/
+                        timeshiftAvailable.disable();
+
+                        boolean returnToLive = timeshifting;
+                        Log.i(TAG, "stopping timeshift [return live:" + returnToLive + "]");
+                        timeshiftRecorderState = RecorderState.STOPPED;
+                        scheduleTimeshiftRecording = false;
+                        timeshifting = false;
+                        playerStopTimeshiftRecording(returnToLive);
                     }
                 }
                 else if (signal.equals("DvbUpdatedEventPeriods"))
@@ -2629,16 +3254,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 {
                     /*free disk space excceds the property's setting*/
                     Bundle event = new Bundle();
-                    event.putString(ConstantManager.KEY_INFO, "Stop timeshift or DVR due to insufficient storage");
+                    event.putString(ConstantManager.KEY_INFO, "Stop timeshift due to insufficient storage");
                     notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
                 }
                 else if (signal.equals("tt_mix_separate"))
                 {
-                    mHandlerThreadHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_SEPARATE);
+                    mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_SEPARATE);
                 }
                 else if (signal.equals("tt_mix_normal"))
                 {
-                    mHandlerThreadHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
+                    mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
                 }
             }
         };
@@ -2654,11 +3279,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_UPDATE_TRACKINFO = 9;
         protected static final int MSG_ENABLE_VIDEO = 10;
         protected static final int MSG_SET_UNBLOCK = 11;
-        protected static final int MSG_SET_TELETEXT_MIX_NORMAL = 12;
-        protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 13;
         protected static final int MSG_CHECK_REC_PATH = 14;
         protected static final int MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG = 15;
         protected static final int MSG_TRY_START_TIMESHIFT = 16;
+        protected static final int MSG_UPDATE_TRACKS_AND_SELECT = 17;
+        protected static final int MSG_SELECT_TRACK = 18;
 
         //audio ad
         public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
@@ -2666,6 +3291,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public static final int MSG_MIX_AD_MIX_LEVEL = 22;
         public static final int MSG_MIX_AD_SET_MAIN = 23;
         public static final int MSG_MIX_AD_SET_ASSOCIATE = 24;
+        public static final int MSG_MIX_AD_SWITCH_ENABLE = 25;
 
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
@@ -2685,6 +3311,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_SHOW_SCAMBLEDTEXT = 2;
         protected static final int MSG_HIDE_SCAMBLEDTEXT = 3;
         protected static final int MSG_DISPLAY_STREAM_CHANGE_DIALOG = 4;
+        protected static final int MSG_SUBTITLE_SHOW_CLOSED_CAPTION = 5;
+        protected static final int MSG_SET_TELETEXT_MIX_NORMAL = 6;
+        protected static final int MSG_SET_TELETEXT_MIX_TRANSPARENT = 7;
+        protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 8;
 
         protected void initWorkThread() {
             Log.d(TAG, "initWorkThread");
@@ -2749,14 +3379,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 setUnBlock((TvContentRating)msg.obj);
                             }
                             break;
-                        case MSG_SET_TELETEXT_MIX_NORMAL:
-                            mView.setTeletextMix(false);
-                            layoutSurface(m_surface_left,m_surface_top,m_surface_right,m_surface_bottom);
-                            break;
-                        case MSG_SET_TELETEXT_MIX_SEPARATE:
-                            mView.setTeletextMix(true);
-                            layoutSurface(m_surface_left,m_surface_bottom/3,m_surface_right/2,m_surface_bottom/3*2);
-                            break;
                         case MSG_CHECK_REC_PATH:
                             if (resetRecordingPath() || (msg.arg2 != 0)/*start*/) {
                                 /* path changed */
@@ -2772,6 +3394,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             break;
                         case MSG_TRY_START_TIMESHIFT:
                             tryStartTimeshifting();
+                            break;
+                        case MSG_UPDATE_TRACKS_AND_SELECT:
+                            updateTrackAndSelect(msg.arg1);
+                            break;
+                        case MSG_SELECT_TRACK:
+                            doSelectTrack(msg.arg1, (String)msg.obj);
                             break;
                         case MSG_TIMESHIFT_PLAY:
                             Uri TimeshiftUri = (Uri)msg.obj;
@@ -2798,7 +3426,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mMainHandle = new MainHandler();
         }
 
-        private void syncParentControlSetting() {
+        //use osd to hide video instead
+        /*private void syncParentControlSetting() {
             int current_age, setting_min_age;
 
             current_age = getParentalControlAge();
@@ -2813,7 +3442,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     notifyContentAllowed();
                 }
             }
-        }
+        }*/
 
         private int getContentRatingsOfCurrentProgram() {
             int age = 0;
@@ -2822,7 +3451,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             long currentStreamTime = 0;
             TvContentRating[] ratings;
 
-            currentStreamTime = PropSettingManager.getCurrentStreamTime(true);
+            //get current position as timeshift may seek to related position
+            currentStreamTime = timeshifting ? onTimeShiftGetCurrentPosition() : PropSettingManager.getCurrentStreamTime(true);
             if (currentStreamTime == 0)
                 return 0;
             Log.d(TAG, "currentStreamTime:("+currentStreamTime+")");
@@ -2918,7 +3548,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        private void updateParentalControl() {
+        //use osd to hide video instead
+        /*private void updateParentalControl() {
             int age = 0;
             int rating;
             int pc_age;
@@ -2952,7 +3583,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.e(TAG, "updateParentalControl = " + e.getMessage());
                 }
             }
-        }
+        }*/
 
         private void setBlockMute(boolean mute) {
             Log.d(TAG, "setBlockMute = " + mute + ", index = " + mCurrentDtvkitTvInputSessionIndex);
@@ -2979,10 +3610,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.i(TAG, "setUnBlock " + unblockedRating);
             mKeyUnlocked = true;
             mBlocked = false;
-            setParentalControlOn(false);
+            //hide by osd instead
+            //setParentalControlOn(false);
             notifyContentAllowed();
-            //change mute status by application
-            //setBlockMute(false);
         }
 
         private boolean playerInitAssociateDualSupport() {
@@ -3045,6 +3675,38 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                         showSearchConfirmDialog(DtvkitTvInput.this, mTunedChannel);
                         break;
+                    case MSG_SET_TELETEXT_MIX_NORMAL:
+                        if (!mTeleTextMixNormal) {
+                            mTeleTextMixNormal = true;
+                            mView.setTeletextMix(TTX_MODE_NORMAL);
+                            layoutSurface(m_surface_left,m_surface_top,m_surface_right,m_surface_bottom);
+                        }
+                        break;
+                    case MSG_SET_TELETEXT_MIX_TRANSPARENT:
+                        {
+                            mTeleTextMixNormal = false;
+                            mView.setTeletextMix(TTX_MODE_TRANSPARENT);
+                            layoutSurface(m_surface_left,m_surface_top,m_surface_right,m_surface_bottom);
+                        }
+                        break;
+                    case MSG_SET_TELETEXT_MIX_SEPARATE:
+                        {
+                            mTeleTextMixNormal = false;
+                            mView.setTeletextMix(TTX_MODE_SEPARATE);
+                            layoutSurface(m_surface_left,m_surface_bottom/3,m_surface_right/2,m_surface_bottom/3*2);
+                        }
+                        break;
+                    case MSG_SUBTITLE_SHOW_CLOSED_CAPTION:
+                        String ccData = (String)msg.obj;
+                        boolean bshow = msg.arg1 == 0 ? false : true;
+                        if (mView != null) {
+                            if (bshow && ccData != null) {
+                                mView.showCCSubtitle(ccData);
+                            }
+                            else {
+                                mView.hideCCSubtitle();
+                            }
+                        }
                     default:
                         Log.d(TAG, "MainHandler default");
                         break;
@@ -3080,6 +3742,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         protected boolean onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
             Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + "index = " + mCurrentDtvkitTvInputSessionIndex);
+
             if (ContentUris.parseId(channelUri) == -1) {
                 Log.e(TAG, "onTuneByHandlerThreadHandle invalid channelUri = " + channelUri);
                 return false;
@@ -3092,6 +3755,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 scheduleTimeshiftRecording = false;
                 playerStopTimeshiftRecording(false);
             }
+
+            timeshiftAvailable.setYes(true);
 
             mTunedChannel = getChannel(channelUri);
             final String dvbUri = getChannelInternalDvbUri(mTunedChannel);
@@ -3107,13 +3772,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             writeSysFs("/sys/class/video/video_global_output", "0");
 
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
-
             playerStopTeletext();//no need to save teletext select status
             playerStop();
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
             setParentalControlOn(false);
             //playerResetAssociateDualSupport();
+            userDataStatus(false);
             mKeyUnlocked = false;
             mDvbNetworkChangeSearchStatus = false;
             if (mBlocked)
@@ -3138,6 +3803,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }*/
             }
             mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
+            if (mAudioADAutoStart) {
+                setAdFunction(MSG_MIX_AD_SWITCH_ENABLE, 1);
+            }else {
+                setAdFunction(MSG_MIX_AD_SWITCH_ENABLE, 0);
+            }
             DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             if (playerPlay(dvbUri, mAudioADAutoStart).equals("ok")) {
                 if (mHandlerThreadHandle != null) {
@@ -3149,6 +3819,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     playerSetSubtitlesOn(true);
                 }
                 */
+                userDataStatus(true);
                 playerInitAssociateDualSupport();
             } else {
                 mTunedChannel = null;
@@ -3299,6 +3970,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.d(TAG, "setAdFunction MSG_MIX_AD_SET_ASSOCIATE result=" + result
                             + "setAudioDescriptionOn " + (param1 == 1));
                     break;
+                case MSG_MIX_AD_SWITCH_ENABLE:
+                    if (param1 > 0) {
+                        audioManager.setParameters("ad_switch_enable=1");
+                    } else {
+                        audioManager.setParameters("ad_switch_enable=0");
+                    }
+                    Log.d(TAG, "setAdFunction MSG_MIX_AD_SWITCH_ENABLE setParameters:"
+                            + "ad_switch_enable==" + (param1 > 0 ? 1 : 0));
+                    result = true;
+                    break;
                 default:
                     Log.i(TAG,"setAdFunction unkown  msg = " + msg + ", param1 = " + param1);
                     break;
@@ -3313,6 +3994,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (recordedProgram != null) {
                 playerState = PlayerState.PLAYING;
                 playerStop();
+                playerSetSubtitlesOn(false);
+                playerSetTeletextOn(false, -1);
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
                 if (playerPlay(recordedProgram.getRecordingDataUri(), mAudioADAutoStart).equals("ok"))
@@ -3380,7 +4063,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mhegStop();
                 playerPlayTimeshiftRecording(false, !seekToBeginning);
             } else if (timeshiftRecorderState == RecorderState.RECORDING && timeshifting) {
-                playerSeekTo((timeMs - (originalStartPosition + PropSettingManager.getStreamTimeDiff())) / 1000);
+                //diff time may change within 1s, add extra 1s to prevent it from playing previous program when seeking to the beginning of current in timeshift mode
+                long rawMsPosition = (timeMs - (originalStartPosition + PropSettingManager.getStreamTimeDiff()));
+                long floorPosition = rawMsPosition % 1000;
+                long position =  rawMsPosition / 1000 + (floorPosition > 0 ? 1 : 0) + 1;
+                playerSeekTo(position < 0 ? 0 : position);
             } else {
                 playerSeekTo(timeMs / 1000);
             }
@@ -3398,14 +4085,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     if (numActiveRecordings < numRecorders
                         && numActiveRecordings < getNumRecordersLimit()) {
-                        timeshiftAvailable = true;
+                        timeshiftAvailable.setYes();
                     } else {
-                        timeshiftAvailable = false;
+                        timeshiftAvailable.setNo();
                     }
                 }
                 Log.i(TAG, "timeshiftAvailable: " + timeshiftAvailable);
                 Log.i(TAG, "timeshiftRecorderState: " + timeshiftRecorderState);
-                if (timeshiftAvailable) {
+                if (timeshiftAvailable.isAvailable()) {
                     if (timeshiftRecorderState == RecorderState.STOPPED) {
                         if (playerStartTimeshiftRecording()) {
                             /*
@@ -3420,6 +4107,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                         }
                     }
+                } else {
+                    notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                 }
             } else {
                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
@@ -3451,6 +4140,29 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private int getTimeshiftBufferSizeMBs() {
             return PropSettingManager.getInt("vendor.tv.dtv.tf.mbs", timeshiftBufferSizeMBs);
         }
+
+        public class MountEventReceiver extends BroadcastReceiver {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                if (action.equals(Intent.ACTION_MEDIA_REMOVED) || action.equals(Intent.ACTION_MEDIA_EJECT)) {
+                    String mountPath = intent.getData().getPath();
+                    String playingPath = null;
+                    if (recordedProgram != null) {
+                        try {
+                            playingPath = recordedProgram.getInternalProviderData().get("record_file_path").toString();
+                        } catch (Exception e) {
+                        }
+                    }
+                    if (!TextUtils.isEmpty(playingPath) && TextUtils.equals(playingPath, mountPath)) {
+                        if (timeshiftRecorderState == RecorderState.STOPPED && timeshifting == false) {
+                            Log.d(TAG, "Pvr storage has been removed, need stop pvr playing.");
+                            playerStop();
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private boolean isMountedPathAvailable(String path) {
@@ -3469,7 +4181,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private boolean resetRecordingPath() {
         String newPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
         boolean changed = false;
-        if (!isMountedPathAvailable(SysSettingManager.convertMediaPathToMountedPath(newPath))) {
+
+        String path = SysSettingManager.convertMediaPathToMountedPath(newPath);
+        if (!TextUtils.isEmpty(path) && !isMountedPathAvailable(path)) {
             Log.d(TAG, "removable device has been moved and use default path");
             newPath = DataMananer.PVR_DEFAULT_PATH;
             mDataMananer.saveStringParameters(DataMananer.KEY_PVR_RECORD_PATH, newPath);
@@ -4832,6 +5546,23 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
        return activeRecordings;
    }
 
+   private boolean checkActiveRecordings(JSONArray activeRecordings, Predicate<JSONObject> check) {
+       boolean checkedTrue = false;
+       if (activeRecordings != null) {
+            try {
+                for (int i = 0; i < activeRecordings.length(); i++) {
+                    if (check.test(activeRecordings.getJSONObject(i))) {
+                        checkedTrue = true;
+                        break;
+                    }
+                }
+            } catch (JSONException e) {
+                Log.e(TAG, e.getMessage());
+            }
+       }
+       return checkedTrue;
+   }
+
    private boolean recordingIsRecordingPathActive(JSONObject recordingStatus, int path) {
        boolean active = false;
        if (recordingStatus != null) {
@@ -5109,14 +5840,22 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             || getFeatureCasReady();
     }
 
+    private boolean getFeatureDmxLimit() {
+        return !PropSettingManager.getBoolean("vendor.tv.dtv.dmx.nolimit", true);
+    }
+
+    private boolean getFeatureSupportRecordAVServiceOnly() {
+        return PropSettingManager.getBoolean("vendor.tv.dtv.dvr.rec_av_only", true);
+    }
+
     private int getNumRecordersLimit() {
         if (numRecorders > 0)
-            return getFeatureCompliance() ? 1 : numRecorders;
+            return getFeatureDmxLimit() ? 1 : numRecorders;
         return numRecorders;
     }
 
     private boolean getFeatureTimeshiftingPriorityHigh() {
-        return !getFeatureCompliance();
+        return PropSettingManager.getBoolean("vendor.tv.dtv.tf.priority_high", false);
     }
 
     private boolean createDecoder() {
@@ -5260,6 +5999,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     mSession.notifyChannelRetuned(channelUri);
                                     Log.d(TAG, "onMessageCallback notifyChannelRetuned " + channelUri);
                                 } else {
+                                    mDvbNetworkChangeSearchStatus = false;
                                     Log.d(TAG, "onMessageCallback none channels");
                                 }
                             }
@@ -5312,7 +6052,31 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (tempStatus[0] != 1 && setup != null) {
                     Log.d(TAG, "showSearchConfirmDialog need to stop search");
                     setup.stopSearch();
+                    EpgSyncJobService.cancelAllSyncRequests(DtvkitTvInput.this);
+                    EpgSyncJobService.requestImmediateSyncSearchedChannel(DtvkitTvInput.this, mInputId, true, new ComponentName(DtvkitTvInput.this, DtvkitEpgSync.class));
+                    mDvbNetworkChangeSearchStatus = false;
                 }
+            }
+        });
+        //prevent exit key
+        alert.setCancelable(false);
+        alert.setOnKeyListener(new DialogInterface.OnKeyListener() {
+
+            @Override
+            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                if (event.getAction() == KeyEvent.ACTION_UP
+                        && keyCode == KeyEvent.KEYCODE_BACK
+                        && event.getRepeatCount() == 0) {
+                    if (tempStatus[0] != 1 && setup != null) {
+                        Log.d(TAG, "showSearchConfirmDialog searching");
+                        Toast.makeText(
+                                DtvkitTvInput.this,
+                                R.string.dvb_network_change,
+                                Toast.LENGTH_SHORT)
+                                .show();
+                    }
+                }
+                return true;
             }
         });
         alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
@@ -5330,4 +6094,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mSysSettingManager.writeSysFs(path, value);
   }
 
+    private void userDataStatus(boolean status) {
+        int subFlg = getSubtitleFlag();
+        if (subFlg >= SUBCTL_HK_DVBSUB) {
+            if (status) {
+                DtvkitGlueClient.getInstance().openUserData(); //for video afd
+            } else {
+                DtvkitGlueClient.getInstance().closeUserData(); //for video afd
+            }
+        }
+    }
 }

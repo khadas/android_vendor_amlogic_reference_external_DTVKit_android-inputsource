@@ -45,11 +45,33 @@ typedef enum {
     CONNECT_TYPE_EXTEND         = 1
 } connect_type_t;
 
+typedef struct s_dvb_subt_info
+{
+   int cpage;
+   int apage;
+} dvbsubtitleinfo_t;
+
+typedef struct s_teletext_subt
+{
+   int magazine;
+   int page;
+} teletextinfo_t;
+
 typedef struct parcel_s {
     int msgType;
     std::vector<int> bodyInt;
     std::vector<std::string> bodyString;
     hidl_memory mem;
+
+    //to subtitleserver subitlte info
+    int funname;
+    int is_dvb_subt;
+    int pid;
+    int subt_type;//1:dvb; 2: teletext; 3:scte27
+    int demux_num;
+    dvbsubtitleinfo_t subt;
+    teletextinfo_t ttxt;
+    int event_type; // teletext event type;
 } parcel_t;
 
 class DTVKitListener : virtual public RefBase {
@@ -67,6 +89,8 @@ public:
     void disconnect();
     void setListener(const sp<DTVKitListener> &listener);
     std::string request(const std::string& resource, const std::string& json);
+    void setAfd(int afd);
+    void setSubtitleFlag(int flag);
 
 private:
     class DTVKitHidlCallback : public IDTVKitServerCallback {

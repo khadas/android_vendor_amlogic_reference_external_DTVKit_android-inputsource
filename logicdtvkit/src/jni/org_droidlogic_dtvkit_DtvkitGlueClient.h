@@ -19,14 +19,26 @@
 #include <jni.h>
 #include <utils/Log.h>
 #include "DTVKitHidlClient.h"
-
+#include "SubtitleServerClient.h"
 using namespace android;
 using ::android::hardware::hidl_memory;
 using ::android::hardware::hidl_string;
+using android::Mutex;
+using amlogic::SubtitleServerClient;
+using amlogic::SubtitleListener;
 
 enum {
-    REQUEST = 0,
-    DRAW = 1,
+    REQUEST        = 0,
+    DTVKIT_DRAW    = 1,
+    SUBSERVER_DRAW = 2
+};
+
+enum {
+    SUBTITLE_START = 0,
+    SUBTITLE_STOP,
+    SUBTITLE_PAUSE,
+    SUBTITLE_RESUME,
+    TELETEXT_EVENT
 };
 
 typedef struct datablock_s {
@@ -52,6 +64,8 @@ public:
 
     static DTVKitClientJni *GetInstance();
     std::string request(const std::string& resource, const std::string& json);
+    void setAfd(int afd);
+    void setSubtitleFlag(int flag);
 
 private:
     sp<DTVKitHidlClient> mDkSession;
@@ -59,5 +73,23 @@ private:
     static DTVKitClientJni *mInstance;
 };
 
+class SubtitleDataListenerImpl : public SubtitleListener {
+    public:
+        SubtitleDataListenerImpl() {}
+        ~SubtitleDataListenerImpl() {}
+
+        virtual void onSubtitleEvent(const char *data, int size, int parserType,
+                int x, int y, int width, int height,
+                int videoWidth, int videoHeight, int cmd);
+        virtual void onSubtitleDataEvent(int event, int id) {}
+        void onSubtitleAvail(int avail) {};
+        void onSubtitleAfdEvent(int afd);
+        void onSubtitleDimension(int width, int height) {}
+        void onSubtitleLanguage(std::string lang) {};
+        void onSubtitleInfo(int what, int extra) {};
+        void onMixVideoEvent(int val);
+        virtual void onServerDied();
+        void onSubtitleUIEvent(int uiCmd, const std::vector<int> &params) {}
+};
 #endif/*__ORG_DTVKIT_INPUTSOURCE_CLIENT_H__*/
 
