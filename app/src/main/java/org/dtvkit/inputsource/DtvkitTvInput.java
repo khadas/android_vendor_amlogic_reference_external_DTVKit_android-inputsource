@@ -1004,6 +1004,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             paint.setFilterBitmap(true);
                             paint.setDither(true);
                             canvas.drawBitmap(region, src_l, dst_l, paint);
+                            region.recycle();
                             region = null;
                         }
                     }
@@ -1034,6 +1035,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Bitmap part = Bitmap.createBitmap(data, 0, src_width, src_width, src_height, Bitmap.Config.ARGB_8888);
                 Canvas canvas = new Canvas(region);
                 canvas.drawBitmap(part, 0, 0, null);
+                part.recycle();
             }
 
             @Override
@@ -1178,6 +1180,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             paint.setFilterBitmap(true);
                             paint.setDither(true);
                             canvas.drawBitmap(region, src, dst, paint);
+                            region.recycle();
                             region = null;
                         }
                     }
@@ -1209,6 +1212,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Bitmap part = Bitmap.createBitmap(colors, 0, src_width, src_width, src_height, Bitmap.Config.ARGB_8888);
                 Canvas canvas = new Canvas(region);
                 canvas.drawBitmap(part, 0, part_bottom, null);
+                part.recycle();
             }
         };
 
