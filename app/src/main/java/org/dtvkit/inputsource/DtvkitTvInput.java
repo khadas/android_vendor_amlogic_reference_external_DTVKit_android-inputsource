@@ -6079,7 +6079,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 return true;
             }
         });
-        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         alert.setView(dialogView);
         alert.show();
         WindowManager.LayoutParams params = alert.getWindow().getAttributes();

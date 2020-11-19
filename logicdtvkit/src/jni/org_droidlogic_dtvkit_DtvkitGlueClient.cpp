@@ -453,7 +453,9 @@ static void setSubtitlePause()
         if (env != NULL) {
             env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, 0, 0, 0, 0, 0, 9999, 0, NULL);
             env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, 0, 0, 0, 0, 0, 0, 9999, NULL);
-            env->CallVoidMethod(DtvkitObject, notifySubtitleCbCtlEx, 1);
+            //when play the pvr file and turn on the subtitle, then seek and switch subtitle track,
+            //the dvbcore don't deliver the resume.And it cause the subitle hide.
+            //env->CallVoidMethod(DtvkitObject, notifySubtitleCbCtlEx, 1);
         }
 
         if (attached) {
