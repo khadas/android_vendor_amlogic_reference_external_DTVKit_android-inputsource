@@ -146,8 +146,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private static final int TTX_MODE_TRANSPARENT = 1;
     private static final int TTX_MODE_SEPARATE = 2;
 
-    TvInputInfo mTvInputInfo = null;
+    protected TvInputInfo mTvInputInfo = null;
     protected Hardware mHardware;
+    private TvInputHardwareInfo mTvInputHardwareInfo = null;
     protected TvStreamConfig[] mConfigs;
     private TvInputManager mTvInputManager;
     private SysSettingManager mSysSettingManager = null;
@@ -290,6 +291,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mTvInputManager = (TvInputManager)this.getSystemService(Context.TV_INPUT_SERVICE);
         mContentResolver = getContentResolver();
         mContentResolver.registerContentObserver(TvContract.Channels.CONTENT_URI, true, mContentObserver);
+        mContentResolver.registerContentObserver(TvContract.RecordedPrograms.CONTENT_URI, true, mRecordingsContentObserver);
 
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED);
@@ -400,7 +402,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private boolean mIsInited = false;
-    private boolean mIsUpdated = false;
     private int mCheckTvProviderTimeOut = 5 * 1000;//10s
 
     private boolean checkTvProviderAvailable() {
@@ -440,6 +441,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mSysSettingManager = new SysSettingManager(this);
         mDataMananer = new DataMananer(this);
         onChannelsChanged();
+        onRecordingsChanged();
         mSystemControlManager = SystemControlManager.getInstance();
         mSystemControlEvent = new SystemControlEvent(this);
         mSystemControlEvent.setDisplayModeListener(this);
@@ -529,23 +531,42 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private synchronized void updateRecorderNumber() {
-        if (mIsUpdated) {
-            Log.d(TAG, "updateRecorderNumber already");
-            return;
-        }
         Log.d(TAG, "updateRecorderNumber start");
-        TvInputInfo.Builder builder = new TvInputInfo.Builder(getApplicationContext(), new ComponentName(getApplicationContext(), DtvkitTvInput.class));
         numRecorders = recordingGetNumRecorders();
-        if (numRecorders > 0) {
-            builder.setCanRecord(true)
-                    .setTunerCount(numRecorders);
-            mContentResolver.registerContentObserver(TvContract.RecordedPrograms.CONTENT_URI, true, mRecordingsContentObserver);
-            onRecordingsChanged();
+    }
+
+    private synchronized void updateTunerNumber() {
+        Log.d(TAG, "updateTunerNumber start");
+        int realNumTuners = getNumTuners();
+        int numTuners = realNumTuners;
+        if (numTuners > 0) {
+            boolean multiFrequencySupport = false;
+            if (numTuners > 2) {
+                //currently ohm_mxl258c has 4 tuner and can server for pip or fcc by configure, besides, it can support play multi frequency
+                multiFrequencySupport = true;
+                numTuners = 3;//match for one record and one play pip
+            } else if (numTuners == 2) {
+                //currently ohm has 2 tuner but can only match for single frequency, besides, it can only debug pip or fcc
+                numTuners = 3;//match for one record and one play and pip
+            } else {
+                //one tuner and only can play and record within same frequency
+                numTuners = 2;//match for one record and one play
+            }
+            if (mTvInputInfo != null && mTvInputInfo.getTunerCount() == numTuners) {
+                Log.d(TAG, "updateTunerNumber same count " + numTuners);
+                return;
+            }
+            Bundle extras = new Bundle();
+            extras.putBoolean(PropSettingManager.ENABLE_PIP_SUPPORT, getFeatureSupportPip());
+            extras.putBoolean(PropSettingManager.ENABLE_FCC_SUPPORT, getFeatureSupportFcc());
+            extras.putBoolean(PropSettingManager.ENABLE_MULTI_FREQUENCY_SUPPORT, multiFrequencySupport);
+            extras.putInt(PropSettingManager.ENABLE_TUNER_NUMBER, realNumTuners);
+            mTvInputInfo = buildTvInputInfo(numTuners, extras);
         } else {
-            builder.setCanRecord(false)
-                    .setTunerCount(1);
+            mTvInputInfo = buildTvInputInfo(1, null);
         }
-        getApplicationContext().getSystemService(TvInputManager.class).updateTvInputInfo(builder.build());
+        mTvInputManager.updateTvInputInfo(mTvInputInfo);
+        Log.d(TAG, "updateTunerNumber end");
     }
 
     private void checkDtvkitSatelliteUpdateStatus() {
@@ -1214,7 +1235,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             super(context);
             mHandler = mainHandler;
             //comment it as pip don't need subtitle for the moment
-            if (!getFeatureSupportFullPip()) {
+            if (!getFeatureSupportFullPipFccArchitecture()) {
                 DtvkitGlueClient.getInstance().setSubtileListener(mSubListener);
             }
         }
@@ -1359,7 +1380,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public NativeOverlayView(Context context) {
             super(context);
             //comment it as pip don't need subtitle for the moment
-            if (!getFeatureSupportFullPip()) {
+            if (!getFeatureSupportFullPipFccArchitecture()) {
                 DtvkitGlueClient.getInstance().setOverlayTarget(mTarget);
             }
         }
@@ -1440,6 +1461,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (numRecorders == 0) {
                 updateRecorderNumber();
             }
+            updateTunerNumber();
             initRecordWorkThread();
             Log.i(TAG, "DtvkitRecordingSession");
         }
@@ -2189,6 +2211,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (numRecorders == 0) {
                     updateRecorderNumber();
                 }
+                updateTunerNumber();
                 if (numActiveRecordings < numRecorders) {
                     timeshiftAvailable.setYes(true);
                 } else {
@@ -2213,7 +2236,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public void onSetMain(boolean isMain) {
             Log.d(TAG, "onSetMain, isMain: " + isMain +" mCurrentDtvkitTvInputSessionIndex is " + mCurrentDtvkitTvInputSessionIndex);
             mIsMain = isMain;
-            if (!getFeatureSupportFullPip()) {
+            if (!getFeatureSupportFullPipFccArchitecture()) {
                 //isMain status may be set to true by livetv after switch to luncher
                 if (mCurrentDtvkitTvInputSessionIndex < mDtvkitTvInputSessionCount) {
                     mIsMain = false;
@@ -2238,7 +2261,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         @Override
         public boolean onSetSurface(Surface surface) {
             Log.i(TAG, "onSetSurface " + surface + ", mIsMain = " + mIsMain + ", mDtvkitTvInputSessionCount = " + mDtvkitTvInputSessionCount + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
-            if (!getFeatureSupportFullPip()) {
+            if (!getFeatureSupportFullPipFccArchitecture()) {
                 if (null != mHardware && mConfigs.length > 0) {
                     if (null == surface) {
                         //isMain status may be set to true by livetv after switch to luncher
@@ -2378,7 +2401,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mView == null) {
                 mView = new DtvkitOverlayView(mContext, mMainHandle);
             }
-            if (!getFeatureSupportFullPip()) {
+            if (!getFeatureSupportFullPipFccArchitecture()) {
                 playerSetRectangle(0, 0, width, height);
                 mView.setSize(width, height);
             } else {
@@ -2450,9 +2473,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 return false;
             }
             mTuned = true;
-            boolean supportFullPip = getFeatureSupportFullPip();
+            boolean supportFullPipFccArchitecture = getFeatureSupportFullPipFccArchitecture();
             if (!mIsPip) {
-                if (supportFullPip && !mSurfaceSent && mSurface != null) {
+                if (supportFullPipFccArchitecture && !mSurfaceSent && mSurface != null) {
                     mSurfaceSent = true;
                     mView.nativeOverlayView.setOverlayTarge(mView.nativeOverlayView.mTarget);
                     mView.mSubServerView.setOverlaySubtitleListener(mView.mSubServerView.mSubListener);
@@ -2491,7 +2514,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mhegStop();
                 }
                 playerStopTeletext();//no need to save teletext select status
-                if (!supportFullPip) {
+                if (!supportFullPipFccArchitecture) {
                     playerStop();
                 } else if (mPreviousBufferUri == null && mNextBufferUri == null) {
                     playerStop();
@@ -2594,7 +2617,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //will regist handle to client when
             //creat ciMenuView,so we need destory and
             //unregist handle.
-            //if (!getFeatureSupportFullPip()) {
+            //if (!getFeatureSupportFullPipFccArchitecture()) {
                 mSystemControlManager.SetDtvKitSourceEnable(0);
                 releaseSignalHandler();
                 if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain || mIsPip) {
@@ -4138,7 +4161,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void setBlockMute(boolean mute) {
             Log.d(TAG, "setBlockMute = " + mute + ", index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
-            if (!getFeatureSupportFullPip()) {
+            if (!getFeatureSupportFullPipFccArchitecture()) {
                 AudioManager audioManager = null;
                 if (mParentControlMute != mute) {
                     if (mContext != null) {
@@ -4452,7 +4475,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             recordedProgram = getRecordedProgram(uri);
             if (recordedProgram != null) {
-                if (getFeatureSupportFullPip() && !mSurfaceSent && mSurface != null) {
+                if (getFeatureSupportFullPipFccArchitecture() && !mSurfaceSent && mSurface != null) {
                     mSurfaceSent = true;
                     mView.nativeOverlayView.setOverlayTarge(mView.nativeOverlayView.mTarget);
                     mView.mSubServerView.setOverlaySubtitleListener(mView.mSubServerView.mSubListener);
@@ -6576,6 +6599,22 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
        }
    }
 
+   private int getNumTuners() {
+       int numTuners = 0;
+       try {
+           JSONArray args = new JSONArray();
+           args = DtvkitGlueClient.getInstance().request("Dvb.getListOfFrontends", args).getJSONArray("data");
+           if (args != null) {
+               Log.d(TAG, "getNumTuners args = " + args);
+               numTuners = args.length();
+           }
+           Log.i(TAG, "numTuners: " + numTuners);
+       } catch (Exception e) {
+           Log.e(TAG, "getNumTuners = " + e.getMessage());
+       }
+       return numTuners;
+   }
+
    private boolean checkRecordingExists(String uri, Cursor cursor) {
         boolean recordingExists = false;
         if (cursor != null && cursor.moveToFirst()) {
@@ -6702,41 +6741,27 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     };
 
-    public ResolveInfo getResolveInfo(String cls_name) {
-        if (TextUtils.isEmpty(cls_name))
-            return null;
-        ResolveInfo ret_ri = null;
-        PackageManager pm = getApplicationContext().getPackageManager();
-        List<ResolveInfo> services = pm.queryIntentServices(new Intent(TvInputService.SERVICE_INTERFACE),
-                PackageManager.GET_SERVICES | PackageManager.GET_META_DATA);
-        for (ResolveInfo ri : services) {
-            ServiceInfo si = ri.serviceInfo;
-            if (!android.Manifest.permission.BIND_TV_INPUT.equals(si.permission)) {
-                continue;
-            }
-            Log.d(TAG, "cls_name = " + cls_name + ", si.name = " + si.name);
-            if (cls_name.equals(si.name)) {
-                ret_ri = ri;
-                break;
-            }
+    private TvInputInfo buildTvInputInfo(int tunerCount, Bundle extras) {
+        TvInputInfo result = null;
+        try {
+            result = new TvInputInfo.Builder(getApplicationContext(), new ComponentName(getApplicationContext(), DtvkitTvInput.class))
+                    .setTvInputHardwareInfo(mTvInputHardwareInfo)
+                    .setLabel(null)
+                    .setTunerCount(tunerCount)//will update it in code
+                    .setExtras(extras)
+                    .build();
+        } catch (Exception e) {
+            Log.d(TAG, "buildTvInputInfo Exception = " + e.getMessage());
         }
-        return ret_ri;
+        return result;
     }
 
     public TvInputInfo onHardwareAdded(TvInputHardwareInfo hardwareInfo) {
         Log.d(TAG, "onHardwareAdded ," + "DeviceId :" + hardwareInfo.getDeviceId());
         if (hardwareInfo.getDeviceId() != 19)
             return null;
-        ResolveInfo rinfo = getResolveInfo(DtvkitTvInput.class.getName());
-        if (rinfo != null) {
-            try {
-            mTvInputInfo = TvInputInfo.createTvInputInfo(getApplicationContext(), rinfo, hardwareInfo, null, null);
-            } catch (XmlPullParserException e) {
-                //TODO: handle exception
-            } catch (IOException e) {
-                //TODO: handle exception
-            }
-        }
+        mTvInputHardwareInfo = hardwareInfo;
+        mTvInputInfo = buildTvInputInfo(2, null);
         setInputId(mTvInputInfo.getId());
         mHardware = mTvInputManager.acquireTvInputHardware(19, mTvInputInfo, mHardwareCallback);
         return mTvInputInfo;
@@ -6777,15 +6802,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private boolean getFeatureSupportPip() {
-        return PropSettingManager.getBoolean(PropSettingManager.ENABLE_PIP_SUPPORT, true);
+        return getFeatureSupportFullPipFccArchitecture() && PropSettingManager.getBoolean(PropSettingManager.ENABLE_PIP_SUPPORT, false);
     }
 
     private boolean getFeatureSupportFcc() {
-        return PropSettingManager.getBoolean(PropSettingManager.ENABLE_FCC_SUPPORT, false);
+        return getFeatureSupportFullPipFccArchitecture() && PropSettingManager.getBoolean(PropSettingManager.ENABLE_FCC_SUPPORT, false);
     }
 
-    private boolean getFeatureSupportFullPip() {
-        return PropSettingManager.getBoolean(PropSettingManager.ENABLE_FULL_PIP, false);
+    private boolean getFeatureSupportFullPipFccArchitecture() {
+        return PropSettingManager.getBoolean(PropSettingManager.ENABLE_FULL_PIP_FCC_ARCHITECTURE, false);
     }
 
     private boolean getFeatureSupportFillSurface() {

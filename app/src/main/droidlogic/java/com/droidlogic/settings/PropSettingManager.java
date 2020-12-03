@@ -17,9 +17,11 @@ public class PropSettingManager {
     public static final String TIMESHIFT_DISABLE = "vendor.tv.dtv.tf.disable";
     public static final String ENABLE_PIP_SUPPORT = "vendor.tv.dtv.enable.pip";
     public static final String ENABLE_FCC_SUPPORT = "vendor.tv.dtv.enable.fcc";
+    public static final String ENABLE_MULTI_FREQUENCY_SUPPORT = "multi_frequency";
+    public static final String ENABLE_TUNER_NUMBER = "tuner_number";
     public static final String ENABLE_FILL_SURFACE = "vendor.tv.dtv.fill.surface";
     public static final String ENABLE_FILL_SURFACE_COLOR = "vendor.tv.dtv.fill.color";
-    public static final String ENABLE_FULL_PIP = "vendor.tv.dtv.pip.enable";
+    public static final String ENABLE_FULL_PIP_FCC_ARCHITECTURE = "vendor.tv.dtv.pipfcc.architecture";
     public static final String PVR_RECORD_MODE_CHANNEL = "0";
     public static final String PVR_RECORD_MODE_FREQUENCY = "1";
 
