@@ -2432,10 +2432,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         playerSetRectangle(0, 0, width, height);
                     }
                 }
-                mWinWidth = width;
-                mWinHeight = height;
                 mView.setSize(width, height);
             }
+            mWinWidth = width;
+            mWinHeight = height;
             setOverlayViewEnabled(true);
         }
 
@@ -3407,7 +3407,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (!mTeleTextMixNormal) {
                         mTeleTextMixNormal = true;
                         mView.setTeletextMix(TTX_MODE_NORMAL);
-                        layoutSurface(m_surface_left,m_surface_top,m_surface_right,m_surface_bottom);
+                        playerSetRectangle(0, 0, mWinWidth, mWinHeight);
                     }
                     break;
                 case KeyEvent.KEYCODE_PROG_RED:
@@ -4359,21 +4359,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         if (!mTeleTextMixNormal) {
                             mTeleTextMixNormal = true;
                             mView.setTeletextMix(TTX_MODE_NORMAL);
-                            layoutSurface(m_surface_left,m_surface_top,m_surface_right,m_surface_bottom);
+                            playerSetRectangle(0, 0, mWinWidth, mWinHeight);
                         }
                         break;
                     case MSG_SET_TELETEXT_MIX_TRANSPARENT:
                         {
                             mTeleTextMixNormal = false;
                             mView.setTeletextMix(TTX_MODE_TRANSPARENT);
-                            layoutSurface(m_surface_left,m_surface_top,m_surface_right,m_surface_bottom);
+                            playerSetRectangle(0, 0, mWinWidth, mWinHeight);
                         }
                         break;
                     case MSG_SET_TELETEXT_MIX_SEPARATE:
                         {
                             mTeleTextMixNormal = false;
                             mView.setTeletextMix(TTX_MODE_SEPARATE);
-                            layoutSurface(m_surface_left,m_surface_bottom/3,m_surface_right/2,m_surface_bottom/3*2);
+                            playerSetRectangle(0, mWinHeight/4, mWinWidth/2, mWinHeight/2);
                         }
                         break;
                     case MSG_SUBTITLE_SHOW_CLOSED_CAPTION:
