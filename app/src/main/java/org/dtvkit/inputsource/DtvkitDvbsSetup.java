@@ -284,7 +284,15 @@ public class DtvkitDvbsSetup extends Activity {
             String serviceListJsonArray = (mServiceList != null && mServiceList.length() > 0) ? mServiceList.toString() : "";
             String firstServiceName = "";
             try {
-                firstServiceName = (mServiceList != null && mServiceList.length() > 0) ? mServiceList.getJSONObject(0).getString("name") : "";
+                if (mServiceList != null && mServiceList.length() > 0) {
+                    firstServiceName = mServiceList.getJSONObject(0).getString("name");
+                    for (int i = 0;i < mServiceList.length();i++) {
+                        if (mServiceList.getJSONObject(i).getBoolean("hidden") == false) {
+                            firstServiceName = mServiceList.getJSONObject(i).getString("name");
+                            break;
+                        }
+                    }
+                }
             } catch (JSONException e) {
                 Log.e(TAG, "finish JSONException = " + e.getMessage());
             }

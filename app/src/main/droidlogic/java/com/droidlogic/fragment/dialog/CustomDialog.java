@@ -98,7 +98,7 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_BAND = {"0", "1", "2", "3", "4", "5", "6", "7"};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_POSITION = {"disable", "enable"};
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_POSITION = {R.string.parameter_position_disable, R.string.parameter_position_enable};
-    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST = {"13V", "18V", "off"/*, "13/18V"*/};
+    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST = {/*"13V", "18V",*/"on", "off"/*, "13/18V"*/};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {"on", "off"/*, "auto"*/};
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST = {"none", "a", "b"};
@@ -580,16 +580,22 @@ public class CustomDialog/* extends AlertDialog*/ {
                         bundle.putString("value2", editText2.getText() != null ? editText2.getText().toString() : "");
                         if (!TextUtils.isEmpty(lowMaxstr) && !TextUtils.isEmpty(lowMinstr) &&
                                 !TextUtils.isEmpty(highMaxstr) && !TextUtils.isEmpty(highMinstr)) {
-                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN, Integer.valueOf(lowMinstr));
+                            /*mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN, Integer.valueOf(lowMinstr));
                             mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MAX, Integer.valueOf(lowMaxstr));
                             mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MIN, Integer.valueOf(highMinstr));
-                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MAX, Integer.valueOf(highMaxstr));
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MAX, Integer.valueOf(highMaxstr));*/
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN, Integer.valueOf(lowMinstr));
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_LNB_CUSTOM_LOW_MAX, Integer.valueOf(lowMaxstr));
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MIN, Integer.valueOf(highMinstr));
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MAX, Integer.valueOf(highMaxstr));
                         }
                     } else {
                         bundle.putString("value2", "");
                         if (!TextUtils.isEmpty(lowMaxstr) && !TextUtils.isEmpty(lowMinstr)) {
-                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN, Integer.valueOf(lowMinstr));
-                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MAX, Integer.valueOf(lowMaxstr));
+                            /*mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN, Integer.valueOf(lowMinstr));
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MAX, Integer.valueOf(lowMaxstr));*/
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN, Integer.valueOf(lowMinstr));
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_LNB_CUSTOM_LOW_MAX, Integer.valueOf(lowMaxstr));
                         }
                     }
                     mDialogCallBack.onStatusChange(ok, ParameterMananer.KEY_LNB_CUSTOM, bundle);
@@ -1006,9 +1012,11 @@ public class CustomDialog/* extends AlertDialog*/ {
                     bundle.putBoolean("value2", value2);
                     bundle.putString("value3", value3);
                     if (name != null) {
-                        mParameterMananer.removeSatellite(name);
+                        bundle.putString("value4", name);
+                        mDialogCallBack.onStatusChange(ok, ParameterMananer.KEY_EDIT_SATELLITE, bundle);
+                    } else {
+                        mDialogCallBack.onStatusChange(ok, ParameterMananer.KEY_ADD_SATELLITE, bundle);
                     }
-                    mDialogCallBack.onStatusChange(ok, ParameterMananer.KEY_ADD_SATELLITE, bundle);
                     if (mAlertDialog != null) {
                         mAlertDialog.dismiss();
                     }
@@ -1195,17 +1203,24 @@ public class CustomDialog/* extends AlertDialog*/ {
                     bundle.putString("value4", value4);
 
                     String[] singleParameter = null;
+                    boolean needEdit = false;
                     if (parameter != null) {
                         singleParameter = parameter.split("/");
                         if (singleParameter != null && singleParameter.length == 3) {
-                            mParameterMananer.removeTransponder(mParameterMananer.getCurrentSatellite(), Integer.valueOf(singleParameter[0]), singleParameter[1], Integer.valueOf(singleParameter[2]));
+                            needEdit = true;
                         } else {
                             Log.d(TAG, "initAddTransponderDialog delete fail as wrong format");
                             return;
                         }
                     }
-
-                    mDialogCallBack.onStatusChange(ok, ParameterMananer.KEY_ADD_TRANSPONDER, bundle);
+                    if (needEdit) {
+                        bundle.putString("value5", singleParameter[0]);
+                        bundle.putString("value6", singleParameter[1]);
+                        bundle.putString("value7", singleParameter[2]);
+                        mDialogCallBack.onStatusChange(ok, ParameterMananer.KEY_EDIT_TRANSPONDER, bundle);
+                    } else {
+                        mDialogCallBack.onStatusChange(ok, ParameterMananer.KEY_ADD_TRANSPONDER, bundle);
+                    }
                     if (mAlertDialog != null) {
                         mAlertDialog.dismiss();
                     }

@@ -12,8 +12,14 @@ public class PropSettingManager {
     private static final boolean DEBUG = true;
 
     public static final String TV_STREAM_TIME = "vendor.sys.tv.stream.realtime";//sync with TvTime.java
+    public static final String TV_PIP_STREAM_TIME = "vendor.sys.tv.stream.realtime1";//for pip
     public static final String PVR_RECORD_MODE = "vendor.tv.dtv.dvr.mode";//used in dtvkit pvr
     public static final String TIMESHIFT_DISABLE = "vendor.tv.dtv.tf.disable";
+    public static final String ENABLE_PIP_SUPPORT = "vendor.tv.dtv.enable.pip";
+    public static final String ENABLE_FCC_SUPPORT = "vendor.tv.dtv.enable.fcc";
+    public static final String ENABLE_FILL_SURFACE = "vendor.tv.dtv.fill.surface";
+    public static final String ENABLE_FILL_SURFACE_COLOR = "vendor.tv.dtv.fill.color";
+    public static final String ENABLE_FULL_PIP = "vendor.tv.dtv.pip.enable";
     public static final String PVR_RECORD_MODE_CHANNEL = "0";
     public static final String PVR_RECORD_MODE_FREQUENCY = "1";
 
@@ -100,9 +106,6 @@ public class PropSettingManager {
             e.printStackTrace();
             Log.d(TAG, "getBoolean Exception = " + e.getMessage());
         }
-        if (DEBUG) {
-            Log.i(TAG, "getBoolean key = " + key + ", result = " + result);
-        }
         return result;
     }
 
@@ -110,6 +113,14 @@ public class PropSettingManager {
         long result = System.currentTimeMillis();
         if (streamtime) {
             result = result + getLong(TV_STREAM_TIME, 0);
+        }
+        return result;
+    }
+
+    public static long getCurrentPipStreamTime(boolean streamtime) {
+        long result = System.currentTimeMillis();
+        if (streamtime) {
+            result = result + getLong(TV_PIP_STREAM_TIME, 0);
         }
         return result;
     }

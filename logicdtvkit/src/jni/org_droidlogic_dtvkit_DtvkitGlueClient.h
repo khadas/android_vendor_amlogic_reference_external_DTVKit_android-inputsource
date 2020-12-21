@@ -54,6 +54,7 @@ typedef struct datablock_s {
 typedef struct dvbparam_s {
     std::string resource;
     std::string json;
+    int id;
 }dvbparam_t;
 
 class DTVKitClientJni : public DTVKitListener {

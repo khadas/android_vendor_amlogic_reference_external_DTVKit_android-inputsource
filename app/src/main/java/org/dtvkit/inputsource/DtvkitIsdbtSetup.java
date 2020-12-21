@@ -26,8 +26,6 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.view.KeyEvent;
 import android.widget.Toast;
-import android.widget.ListView;
-import android.widget.SimpleAdapter;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.view.WindowManager;
@@ -51,8 +49,8 @@ import com.droidlogic.fragment.ParameterMananer;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 
-public class DtvkitDvbtSetup extends Activity {
-    private static final String TAG = "DtvkitDvbtSetup";
+public class DtvkitIsdbtSetup extends Activity {
+    private static final String TAG = "DtvkitIsdbtSetup";
 
     private boolean mIsDvbt = false;
     private DataMananer mDataMananer;
@@ -102,13 +100,13 @@ public class DtvkitDvbtSetup extends Activity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (mStartSync) {
-            Toast.makeText(DtvkitDvbtSetup.this, R.string.sync_tv_provider, Toast.LENGTH_SHORT).show();
+            Toast.makeText(DtvkitIsdbtSetup.this, R.string.sync_tv_provider, Toast.LENGTH_SHORT).show();
             return true;
         }
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (mStartSearch) {
                 //onSearchFinished();
-                sendFinishSearch(false);
+                sendFinishSearch();
                 return true;
             } else {
                 stopMonitoringSearch();
@@ -139,9 +137,9 @@ public class DtvkitDvbtSetup extends Activity {
                 mPvrStatusConfirmManager.setSearchType(autoSearch ? ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO : ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
                 boolean checkPvr = mPvrStatusConfirmManager.needDeletePvrRecordings();
                 if (checkPvr) {
-                    mPvrStatusConfirmManager.showDialogToAppoint(DtvkitDvbtSetup.this, autoSearch);
+                    mPvrStatusConfirmManager.showDialogToAppoint(DtvkitIsdbtSetup.this, autoSearch);
                 } else {
-                    mPvrStatusConfirmManager.sendDvrCommand(DtvkitDvbtSetup.this);
+                    mPvrStatusConfirmManager.sendDvrCommand(DtvkitIsdbtSetup.this);
                     startSearch.setEnabled(false);
                     stopSearch.setEnabled(true);
                     stopSearch.requestFocus();
@@ -160,14 +158,14 @@ public class DtvkitDvbtSetup extends Activity {
             mPvrStatusConfirmManager.setPvrStatus(status);
             Log.d(TAG, "onCreate mIsDvbt = " + mIsDvbt + ", status = " + status);
         }
-        ((TextView)findViewById(R.id.description)).setText(mIsDvbt ? R.string.strSearchDvbtDescription : R.string.strSearchDvbcDescription);
+        ((TextView)findViewById(R.id.description)).setText(R.string.strSearchIsdbtDescription);
 
         stopSearch.setEnabled(false);
         stopSearch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 //onSearchFinished();
-                sendFinishSearch(false);
+                sendFinishSearch();
             }
         });
 
@@ -229,7 +227,7 @@ public class DtvkitDvbtSetup extends Activity {
         Log.d(TAG, "onStop");
         if (mStartSearch) {
             //onSearchFinished();
-            sendFinishSearch(true);
+            sendFinishSearch();
         } else if (!mFinish) {
             stopMonitoringSearch();
             //stopSearch();
@@ -248,7 +246,7 @@ public class DtvkitDvbtSetup extends Activity {
 
     private void initHandler() {
         Log.d(TAG, "initHandler");
-        mHandlerThread = new HandlerThread("DtvkitDvbtSetup");
+        mHandlerThread = new HandlerThread("DtvkitIsdbtSetup");
         mHandlerThread.start();
         mThreadHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
             @Override
@@ -264,7 +262,7 @@ public class DtvkitDvbtSetup extends Activity {
                         break;
                     }
                     case MSG_FINISH_SEARCH: {
-                        onSearchFinished(msg.arg1 == 1);
+                        onSearchFinished();
                         break;
                     }
                     case MSG_ON_SIGNAL: {
@@ -339,6 +337,8 @@ public class DtvkitDvbtSetup extends Activity {
         Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
         Button search = (Button)findViewById(R.id.terrestrialstartsearch);
         CheckBox nit = (CheckBox)findViewById(R.id.network);
+        TextView dvb_search_text = (TextView) findViewById(R.id.dvb_search);
+        dvb_search_text.setText("ISDB SEARCH");
 
         int isFrequencyMode = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
         if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
@@ -384,10 +384,10 @@ public class DtvkitDvbtSetup extends Activity {
             if (mIsDvbt) {
                 dvbt_bandwidth_containner.setVisibility(View.VISIBLE);
                 dvbt_mode_containner.setVisibility(View.VISIBLE);
-                dvbt_type_containner.setVisibility(View.VISIBLE);
+                dvbt_type_containner.setVisibility(View.GONE);
                 dvbc_symbol_containner.setVisibility(View.GONE);
                 dvbc_mode_containner.setVisibility(View.GONE);
-                dvbt_bandwidth_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH));
+                dvbt_bandwidth_spinner.setSelection(1);
                 dvbt_mode_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE));
                 dvbt_type_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE));
             } else {
@@ -404,7 +404,7 @@ public class DtvkitDvbtSetup extends Activity {
             dvbt_bandwidth_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    Log.d(TAG, "dvbt_bandwidth_spinner onItemSelected position = " + position);
+                    Log.d(TAG, "isdbt_bandwidth_spinner onItemSelected position = " + position);
                     mDataMananer.saveIntParameters(DataMananer.KEY_DVBT_BANDWIDTH, position);
                 }
 
@@ -523,9 +523,9 @@ public class DtvkitDvbtSetup extends Activity {
         List<String> list = null;
         List<String> newlist = new ArrayList<String>();
         ArrayAdapter<String> adapter = null;
-        int select = mIsDvbt ? mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME) :
-                mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME);
-        list = mParameterMananer.getChannelTable(mParameterMananer.getCurrentCountryCode(), mIsDvbt, mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == 1);
+        int select = mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_ISDBT_CHANNEL_NAME);
+        int county_code_Brazil = ('b' << 16 | 'r' << 8 | 'a') & 0xFFFFFF;
+        list = mParameterMananer.getIsdbtChannelTable(county_code_Brazil);
         for (String one : list) {
             String[] parameter = one.split(",");//first number, second string, third number
             if (parameter != null && parameter.length == 3) {
@@ -550,35 +550,18 @@ public class DtvkitDvbtSetup extends Activity {
                 String parameter = getParameter();
                 if (!TextUtils.isEmpty(parameter)) {
                     int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
-                    if (mIsDvbt) {
-                        if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
-                            args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
-                            args.put(Integer.valueOf(parameter) * 1000);//khz to hz
-                            args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
-                            args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
-                            args.put(DataMananer.VALUE_DVBT_TYPE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE)]);
-                        } else {
-                            parameter = getChannelIndex();
-                            if (parameter == null) {
-                                Log.d(TAG, "initSearchParameter dvbt search can't find channel index");
-                                return null;
-                            }
-                            args.put(Integer.valueOf(parameter));
-                        }
+                    if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
+                        args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
+                        args.put(Integer.valueOf(parameter) * 1000);//khz to hz
+                        args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
+                        args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
                     } else {
-                        if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
-                            args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
-                            args.put(Integer.valueOf(parameter) * 1000);//khz to hz
-                            args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
-                            args.put(getUpdatedDvbcSymbolRate());
-                        } else {
-                            parameter = getChannelIndex();
-                            if (parameter == null) {
-                                Log.d(TAG, "initSearchParameter dvbc search can't find channel index");
-                                return null;
-                            }
-                            args.put(Integer.valueOf(parameter));
+                        parameter = getChannelIndex();
+                        if (parameter == null) {
+                            Log.d(TAG, "initSearchParameter Isdbt search can't find channel index");
+                            return null;
                         }
+                        args.put(Integer.valueOf(parameter));
                     }
                     return args;
                 } else {
@@ -635,7 +618,8 @@ public class DtvkitDvbtSetup extends Activity {
         String result = null;
         int index = mIsDvbt ? mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME) :
                 mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME);
-        List<String> list = mParameterMananer.getChannelTable(mParameterMananer.getCurrentCountryCode(), mIsDvbt, mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == 1);
+        int county_code_Brazil = ('b' << 16 | 'r' << 8 | 'a') & 0xFFFFFF;
+        List<String> list = mParameterMananer.getIsdbtChannelTable(county_code_Brazil);
         String channelInfo = (index < list.size()) ? list.get(index) : null;
         if (channelInfo != null) {
             String[] parameter = channelInfo.split(",");//first number, second string, third number
@@ -664,7 +648,7 @@ public class DtvkitDvbtSetup extends Activity {
         try {
             JSONArray args = new JSONArray();
             args.put(false); // Commit
-            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
+            DtvkitGlueClient.getInstance().request("Isdbt.finishSearch", args);
         } catch (Exception e) {
             setSearchStatus("Failed to finish search", e.getMessage());
             return;
@@ -680,13 +664,13 @@ public class DtvkitDvbtSetup extends Activity {
                 int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
                 if (!(DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == searchmode)) {
                     if (isfrequencysearch == DataMananer.VALUE_FREQUENCY_MODE) {
-                        command = (mIsDvbt ? "Dvbt.startManualSearchByFreq" : "Dvbc.startManualSearchByFreq");
+                        command = ("Isdbt.startManualSearchByFreq");
                     } else {
-                        command = (mIsDvbt ? "Dvbt.startManualSearchById" : "Dvbc.startManualSearchById");
+                        command = ("Isdbt.startManualSearchById");
                     }
                     mSearchManualAutoType = DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL;
                 } else {
-                    command = (mIsDvbt ? "Dvbt.startSearch" : "Dvbc.startSearch");
+                    command = ("Isdbt.startSearch");
                     mSearchManualAutoType = DtvkitDvbScanSelect.SEARCH_TYPE_AUTO;
                 }
                 if (mIsDvbt) {
@@ -724,23 +708,23 @@ public class DtvkitDvbtSetup extends Activity {
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
-            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
+            DtvkitGlueClient.getInstance().request("Isdbt.finishSearch", args);
         } catch (Exception e) {
             setSearchStatus("Failed to finish search", e.getMessage());
             return;
         }
     }
 
-    private void sendFinishSearch(boolean skipConfirmNetwork) {
+    private void sendFinishSearch() {
         if (mThreadHandler != null) {
             mThreadHandler.removeMessages(MSG_FINISH_SEARCH);
-            Message mess = mThreadHandler.obtainMessage(MSG_FINISH_SEARCH, skipConfirmNetwork ? 1 : 0, 0, null);
+            Message mess = mThreadHandler.obtainMessage(MSG_FINISH_SEARCH, 0, 0, null);
             boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
             Log.d(TAG, "sendMessage MSG_FINISH_SEARCH " + info);
         }
     }
 
-    private void onSearchFinished(boolean skipConfirmNetwork) {
+    private void onSearchFinished() {
         mStartSearch = false;
         enableStopSearchButton(false);
         setSearchStatus("Finishing search", "");
@@ -749,49 +733,11 @@ public class DtvkitDvbtSetup extends Activity {
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
-            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
+            DtvkitGlueClient.getInstance().request("Isdbt.finishSearch", args);
         } catch (Exception e) {
             setSearchStatus("Failed to finish search", e.getMessage());
             return;
         }
-        boolean networksNeedUpdate = false;
-        boolean lcnConflictNeedUpdate = false;
-        boolean autoSearch = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE) == DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO;
-        JSONArray array = mParameterMananer.getConflictLcn();
-        if (mParameterMananer.needConfirmLcnInfomation(array)) {
-            lcnConflictNeedUpdate = true;
-        } else {
-            array = mParameterMananer.getNetworksOfRegion();
-            if (mParameterMananer.needConfirmNetWorkInfomation(array)) {
-                networksNeedUpdate = true;
-            }
-        }
-        if (lcnConflictNeedUpdate) {
-            final JSONArray conflictLcnArray = array;
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    showLcnConflictServiceConfirmDialog(DtvkitDvbtSetup.this, conflictLcnArray);
-                }
-            });
-        } else if (autoSearch && !skipConfirmNetwork && networksNeedUpdate) {
-            final JSONArray networlArray = array;
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    showNetworkInfoConfirmDialog(DtvkitDvbtSetup.this, networlArray);
-                }
-            });
-        } else {
-            updateChannelList();
-        }
-    }
-
-    private void updateChannelList() {
-        updateChannelListAndCheckLcn(false);
-    }
-
-    private void updateChannelListAndCheckLcn(boolean needCheckLcn) {
         //update search results as After the search is finished, the lcn will be reordered
         mServiceList = getServiceList();
         mFoundServiceNumber = getFoundServiceNumber();
@@ -808,11 +754,7 @@ public class DtvkitDvbtSetup extends Activity {
         String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
         Log.i(TAG, String.format("inputId: %s", inputId));
         //EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
-        Bundle parameters = new Bundle();
-        if (needCheckLcn) {
-            parameters.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_LCN_CONFLICT, false);
-        }
-        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, inputId, (mFoundServiceNumber > 0),new ComponentName(this, DtvkitEpgSync.class), parameters);
+        EpgSyncJobService.requestImmediateSyncSearchedChannel(this, inputId, (mFoundServiceNumber > 0),new ComponentName(this, DtvkitEpgSync.class));
     }
 
     private void startMonitoringSearch() {
@@ -945,7 +887,7 @@ public class DtvkitDvbtSetup extends Activity {
         }
         String signal = (String)map.get("signal");
         JSONObject data = (JSONObject)map.get("data");
-        if (signal != null && ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged")))) {
+        if (signal != null && signal.equals("IsdbtStatusChanged")) {
             int progress = getSearchProcess(data);
             Log.d(TAG, "onSignal progress = " + progress);
             if (progress < 100) {
@@ -954,7 +896,7 @@ public class DtvkitDvbtSetup extends Activity {
                 setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), String.format(Locale.ENGLISH, "Found %d services", found));
             } else {
                 //onSearchFinished();
-                sendFinishSearch(false);
+                sendFinishSearch();
             }
         }
     }
@@ -968,310 +910,4 @@ public class DtvkitDvbtSetup extends Activity {
             Log.d(TAG, "sendMessage MSG_FINISH " + info);
         }
     }
-
-    private void showNetworkInfoConfirmDialog(final Context context, final JSONArray networkArray) {
-        Log.d(TAG, "showNetworkInfoConfirmDialog networkArray = " + networkArray);
-        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        final AlertDialog alert = builder.create();
-        final View dialogView = View.inflate(context, R.layout.confirm_region_network, null);
-        final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
-        final ListView listView = (ListView) dialogView.findViewById(R.id.dialog_listview);
-        final List<HashMap<String, Object>> dataList = new ArrayList<HashMap<String, Object>>();
-        if (networkArray != null && networkArray.length() > 0) {
-            JSONObject networkObj = null;
-            String name = null;
-            for (int i = 0; i < networkArray.length(); i++) {
-                HashMap<String, Object> map = new HashMap<String, Object>();
-                networkObj = mParameterMananer.getJSONObjectFromJSONArray(networkArray, i);
-                name = mParameterMananer.getNetworkName(networkObj);
-                map.put("name", name);
-                dataList.add(map);
-            }
-        } else {
-            Log.d(TAG, "showNetworkInfoConfirmDialog no networkArray");
-            return;
-        }
-        SimpleAdapter adapter = new SimpleAdapter(context, dataList,
-                R.layout.region_network_list,
-                new String[] {"name"},
-                new int[] {R.id.name});
-
-        listView.setAdapter(adapter);
-        listView.setSelection(mParameterMananer.getCurrentNetworkIndex(networkArray));
-        title.setText(R.string.search_confirm_network);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, final int position, long id) {
-                int currentNetWorkIndex = mParameterMananer.getCurrentNetworkIndex(networkArray);
-                if (currentNetWorkIndex == position) {
-                    Log.d(TAG, "showNetworkInfoConfirmDialog same position = " + position);
-                    alert.dismiss();
-                    return;
-                }
-                //excute by child thread
-                mThreadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.d(TAG, "showNetworkInfoConfirmDialog onItemClick position = " + position);
-                        mParameterMananer.setNetworkPreferedOfRegion(mParameterMananer.getNetworkId(networkArray, position));
-                        //ui need to be updated in main handler
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                alert.dismiss();
-                            }
-                        });
-                    }
-                });
-            }
-        });
-        alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                Log.d(TAG, "showNetworkInfoConfirmDialog onDismiss");
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        updateChannelList();
-                    }
-                });
-            }
-        });
-
-        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
-        alert.setView(dialogView);
-        alert.show();
-        WindowManager.LayoutParams params = alert.getWindow().getAttributes();
-        params.width = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 500, context.getResources().getDisplayMetrics());
-        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        alert.getWindow().setAttributes(params);
-        //alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
-    }
-
-    private void showLcnConflictServiceConfirmDialog(final Context context, final JSONArray lcnConflictArray) {
-        Log.d(TAG, "showLcnConflictServiceConfirmDialog lcnConflictArray = " + lcnConflictArray);
-        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        final AlertDialog alert = builder.create();
-        final View dialogView = View.inflate(context, R.layout.confirm_region_network, null);
-        final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
-        final ListView listView = (ListView) dialogView.findViewById(R.id.dialog_listview);
-        final List<HashMap<String, Object>> DATALIST = new ArrayList<HashMap<String, Object>>();
-        final int[] DEALTINDEX = {0, 0};
-        final int[] FINALINDEX = {0};
-        final boolean[] NEEDSHOWNEXT = {false};
-        if (lcnConflictArray != null && lcnConflictArray.length() > 0) {
-            int[] updateDefaultIndex = getLcnConflictDataList(DATALIST, lcnConflictArray, DEALTINDEX[0]);
-            DEALTINDEX[0] = updateDefaultIndex[0];
-            DEALTINDEX[1] = updateDefaultIndex[1];
-        } else {
-            Log.d(TAG, "showLcnConflictServiceConfirmDialog no lcnConflictArray");
-            return;
-        }
-
-        listView.setAdapter(getLcnConflictDataListSimpleAdapter(context, DATALIST));
-        title.setText(R.string.search_confirm_lcn);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, final int position, long id) {
-                boolean finalSelect = false;
-                if (DATALIST.size() < position) {
-                    Log.d(TAG, "showLcnConflictServiceConfirmDialog invalid position = " + position);
-                    return;
-                } else if (DATALIST.size() - 1 == position) {
-                    //select end
-                    Log.d(TAG, "showLcnConflictServiceConfirmDialog finalSelect position = " + position);
-                    finalSelect = true;
-                }
-                int realIndex = DEALTINDEX[0] + position;
-                JSONObject serviceObj = mParameterMananer.getJSONObjectFromJSONArray(lcnConflictArray, realIndex);
-                if (serviceObj == null) {
-                    Log.d(TAG, "showLcnConflictServiceConfirmDialog service not found");
-                    return;
-                } else {
-                    Log.d(TAG, "showLcnConflictServiceConfirmDialog serviceObj = " + serviceObj);
-                }
-                FINALINDEX[0] = realIndex;
-                //excute by child thread
-                mThreadHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.d(TAG, "showLcnConflictServiceConfirmDialog onItemClick position = " + position + ", DEALTINDEX[0] = " + DEALTINDEX[0] + ", DEALTINDEX[1] = " + DEALTINDEX[1] + ", FINALINDEX[0] = " + FINALINDEX[0]);
-                        String uri = null;
-                        String tunerType = null;
-                        try {
-                            uri = serviceObj.getString("uri");
-                            tunerType = serviceObj.getString("sig_name");
-                        } catch (Exception e) {
-                            Log.d(TAG, "showLcnConflictServiceConfirmDialog get uri Exception = " + e.getMessage());
-                        }
-                        if (uri != null && tunerType != null) {
-                            Log.d(TAG, "showLcnConflictServiceConfirmDialog selectServiceKeepConflictLcn");
-                            mParameterMananer.selectServiceKeepConflictLcn(uri, tunerType);
-                            //ui need to be updated in main handler
-                            if (mParameterMananer.hasSelectToEnd(lcnConflictArray, FINALINDEX[0])) {
-                                NEEDSHOWNEXT[0] = false;
-                            } else {
-                                NEEDSHOWNEXT[0] = true;
-                            }
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    //turn to next lcn
-                                    if (NEEDSHOWNEXT[0]) {
-                                        Log.d(TAG, "showLcnConflictServiceConfirmDialog onItemClick select next");
-                                        int[] updateDefaultIndex = getLcnConflictDataList(DATALIST, lcnConflictArray, DEALTINDEX[1]);
-                                        DEALTINDEX[0] = updateDefaultIndex[0];
-                                        DEALTINDEX[1] = updateDefaultIndex[1];
-                                        listView.setAdapter(getLcnConflictDataListSimpleAdapter(context, DATALIST));
-                                    } else {
-                                        Log.d(TAG, "showLcnConflictServiceConfirmDialog onItemClick select over");
-                                        alert.dismiss();
-                                    }
-                                }
-                            });
-                        }
-                    }
-                });
-            }
-        });
-        alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                if (mParameterMananer.hasSelectToEnd(lcnConflictArray, FINALINDEX[0])) {
-                    Log.d(TAG, "showLcnConflictServiceConfirmDialog select over onDismiss");
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            updateChannelList();
-                        }
-                    });
-                } else {
-                    Log.d(TAG, "showLcnConflictServiceConfirmDialog select default for the rest");
-                    mThreadHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            mParameterMananer.dealRestLcnConflictAsDefault(lcnConflictArray, DEALTINDEX[0]);
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    updateChannelList();
-                                }
-                            });
-                        }
-                    });
-                }
-            }
-        });
-
-        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
-        alert.setView(dialogView);
-        alert.show();
-        WindowManager.LayoutParams params = alert.getWindow().getAttributes();
-        params.width = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 500, context.getResources().getDisplayMetrics());
-        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        alert.getWindow().setAttributes(params);
-        //alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
-    }
-
-    /*
-    * return start index and next new index that need to be dealt
-    */
-    private int[] getLcnConflictDataList(List<HashMap<String, Object>> source, JSONArray values, int index) {
-        int[] result = {-1, -1};
-        result[0] = index;
-        if (source != null && values != null && values.length() > 0 && values.length() > index && index > -1) {
-            source.clear();
-            JSONObject lcnConflictObj = null;
-            String name = null;
-            int lcn = -1;
-            int previousLcn = -1;
-            for (int i = index; i < values.length(); i++) {
-                HashMap<String, Object> map = new HashMap<String, Object>();
-                lcnConflictObj = mParameterMananer.getJSONObjectFromJSONArray(values, i);
-                name = mParameterMananer.getLcnServiceName(lcnConflictObj);
-                lcn = mParameterMananer.getLcnServiceLcnValue(lcnConflictObj);
-                if (previousLcn != -1 && previousLcn != lcn) {
-                    //record new start index
-                    result[1] = i;
-                    break;
-                } else if (i == (values.length() - 1)) {
-                    //search to the end
-                    result[1] = values.length() - 1;
-                }
-                previousLcn = lcn;
-                map.put("name", lcn + "  " + name);
-                source.add(map);
-            }
-        }
-        Log.d(TAG, "getLcnConflictDataList result[0] = " + result[0] + ", result[1] = " + result[1]);
-        return result;
-    }
-
-    private SimpleAdapter getLcnConflictDataListSimpleAdapter(Context context, List<HashMap<String, Object>> source) {
-        SimpleAdapter result = null;
-        if (context != null && source != null && source.size() > 0) {
-            result = new SimpleAdapter(context, source,
-                R.layout.region_network_list,
-                new String[] {"name"},
-                new int[] {R.id.name});
-        }
-        return result;
-    }
-
-    /*private boolean hasSelectToEnd(JSONArray lcnConflictArray, int selectEndIndex) {
-        boolean result = false;
-        if (lcnConflictArray != null && lcnConflictArray.length() > 0) {
-            if (selectEndIndex >= lcnConflictArray.length() - 1) {
-                result = true;
-                return result;
-            }
-            int finalLcn = -1;
-            JSONObject lcnConflictObj = null;
-            int conflictLcn = -1;
-            for (int i = selectEndIndex; i < lcnConflictArray.length(); i++) {
-                lcnConflictObj = mParameterMananer.getJSONObjectFromJSONArray(lcnConflictArray, i);
-                conflictLcn = mParameterMananer.getLcnServiceLcnValue(lcnConflictObj);
-                if (selectEndIndex == i) {
-                    finalLcn = conflictLcn;
-                    continue;
-                }
-                if (finalLcn != conflictLcn) {
-                    result = false;
-                    break;
-                } else {
-                    result = true;
-                }
-            }
-        }
-        Log.d(TAG, "hasSelectToEnd result = " + result);
-        return result;
-    }
-
-    private void dealRestLcnConflictAsDefault(JSONArray lcnConflictArray, int restStartIndex) {
-        if (lcnConflictArray != null && lcnConflictArray.length() > 0) {
-            JSONObject lcnConflictObj = null;
-            int lcn = -1;
-            String tunerType = null;
-            int previousLcn = -1;
-            boolean needUpdate = false;
-            for (int i = restStartIndex; i < lcnConflictArray.length(); i++) {
-                lcnConflictObj = mParameterMananer.getJSONObjectFromJSONArray(lcnConflictArray, i);
-                lcn = mParameterMananer.getLcnServiceLcnValue(lcnConflictObj);
-                tunerType = mParameterMananer.getLcnServiceTunerType(lcnConflictObj);
-                if (previousLcn == -1) {
-                    previousLcn = lcn;
-                    needUpdate = true;
-                } else if (previousLcn != lcn) {
-                    previousLcn = lcn;
-                    needUpdate = true;
-                } else {
-                    needUpdate = false;
-                }
-                if (needUpdate) {
-                    Log.d(TAG, "dealRestLcnConflictAsDefault needUpdate previousLcn = " + previousLcn + ", tunerType = " + tunerType);
-                    mParameterMananer.selectDefaultLcnConflictProcess(previousLcn, tunerType);
-                }
-            }
-        }
-    }*/
 }

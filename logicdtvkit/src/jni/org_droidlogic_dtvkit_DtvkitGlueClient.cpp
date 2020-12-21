@@ -232,8 +232,8 @@ static void postMixVideoEvent(int event) {
 
 }
 
-static void postDvbParam(const std::string& resource, const std::string json) {
-    ALOGD("-callback senddvbparam resource:%s, json:%s", resource.c_str(), json.c_str());
+static void postDvbParam(const std::string& resource, const std::string json, int id) {
+    ALOGD("-callback postDvbParam resource:%s (%d), json:%s", resource.c_str(), id, json.c_str());
     bool attached = false;
     JNIEnv *env = getJniEnv(&attached);
 
@@ -243,7 +243,7 @@ static void postDvbParam(const std::string& resource, const std::string json) {
         //ScopedLocalRef<jstring> jjson((env),  (env)->NewStringUTF(json.c_str()));
         jstring jresource = env->NewStringUTF(resource.c_str());
         jstring jjson     = env->NewStringUTF(json.c_str());
-        env->CallVoidMethod(DtvkitObject, notifyDvbCallback, jresource, jjson);
+        env->CallVoidMethod(DtvkitObject, notifyDvbCallback, jresource, jjson, id);
         env->DeleteLocalRef(jresource);
         env->DeleteLocalRef(jjson);
     }
@@ -316,7 +316,8 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
         dvbparam_t dvbparam;
         dvbparam.resource = parcel.bodyString[0];
         dvbparam.json     = parcel.bodyString[1];
-        postDvbParam(dvbparam.resource, dvbparam.json);
+        dvbparam.id       = parcel.bodyInt[0];
+        postDvbParam(dvbparam.resource, dvbparam.json, dvbparam.id);
     }
 
     if (parcel.msgType == SUBSERVER_DRAW) {
@@ -680,7 +681,7 @@ int register_org_droidlogic_dtvkit_DtvkitGlueClient(JNIEnv *env)
         return -1;
     }
 
-    GET_METHOD_ID(notifyDvbCallback, clazz, "notifyDvbCallback", "(Ljava/lang/String;Ljava/lang/String;)V");
+    GET_METHOD_ID(notifyDvbCallback, clazz, "notifyDvbCallback", "(Ljava/lang/String;Ljava/lang/String;I)V");
     GET_METHOD_ID(notifySubtitleCallback, clazz, "notifySubtitleCallback", "(IIIIII[B)V");
     GET_METHOD_ID(notifySubtitleCallbackEx, clazz, "notifySubtitleCallbackEx", "(IIIIIII[I)V");
     GET_METHOD_ID(notifySubtitleCbCtlEx, clazz, "notifySubtitleCbCtlEx", "(I)V");

@@ -102,6 +102,7 @@
     <string name="strSettingsSubtitleLang">Text Language:</string>
     <string name="strSettingsMainSubtitleLang">Main Text Language:</string>
     <string name="strSettingsAssistSubtitleLang">Second Text Language:</string>
+    <string name="strSettingsTeletextCharset">Teletext charset:</string>
     <string name="strSettingsHearingImpaired">Hearing Impaired:</string>
     <string name="strSettingsHearingImpairedOff">OFF</string>
     <string name="strSettingsHearingImpairedOn">ON</string>
@@ -111,4 +112,11 @@
     <string name="strSettingsPvrFullFrequency">Record Frequency</string>
     <string name="strSettingsAdAudio">Associate Audio:</string>
     <string name="strSettingsAdAudio_enable">Enable</string>
+    <string name="strSettingsFormatDialog">Storage need to be to formatted to FAT and data will be deleted !</string>
+    <string name="strSettingsFormatDialog_ok">Ok</string>
+    <string name="strSettingsFormatDialog_cancel">Cancel</string>
+    <string name="strSettingsFormatDialog_formatting">Storage is formatting...</string>
+    <string name="strSettingsFormatDialog_formatting_done">Formatting done !</string>
+    <string name="strSettingsUpdateNetwork">Update network:</string>
+    <string name="strSettingsUpdateNetworkUpdate">Update</string>
 </resources>

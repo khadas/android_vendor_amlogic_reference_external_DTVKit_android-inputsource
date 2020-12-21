@@ -37,7 +37,11 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.widget.Toast;
+import android.content.ComponentName;
 
+import org.dtvkit.companionlibrary.EpgSyncJobService;
+
+import org.dtvkit.inputsource.DtvkitEpgSync;
 import org.dtvkit.inputsource.R;
 import org.dtvkit.inputsource.R.color;
 
@@ -400,11 +404,21 @@ public class ScanDishSetupFragment extends Fragment {
                 case ParameterMananer.KEY_LNB_TYPE:
                     if (data != null && "selected".equals(data.getString("action"))) {
                         int lnbType = data.getInt("position");
-                        mParameterMananer.saveIntParameters(parameterKey, lnbType);
+                        //mParameterMananer.saveIntParameters(parameterKey, lnbType);
+                        mParameterMananer.updateCurrentSingleSatelliteParameter(parameterKey, lnbType);
                         if (lnbType == 0 || lnbType == 2) {
-                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_22_KHZ, 0);
+                            //mParameterMananer.saveIntParameters(ParameterMananer.KEY_22_KHZ, 0);
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_22_KHZ, 0);
                         } else if (lnbType == 1) {
-                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_22_KHZ, 1);
+                            //mParameterMananer.saveIntParameters(ParameterMananer.KEY_22_KHZ, 1);
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_22_KHZ, 1);
+                        }
+                        if (lnbType == 0 || lnbType == 1) {
+                            //mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_POWER, 0);
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_LNB_POWER, 0);
+                        } else if (lnbType == 2) {
+                            //mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_POWER, 1);
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_LNB_POWER, 1);
                         }
                         if (mCurrentCustomDialog != null && TextUtils.equals(parameterKey, mCurrentCustomDialog.getDialogKey())) {
                             mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(), mCurrentCustomDialog.getDialogKey(), data.getInt("position"));
@@ -415,9 +429,9 @@ public class ScanDishSetupFragment extends Fragment {
                             if (mCurrentSubCustomDialog != null) {
                                 mCurrentSubCustomDialog.showDialog();
                             }
-                        } else {
-                            startTune();
                         }
+                        //start tune for all lnb type
+                        startTune();
                         mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
                     }
                     break;
@@ -426,11 +440,14 @@ public class ScanDishSetupFragment extends Fragment {
                         if ("ok".equals(data.getString("button"))) {
                             Log.d(TAG, "ok in clicked");
                             if (!TextUtils.isEmpty(data.getString("value1")) && !TextUtils.isEmpty(data.getString("value2"))) {
-                                mParameterMananer.saveStringParameters(parameterKey, data.getString("value1") + "," + data.getString("value2"));
+                                //mParameterMananer.saveStringParameters(parameterKey, data.getString("value1") + "," + data.getString("value2"));
+                                mParameterMananer.updateCurrentSingleSatelliteParameter(parameterKey, data.getString("value1") + "," + data.getString("value2"));
                             } else if (!TextUtils.isEmpty(data.getString("value1")) && TextUtils.isEmpty(data.getString("value2"))) {
-                                mParameterMananer.saveStringParameters(parameterKey, data.getString("value1"));
+                                //mParameterMananer.saveStringParameters(parameterKey, data.getString("value1"));
+                                mParameterMananer.updateCurrentSingleSatelliteParameter(parameterKey, data.getString("value1"));
                             } else {
-                                mParameterMananer.saveStringParameters(parameterKey, "");
+                                //mParameterMananer.saveStringParameters(parameterKey, "");
+                                mParameterMananer.updateCurrentSingleSatelliteParameter(parameterKey, "");
                             }
                             startTune();
                         } else if ("cancel".equals(data.getString("button"))) {
@@ -457,10 +474,12 @@ public class ScanDishSetupFragment extends Fragment {
                             if (unicable_value > min) {
                                 unicable_value--;
                             }
-                            mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[unicable_position], unicable_value);
+                            //mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[unicable_position], unicable_value);
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[unicable_position], unicable_value);
                             //update UB frequency when set user band
                             if (unicable_position == 1) {
-                                mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[2], CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST[unicable_value]);
+                                //mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[2], CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST[unicable_value]);
+                                mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[2], CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST[unicable_value]);
                             }
                         } else if ("right".equals(data.getString("action"))) {
                             Log.d(TAG, "unicable switch right in clicked");
@@ -468,10 +487,12 @@ public class ScanDishSetupFragment extends Fragment {
                             if (unicable_value1 < max) {
                                 unicable_value1++;
                             }
-                            mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[unicable_position], unicable_value1);
+                            //mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[unicable_position], unicable_value1);
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[unicable_position], unicable_value1);
                             //update UB frequency when set user band
                             if (unicable_position == 1) {
-                                mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[2], CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST[unicable_value1]);
+                                //mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[2], CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST[unicable_value1]);
+                                mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[2], CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST[unicable_value1]);
                             }
                         }
                         if (mCurrentCustomDialog != null) {
@@ -493,7 +514,8 @@ public class ScanDishSetupFragment extends Fragment {
                     if (data != null && "onClick".equals(data.getString("action"))) {
                         if ("ok".equals(data.getString("button"))) {
                             Log.d(TAG, "KEY_UB_FREQUENCY ok in clicked");
-                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_UB_FREQUENCY, Integer.valueOf(data.getString("value1")));
+                            //mParameterMananer.saveIntParameters(ParameterMananer.KEY_UB_FREQUENCY, Integer.valueOf(data.getString("value1")));
+                            mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_UB_FREQUENCY, Integer.valueOf(data.getString("value1")));
                             if (mCurrentCustomDialog != null) {
                                 mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(), mCurrentCustomDialog.getDialogKey(), mParameterMananer.getIntParameters(ParameterMananer.KEY_UNICABLE));
                             }
@@ -516,7 +538,8 @@ public class ScanDishSetupFragment extends Fragment {
                 case ParameterMananer.KEY_DISEQC1_0:
                 case ParameterMananer.KEY_DISEQC1_1:
                     if (data != null && "selected".equals(data.getString("action"))) {
-                        mParameterMananer.saveIntParameters(parameterKey, data.getInt("position"));
+                        //mParameterMananer.saveIntParameters(parameterKey, data.getInt("position"));
+                        mParameterMananer.updateCurrentSingleSatelliteParameter(parameterKey, data.getInt("position"));
                         if (mCurrentCustomDialog != null && TextUtils.equals(parameterKey, mCurrentCustomDialog.getDialogKey())) {
                             mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(), mCurrentCustomDialog.getDialogKey(), data.getInt("position"));
                         }
@@ -526,7 +549,8 @@ public class ScanDishSetupFragment extends Fragment {
                     break;
                 case ParameterMananer.KEY_MOTOR:
                     if (data != null && "selected".equals(data.getString("action"))) {
-                        mParameterMananer.saveIntParameters(parameterKey, data.getInt("position"));
+                        //mParameterMananer.saveIntParameters(parameterKey, data.getInt("position"));
+                        mParameterMananer.updateCurrentSingleSatelliteParameter(parameterKey, data.getInt("position"));
                         if (data.getInt("position") == 0 && mCurrentCustomDialog != null && TextUtils.equals(parameterKey, mCurrentCustomDialog.getDialogKey())) {
                             mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(), mCurrentCustomDialog.getDialogKey(), data.getInt("position"));
                             //mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatellite()));
@@ -563,7 +587,8 @@ public class ScanDishSetupFragment extends Fragment {
                                 needbreak = true;
                                 break;
                             case 9://save to position
-                                mParameterMananer.storeDishPosition(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION));
+                                int currentPosition = mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION);
+                                mParameterMananer.storeDishPosition(currentPosition);
                                 needbreak = true;
                                 break;
                             case 10://move to position
@@ -652,7 +677,8 @@ public class ScanDishSetupFragment extends Fragment {
                                         positionvalue = positionvalue + 1;
                                     }
                                 }
-                                mParameterMananer.saveIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION, positionvalue);
+                                //mParameterMananer.saveIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION, positionvalue);
+                                mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION, positionvalue);
                                 break;
                             default:
                                 needbreak = true;
@@ -738,17 +764,32 @@ public class ScanDishSetupFragment extends Fragment {
                     break;
                 case ParameterMananer.KEY_EDIT_SATELLITE:
                     if (data != null && "ok".equals(data.getString("button"))) {
-                        String name_edit = data.getString("value1");
+                        String new_name_edit = data.getString("value1");
                         boolean iseast_edit = data.getBoolean("value2", true);
                         int position_edit = Integer.valueOf(data.getString("value3"));
-                        mParameterMananer.addSatellite(name_edit, iseast_edit, position_edit);
-                        mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
+                        String old_name_edit = data.getString("value4");
+                        mParameterMananer.editSatellite(old_name_edit, new_name_edit, iseast_edit, position_edit);
+                        if (old_name_edit.equals(mParameterMananer.getCurrentSatellite())) {
+                            mParameterMananer.setCurrentSatellite(new_name_edit);
+                            mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
+                            mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
+                        } else {
+                            mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
+                        }
                     }
                     break;
-                case ParameterMananer.KEY_REMOVE_SATELLITE:
+                case ParameterMananer.KEY_REMOVE_SATELLITE:{
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String name_remove = data.getString("value1");
                         mParameterMananer.removeSatellite(name_remove);
+                        String inputId = getActivity().getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                        if (inputId != null) {
+                            Log.d(TAG, "KEY_REMOVE_SATELLITE sync inputId = " + inputId);
+                            ComponentName sync = new ComponentName(getActivity(), DtvkitEpgSync.class);
+                            EpgSyncJobService.requestImmediateSync(getActivity(), inputId, true, sync);
+                        } else {
+                            Log.d(TAG, "KEY_REMOVE_SATELLITE empty inputId");
+                        }
                         //Log.d(TAG, "KEY_REMOVE_SATELLITE = " + mParameterMananer.getCurrentSatellite());
                         if (TextUtils.equals(name_remove, mParameterMananer.getCurrentSatellite())) {
                             mParameterMananer.setCurrentSatellite("null");
@@ -758,6 +799,7 @@ public class ScanDishSetupFragment extends Fragment {
                         mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
                     }
                     break;
+                }
                 case ParameterMananer.KEY_ADD_TRANSPONDER:
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String name_add_t = data.getString("value1");
@@ -772,20 +814,38 @@ public class ScanDishSetupFragment extends Fragment {
                 case ParameterMananer.KEY_EDIT_TRANSPONDER:
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String name_edit_t = data.getString("value1");
-                        int frequency_edit_t = Integer.valueOf(data.getString("value2"));
-                        String polarity_edit_t = data.getString("value3");
-                        int symbol_edit_t = Integer.valueOf(data.getString("value4"));
-                        mParameterMananer.addTransponder(name_edit_t, frequency_edit_t, polarity_edit_t, symbol_edit_t);
-                        mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
+                        int new_frequency_edit_t = Integer.valueOf(data.getString("value2"));
+                        String new_polarity_edit_t = data.getString("value3");
+                        int new_symbol_edit_t = Integer.valueOf(data.getString("value4"));
+                        int old_frequency_edit_t = Integer.valueOf(data.getString("value5"));
+                        String old_polarity_edit_t = data.getString("value6");
+                        int old_symbol_edit_t = Integer.valueOf(data.getString("value7"));
+                        mParameterMananer.editTransponder(name_edit_t, old_frequency_edit_t, old_polarity_edit_t, old_symbol_edit_t, new_frequency_edit_t, new_polarity_edit_t, new_symbol_edit_t);
+                        String edit_transponder = old_frequency_edit_t + "/" + old_polarity_edit_t + "/" + old_symbol_edit_t;
+                        if (TextUtils.equals(edit_transponder, mParameterMananer.getCurrentTransponder())) {
+                            mParameterMananer.setCurrentTransponder(new_frequency_edit_t + "/" + new_polarity_edit_t + "/" + new_symbol_edit_t);
+                            mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
+                            mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
+                        } else {
+                            mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
+                        }
                     }
                     break;
-                case ParameterMananer.KEY_REMOVE_TRANSPONDER:
+                case ParameterMananer.KEY_REMOVE_TRANSPONDER:{
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String name_remove_t = data.getString("value1");
                         int name_frequency_t = Integer.valueOf(data.getString("value2"));
                         String name_polarity_t = data.getString("value3");
                         int name_symbol_t = Integer.valueOf(data.getString("value4"));
                         mParameterMananer.removeTransponder(name_remove_t, name_frequency_t, name_polarity_t, name_symbol_t);
+                        String inputId = getActivity().getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                        if (inputId != null) {
+                            Log.d(TAG, "KEY_REMOVE_TRANSPONDER sync inputId = " + inputId);
+                            ComponentName sync = new ComponentName(getActivity(), DtvkitEpgSync.class);
+                            EpgSyncJobService.requestImmediateSync(getActivity(), inputId, true, sync);
+                        } else {
+                            Log.d(TAG, "KEY_REMOVE_TRANSPONDER empty inputId");
+                        }
                         //Log.d(TAG, "KEY_REMOVE_TRANSPONDER = " + mParameterMananer.getCurrentSatellite() + ", trans = " + mParameterMananer.getCurrentTransponder());
                         if (TextUtils.equals(name_remove_t, mParameterMananer.getCurrentSatellite())) {
                             String removeTrans = name_frequency_t + "/" + name_polarity_t + "/" + name_symbol_t;
@@ -797,6 +857,7 @@ public class ScanDishSetupFragment extends Fragment {
                         mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
                     }
                     break;
+                }
                 default:
                     break;
             }
@@ -867,8 +928,16 @@ public class ScanDishSetupFragment extends Fragment {
                 if (ItemListView.ITEM_SATALLITE.equals(listtype)) {
                     LinkedList<ItemDetail> items = mParameterMananer.getSatelliteList();
                     if (items != null && position < items.size()) {
-                        mParameterMananer.setCurrentSatellite(items != null ? items.get(position).getFirstText() : "null");
-                        mParameterMananer.setCurrentTransponder("null");
+                        String selectedSatellite = items != null ? items.get(position).getFirstText() : "null";
+                        String currentSatellite = mParameterMananer.getCurrentSatellite();
+                        mParameterMananer.syncSatelliteParametersToSetting(selectedSatellite, null);
+                        //need to tune when switched to new satellite
+                        if (selectedSatellite != null && !selectedSatellite.equals(currentSatellite)) {
+                            startTune();
+                        }
+                        //syncSatelliteParametersToSetting instead
+                        //mParameterMananer.setCurrentSatellite(selectedSatellite);
+                        //mParameterMananer.setCurrentTransponder("null");
                     } else {
                         Log.e(TAG, "onListItemSelected setCurrentSatellite erro position index");
                     }
@@ -876,7 +945,8 @@ public class ScanDishSetupFragment extends Fragment {
                     LinkedList<ItemDetail> items = mParameterMananer.getTransponderList();
                     if (items != null && position < items.size()) {
                         String transponder = items != null ? (items.get(position).getFirstText()) : "null";
-                        mParameterMananer.setCurrentTransponder(transponder);
+                        mParameterMananer.updateCurrentSingleSatelliteParameter(ParameterMananer.KEY_TRANSPONDER, transponder);
+                        //mParameterMananer.setCurrentTransponder(transponder);
                         if (!TextUtils.isEmpty(transponder) && !"null".equals(transponder)) {
                             startTune();
                         }

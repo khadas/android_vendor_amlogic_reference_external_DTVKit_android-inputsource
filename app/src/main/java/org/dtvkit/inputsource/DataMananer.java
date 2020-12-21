@@ -69,7 +69,7 @@ public class DataMananer {
     public static final String KEY_UB_FREQUENCY_DEFAULT_VALUE = "0";
     public static final String KEY_POSITION_DEFAULT_VALUE = "false";
 
-    public static final String KEY_LNB_POWER_DEFAULT_VALUE = "18V";
+    public static final String KEY_LNB_POWER_DEFAULT_VALUE = "on"/*18V"*/;
     public static final String KEY_22_KHZ_DEFAULT_VALUE = "auto";
     public static final String KEY_TONE_BURST_DEFAULT_VALUE = "none";
     public static final String KEY_DISEQC1_0_DEFAULT_VALUE = "none";
@@ -95,7 +95,7 @@ public class DataMananer {
     public static final int KEY_UB_FREQUENCY_DEFAULT_VALUE_INDEX = 1284;
     public static final int KEY_POSITION_DEFAULT_VALUE_INDEX = 0;
 
-    public static final int KEY_LNB_POWER_DEFAULT_VALUE_INDEX = 1;
+    public static final int KEY_LNB_POWER_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_22_KHZ_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_TONE_BURST_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_DISEQC1_0_DEFAULT_VALUE_INDEX = 0;
@@ -104,12 +104,13 @@ public class DataMananer {
     public static final int KEY_DISEQC1_2_DISH_LIMITS_STATUS_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_FEC_DEFAULT_VALUE = 0;
     public static final int KEY_MODULATION_DEFAULT_VALUE = 0;
+    public static final int KEY_DISEQC1_2_DISH_CURRENT_POSITION_DEFAULT_VALUE = 0;
 
     public static final String[] DIALOG_SET_ITEM_UNICABLE_KEY_LIST = {KEY_UNICABLE_SWITCH, KEY_USER_BAND, KEY_UB_FREQUENCY, KEY_POSITION};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST = {"none", "a", "b"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_0_LIST = {"none", "1/4", "2/4", "3/4", "4/4"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_1_LIST = {"none", "1/16", "2/16", "3/16", "4/16", "5/16", "6/16", "7/16", "8/16", "9/16", "10/16", "11/16", "12/16", "13/16", "14/16", "15/16", "16/16"};
-    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST = {"13v", "18v", "off"/*, "13/18V"*/};
+    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST = {/*"13v", "18v",*/"on", "off"/*, "13/18V"*/};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {"on", "off"/*, "auto"*/};
 
     public static final String KEY_NIT = "network_search";
@@ -134,11 +135,13 @@ public class DataMananer {
     public static final String KEY_PACKAGE_NAME = "org.dtvkit.inputsource";
     public static final String KEY_ACTIVITY_DVBT = "org.dtvkit.inputsource.DtvkitDvbtSetup";
     public static final String KEY_ACTIVITY_DVBS = "org.dtvkit.inputsource.DtvkitDvbsSetup";
+    public static final String KEY_ACTIVITY_ISDBT = "org.dtvkit.inputsource.DtvkitIsdbtSetup";
     public static final String KEY_ACTIVITY_SETTINGS = "com.droidlogic.settings.DtvkitDvbSettings";
     public static final int SELECT_DVBC = 0;
     public static final int SELECT_DVBT = 1;
     public static final int SELECT_DVBS = 2;
     public static final int SELECT_SETTINGS = 3;
+    public static final int SELECT_ISDBT = 4;
     public static final String KEY_DTVKIT_COUNTRY = "dtvkit_country";
     public static final String KEY_DTVKIT_MAIN_AUDIO_LANG = "main_audio_lang";
     public static final String KEY_DTVKIT_ASSIST_AUDIO_LANG = "assist_audio_lang";
@@ -166,6 +169,7 @@ public class DataMananer {
     public static final int VALUE_PUBLIC_SEARCH_MODE_AUTO = 1;
     public static final String KEY_SEARCH_DVBC_CHANNEL_NAME = "dvbc_channel_name";
     public static final String KEY_SEARCH_DVBT_CHANNEL_NAME = "dvbt_channel_name";
+    public static final String KEY_SEARCH_ISDBT_CHANNEL_NAME = "isdbt_channel_name";
     public static final int VALUE_SEARCH_CHANNEL_NAME_INDEX_DEFAULT = 0;
 
     //add for pvr record path setting
@@ -175,9 +179,14 @@ public class DataMananer {
     //audio ad
     public static final String TV_KEY_AD_SWITCH = "ad_switch";
     public static final String TV_KEY_AD_MIX = "ad_mix_level";
+    public static final String TV_KEY_AD_VOLUME = "ad_volume";
     public static final String ACTION_AD_MIXING_LEVEL = "android.intent.action.ad_mixing_level";
+    public static final String ACTION_AD_VOLUME_LEVEL = "android.intent.action.ad_volume_level";
     public static final String PARA_VALUE1 = "value1";
     public static final int VALUE_AD_MIX_LEVEL = 50;
+    public static final int VALUE_AD_VOLUME = 100;
+    public static final String ACTION_DTV_ENABLE_AUDIO_AD = "dtv_enable_audio_ad";
+    public static final String PARA_ENABLE = "enable";
 
     //dtvkit satellite data import flag
     public static final String DTVKIT_IMPORT_SATELLITE_FLAG = "has_dtvkit_import_satellite";
@@ -195,7 +204,7 @@ public class DataMananer {
         int defValue = 0;
         switch (key) {
             case KEY_LNB_TYPE:
-                defValue = 1;
+                defValue = KEY_LNB_TYPE_DEFAULT_INDEX_INDEX;
                 break;
             case KEY_UNICABLE_SWITCH:
                 defValue = KEY_UNICABLE_SWITCH_DEFAULT_VALUE_INDEX;
@@ -246,7 +255,7 @@ public class DataMananer {
                 defValue = 1;
                 break;
             case KEY_DISEQC1_2_DISH_CURRENT_POSITION:
-                defValue = 0;
+                defValue = KEY_DISEQC1_2_DISH_CURRENT_POSITION_DEFAULT_VALUE;
                 break;
             case KEY_NIT:
                 defValue = VALUE_SEARCH_NIT_DISABLE;
@@ -295,6 +304,9 @@ public class DataMananer {
                 break;
             case TV_KEY_AD_MIX:
                 defValue = VALUE_AD_MIX_LEVEL;
+                break;
+            case TV_KEY_AD_VOLUME:
+                defValue = VALUE_AD_VOLUME;
                 break;
             default:
                 defValue = 0;

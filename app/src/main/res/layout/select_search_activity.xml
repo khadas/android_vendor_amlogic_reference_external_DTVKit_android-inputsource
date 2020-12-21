@@ -20,7 +20,7 @@
         android:fontFamily="sans-serif"
         android:gravity="center"
         android:padding="10dp"
-        android:text="@string/public_dvb_search"
+        android:text="@string/public_dtv_search"
         android:textSize="@dimen/dvb_search_text_size"
         android:textStyle="bold" />
 
@@ -59,6 +59,15 @@
             android:layout_weight="1"
             android:background="@drawable/selector"
             android:text="@string/strDvbs" />
+
+        <Button
+            android:id="@+id/select_isdbt"
+            android:layout_width="200dp"
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:layout_weight="1"
+            android:background="@drawable/selector"
+            android:text="@string/strIsdbt" />
 
         <Button
             android:id="@+id/select_setting"

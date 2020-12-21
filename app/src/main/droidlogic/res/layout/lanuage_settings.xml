@@ -147,6 +147,28 @@
                 android:gravity="center_vertical" />
         </LinearLayout>
         <LinearLayout
+            android:id="@+id/teletext_charset_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/teletext_charset_text"
+                android:layout_width="@dimen/dvb_language_text_width"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:text="@string/strSettingsTeletextCharset" />
+
+            <Spinner
+                android:id="@+id/teletext_charset_spinner"
+                android:layout_width="@dimen/dvb_language_item_width"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical" />
+        </LinearLayout>
+        <LinearLayout
             android:id="@+id/hearing_impaired_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -226,6 +248,29 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:text="@string/strSettingsAdAudio_enable" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/network_update"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/network_update_text"
+                android:layout_width="@dimen/dvb_language_text_width"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:text="@string/strSettingsUpdateNetwork" />
+
+            <Button
+                android:id="@+id/network_update_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:text="@string/strSettingsUpdateNetworkUpdate" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

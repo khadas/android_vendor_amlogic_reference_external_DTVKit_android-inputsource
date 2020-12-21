@@ -3,6 +3,7 @@ package com.droidlogic.settings;
 import android.util.Log;
 import android.text.TextUtils;
 import android.content.Context;
+import android.os.storage.StorageManager;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -204,6 +205,74 @@ public class SysSettingManager {
         return result;
     }
 
+    public String getStorageFsType(String rawPath) {
+        String result = null;
+        List<Map<String, Object>> mapList = getStorageDevices();
+        String path = "";
+        if (mapList != null && mapList.size() > 0) {
+            for (Map<String, Object> map : mapList) {
+                path = getStoragePath(map);
+                if (TextUtils.equals(rawPath, path) && isMediaPath(rawPath)) {
+                    result = getStorageFsType(map);
+                    Log.d(TAG, "getStorageFsType rawPath = " + rawPath + ", fsType = " + result);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public String getStorageVolumeId(String rawPath) {
+        String result = null;
+        List<Map<String, Object>> mapList = getStorageDevices();
+        String path = "";
+        if (mapList != null && mapList.size() > 0) {
+            for (Map<String, Object> map : mapList) {
+                path = getStoragePath(map);
+                if (TextUtils.equals(rawPath, path) && isMediaPath(rawPath)) {
+                    result = getStorageVolumeId(map);
+                    Log.d(TAG, "getStorageVolumeId rawPath = " + rawPath + ", volumeId = " + result);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public String getStorageDeviceId(String rawPath) {
+        String result = null;
+        List<Map<String, Object>> mapList = getStorageDevices();
+        String path = "";
+        if (mapList != null && mapList.size() > 0) {
+            for (Map<String, Object> map : mapList) {
+                path = getStoragePath(map);
+                if (TextUtils.equals(rawPath, path) && isMediaPath(rawPath)) {
+                    result = getStorageDeviceId(map);
+                    Log.d(TAG, "getStorageDeviceId rawPath = " + rawPath + ", deviceId = " + result);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public String getStorageRawPathByVolumeId(String volumeId) {
+        String result = null;
+        List<Map<String, Object>> mapList = getStorageDevices();
+        String volumeIdStr = "";
+        if (mapList != null && mapList.size() > 0) {
+            for (Map<String, Object> map : mapList) {
+                volumeIdStr = getStorageVolumeId(map);
+                if (TextUtils.equals(volumeId, volumeIdStr)) {
+                    result = getStoragePath(map);
+                    Log.d(TAG, "getStorageRawPathByVolumeId volumeId = " + volumeId + ", rawPath = " + result);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
     private List<Map<String, Object>> getStorageDevices() {
         List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
         Map<String, Object> map = new HashMap<String, Object>();
@@ -230,7 +299,10 @@ public class SysSettingManager {
                         uuid = storagePath.substring(idx + 1);
                     }
                     if (uuid != null) {
-                        Log.d(TAG, "getWriteableDevices add storage /mnt/media_rw/" + uuid);
+                        String fsType = (String) map.get(FileListManager.KEY_FS_TYPE);
+                        String volumeId = (String) map.get(FileListManager.KEY_VOLUME_ID);
+                        String deviceId = (String) map.get(FileListManager.KEY_DISK_ID);
+                        Log.d(TAG, "getWriteableDevices add storage /mnt/media_rw/" + uuid + ", fsType = " + fsType + ", volumeId = " + volumeId + ", deviceId = " + deviceId);
                         map.put(FileListManager.KEY_PATH, "/mnt/media_rw/" + uuid);
                         result.add(map);
                     } else {
@@ -287,8 +359,60 @@ public class SysSettingManager {
         return result;
     }
 
+    public String getStorageFsType(Map<String, Object> map) {
+        String result = null;
+        if (map != null) {
+            result = (String) map.get(FileListManager.KEY_FS_TYPE);
+        }
+        return result;
+    }
+
+    public String getStorageVolumeId(Map<String, Object> map) {
+        String result = null;
+        if (map != null) {
+            result = (String) map.get(FileListManager.KEY_VOLUME_ID);
+        }
+        return result;
+    }
+
+    public String getStorageDeviceId(Map<String, Object> map) {
+        String result = null;
+        if (map != null) {
+            result = (String) map.get(FileListManager.KEY_DISK_ID);
+        }
+        return result;
+    }
+
     public String getAppDefaultPath() {
         return PVR_DEFAULT_PATH;
+    }
+
+    public void formatStorageByVolumeId(String volumeId) {
+        StorageManager storageManager = mFileListManager.getStorageManager();
+        if (storageManager != null && volumeId != null) {
+            try {
+                Method format = StorageManager.class.getMethod("format", String.class);
+                format.invoke(storageManager, volumeId);
+            } catch (Exception e) {
+                Log.d(TAG, "formatStorageByVoluemId format Exception = " + e.getMessage());
+            }
+        } else {
+            Log.d(TAG, "formatStorageByVoluemId null");
+        }
+    }
+
+    public void formatStorageByDiskId(String diskId) {
+        StorageManager storageManager = mFileListManager.getStorageManager();
+        if (storageManager != null && diskId != null) {
+            try {
+                Method partitionPublic = StorageManager.class.getMethod("partitionPublic", String.class);
+                partitionPublic.invoke(storageManager, diskId);
+            } catch (Exception e) {
+                Log.d(TAG, "formatStorageByDiskId format Exception = " + e.getMessage());
+            }
+        } else {
+            Log.d(TAG, "formatStorageByDiskId null");
+        }
     }
 
     public static String convertMediaPathToMountedPath(String mediaPath) {
@@ -298,6 +422,21 @@ public class SysSettingManager {
             if (split != null && split.length > 0) {
                 result = "/storage/" + split[split.length - 1];
             }
+        } else {
+            Log.d(TAG, "convertMediaPathToMountedPath not ready");
+        }
+        return result;
+    }
+
+    public static String convertStoragePathToMediaPath(String mountPath) {
+        String result = null;
+        if (isStoragePath(mountPath)) {
+            String[] split = mountPath.split("/");
+            if (split != null && split.length > 0) {
+                result = "/mnt/media_rw/" + split[split.length - 1];
+            }
+        } else {
+            Log.d(TAG, "convertStoragePathToMediaPath not ready");
         }
         return result;
     }
@@ -306,6 +445,22 @@ public class SysSettingManager {
         boolean result = false;
         if (mediaPath != null && mediaPath.startsWith("/mnt/media_rw/")) {
             result = true;
+        }
+        return result;
+    }
+
+    public static boolean isStoragePath(String mediaPath) {
+        boolean result = false;
+        if (mediaPath != null && mediaPath.startsWith("/storage") && !mediaPath.startsWith("/storage/emulated")) {
+            result = true;
+        }
+        return result;
+    }
+
+    public static boolean isStorageFatFormat(String fsType) {
+        boolean result = false;
+        if (fsType != null) {
+            result = fsType.toUpperCase().contains("FAT");
         }
         return result;
     }

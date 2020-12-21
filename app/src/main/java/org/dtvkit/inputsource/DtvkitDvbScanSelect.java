@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.media.tv.TvInputInfo;
 
 import com.droidlogic.settings.ConstantManager;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 public class DtvkitDvbScanSelect extends Activity {
     private static final String TAG = "DtvkitDvbScanSelect";
@@ -22,12 +23,14 @@ public class DtvkitDvbScanSelect extends Activity {
     public static final int REQUEST_CODE_START_DVBT_ACTIVITY = 2;
     public static final int REQUEST_CODE_START_DVBS_ACTIVITY = 3;
     public static final int REQUEST_CODE_START_SETTINGS_ACTIVITY = 4;
+    public static final int REQUEST_CODE_START_ISDBT_ACTIVITY = 5;
 
     public static final int SEARCH_TYPE_MANUAL = 0;
     public static final int SEARCH_TYPE_AUTO = 1;
     public static final int SEARCH_TYPE_DVBC = 0;
     public static final int SEARCH_TYPE_DVBT = 1;
     public static final int SEARCH_TYPE_DVBS = 2;
+    public static final int SEARCH_TYPE_ISDBT = 3;
     public static final String SEARCH_TYPE_MANUAL_AUTO = "search_manual_auto";
     public static final String SEARCH_TYPE_DVBS_DVBT_DVBC = "search_dvbs_dvbt_dvbc";
     public static final String SEARCH_FOUND_SERVICE_NUMBER = "service_number";
@@ -60,6 +63,7 @@ public class DtvkitDvbScanSelect extends Activity {
             case REQUEST_CODE_START_DVBT_ACTIVITY:
             case REQUEST_CODE_START_DVBS_ACTIVITY:
             case REQUEST_CODE_START_SETTINGS_ACTIVITY:
+            case REQUEST_CODE_START_ISDBT_ACTIVITY:
                 if (resultCode == RESULT_OK) {
                     setResult(RESULT_OK, data);
                     finish();
@@ -136,6 +140,27 @@ public class DtvkitDvbScanSelect extends Activity {
                 Log.d(TAG, "select_dvbs inputId = " + inputId);
             }
         });
+        Button isdbt = (Button)findViewById(R.id.select_isdbt);
+        isdbt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String pvrFlag = PvrStatusConfirmManager.read(DtvkitDvbScanSelect.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
+                if (pvrStatus != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
+                } else {
+                    intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
+                }
+                intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_ISDBT);
+                intent.putExtra(DataMananer.KEY_IS_DVBT, true);
+                startActivityForResult(intent, REQUEST_CODE_START_ISDBT_ACTIVITY);
+                mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_ISDBT);
+                Log.d(TAG, "select_isdbt inputId = " + inputId);
+            }
+        });
+        if (!DtvkitGlueClient.getInstance().isdbtSupport()) {
+            Log.d(TAG, "Unsupport isdb-t.");
+            isdbt.setVisibility(View.GONE);
+        }
         Button settings = (Button)findViewById(R.id.select_setting);
         settings.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -161,6 +186,9 @@ public class DtvkitDvbScanSelect extends Activity {
                 break;
             case DataMananer.SELECT_DVBS:
                 dvbs.requestFocus();
+                break;
+            case DataMananer.SELECT_ISDBT:
+                isdbt.requestFocus();
                 break;
             case DataMananer.SELECT_SETTINGS:
                 settings.requestFocus();

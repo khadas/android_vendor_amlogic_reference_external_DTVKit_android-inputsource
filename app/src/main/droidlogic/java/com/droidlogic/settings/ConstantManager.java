@@ -31,10 +31,15 @@ public class ConstantManager {
     public static final String EVENT_SIGNAL_INFO = "event_signal_info";
     public static final String EVENT_RECORD_PROGRAM_URI = "event_record_program_uri";
     public static final String EVENT_RECORD_DATA_URI = "event_record_data_uri";
+    public static final String EVENT_CA_MESSAGE = "event_ca_message";
+    public static final String EVENT_PIP_INFO = "event_pip_info";
+    public static final String KEY_PIP_ACTION = "event_pip_action";
+    public static final String VALUE_PIP_ACTION_TUNE_NEXT = "tune_next";
 
     //show or hide overlay
     public static final String ACTION_TIF_CONTROL_OVERLAY = "tif_control_overlay";
     public static final String KEY_TIF_OVERLAY_SHOW_STATUS = "tif_overlay_show_status";
+    public static final String ACTION_TIF_BEFORE_TUNE = "tif_before_tune";
     //surface related
     public static final String KEY_SURFACE = "surface";
     public static final String KEY_TV_STREAM_CONFIG = "config";

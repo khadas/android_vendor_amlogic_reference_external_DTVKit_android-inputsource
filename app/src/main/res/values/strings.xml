@@ -41,6 +41,7 @@
     <string name="strSearchNotStarted">Search not started</string>
     <string name="strSearchDvbcDescription">Press START SEARCH to start searching for DVB-C channels.</string>
     <string name="strSearchDvbtDescription">Press START SEARCH to start searching for DVB-T channels.</string>
+    <string name="strSearchIsdbtDescription">Press START SEARCH to start searching for ISDB-T channels.</string>
     <string name="strStartSearch">Start Search</string>
     <string name="strManualSearch">Manual Search</string>
     <string name="strAutoSearch">Auto Search</string>
@@ -74,6 +75,8 @@
     <string name="search_frequency_hint">MHz</string>
     <string name="search_number">Channel Number:</string>
     <string name="search_number_hint">Number</string>
+    <string name="search_confirm_network">Network select</string>
+    <string name="search_confirm_lcn">Lcn select</string>
     <string name="dvbt_search_bandwidth">Bandwidth:</string>
     <string name="dvbt_search_mode">Mode:</string>
     <string name="dvbt_search_type">Type:</string>
@@ -95,5 +98,9 @@
     <string name="pvr_record_confirm_deleting">Please wait ! deleting...</string>
     <string name="pvr_record_confirm_delete_done">Delete complete!</string>
     <string name="pvr_record_confirm_stop_done">Cancel complete!</string>
+    <string name="strIsdbt">ISDB-T</string>
+    <string name="public_dtv_search">DTV SEARCH</string>
 
+    <!-- play -->
+    <string name="play_scrambled">Scrambled</string>
 </resources>

@@ -4,7 +4,7 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
 import android.os.HwBinder;
-import java.util.NoSuchElementException;
+import android.util.Pair;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -12,13 +12,19 @@ import org.json.JSONObject;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 
+import java.util.NoSuchElementException;
 import java.util.ArrayList;
+import java.util.Iterator;
+
 
 public class DtvkitGlueClient {
     private static final String TAG = "DtvkitGlueClient";
 
+    public static final int INDEX_FOR_MAIN = 0;
+    public static final int INDEX_FOR_PIP = 1;
+
     private static DtvkitGlueClient mSingleton = null;
-    private ArrayList<SignalHandler> mHandlers = new ArrayList<>();
+    private ArrayList<Pair<Integer, SignalHandler>> mHandlers = new ArrayList<>();
     // Notification object used to listen to the start of the rpcserver daemon.
     //private final ServiceNotification mServiceNotification = new ServiceNotification();
     //private static final int DTVKITSERVER_DEATH_COOKIE = 1000;
@@ -32,6 +38,7 @@ public class DtvkitGlueClient {
     private final Object mLock = new Object();
     private native void nativeconnectdtvkit(DtvkitGlueClient client);
     private native void nativedisconnectdtvkit();
+    private native void nativeSetMutilSurface(int index, Surface surface);
     private native void nativeSetSurface(Surface surface);
     private native void nativeSetSurfaceToPlayer(Surface surface);
     private native String nativerequest(String resource, String json);
@@ -78,8 +85,8 @@ public class DtvkitGlueClient {
         }
     }
 
-    public void notifyDvbCallback(String resource, String json) {
-        Log.i(TAG, "notifyDvbCallback received!!! resource" + resource + ",json" + json);
+    public void notifyDvbCallback(String resource, String json, int id) {
+        Log.i(TAG, "notifyDvbCallback received!!! resource" + "(" + id + ")" + ",json" + json);
         JSONObject object;
         try {
             object = new JSONObject(json);
@@ -88,8 +95,9 @@ public class DtvkitGlueClient {
             return;
         }
         synchronized (mHandlers) {
-            for (SignalHandler handler :mHandlers) {
-                handler.onSignal(resource, object);
+            for (Pair <Integer, SignalHandler> handler :mHandlers) {
+                if (handler.first == id)
+                    handler.second.onSignal(resource, object);
             }
         }
     }
@@ -103,6 +111,10 @@ public class DtvkitGlueClient {
 
    public void doUnCrypt(String src, String dest) {
         native_UnCrypt(src, dest);
+   }
+
+   public void setMutilSurface(int index, Surface sh) {
+        nativeSetMutilSurface(index, sh);
    }
 
    public void setDisplay(Surface sh) {
@@ -214,19 +226,33 @@ public class DtvkitGlueClient {
         return mSingleton;
     }
 
-    public void registerSignalHandler(SignalHandler handler) {
-        synchronized (mHandlers) {
-            if (!mHandlers.contains(handler)) {
-                mHandlers.add(handler);
-            }
+    private void registerSignalHandlerUnlock(SignalHandler handler, int id) {
+        mHandlers.add(new Pair<Integer, SignalHandler>(id, handler));
+    }
+
+    private void unregisterSignalHandlerUnlock(SignalHandler handler) {
+        Iterator<Pair<Integer,SignalHandler>> it = mHandlers.iterator();
+        while (it.hasNext()) {
+            Pair<Integer, SignalHandler> pair = it.next();
+            if (pair.second == handler)
+                it.remove();
         }
+    }
+
+    public void registerSignalHandler(SignalHandler handler, int id) {
+        synchronized (mHandlers) {
+            unregisterSignalHandlerUnlock(handler);
+            registerSignalHandlerUnlock(handler, id);
+        }
+    }
+
+    public void registerSignalHandler(SignalHandler handler) {
+        registerSignalHandler(handler, INDEX_FOR_MAIN);
     }
 
     public void unregisterSignalHandler(SignalHandler handler) {
         synchronized (mHandlers) {
-            if (mHandlers.contains(handler)) {
-                mHandlers.remove(handler);
-            }
+            unregisterSignalHandlerUnlock(handler);
         }
     }
 

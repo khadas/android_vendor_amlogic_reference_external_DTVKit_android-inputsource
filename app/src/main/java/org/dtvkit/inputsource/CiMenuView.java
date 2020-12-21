@@ -539,7 +539,7 @@ public class CiMenuView extends LinearLayout {
     }
 
     private void startListeningForCamSignal() {
-        DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
+        DtvkitGlueClient.getInstance().registerSignalHandler(mHandler, DtvkitGlueClient.INDEX_FOR_MAIN);
     }
 
     private void stopListeningForCamSignal() {

@@ -13,6 +13,7 @@ import org.json.JSONObject;
 
 import com.droidlogic.fragment.ItemAdapter.ItemDetail;
 import com.droidlogic.fragment.dialog.CustomDialog;
+import com.droidlogic.settings.PropSettingManager;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -28,6 +29,7 @@ import com.droidlogic.app.DataProviderManager;
 public class ParameterMananer {
 
     private static final String TAG = "ParameterMananer";
+    private static final boolean DEBUG = PropSettingManager.getBoolean("vendor.sys.tv.debug.ParameterMananer", false);
     private Context mContext;
     private DtvkitGlueClient mDtvkitGlueClient;
     private DataMananer mDataMananer;
@@ -61,7 +63,11 @@ public class ParameterMananer {
     public static final String KEY_POSITION = "key_position";
 
     public static final String KEY_LNB_POWER = "key_lnb_power";
+    public static final String KEY_LOW_BAND_LNB_POWER = "key_low_band_lnb_power";
+    public static final String KEY_HIGH_BAND_LNB_POWER = "key_high_band_lnb_power";
     public static final String KEY_22_KHZ = "key_22_khz";
+    public static final String KEY_LOW_BAND_22_KHZ = "key_low_band_22_khz";
+    public static final String KEY_HIGH_BAND_22_KHZ = "key_high_band_22_khz";
     public static final String KEY_TONE_BURST = "key_tone_burst";
     public static final String KEY_DISEQC1_0 = "key_diseqc1_0";
     public static final String KEY_DISEQC1_1 = "key_diseqc1_1";
@@ -83,8 +89,10 @@ public class ParameterMananer {
     public static final int DEFAULT_LNB_CUSTOM_SINGLE_DOUBLE = 0;//SINGLE
     public static final String KEY_LNB_CUSTOM_LOW_MIN = "key_lnb_low_band_min";
     public static final String KEY_LNB_CUSTOM_LOW_MAX = "key_lnb_low_band_max";
+    public static final String KEY_LNB_CUSTOM_LOW_BAND = "key_lnb_low_band";
     public static final String KEY_LNB_CUSTOM_HIGH_MIN = "key_lnb_high_band_min";
     public static final String KEY_LNB_CUSTOM_HIGH_MAX = "key_lnb_high_band_max";
+    public static final String KEY_LNB_CUSTOM_HIGH_BAND = "key_lnb_high_band";
     public static final int VALUE_LNB_CUSTOM_MIN = 0;
     public static final int VALUE_LNB_CUSTOM_MAX = 11750;
     //default value
@@ -99,7 +107,7 @@ public class ParameterMananer {
     public static final String KEY_UB_FREQUENCY_DEFAULT_VALUE = "0";
     public static final String KEY_POSITION_DEFAULT_VALUE = "false";
 
-    public static final String KEY_LNB_POWER_DEFAULT_VALUE = "18V";
+    public static final String KEY_LNB_POWER_DEFAULT_VALUE = "on"/*18V"*/;
     public static final String KEY_22_KHZ_DEFAULT_VALUE = "auto";
     public static final String KEY_TONE_BURST_DEFAULT_VALUE = "none";
     public static final String KEY_DISEQC1_0_DEFAULT_VALUE = "none";
@@ -125,13 +133,18 @@ public class ParameterMananer {
     public static final int KEY_UB_FREQUENCY_DEFAULT_VALUE_INDEX = 1284;
     public static final int KEY_POSITION_DEFAULT_VALUE_INDEX = 0;
 
-    public static final int KEY_LNB_POWER_DEFAULT_VALUE_INDEX = 1;
+    public static final int KEY_LNB_POWER_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_22_KHZ_DEFAULT_VALUE_INDEX = 1;
     public static final int KEY_TONE_BURST_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_DISEQC1_0_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_DISEQC1_1_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_MOTOR_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_DISEQC1_2_DISH_LIMITS_STATUS_DEFAULT_VALUE_INDEX = 0;
+    public static final int KEY_DISEQC1_2_DISH_CURRENT_POSITION_DEFAULT_VALUE = 0;
+
+    public static final int DTV_TYPE_DVBT = 0;
+    public static final int DTV_TYPE_DVBC = 1;
+    public static final int DTV_TYPE_ISDBT = 2;
 
     public static final String[] DIALOG_SET_ITEM_UNICABLE_KEY_LIST = {KEY_UNICABLE_SWITCH, KEY_USER_BAND, KEY_UB_FREQUENCY, KEY_POSITION};
 
@@ -174,9 +187,13 @@ public class ParameterMananer {
             String current = getCurrentSatellite();
             int type = 0;
             for (int i = 0; i < data.length(); i++) {
-                Log.d(TAG, "getSatelliteList data:" + data.get(i));
+                if (DEBUG) {
+                    Log.d(TAG, "getSatelliteList data:" + data.get(i));
+                }
                 String satellitevalue = (String)(((JSONObject)(data.get(i))).get("name"));
-                Log.d(TAG, "getSatelliteList satellitevalue = " + satellitevalue);
+                if (DEBUG) {
+                    Log.d(TAG, "getSatelliteList satellitevalue = " + satellitevalue);
+                }
                 if (TextUtils.equals(satellitevalue, current)) {
                     type = ItemDetail.SELECT_EDIT;
                 } else {
@@ -325,10 +342,8 @@ public class ParameterMananer {
                 list.add(new ItemDetail(type, transpondervalue, null, true));
             }
         } catch (Exception e) {
-            Log.d(TAG, "getSatelliteList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
-            e.printStackTrace();
+            Log.d(TAG, "getSatelliteList Exception " + e.getMessage());
         }
-
         return list;
     }
 
@@ -447,10 +462,6 @@ public class ParameterMananer {
                 String value = parametervalue.get(i);
                 int lnbType = getIntParameters(KEY_LNB_TYPE);
                 Log.d(TAG, "getCompleteParameterList lnbType = " + lnbType);
-                //don't display lnbpower value if lnb type is not customed
-                if (i == 4 && lnbType != 2) {
-                    value = "---";
-                }
                 ItemDetail itemDetail = new ItemDetail(ItemDetail.SWITCH_EDIT, parametertype.get(i), value, false);
                 //disble lnb power and 22khz when lnb type is not customed
                 if (lnbType == 2) {
@@ -944,7 +955,7 @@ public class ParameterMananer {
                 String satellitevalue = (String)(((JSONObject)(data.get(i))).get("name"));
                 //Log.d(TAG, "getSatelliteList satellitevalue = " + satellitevalue);
                 if (TextUtils.equals(satellitevalue, current)) {
-                    result = (boolean)(((JSONObject)(data.get(i))).get("east_west")) ? "east" : "west";
+                    result = (boolean)(((JSONObject)(data.get(i))).get("east")) ? "east" : "west";
                     return result;
                 }
             }
@@ -986,12 +997,389 @@ public class ParameterMananer {
         return result;
     }
 
+    private JSONObject getSatelliteParameters(String satelliteName) {
+        JSONObject result = null;
+        if (satelliteName == null || satelliteName.length() == 0) {
+            return result;
+        }
+        try {
+            JSONObject jsonObj = getSatellites();
+            JSONArray data = null;
+            if (jsonObj != null) {
+                data = (JSONArray)jsonObj.get("data");
+            }
+            if (data == null || data.length() == 0) {
+                return result;
+            }
+
+            String name = null;
+            JSONObject satelliteObj = null;
+            String eachkey = null;
+            Object eachValue = null;
+            for (int i = 0; i < data.length(); i++) {
+                satelliteObj = data.getJSONObject(i);
+                name = satelliteObj.getString("name");
+                if (TextUtils.equals(name , satelliteName)) {
+                    Iterator<String> iter = satelliteObj.keys();
+                    while (iter.hasNext()) {
+                        eachkey = iter.next();
+                        eachValue = satelliteObj.get(eachkey);
+                        if ("transponderlist".equals(eachkey)) {
+                            //no need to add transponder list
+                            continue;
+                        }
+                        if (result == null) {
+                            result = new JSONObject();
+                        }
+                        result.put(eachkey, eachValue);
+                    }
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getSatelliteParameters Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        Log.d(TAG, "getSatelliteParameters satelliteName " + satelliteName + ", result = " + result);
+
+        return result;
+    }
+
+    /* need to get the following parameter
+        array.put("long_pos", int)
+        array.put("east", boolean)
+        array.put("name", string)
+        array.put("unicable", boolean);
+        array.put("unicable_chan", int));
+        array.put("unicable_if", int;//mhz to khz
+        array.put("unicable_position_b", boolean);
+        array.put("tone_burst", string);
+        array.put("c_switch", int);
+        array.put("u_switch", int);
+        array.put("motor_switch", int);
+        array.put("dish_pos", int);
+        array.put("lnb_type", int);
+        array.put("low_min_freq", int);
+        array.put("low_max_freq", int);
+        array.put("low_local_oscillator_frequency", int);
+        array.put("low_lnb_voltage", string);
+        array.put("low_tone_22k", boolean);
+        array.put("high_min_freq", int);
+        array.put("high_max_freq", int);
+        array.put("high_local_oscillator_frequency", int);
+        array.put("high_lnb_voltage", string);
+        array.put("high_tone_22k", boolean);
+        array.put("transponder", string);
+
+        //default parameter that will be added to search parameters
+        boolean unicable = KEY_UNICABLE_SWITCH_DEFAULT_VALUE_INDEX;
+        int unicable_chan = KEY_USER_BAND_DEFAULT_VALUE_INDEX;
+        int unicable_if = KEY_UB_FREQUENCY_DEFAULT_VALUE_INDEX * 1000;//mhz to khz
+        boolean unicable_position_b = KEY_POSITION_DEFAULT_VALUE_INDEX == 1;
+        String tone_burst = DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST[KEY_TONE_BURST_DEFAULT_VALUE_INDEX];
+        int c_switch = KEY_DISEQC1_0_DEFAULT_VALUE_INDEX;
+        int u_switch = KEY_DISEQC1_1_DEFAULT_VALUE_INDEX;
+        int motor_switch = KEY_MOTOR_DEFAULT_VALUE_INDEX;
+        int dish_pos = KEY_DISEQC1_2_DISH_CURRENT_POSITION_DEFAULT_VALUE;
+        int lnb_type = KEY_LNB_TYPE_DEFAULT_INDEX_INDEX;
+    */
+    private JSONArray generateOrderedJSONArray(JSONObject obj) {
+        JSONArray result = null;
+        final String[] ALLKEY = {"name", "east", "long_pos", "unicable", "unicable_chan", "unicable_if", "unicable_position_b",
+                                 "tone_burst", "c_switch", "u_switch", "motor_switch", "dish_pos", "lnb_type",
+                                 "low_min_freq", "low_max_freq", "low_local_oscillator_frequency", "low_lnb_voltage", "low_tone_22k",
+                                 "high_min_freq", "high_max_freq", "high_local_oscillator_frequency", "high_lnb_voltage", "high_tone_22k",
+                                 "transponder"};
+        if (obj != null && obj.length() > 0) {
+            Object temp = null;
+            try {
+                for (int i = 0; i < ALLKEY.length; i++) {
+                    temp = obj.get(ALLKEY[i]);
+                    if (result == null) {
+                        result = new JSONArray();
+                    }
+                    //Log.d(TAG, "generateOrderedJSONArray " + ALLKEY[i] + ":" + temp);
+                    result.put(temp);
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "generateOrderedJSONArray Exception " + e.getMessage());
+                result = null;
+            }
+        }
+        return result;
+    }
+
+    private Object getValueFromJSONObject(JSONObject obj, String key, Object defaultValue) {
+        Object result = null;
+        if (obj != null && obj.length() > 0) {
+            try {
+                result = obj.get(key);
+            } catch (Exception e) {
+                Log.d(TAG, "getValueFromJSONObject Exception " + e.getMessage());
+                result = defaultValue;
+            }
+        }
+        return result;
+    }
+
+    public JSONObject generateSatelliteParameter(String satelliteName) {
+        JSONObject result = null;
+        JSONObject satelliteParameters = getSatelliteParameters(satelliteName);
+        if (satelliteParameters != null && satelliteParameters.length() > 0) {
+            try {
+                int unicable_chan = (int)getValueFromJSONObject(satelliteParameters, getDtvkitCoreKey(KEY_USER_BAND), 65535);
+                if (unicable_chan == 65535) {
+                    //not init and need default parameter
+                    if (result == null) {
+                        result = satelliteParameters;
+                    }
+                    satelliteParameters = generateDefaultSatelliteParameter(satelliteParameters);
+                    result = satelliteParameters;
+                } else {
+                    result = satelliteParameters;
+                }
+                if (DEBUG) {
+                    Log.d(TAG, "generateSatelliteParameter result " + result.toString());
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "generateSatelliteParameter Exception " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    private JSONObject generateDefaultSatelliteParameter(JSONObject satelliteParameters) {
+        if (satelliteParameters != null) {
+            try {
+                satelliteParameters.put("unicable", KEY_UNICABLE_SWITCH_DEFAULT_VALUE_INDEX == 1);
+                satelliteParameters.put("unicable_chan", KEY_USER_BAND_DEFAULT_VALUE_INDEX);
+                satelliteParameters.put("unicable_if", KEY_UB_FREQUENCY_DEFAULT_VALUE_INDEX);//need to * 1000 to get khz
+                satelliteParameters.put("unicable_position_b", KEY_POSITION_DEFAULT_VALUE_INDEX == 1);
+                satelliteParameters.put("tone_burst", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST[KEY_TONE_BURST_DEFAULT_VALUE_INDEX]);
+                satelliteParameters.put("c_switch", KEY_DISEQC1_0_DEFAULT_VALUE_INDEX);
+                satelliteParameters.put("u_switch", KEY_DISEQC1_1_DEFAULT_VALUE_INDEX);
+                satelliteParameters.put("motor_switch", KEY_MOTOR_DEFAULT_VALUE_INDEX);
+                satelliteParameters.put("dish_pos", KEY_DISEQC1_2_DISH_CURRENT_POSITION_DEFAULT_VALUE);
+                satelliteParameters.put("lnb_type", KEY_LNB_TYPE_DEFAULT_INDEX_INDEX);
+                satelliteParameters.put("low_min_freq", 0);
+                satelliteParameters.put("low_max_freq", 11750);
+                satelliteParameters.put("low_local_oscillator_frequency", 9750);
+                satelliteParameters.put("low_lnb_voltage", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST[KEY_LNB_POWER_DEFAULT_VALUE_INDEX]);
+                satelliteParameters.put("low_tone_22k", KEY_22_KHZ_DEFAULT_VALUE_INDEX == 1);
+                satelliteParameters.put("high_min_freq", 0);
+                satelliteParameters.put("high_max_freq", 11750);
+                satelliteParameters.put("high_local_oscillator_frequency", 10600);
+                satelliteParameters.put("high_lnb_voltage", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST[KEY_LNB_POWER_DEFAULT_VALUE_INDEX]);
+                satelliteParameters.put("high_tone_22k", KEY_22_KHZ_DEFAULT_VALUE_INDEX == 1);
+                satelliteParameters.put("transponder", KEY_TRANSPONDER_DEFAULT_VALUE);
+            } catch (Exception e) {
+                Log.d(TAG, "generateDefaultSatelliteParameter Exception " + e.getMessage());
+            }
+        }
+        return satelliteParameters;
+    }
+
+    public void syncSatelliteParametersToSetting(String satelliteName, JSONObject satelliteParameters) {
+        if (satelliteParameters == null) {
+            satelliteParameters = generateSatelliteParameter(satelliteName);
+        }
+        if (satelliteParameters != null && satelliteParameters.length() > 0) {
+            try {
+                if (DEBUG) {
+                    Log.d(TAG, "syncSatelliteParametersToSetting satelliteParameters " + satelliteParameters.toString());
+                }
+                Log.d(TAG, "syncSatelliteParametersToSetting start " + satelliteName);
+                setCurrentSatellite(satelliteName);
+                saveIntParameters(KEY_UNICABLE_SWITCH, satelliteParameters.getBoolean("unicable") ? 1 : 0);
+                saveIntParameters(KEY_USER_BAND, satelliteParameters.getInt("unicable_chan"));
+                saveIntParameters(KEY_UB_FREQUENCY, satelliteParameters.getInt("unicable_if"));
+                saveIntParameters(KEY_POSITION, satelliteParameters.getBoolean("unicable_position_b") ? 1 : 0);
+                saveStringParameters(KEY_TONE_BURST, satelliteParameters.getString("tone_burst"));
+                saveIntParameters(KEY_DISEQC1_0, satelliteParameters.getInt("c_switch"));
+                saveIntParameters(KEY_DISEQC1_1, satelliteParameters.getInt("u_switch"));
+                saveIntParameters(KEY_MOTOR, satelliteParameters.getInt("motor_switch"));
+                saveIntParameters(KEY_DISEQC1_2_DISH_CURRENT_POSITION, satelliteParameters.getInt("dish_pos"));
+                saveIntParameters(KEY_LNB_TYPE, satelliteParameters.getInt("lnb_type"));
+                String lowlnb = String.valueOf(satelliteParameters.getInt("low_local_oscillator_frequency"));
+                saveIntParameters(KEY_LNB_CUSTOM_LOW_MIN, satelliteParameters.getInt("low_min_freq"));
+                saveIntParameters(KEY_LNB_CUSTOM_LOW_MAX, satelliteParameters.getInt("low_max_freq"));
+                String highlnb = String.valueOf(satelliteParameters.getInt("high_local_oscillator_frequency"));
+                int high_min_freq = satelliteParameters.getInt("high_min_freq");
+                int high_max_freq = satelliteParameters.getInt("high_max_freq");
+                if (high_min_freq != -1 && high_max_freq != -1) {
+                    //double
+                    saveStringParameters(KEY_LNB_CUSTOM, lowlnb + "," + highlnb);
+                } else {
+                    //single
+                    saveStringParameters(KEY_LNB_CUSTOM, lowlnb);
+                }
+                saveIntParameters(KEY_LNB_CUSTOM_HIGH_MIN, high_min_freq);
+                saveIntParameters(KEY_LNB_CUSTOM_HIGH_MAX, high_max_freq);
+                saveStringParameters(KEY_LNB_POWER, satelliteParameters.getString("low_lnb_voltage"));
+                saveIntParameters(KEY_22_KHZ, satelliteParameters.getBoolean("low_tone_22k") ? 1 : 0);
+                setCurrentTransponder(satelliteParameters.getString("transponder"));
+                Log.d(TAG, "syncSatelliteParametersToSetting   end " + satelliteName);
+            } catch (Exception e) {
+                Log.d(TAG, "syncSatelliteParametersToSetting Exception " + e.getMessage());
+            }
+        }
+    }
+
+    public JSONObject updateParameterIntoJSONObject(JSONObject obj, String key, Object newValue) {
+        JSONObject result = null;
+        if (obj != null && key != null) {
+            try {
+                if (key.equals(getDtvkitCoreKey(KEY_22_KHZ))) {
+                    obj.put(getDtvkitCoreKey(KEY_LOW_BAND_22_KHZ), newValue);
+                    obj.put(getDtvkitCoreKey(KEY_HIGH_BAND_22_KHZ), newValue);
+                } else if (key.equals(getDtvkitCoreKey(KEY_LNB_POWER))) {
+                    obj.put(getDtvkitCoreKey(KEY_LOW_BAND_LNB_POWER), newValue);
+                    obj.put(getDtvkitCoreKey(KEY_HIGH_BAND_LNB_POWER), newValue);
+                } else if (key.equals(getDtvkitCoreKey(KEY_LNB_CUSTOM))) {
+                    String[] customlnbvalue = null;
+                    if (newValue != null) {
+                        customlnbvalue = ((String)newValue).split(",");
+                    }
+                    if (customlnbvalue != null && customlnbvalue.length == 1) {
+                        obj.put(getDtvkitCoreKey(KEY_LNB_CUSTOM_LOW_BAND), Integer.valueOf(customlnbvalue[0]));
+                    } else if (customlnbvalue != null && customlnbvalue.length == 2) {
+                        obj.put(getDtvkitCoreKey(KEY_LNB_CUSTOM_LOW_BAND), Integer.valueOf(customlnbvalue[0]));
+                        obj.put(getDtvkitCoreKey(KEY_LNB_CUSTOM_HIGH_BAND), Integer.valueOf(customlnbvalue[1]));
+                    } else {
+                        Log.d(TAG, "updateParameterIntoJSONObject null lnb customized data!");
+                        return result;
+                    }
+                } else {
+                    obj.put(key, newValue);
+                }
+                result = obj;
+            } catch (Exception e) {
+                Log.d(TAG, "updateParameterIntoJSONObject Exception " + e.getMessage());
+                result = null;
+            }
+        }
+        return result;
+    }
+
+    public void updateCurrentSingleSatelliteParameter(String key, Object newValue) {
+        switch (key) {
+            case KEY_UNICABLE_SWITCH:
+                newValue = (int)newValue == 1;
+                break;
+            case KEY_POSITION:
+                newValue = (int)newValue == 1;
+                break;
+            case KEY_22_KHZ:
+                newValue = (int)newValue == 1;
+                break;
+        }
+        key = getDtvkitCoreKey(key);
+        if (key != null) {
+            try {
+                String currentSatellite = getCurrentSatellite();
+                JSONObject currentSatelliteParameter = generateSatelliteParameter(currentSatellite);
+                //update transponder info
+                currentSatelliteParameter = updateParameterIntoJSONObject(currentSatelliteParameter, key, newValue);
+                //update to dtvkit core
+                editSatellite(currentSatellite, currentSatelliteParameter);
+                //update to settings
+                syncSatelliteParametersToSetting(currentSatellite, currentSatelliteParameter);
+            } catch (Exception e) {
+                Log.d(TAG, "updateCurrentSingleSatelliteParameter Exception " + e.getMessage());
+            }
+        }
+    }
+
+    private String getDtvkitCoreKey(String key) {
+        String result = null;
+        switch (key) {
+            case KEY_UNICABLE_SWITCH:
+                result = "unicable";
+                break;
+            case KEY_USER_BAND:
+                result = "unicable_chan";
+                break;
+            case KEY_UB_FREQUENCY:
+                result = "unicable_if";
+                break;
+            case KEY_POSITION:
+                result = "unicable_position_b";
+                break;
+            case KEY_TONE_BURST:
+                result = "tone_burst";
+                break;
+            case KEY_DISEQC1_0:
+                result = "c_switch";
+                break;
+            case KEY_DISEQC1_1:
+                result = "u_switch";
+                break;
+            case KEY_MOTOR:
+                result = "motor_switch";
+                break;
+            case KEY_DISEQC1_2_DISH_CURRENT_POSITION:
+                result = "dish_pos";
+                break;
+            case KEY_LNB_TYPE:
+                result = "lnb_type";
+                break;
+            case KEY_LNB_CUSTOM_LOW_MIN:
+                result = "low_min_freq";
+                break;
+            case KEY_LNB_CUSTOM_LOW_MAX:
+                result = "low_max_freq";
+                break;
+            case KEY_LNB_CUSTOM_LOW_BAND:
+                result = "low_local_oscillator_frequency";
+                break;
+            case KEY_LOW_BAND_LNB_POWER:
+                result = "low_lnb_voltage";
+                break;
+            case KEY_LOW_BAND_22_KHZ:
+                result = "low_tone_22k";
+                break;
+            case KEY_LNB_CUSTOM_HIGH_MIN:
+                result = "high_min_freq";
+                break;
+            case KEY_LNB_CUSTOM_HIGH_MAX:
+                result = "high_max_freq";
+                break;
+            case KEY_LNB_CUSTOM_HIGH_BAND:
+                result = "high_local_oscillator_frequency";
+                break;
+            case KEY_HIGH_BAND_LNB_POWER:
+                result = "high_lnb_voltage";
+                break;
+            case KEY_HIGH_BAND_22_KHZ:
+                result = "high_tone_22k";
+                break;
+            case KEY_LNB_POWER:
+                result = "lnb_voltage";
+                break;
+            case KEY_22_KHZ:
+                result = "tone_22k";
+                break;
+            case KEY_LNB_CUSTOM:
+                result = "lnb_custom";
+                break;
+            case KEY_TRANSPONDER:
+                result = "transponder";
+                break;
+            default:
+                break;
+        }
+        Log.d(TAG, "getDtvkitCoreKey " + result);
+        return result;
+    }
+
     public JSONObject getSatellites() {
         JSONObject resultObj = null;
         try {
             resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getSatellites", new JSONArray());
             if (resultObj != null) {
-                Log.d(TAG, "getSatellites resultObj:" + resultObj.toString());
+                if (DEBUG) {
+                    Log.d(TAG, "getSatellites resultObj:" + resultObj.toString());
+                }
             } else {
                 Log.d(TAG, "getSatellites then get null");
             }
@@ -1038,7 +1426,9 @@ public class ParameterMananer {
             args1.put(satellite);
             resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getTransponders", args1);
             if (resultObj != null) {
-                Log.d(TAG, "getTransponders resultObj:" + resultObj.toString());
+                if (DEBUG) {
+                    Log.d(TAG, "getTransponders resultObj:" + resultObj.toString());
+                }
             } else {
                 Log.d(TAG, "getTransponders then get null");
             }
@@ -1051,41 +1441,112 @@ public class ParameterMananer {
 
     public void addSatellite(String name, boolean isEast, int position) {
         try {
-            JSONArray args = new JSONArray();
+            /*JSONArray args = new JSONArray();
             args.put(name);
             args.put(isEast);
-            args.put(position);
+            args.put(position);*/
+            JSONObject newSatelliteParameter = new JSONObject();
+            newSatelliteParameter.put("name", name);
+            newSatelliteParameter.put("east", isEast);
+            newSatelliteParameter.put("long_pos", position);
+            newSatelliteParameter = generateDefaultSatelliteParameter(newSatelliteParameter);
+            JSONArray args = generateOrderedJSONArray(newSatelliteParameter);
+            if (args == null) {
+                Log.d(TAG, "addSatellite null args");
+                return;
+            }
             Log.d(TAG, "addSatallite->" + args.toString());
             DtvkitGlueClient.getInstance().request("Dvbs.addSatellite", args);
-            /*JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getSatellites", new JSONArray());
-            if (resultObj != null) {
-                Log.d(TAG, "addSatallite resultObj:" + resultObj.toString());
-            } else {
-                Log.d(TAG, "addSatallite then get null");
-            }*/
         } catch (Exception e) {
             Log.d(TAG, "addSatallite Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
     }
 
-    public void editSatellite(String name, boolean isEast, int position) {
+    public void editSatellite(String oldName, String newName, boolean isEast, int position) {
         try {
             JSONArray args = new JSONArray();
-            args.put(name);
+            args.put(oldName);
+            /*args.put(newName);
+            args.put(isEast);
+            args.put(position);*/
+            JSONObject newSatelliteParameter = generateSatelliteParameter(oldName);
+            if (newSatelliteParameter == null) {
+                Log.d(TAG, "editSatellite null oldSatelliteParameter");
+                return;
+            }
+            newSatelliteParameter.put("name", newName);
+            newSatelliteParameter.put("east", isEast);
+            newSatelliteParameter.put("long_pos", position);
+            JSONArray generateArgs = generateOrderedJSONArray(newSatelliteParameter);
+            if (generateArgs != null) {
+                for (int i = 0; i < generateArgs.length(); i++) {
+                    args.put(generateArgs.get(i));
+                }
+            } else {
+                Log.d(TAG, "editSatellite null args");
+                return;
+            }
+            Log.d(TAG, "editSatellite by dtvkit ->" + args.toString());
+            DtvkitGlueClient.getInstance().request("Dvbs.editSatellite", args);
+            Log.d(TAG, "editSatellite by Dvbs.editSatellite ok");
+            return;
+        } catch (Exception e) {
+            Log.d(TAG, "editSatellite Exception " + e.getMessage());
+        }
+        /*try {
+            //save old transponder and delete old satellite
+            JSONObject oldTransponder = getTransponders(oldName);
+            removeSatellite(oldName);
+            JSONArray args = new JSONArray();
+            args.put(newName);
             args.put(isEast);
             args.put(position);
-            Log.d(TAG, "editSatellite->" + args.toString());
+            Log.d(TAG, "editSatellite by application->" + args.toString());
             DtvkitGlueClient.getInstance().request("Dvbs.addSatellite", args);
-            /*JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getSatellites", new JSONArray());
-            if (resultObj != null) {
-                Log.d(TAG, "editSatellite resultObj:" + resultObj.toString());
-            } else {
-                Log.d(TAG, "editSatellite then get null");
-            }*/
+            //add old transponder
+            JSONArray transponderData = null;
+            if (oldTransponder != null) {
+                transponderData = (JSONArray)oldTransponder.get("data");
+            }
+            if (transponderData == null || transponderData.length() == 0) {
+                Log.d(TAG, "editSatellite no transponder");
+                return;
+            }
+            int frequency = 0;
+            String polarity = null;
+            int symbol_rate = 0;
+            for (int i = 0; i < transponderData.length(); i++) {
+                String transpondervalue = null;
+                frequency = (int)(((JSONObject)(transponderData.get(i))).get("frequency"));
+                polarity = (String)(((JSONObject)(transponderData.get(i))).get("polarity"));
+                symbol_rate = (int)(((JSONObject)(transponderData.get(i))).get("symbol_rate"));
+                addTransponder(newName, frequency, polarity, symbol_rate);
+            }
+            Log.d(TAG, "editSatellite add previous transponder");
         } catch (Exception e) {
             Log.d(TAG, "editSatellite Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
+        }*/
+    }
+
+    public void editSatellite(String oldName, JSONObject satelliteParameters) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(oldName);
+            JSONArray generateArgs = generateOrderedJSONArray(satelliteParameters);
+            if (generateArgs != null && generateArgs.length() > 0) {
+                for (int i = 0; i < generateArgs.length(); i++) {
+                    args.put(generateArgs.get(i));
+                }
+                Log.d(TAG, "editSatellite2 by dtvkit ->" + args.toString());
+                DtvkitGlueClient.getInstance().request("Dvbs.editSatellite", args);
+                Log.d(TAG, "editSatellite2 by Dvbs.editSatellite ok");
+            } else {
+                Log.d(TAG, "editSatellite2 invalid satelliteParameters");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "editSatellite2 Exception " + e.getMessage());
         }
     }
 
@@ -1095,12 +1556,6 @@ public class ParameterMananer {
             args.put(name);
             Log.d(TAG, "removeSatellite->" + args.toString());
             DtvkitGlueClient.getInstance().request("Dvbs.deleteSatellite", args);
-            /*JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getSatellites", args);
-            if (resultObj != null) {
-                Log.d(TAG, "removeSatellite resultObj:" + resultObj.toString());
-            } else {
-                Log.d(TAG, "removeSatellites then get null");
-            }*/
         } catch (Exception e) {
             Log.d(TAG, "removeSatellite Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
@@ -1116,37 +1571,23 @@ public class ParameterMananer {
             args.put(symbolrate);
             Log.d(TAG, "addTransponder->" + args.toString());
             DtvkitGlueClient.getInstance().request("Dvbs.addTransponder", args);
-            /*JSONArray args1 = new JSONArray();
-            args1.put(satellite);
-            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getTransponders", args1);
-            if (resultObj != null) {
-                Log.d(TAG, "addTransponder resultObj:" + resultObj.toString());
-            } else {
-                Log.d(TAG, "addTransponder then get null");
-            }*/
         } catch (Exception e) {
             Log.d(TAG, "addTransponder Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
     }
 
-    public void editTransponder(String satellite, int frequency, String polarity, int symbolrate) {
+    public void editTransponder(String satellite, int oldFrequency, String oldPolarity, int oldSymbolrate, int newFrequency, String newPolarity, int newSymbolrate) {
         try {
+            //remove previous one firstly
+            removeTransponder(satellite, oldFrequency, oldPolarity, oldSymbolrate);
             JSONArray args = new JSONArray();
             args.put(satellite);
-            args.put(frequency);
-            args.put(polarity);
-            args.put(symbolrate);
+            args.put(newFrequency);
+            args.put(newPolarity);
+            args.put(newSymbolrate);
             Log.d(TAG, "editTransponder->" + args.toString());
             DtvkitGlueClient.getInstance().request("Dvbs.addTransponder", args);
-            /*JSONArray args1 = new JSONArray();
-            args1.put(satellite);
-            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getTransponders", args1);
-            if (resultObj != null) {
-                Log.d(TAG, "editTransponder resultObj:" + resultObj.toString());
-            } else {
-                Log.d(TAG, "editTransponder then get null");
-            }*/
         } catch (Exception e) {
             Log.d(TAG, "editTransponder Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
@@ -1162,14 +1603,6 @@ public class ParameterMananer {
             args.put(symbolrate);
             Log.d(TAG, "removeTransponder->" + args.toString());
             DtvkitGlueClient.getInstance().request("Dvbs.deleteTransponder", args);
-            /*JSONArray args1 = new JSONArray();
-            args1.put(name);
-            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getTransponders", args1);
-            if (resultObj != null) {
-                Log.d(TAG, "removeTransponder resultObj:" + resultObj.toString());
-            } else {
-                Log.d(TAG, "removeTransponder then get null");
-            }*/
         } catch (Exception e) {
             Log.d(TAG, "removeTransponder Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
@@ -1431,7 +1864,9 @@ public class ParameterMananer {
             args1.put(countryCode);
             resultObj = DtvkitGlueClient.getInstance().request("Dvb.getCountryLangs", args1);
             if (resultObj != null) {
-                Log.d(TAG, "getCountryLangs resultObj:" + resultObj.toString());
+                if (DEBUG) {
+                    Log.d(TAG, "getCountryLangs resultObj:" + resultObj.toString());
+                }
             } else {
                 Log.d(TAG, "getCountryLangs then get null");
             }
@@ -1491,6 +1926,34 @@ public class ParameterMananer {
             }
         } catch (Exception e) {
             Log.d(TAG, "getCurrentCountryIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    public String getCurrentCountryIso3Name() {
+        String result = null;
+        int currentcountrycode = getCurrentCountryCode();
+        try {
+            JSONObject resultObj = getCountrys();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    int countryCode = (int)(((JSONObject)(data.get(i))).get("country_code"));
+                    if (countryCode == currentcountrycode) {
+                        result = (String)(((JSONObject)(data.get(i))).get("country_name"));;
+                        break;
+                    }
+                }
+            } else {
+                Log.d(TAG, "getCurrentCountryIso3Name then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCurrentCountryIso3Name Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
         return result;
@@ -1917,18 +2380,156 @@ public class ParameterMananer {
         return resultObj;
     }
 
+    private JSONObject getTeletextCharset() {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args = new JSONArray();
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.getTeletextCharacterDesignation", args);
+            if (resultObj != null) {
+                Log.d(TAG, "getTeletextCharset resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "getTeletextCharset then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getTeletextCharset Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+        }
+        return resultObj;
+    }
+
+    public List<String> getTeletextCharsetNameList() {
+        List<String> result = new ArrayList<String>();
+        try {
+            JSONObject resultObj = getTeletextCharset();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                String temp;
+                for (int i = 0; i < data.length(); i++) {
+                    temp = (String)(((JSONObject)(data.get(i))).get("tt_chara_design"));
+                    result.add(temp);
+                }
+            } else {
+                Log.d(TAG, "getTeletextCharsetNameList then get null");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getTeletextCharsetNameList Exception = " + e.getMessage());
+            return result;
+        }
+        return result;
+    }
+
+    public int getCurrentTeletextCharsetIndex() {
+        int result = 0;
+        try {
+            JSONObject resultObj = getTeletextCharset();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                JSONObject temp;
+                boolean select;
+                for (int i = 0; i < data.length(); i++) {
+                    temp = data.getJSONObject(i);
+                    if (temp != null && temp.length() > 0) {
+                        select = temp.getBoolean("selected");
+                        if (select) {
+                            result = i;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                Log.d(TAG, "getCurrentTeletextCharsetIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCurrentTeletextCharsetIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+        }
+        return result;
+    }
+
+    private String getTeletextCharsetByPosition(int position) {
+        String result = null;
+        try {
+            JSONObject resultObj = getTeletextCharset();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                JSONObject temp;
+                boolean select;
+                if (position >= 0 && position < data.length()) {
+                    temp = data.getJSONObject(position);
+                    if (temp != null && temp.length() > 0) {
+                        result = temp.getString("tt_chara_design");
+                    }
+                }
+            } else {
+                Log.d(TAG, "getCurrentTeletextCharsetByPosition then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCurrentTeletextCharsetByPosition Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+        }
+        return result;
+    }
+
+    private JSONObject setCurrentTeletextCharset(String charset) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(charset);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setTeletextCharacterDesignation", args);
+            if (resultObj != null) {
+                Log.d(TAG, "setCurrentTeletextCharset resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setCurrentTeletextCharset then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setCurrentTeletextCharset Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+        }
+        return resultObj;
+    }
+
+    public JSONObject setCurrentTeletextCharsetByPosition(int position) {
+        JSONObject resultObj = null;
+        String charSet = getTeletextCharsetByPosition(position);
+        if (charSet != null) {
+            resultObj = setCurrentTeletextCharset(charSet);
+        } else {
+            Log.d(TAG, "setCurrentTeletextCharsetByPosition null charSet");
+        }
+        return resultObj;
+    }
+
     public List<String> getChannelTable(int countryCode, boolean isDvbt, boolean isDvbt2) {
+        int dtvType = isDvbt?DTV_TYPE_DVBT:DTV_TYPE_DVBC;
+        return getRfChannelTable(countryCode, dtvType, isDvbt2);
+    }
+
+    public List<String> getIsdbtChannelTable(int countryCode) {
+        return getRfChannelTable(countryCode, DTV_TYPE_ISDBT, false);
+    }
+    public List<String> getRfChannelTable(int countryCode, int dtvType, boolean isDvbt2) {
         List<String> result = new ArrayList<String>();
         try {
             JSONObject resultObj = null;
             JSONArray args = new JSONArray();
-            if (isDvbt) {
+            if (dtvType == DTV_TYPE_DVBT) {
                 args.put(isDvbt2);
                 args.put(countryCode);
                 resultObj = DtvkitGlueClient.getInstance().request("Dvbt.getTerRfChannelTable", args);
-            } else {
+            } else if (dtvType == DTV_TYPE_DVBC) {
                 args.put(countryCode);
                 resultObj = DtvkitGlueClient.getInstance().request("Dvbc.getCabRfChannelTable", args);
+            } else if (dtvType == DTV_TYPE_ISDBT) {
+                args.put(countryCode);
+                resultObj = DtvkitGlueClient.getInstance().request("Isdbt.getIsdbRfChannelTable", args);
             }
 
             JSONArray data = null;
@@ -2100,6 +2701,7 @@ public class ParameterMananer {
             return null;
         }
         result.put(DataMananer.KEY_FEC_ARRAY_VALUE[mDataMananer.getIntParameters(DataMananer.KEY_FEC_MODE)]);//arg5
+        result.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBS2) == 1);//arg6
         return result;
     }
 
@@ -2125,6 +2727,413 @@ public class ParameterMananer {
         } catch (Exception e) {
             Log.e(TAG, "setHearingImpairedSwitchStatus " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    /*
+    * obj: {"accepted":true,"data":[{"favourite":true,"name":"StreamSpark Network_1","net_id":1000}, {"favourite":false,"name":"StreamSpark Network_2","net_id":12000}]}
+    */
+    public JSONArray getNetworksOfRegion() {
+        JSONArray result = null;
+        if (PropSettingManager.getBoolean("vendor.sys.tv.debug.networks", false)) {
+            result = creatTestNetworks();
+            return result;
+        }
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getNetworksOfRegion", new JSONArray());
+            if (obj != null) {
+                Log.d(TAG, "getNetworksOfRegion resultObj:" + obj.toString());
+            } else {
+                Log.d(TAG, "getNetworksOfRegion then get null");
+                return result;
+            }
+            JSONArray netWorks = obj.getJSONArray("data");
+            result = netWorks;
+            for (int i = 0; i < netWorks.length(); i++) {
+                JSONObject netWork = netWorks.getJSONObject(i);
+                Log.i(TAG, "getNetworksOfRegion netWork = " + netWork.toString());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getNetworksOfRegion Exception = " + e.getMessage());
+        }
+        return result;
+    }
+
+    private JSONArray creatTestNetworks() {
+        JSONArray result = new JSONArray();
+        for (int i = 0; i < 3; i++) {
+            try {
+                JSONObject obj = new JSONObject();
+                if (i == 1) {
+                    obj.put("favourite", true);
+                } else {
+                    obj.put("favourite", false);
+                }
+                obj.put("name", "StreamSpark Network_" + i);
+                obj.put("net_id", 1000 + i);
+                Log.i(TAG, "creatTestNetworks netWork = " + obj.toString());
+                result.put(obj);
+            } catch (Exception e) {
+                Log.d(TAG, "creatTestNetworks Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public JSONObject setNetworkPreferedOfRegion(int networkId) {
+        JSONObject resultObj = null;
+        if (networkId == -1) {
+            Log.d(TAG, "setNetworkPreferedOfRegion invalid networkId");
+            return resultObj;
+        } else {
+            Log.d(TAG, "setNetworkPreferedOfRegion networkId = " + networkId);
+        }
+        try {
+            JSONArray args = new JSONArray();
+            args.put(networkId);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setNetworkPreferedOfRegion", args);
+            if (resultObj != null) {
+                Log.d(TAG, "setNetworkPreferedOfRegion resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setNetworkPreferedOfRegion then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setNetworkPreferedOfRegion Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public String getNetworkName(JSONObject obj) {
+        String result = null;
+        if (obj != null && obj.length() > 0) {
+            try {
+                result = obj.getString("name");
+            } catch (Exception e) {
+                Log.d(TAG, "getNetworkName Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public int getNetworkId(JSONObject obj) {
+        int result = -1;//invalid
+        if (obj != null && obj.length() > 0) {
+            try {
+                result = obj.getInt("net_id");
+            } catch (Exception e) {
+                Log.d(TAG, "getNetworkId1 Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public int getNetworkId(JSONArray array, int index) {
+        int result = -1;//invalid
+        if (array != null && array.length() > 0) {
+            try {
+                result = array.getJSONObject(index).getInt("net_id");
+            } catch (Exception e) {
+                Log.d(TAG, "getNetworkId2 Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public int getCurrentNetworkId(JSONArray array) {
+        int result = -1;//invalid
+        if (array != null && array.length() > 0) {
+            for (int i = 0; i < array.length(); i++) {
+                try {
+                    if (array.getJSONObject(i).getBoolean("favourite")) {
+                        result = array.getJSONObject(i).getInt("net_id");
+                        break;
+                    }
+                } catch (Exception e) {
+                    Log.d(TAG, "getDefaultNetworkId Exception = " + e.getMessage());
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public int getCurrentNetworkIndex(JSONArray array) {
+        int result = -1;//invalid
+        if (array != null && array.length() > 0) {
+            for (int i = 0; i < array.length(); i++) {
+                try {
+                    if (array.getJSONObject(i).getBoolean("favourite")) {
+                        result = i;
+                        break;
+                    }
+                } catch (Exception e) {
+                    Log.d(TAG, "getDefaultNetworkIndex Exception = " + e.getMessage());
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public JSONObject getJSONObjectFromJSONArray(JSONArray array, int index) {
+        JSONObject result = null;
+        if (array != null && array.length() > 0) {
+            try {
+                result = array.getJSONObject(index);
+            } catch (Exception e) {
+                Log.d(TAG, "getJSONObject Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public boolean needConfirmNetWorkInfomation(JSONArray array) {
+        boolean result = false;
+        final String NORWAY_ISO3_NAME = "nor";
+        String currentCountryName = getCurrentCountryIso3Name();
+        if (NORWAY_ISO3_NAME.equalsIgnoreCase(currentCountryName)) {
+            if (array != null && array.length() > 1) {
+                result = true;
+            }
+        }
+        return result;
+    }
+
+    /*
+    * obj: {"accepted":true,"data":[{"blocked":false,"freq":706000000,"hidden":false,"is_data":false,"lcn":1,"name":"Supernova","network_id":12455,"radio":false,"sate_name":"","sig_name":"DVB-T","subtitles":false,"transponder":"","uri":"dvb:\/\/217c.6fd4.000e","video_codec":"MPEG","video_pid":0}]}
+    */
+    public JSONArray getConflictLcn() {
+        JSONArray result = null;
+        if (PropSettingManager.getBoolean("vendor.sys.tv.debug.conflictlcn", false)) {
+            result = creatTestConflictLcn();
+            return result;
+        }
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getLcnConflictServiceList", new JSONArray());
+            if (obj != null) {
+                Log.d(TAG, "getConflictLcn resultObj:" + obj.toString());
+            } else {
+                Log.d(TAG, "getConflictLcn then get null");
+                return result;
+            }
+            JSONArray netWorks = obj.getJSONArray("data");
+            result = netWorks;
+            for (int i = 0; i < netWorks.length(); i++) {
+                JSONObject netWork = netWorks.getJSONObject(i);
+                Log.i(TAG, "getConflictLcn netWork = " + netWork.toString());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getConflictLcn Exception = " + e.getMessage());
+        }
+        return result;
+    }
+
+    private JSONArray creatTestConflictLcn() {
+        JSONArray result = new JSONArray();
+        int lcn = 0;
+        for (int i = 0; i < 4; i++) {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("name", "name_" + i);
+                if (i % 2 == 0) {
+                    lcn++;
+                }
+                obj.put("lcn", lcn);
+                obj.put("sig_name", "DVB-T");
+                obj.put("uri", "dvb://0000.0000.000" + i);
+                Log.i(TAG, "creatTestConflictLcn lcn = " + obj.toString());
+                result.put(obj);
+            } catch (Exception e) {
+                Log.d(TAG, "creatTestConflictLcn Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public boolean needConfirmLcnInfomation(JSONArray array) {
+        boolean result = false;
+        final String ITALY_ISO3_NAME = "ita";
+        String currentCountryName = getCurrentCountryIso3Name();
+        if (ITALY_ISO3_NAME.equalsIgnoreCase(currentCountryName)) {
+            if (array != null && array.length() > 1) {
+                result = true;
+            }
+        }
+        return result;
+    }
+
+    public JSONObject selectServiceKeepConflictLcn(String serviceUri, String tunerType) {
+        JSONObject resultObj = null;
+        if (serviceUri == null || tunerType == null) {
+            Log.d(TAG, "selectServiceKeepConflictLcn invalid serviceUri or tunerType");
+            return resultObj;
+        } else {
+            Log.d(TAG, "selectServiceKeepConflictLcn serviceUri = " + serviceUri + ", tunerType = " + tunerType);
+        }
+        try {
+            JSONArray args = new JSONArray();
+            args.put(serviceUri);
+            args.put(tunerType);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.SelectServiceKeepConflictLcn", args);
+            if (resultObj != null) {
+                Log.d(TAG, "selectServiceKeepConflictLcn resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "selectServiceKeepConflictLcn then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "selectServiceKeepConflictLcn Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public JSONObject selectDefaultLcnConflictProcess(int lcn, String tunerType) {
+        JSONObject resultObj = null;
+        if (lcn == -1 || tunerType == null) {
+            Log.d(TAG, "selectDefaultLcnConflictProcess invalid lcn or tunerType");
+            return resultObj;
+        } else {
+            Log.d(TAG, "selectDefaultLcnConflictProcess lcn = " + lcn + ", tunerType = " + tunerType);
+        }
+        try {
+            JSONArray args = new JSONArray();
+            args.put(lcn);
+            args.put(tunerType);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.SelectDefaultLcnConflictProcess", args);
+            if (resultObj != null) {
+                Log.d(TAG, "selectDefaultLcnConflictProcess resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "selectDefaultLcnConflictProcess then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "selectDefaultLcnConflictProcess Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public JSONObject getLcnServiceByUri(JSONArray conflictLcnServices, String uri) {
+        JSONObject result = null;
+        if (conflictLcnServices != null && conflictLcnServices.length() > 0 && uri != null && uri.length() > 0) {
+            try {
+                JSONObject serviceObj = null;
+                for (int i = 0; i < conflictLcnServices.length(); i++) {
+                    serviceObj = conflictLcnServices.getJSONObject(i);
+                    if (uri.equals(serviceObj.getString("uri"))) {
+                        result = serviceObj;
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "getLcnServiceByUri Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public String getLcnServiceName(JSONObject obj) {
+        String result = null;
+        if (obj != null && obj.length() > 0) {
+            try {
+                result = obj.getString("name");
+            } catch (Exception e) {
+                Log.d(TAG, "getLcnServiceName Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public int getLcnServiceLcnValue(JSONObject obj) {
+        int result = -1;
+        if (obj != null && obj.length() > 0) {
+            try {
+                result = obj.getInt("lcn");
+            } catch (Exception e) {
+                Log.d(TAG, "getLcnServiceLcnValue Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public String getLcnServiceUri(JSONObject obj) {
+        String result = null;
+        if (obj != null && obj.length() > 0) {
+            try {
+                result = obj.getString("uri");
+            } catch (Exception e) {
+                Log.d(TAG, "getLcnServiceUri Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public String getLcnServiceTunerType(JSONObject obj) {
+        String result = null;
+        if (obj != null && obj.length() > 0) {
+            try {
+                result = obj.getString("sig_name");
+            } catch (Exception e) {
+                Log.d(TAG, "getLcnServiceTunerType Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public boolean hasSelectToEnd(JSONArray lcnConflictArray, int selectEndIndex) {
+        boolean result = false;
+        if (lcnConflictArray != null && lcnConflictArray.length() > 0) {
+            if (selectEndIndex >= lcnConflictArray.length() - 1) {
+                result = true;
+                return result;
+            }
+            int finalLcn = -1;
+            JSONObject lcnConflictObj = null;
+            int conflictLcn = -1;
+            for (int i = selectEndIndex; i < lcnConflictArray.length(); i++) {
+                lcnConflictObj = getJSONObjectFromJSONArray(lcnConflictArray, i);
+                conflictLcn = getLcnServiceLcnValue(lcnConflictObj);
+                if (selectEndIndex == i) {
+                    finalLcn = conflictLcn;
+                    continue;
+                }
+                if (finalLcn != conflictLcn) {
+                    result = false;
+                    break;
+                } else {
+                    result = true;
+                }
+            }
+        }
+        Log.d(TAG, "hasSelectToEnd result = " + result);
+        return result;
+    }
+
+    public void dealRestLcnConflictAsDefault(JSONArray lcnConflictArray, int restStartIndex) {
+        if (lcnConflictArray != null && lcnConflictArray.length() > 0) {
+            JSONObject lcnConflictObj = null;
+            int lcn = -1;
+            String tunerType = null;
+            int previousLcn = -1;
+            boolean needUpdate = false;
+            for (int i = restStartIndex; i < lcnConflictArray.length(); i++) {
+                lcnConflictObj = getJSONObjectFromJSONArray(lcnConflictArray, i);
+                lcn = getLcnServiceLcnValue(lcnConflictObj);
+                tunerType = getLcnServiceTunerType(lcnConflictObj);
+                if (previousLcn == -1) {
+                    previousLcn = lcn;
+                    needUpdate = true;
+                } else if (previousLcn != lcn) {
+                    previousLcn = lcn;
+                    needUpdate = true;
+                } else {
+                    needUpdate = false;
+                }
+                if (needUpdate) {
+                    Log.d(TAG, "dealRestLcnConflictAsDefault needUpdate previousLcn = " + previousLcn + ", tunerType = " + tunerType);
+                    selectDefaultLcnConflictProcess(previousLcn, tunerType);
+                }
+            }
         }
     }
 }

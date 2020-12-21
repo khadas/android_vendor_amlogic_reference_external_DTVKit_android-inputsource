@@ -23,6 +23,9 @@
     <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.MOUNT_FORMAT_FILESYSTEMS" />
+    <uses-permission android:name="com.android.providers.tv.permission.ACCESS_ALL_EPG_DATA" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -54,6 +57,11 @@
             </intent-filter>
         </activity>
         <activity android:name=".DtvkitDvbsSetup">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".DtvkitIsdbtSetup">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
@@ -98,6 +106,13 @@
             android:name=".DtvkitEpgSync"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE">
+        </service>
+        <service
+            android:name=".services.CaSettingService"
+            android:exported="true">
+            <intent-filter android:priority="1">
+                <action android:name="org.dtvkit.inputsource.services.CaSettingService" />
+            </intent-filter>
         </service>
     </application>
 </manifest>

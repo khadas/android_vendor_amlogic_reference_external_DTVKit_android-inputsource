@@ -34,6 +34,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.PersistableBundle;
 import android.os.RemoteException;
+import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.util.LongSparseArray;
@@ -46,6 +47,7 @@ import org.dtvkit.companionlibrary.utils.TvContractUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Service to handle callbacks from JobScheduler. This service will be called by the system to
@@ -137,6 +139,7 @@ public abstract class EpgSyncJobService extends JobService {
     private static final String BUNDLE_KEY_SYNC_NOW_NEXT = "BUNDLE_KEY_SYNC_NOW_NEXT";
     private static final String BUNDLE_KEY_SYNC_CHANNEL_ONLY = "BUNDLE_KEY_SYNC_CHANNEL_ONLY";
     public static final String BUNDLE_KEY_SYNC_SEARCHED_CHANNEL = "BUNDLE_KEY_SYNC_SEARCHED_CHANNEL";
+    public static final String BUNDLE_KEY_SYNC_SEARCHED_LCN_CONFLICT = "BUNDLE_KEY_SYNC_SEARCHED_LCN_CONFLICT";
 
 
     private final SparseArray<EpgSyncTask> mTaskArray = new SparseArray<>();
@@ -354,6 +357,11 @@ public abstract class EpgSyncJobService extends JobService {
 
     public static void requestImmediateSyncSearchedChannel(Context context, String inputId, boolean searchedChannel,
             ComponentName jobServiceComponent) {
+        requestImmediateSyncSearchedChannelWitchParameters(context, inputId, searchedChannel, jobServiceComponent, null);
+    }
+
+    public static void requestImmediateSyncSearchedChannelWitchParameters(Context context, String inputId, boolean searchedChannel,
+            ComponentName jobServiceComponent, Bundle parameters) {
         if (jobServiceComponent.getClass().isAssignableFrom(EpgSyncJobService.class)) {
             throw new IllegalArgumentException("This class does not extend EpgSyncJobService");
         }
@@ -365,6 +373,26 @@ public abstract class EpgSyncJobService extends JobService {
         persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NOW_NEXT, true);
         persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_CHANNEL_ONLY, false);
         persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, searchedChannel);
+        if (parameters != null) {
+            Set<String> keySet = parameters.keySet();
+            Object obj = null;
+            for (String key : keySet) {
+                obj = parameters.get(key);
+                if (obj != null) {
+                    if (obj instanceof Boolean) {
+                        persistableBundle.putBoolean(key, (boolean)obj);
+                    } else if (obj instanceof String) {
+                        persistableBundle.putString(key, (String)obj);
+                    } else if (obj instanceof Long) {
+                        persistableBundle.putLong(key, (long)obj);
+                    } else if (obj instanceof Integer) {
+                        persistableBundle.putInt(key, (int)obj);
+                    } else {
+                        Log.d(TAG, "requestImmediateSyncSearchedChannelWitchParameters instanceof not support for the moment");
+                    }
+                }
+            }
+        }
         JobInfo.Builder builder = new JobInfo.Builder(REQUEST_SYNC_JOB_ID, jobServiceComponent);
         JobInfo jobInfo = builder
                 .setExtras(persistableBundle)
@@ -373,7 +401,7 @@ public abstract class EpgSyncJobService extends JobService {
                 .build();
         scheduleJob(context, jobInfo);
         if (DEBUG) {
-            Log.d(TAG, "requestImmediateSyncSearchedChannel Single job scheduled");
+            Log.d(TAG, "requestImmediateSyncSearchedChannelWitchParameters Single job scheduled");
         }
     }
 
@@ -414,7 +442,6 @@ public abstract class EpgSyncJobService extends JobService {
                 broadcastError(ERROR_EPG_SYNC_CANCELED);
                 return null;
             }
-
             List<Channel> tvChannels = getChannels();
             TvContractUtils.updateChannels(mContext, mInputId, mIsSearchedChannel, tvChannels);
             LongSparseArray<Channel> channelMap = TvContractUtils.buildChannelMap(
