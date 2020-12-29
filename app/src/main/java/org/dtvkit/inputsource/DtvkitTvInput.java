@@ -2509,19 +2509,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             mKeyUnlocked = false;
             mDvbNetworkChangeSearchStatus = false;
-            if (mBlocked)
-            {
-                notifyContentAllowed();
-                //change mute status by application
-                //setBlockMute(false);
-                mBlocked = false;
-            }
             //parent control may need separate stream time for main and pip
             if (mTvInputManager != null) {
                 boolean parentControlSwitch = mTvInputManager.isParentalControlsEnabled();
-                if (parentControlSwitch)
-                {
+                if (parentControlSwitch) {
+                    //init it to wait for update
+                    mBlocked = true;
                     updateParentalControlExt();
+                } else {
+                    mBlocked=  false;
+                    notifyContentAllowed();
                 }
                 /*boolean parentControlStatus = getParentalControlOn();
                 if (parentControlSwitch != parentControlStatus) {
@@ -2534,7 +2531,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
             if (mAudioADAutoStart) {
                 setAdFunction(MSG_MIX_AD_SWITCH_ENABLE, 1);
-            }else {
+            } else {
                 setAdFunction(MSG_MIX_AD_SWITCH_ENABLE, 0);
             }
             boolean playResult = false;
@@ -2568,11 +2565,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     playerInitAssociateDualSupport();
                 }
             } else {
-                if (!mIsPip) {
-                    DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
-                } else {
-                    DtvkitGlueClient.getInstance().registerSignalHandler(mHandler, INDEX_FOR_PIP);
-                }
+                DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
                 mTunedChannel = null;
                 notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
@@ -2581,7 +2574,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Bundle event = new Bundle();
                 event.putString(ConstantManager.KEY_INFO, "No play path available");
                 notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
-                DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
             }
             Log.i(TAG, "onTuneByHandlerThreadHandle Done");
             if (getFeatureSupportFillSurface() && !mIsPip) {
