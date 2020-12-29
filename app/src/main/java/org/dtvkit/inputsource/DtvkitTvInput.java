@@ -2161,6 +2161,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private boolean mSurfaceSent = false;
         private int mWinWidth = 0;
         private int mWinHeight = 0;
+        private boolean mReleaseHandleMessage = false;
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -2614,7 +2615,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
             } else {
-                sendDoReleaseMessage();
+                if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain || mIsPip) {
+                    sendDoReleaseMessage();
+                } else {
+                    //release by message queue for current session
+                    if (mMainHandle != null) {
+                        mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
+                    } else {
+                        Log.i(TAG, "onRelease mMainHandle == null");
+                    }
+                }
             }
             mContext.unregisterReceiver(mMediaReceiver);
             mMediaReceiver = null;
@@ -2639,24 +2649,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else {
                 playerPipStop();
             }
-            finalReleaseInThread();
+            finalReleaseWorkThread();
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
-        }
-
-        private void finalReleaseInThread() {
-            Log.d(TAG, "finalReleaseInThread index = " + mCurrentDtvkitTvInputSessionIndex);
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    Log.d(TAG, "finalReleaseInThread start");
-                    finalReleaseWorkThread();
-                    Log.d(TAG, "finalReleaseInThread end");
-                }
-            }).start();
         }
 
         private synchronized void finalReleaseWorkThread() {
             Log.d(TAG, "finalReleaseWorkThread index = " + mCurrentDtvkitTvInputSessionIndex);
+            mReleaseHandleMessage = true;
             if (mMainHandle != null) {
                 mMainHandle.removeCallbacksAndMessages(null);
             }
@@ -3857,6 +3856,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 @Override
                 public boolean handleMessage(Message msg) {
                     Log.d(TAG, "mHandlerThreadHandle [[[:" + msg.what + ", sessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
+                    if (mReleaseHandleMessage) {
+                        Log.d(TAG, "mReleaseHandleMessage, and handle message stopped. index = " + mCurrentDtvkitTvInputSessionIndex);
+                        return true;
+                    }
                     switch (msg.what) {
                         case MSG_ON_TUNE:
                             Uri channelUri = (Uri)msg.obj;
@@ -3889,7 +3892,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             doRelease();
                             break;
                         case MSG_RELEASE_WORK_THREAD:
-                            finalReleaseInThread();
+                            finalReleaseWorkThread();
                             break;
                         case MSG_GET_SIGNAL_STRENGTH:
                             sendCurrentSignalInfomation();
