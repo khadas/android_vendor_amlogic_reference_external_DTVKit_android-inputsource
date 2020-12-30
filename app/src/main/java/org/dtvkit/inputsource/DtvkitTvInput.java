@@ -3168,7 +3168,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         public long onTimeShiftGetStartPosition() {
             if (timeshiftRecorderState != RecorderState.STOPPED) {
-                long truncated = playerGetElapsedAndTruncated()[1] * 1000;
+                long truncated = playerGetElapsedAndTruncated()[1];
                 long diff = PropSettingManager.getStreamTimeDiff();
 
                 if (originalStartPosition != 0 && originalStartPosition != TvInputManager.TIME_SHIFT_INVALID_TIME) {
@@ -3184,16 +3184,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (startPosition == 0) /* Playing back recorded program */ {
                 if (playerState == PlayerState.PLAYING) {
                     long e_t_l[] = playerGetElapsedAndTruncated();
-                    long length = e_t_l[2] * 1000;
-                    currentPosition = e_t_l[0] * 1000;
+                    long length = e_t_l[2];
+                    currentPosition = e_t_l[0];
                     if ((length - currentPosition) < 1000)
                         currentPosition = recordedProgram.getRecordingDurationMillis();
                     Log.i(TAG, "playing back record program. current position: " + currentPosition);
                 }
             } else if (timeshifting) {
                 long e_t_l[] = playerGetElapsedAndTruncated();
-                long elapsed = e_t_l[0] * 1000;
-                long length = e_t_l[2] * 1000;
+                long elapsed = e_t_l[0];
+                long length = e_t_l[2];
                 long diff = PropSettingManager.getStreamTimeDiff();
 
                 if ((length - elapsed) < 1000)
@@ -3438,7 +3438,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             else if (type.equals("dvbrecording")) {
                                 setBlockMute(false);
                                 startPosition = originalStartPosition = 0; // start position is always 0 when playing back recorded program
-                                currentPosition = playerGetElapsedAndTruncated(data)[0] * 1000;
+                                currentPosition = playerGetElapsedAndTruncated(data)[0];
                                 Log.i(TAG, "dvbrecording currentPosition = " + currentPosition + "as date = " + ConvertSettingManager.convertLongToDate(startPosition));
                                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_AVAILABLE);
                                 //update track info in message queue
