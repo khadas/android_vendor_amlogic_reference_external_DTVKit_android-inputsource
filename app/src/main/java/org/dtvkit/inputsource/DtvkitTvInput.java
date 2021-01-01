@@ -232,7 +232,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private static final int INDEX_FOR_MAIN = 0;
     private static final int INDEX_FOR_PIP = 1;
 
-    private boolean mMhegStarted = false;
+    private String lastMhegUri = null;
 
     //stream change and update dialog
     private AlertDialog mStreamChangeUpdateDialog = null;
@@ -6059,8 +6059,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             DtvkitGlueClient.getInstance().request("Mheg.suspend", args);
             Log.e(TAG, "Mheg suspended");
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "mhegSuspend" + e.getMessage());
         }
+        lastMhegUri = null;
     }
 
     private int mhegGetNextTuneInfo(String dvbUri) {
@@ -6268,16 +6269,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private void startMheg(String dvbUri, boolean mhegSuspend) {
-        if (mMhegStarted) {
-            Log.d(TAG, "startMheg mMhegStarted = " + mMhegStarted);
+        Log.d(TAG, "Mheg dvbUri =" + dvbUri + "Mheg lastDvbUri = " + lastMhegUri);
+        if (dvbUri.equals(lastMhegUri)) {
+            Log.d(TAG, "startMheg mMhegStarted and mheg dvbUri is the same!!");
             return;
+        } else if (lastMhegUri != null) {
+            mhegStop();
+            Log.d(TAG, "mheg stop in start mheg function");
         }
         if (mhegSuspend) {
             mhegSuspend();
         }
         if (dvbUri != null) {
             if (mhegStartService(dvbUri) != -1) {
-                mMhegStarted = true;
+                lastMhegUri = dvbUri;
                 Log.d(TAG, "startMheg mhegStarted");
             } else {
                 Log.d(TAG, "startMheg mheg failed to start");
@@ -6304,7 +6309,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         try {
             JSONArray args = new JSONArray();
             DtvkitGlueClient.getInstance().request("Mheg.stop", args);
-            mMhegStarted = false;
+            lastMhegUri = null;
             Log.e(TAG, "Mheg stopped");
         } catch (Exception e) {
             Log.e(TAG, "mhegStop = " + e.getMessage());
