@@ -2271,6 +2271,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 //DtvkitGlueClient.getInstance().setDisplay(surface);
             } else {
                 //support multi surface and save it only here, then set it when tuned according to pip or main
+                if (surface == null && (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain || mIsPip)) {
+                    //stop play when set surface null
+                    sendDoReleaseMessage();
+                }
                 if (mSurface != surface) {
                     mSurfaceSent = false;
                     mSurface = surface;
@@ -2584,16 +2588,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public void onRelease() {
-            Log.i(TAG, "onRelease index = " + mCurrentDtvkitTvInputSessionIndex);
+            Log.i(TAG, "onRelease index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
             mReleased = true;
             //must destory mview,!!! we
             //will regist handle to client when
             //creat ciMenuView,so we need destory and
             //unregist handle.
-            if (!getFeatureSupportFullPip()) {
+            //if (!getFeatureSupportFullPip()) {
                 mSystemControlManager.SetDtvKitSourceEnable(0);
                 releaseSignalHandler();
-                if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain) {
+                if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain || mIsPip) {
                     //release by message queue for current session
                     if (mMainHandle != null) {
                         mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
@@ -2606,26 +2610,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     doDestroyOverlay();
                 }
                 //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
-            } else {
-                if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain || mIsPip) {
-                    sendDoReleaseMessage();
-                } else {
-                    //release by message queue for current session
-                    if (mMainHandle != null) {
-                        mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
-                    } else {
-                        Log.i(TAG, "onRelease mMainHandle == null");
-                    }
-                }
-            }
+            //}
             mContext.unregisterReceiver(mMediaReceiver);
             mMediaReceiver = null;
             hideStreamChangeUpdateDialog();
-            Log.i(TAG, "onRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
+            Log.i(TAG, "onRelease over index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
         }
 
         private void doRelease() {
-            Log.i(TAG, "doRelease index = " + mCurrentDtvkitTvInputSessionIndex);
+            Log.i(TAG, "doRelease index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
             removeTunerSession(this);
             releaseSignalHandler();
             if (!mIsPip) {
@@ -2642,11 +2635,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 playerPipStop();
             }
             finalReleaseWorkThread();
-            Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
+            Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
         }
 
         private synchronized void finalReleaseWorkThread() {
-            Log.d(TAG, "finalReleaseWorkThread index = " + mCurrentDtvkitTvInputSessionIndex);
+            Log.d(TAG, "finalReleaseWorkThread index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
             mReleaseHandleMessage = true;
             if (mMainHandle != null) {
                 mMainHandle.removeCallbacksAndMessages(null);
@@ -2657,7 +2650,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //don't set it to none
             //mMainHandle = null;
             //mHandlerThreadHandle = null;
-            Log.d(TAG, "finalReleaseWorkThread over");
+            Log.d(TAG, "finalReleaseWorkThread over , mIsPip = " + mIsPip);
         }
 
         private void releaseSignalHandler() {
