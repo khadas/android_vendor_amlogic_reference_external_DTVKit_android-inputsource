@@ -3482,7 +3482,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
                             break;
                         case "starting":
-                           notifyVideoAvailable();
                            boolean isAv = true;
                            try {
                                isAv = data.getJSONObject("content").getBoolean("is_av");
@@ -3506,6 +3505,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                   mHandlerThreadHandle.obtainMessage(MSG_START_MHEG5, 0/*mhegSsupend*/, 0, dvbUri).sendToTarget();
                                }
                            }
+                           notifyVideoAvailable();
                            break;
                         case "scambled":
                             /*notify scambled*/
