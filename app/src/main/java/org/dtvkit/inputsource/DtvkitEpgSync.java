@@ -167,7 +167,6 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name")))
                         .build();
                 programs.add(pro);
-                Log.i("cz_debug", "## get pro by event:"+ pro.toString()+ " ##");
             }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
