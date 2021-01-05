@@ -3466,6 +3466,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             }
                             break;
                         case "off":
+                            if (mIsPip) {
+                                return;
+                            }
                             if (timeshiftRecorderState != RecorderState.STOPPED) {
                                 removeScheduleTimeshiftRecordingTask();
                                 scheduleTimeshiftRecording = false;
