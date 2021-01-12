@@ -2446,7 +2446,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.e(TAG, "DtvkitTvInputSession onTune invalid channelUri = " + channelUri);
                 return false;
             }
-
             if (mMainHandle != null) {
                 mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
                 mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
@@ -2673,6 +2672,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //don't set it to none
             //mMainHandle = null;
             //mHandlerThreadHandle = null;
+            if (mDvbNetworkChangeSearchStatus && mHandlerThreadHandle != null) {
+                if (!(mStreamChangeUpdateDialog != null && mStreamChangeUpdateDialog.isShowing())) {
+                    mReleaseHandleMessage = false;
+                    mHandlerThreadHandle.removeMessages(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
+                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG, MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
+                }
+            }
             Log.d(TAG, "finalReleaseWorkThread over , mIsPip = " + mIsPip);
         }
 
@@ -3653,10 +3659,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             pipSession.sendDoReleaseMessage();
                         }
                         sendDoReleaseMessage();
-                        if (mHandlerThreadHandle != null) {
-                            mHandlerThreadHandle.removeMessages(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
-                            mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG, MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
-                        }
                     }
                 }
                 else if (signal.equals("DvbUpdatedChannelData"))
