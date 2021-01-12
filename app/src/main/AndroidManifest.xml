@@ -116,5 +116,12 @@
                 <action android:name="org.dtvkit.inputsource.services.CaSettingService" />
             </intent-filter>
         </service>
+        <service
+            android:name=".service.DtvkitSettingService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.dtvkit.inputsource.service.DtvkitSettingService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

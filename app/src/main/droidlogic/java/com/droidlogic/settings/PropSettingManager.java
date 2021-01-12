@@ -24,6 +24,12 @@ public class PropSettingManager {
     public static final String ENABLE_FULL_PIP_FCC_ARCHITECTURE = "vendor.tv.dtv.pipfcc.architecture";
     public static final String PVR_RECORD_MODE_CHANNEL = "0";
     public static final String PVR_RECORD_MODE_FREQUENCY = "1";
+    //add to match sei tv app
+    public static final String MATCH_SEI_TVAPP_ENABLE = "vendor.sys.tv.sei.tvapp";
+    public static final String CAPTIONING_MANAGER_ENABLE = "vendor.sys.tv.captioning_manager_enable";
+    public static final String MANUAL_TIMESHIFT_ENABLE = "vendor.sys.tv.maunal_timeshift_enable";
+    public static final String ACTON_CONTROL_TIMESHIFT = "action_control_timeshift";
+    public static final String VALUE_CONTROL_TIMESHIFT = "value_control_timeshift";
 
     public static String getProp(String key) {
         String result = null;

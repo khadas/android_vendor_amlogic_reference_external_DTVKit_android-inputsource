@@ -1605,8 +1605,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mStarted = false;
 
             DtvkitTvInputSession session = getMainTunerSession();
+            boolean seiDesign = getFeatureSupportSeiTvApp();
             if (session != null) {
                 session.removeScheduleTimeshiftRecordingTask();
+                //need to reset record path as path may be set suring playing
+                if (getFeatureSupportSeiTvApp()) {
+                    resetRecordingPath();
+                }
             } else {
                 resetRecordingPath();
             }
@@ -1746,10 +1751,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             /*if there's a live play,
               should lock here, may run into a race condition*/
-            DtvkitTvInputSession session = getMainTunerSession();
-            if ((session != null && session.mTunedChannel != null &&
-                     session.mHandlerThreadHandle != null)) {
-               session.sendMsgTryStartTimeshift();
+            if (!getFeatureSupportManualTimeshift()) {
+                DtvkitTvInputSession session = getMainTunerSession();
+                if ((session != null && session.mTunedChannel != null &&
+                         session.mHandlerThreadHandle != null)) {
+                   session.sendMsgTryStartTimeshift(500);
+                }
             }
         }
 
@@ -2659,7 +2666,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
                 }
                 /*
-                if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
+                if (!getFeatureSupportCaptioningManager() || (mCaptioningManager != null && mCaptioningManager.isEnabled())) {
                     playerSetSubtitlesOn(true);
                 }
                 */
@@ -2895,7 +2902,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         return result;
                     }
                 }
-                if (mCaptioningManager.isEnabled() && selectSubtitleOrTeletext(isTele, subType, trackId)) {
+                if ((!getFeatureSupportCaptioningManager() || mCaptioningManager.isEnabled()) && selectSubtitleOrTeletext(isTele, subType, trackId)) {
                     notifyTrackSelected(type, sourceTrackId);
                 } else {
                     Log.d(TAG, "onSelectTrack mCaptioningManager closed or invlid sub");
@@ -2986,7 +2993,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
             if (retuneSubtile
-                && (mCaptioningManager != null && mCaptioningManager.isEnabled())) {
+                && (!getFeatureSupportCaptioningManager() || (mCaptioningManager != null && mCaptioningManager.isEnabled()))) {
                     playerSetSubtitlesOn(true);
                     if (isDvrPlaying == 1) {
                         dvrSubtitleFlag = 1;
@@ -3243,6 +3250,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else if (TextUtils.equals(DataMananer.ACTION_AD_VOLUME_LEVEL, action)) {
                 mAudioADVolume = data.getInt(DataMananer.PARA_VALUE1);
                 setAdFunction(MSG_MIX_AD_SET_VOLUME, mAudioADVolume);
+            } else if (TextUtils.equals(PropSettingManager.ACTON_CONTROL_TIMESHIFT, action)) {
+                if (data != null) {
+                    boolean status = data.getBoolean(PropSettingManager.VALUE_CONTROL_TIMESHIFT, false);
+                    if (status) {
+                        sendMsgTryStartTimeshift(0);
+                    } else {
+                        sendMsgTryStopTimeshift(0);
+                    }
+                }
             }
         }
 
@@ -3564,7 +3580,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
                                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
                                 }
-                                monitorTimeshiftRecordingPathAndTryRestart(true, true, true);
+                                if (!getFeatureSupportManualTimeshift()) {
+                                    monitorTimeshiftRecordingPathAndTryRestart(true, true, true);
+                                }
                             }
                             else if (type.equals("dvbrecording")) {
                                 setBlockMute(false);
@@ -3708,7 +3726,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             timeshiftRecorderState == RecorderState.STOPPED && scheduleTimeshiftRecording) {
                         timeshiftAvailable.setYes();
                         /*no scheduling, taken over by MSG_CHECK_REC_PATH*/
-                        //scheduleTimeshiftRecordingTask();
+                        /*if (!getFeatureSupportManualTimeshift()) {
+                            scheduleTimeshiftRecordingTask();
+                        }*/
                     }
 
                     if (checkActiveRecordings(activeRecordings,
@@ -3974,12 +3994,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_UPDATE_TRACKINFO = 9;
         protected static final int MSG_ENABLE_VIDEO = 10;
         protected static final int MSG_SET_UNBLOCK = 11;
-        protected static final int MSG_CHECK_REC_PATH = 14;
-        protected static final int MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG = 15;
-        protected static final int MSG_TRY_START_TIMESHIFT = 16;
-        protected static final int MSG_UPDATE_TRACKS_AND_SELECT = 17;
-        protected static final int MSG_SELECT_TRACK = 18;
-        protected static final int MSG_DO_RELEASE_SPECIFIELD_SESSION = 19;
+        protected static final int MSG_CHECK_REC_PATH = 12;
+        protected static final int MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG = 13;
+        protected static final int MSG_TRY_START_TIMESHIFT = 14;
+        protected static final int MSG_UPDATE_TRACKS_AND_SELECT = 15;
+        protected static final int MSG_SELECT_TRACK = 16;
+        protected static final int MSG_DO_RELEASE_SPECIFIELD_SESSION = 17;
+        protected static final int MSG_TRY_STOP_TIMESHIFT = 18;
 
         //audio ad
         public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
@@ -4094,7 +4115,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             }
                             break;
                         case MSG_CHECK_REC_PATH:
-                            if (resetRecordingPath() || (msg.arg2 != 0)/*start*/) {
+                            if (resetRecordingPath() || (msg.arg2 == 1)/*start*/) {
                                 /* path changed */
                                 tryStartTimeshifting();
                             }
@@ -4113,7 +4134,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             }
                             break;
                         case MSG_TRY_START_TIMESHIFT:
+                            resetRecordingPath();
                             tryStartTimeshifting();
+                            break;
+                        case MSG_TRY_STOP_TIMESHIFT:
+                            tryStopTimeshifting();
                             break;
                         case MSG_UPDATE_TRACKS_AND_SELECT:
                             updateTrackAndSelect(msg.arg1);
@@ -4782,11 +4807,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         timeshiftAvailable.setNo();
                     }
                 }
-                Log.i(TAG, "timeshiftAvailable: " + timeshiftAvailable);
-                Log.i(TAG, "timeshiftRecorderState: " + timeshiftRecorderState);
+                Log.i(TAG, "tryStartTimeshifting timeshiftAvailable: " + timeshiftAvailable + ", timeshiftRecorderState: " + timeshiftRecorderState);
                 if (timeshiftAvailable.isAvailable()) {
                     if (timeshiftRecorderState == RecorderState.STOPPED) {
                         if (playerStartTimeshiftRecording()) {
+                            Log.d(TAG, "tryStartTimeshifting OK");
                             /*
                               The onSignal callback may be triggerd before here,
                               and changes the state to a further value.
@@ -4796,10 +4821,33 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 timeshiftRecorderState = RecorderState.STARTING;
                             }
                         } else {
+                            Log.d(TAG, "tryStartTimeshifting fail");
                             notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                         }
                     }
                 } else {
+                    Log.d(TAG, "tryStartTimeshifting not available");
+                    notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+                }
+            } else {
+                notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+            }
+        }
+
+        private void tryStopTimeshifting() {
+            if (getFeatureSupportTimeshifting()) {
+                Log.i(TAG, "tryStopTimeshifting timeshiftAvailable: " + timeshiftAvailable + ", timeshiftRecorderState = " + timeshiftRecorderState);
+                if (timeshiftAvailable.isAvailable()) {
+                    if ((timeshiftRecorderState == RecorderState.RECORDING)) {
+                        if (playerStopTimeshiftRecording(timeshifting)) {
+                            Log.d(TAG, "tryStopTimeshifting OK");
+                        } else {
+                            Log.d(TAG, "tryStopTimeshifting fail");
+                            notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+                        }
+                    }
+                } else {
+                    Log.d(TAG, "tryStopTimeshifting not available");
                     notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                 }
             } else {
@@ -4815,16 +4863,23 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mHandlerThreadHandle.removeMessages(MSG_CHECK_REC_PATH);//remove pending message
                 }
                 if (on) {
-                    Message mess = mHandlerThreadHandle.obtainMessage(now ? MSG_CHECK_REC_PATH_DIRECTLY : MSG_CHECK_REC_PATH, now ? 1 : 0, start ? 1 : 0);
+                    Message mess = mHandlerThreadHandle.obtainMessage(now ? MSG_CHECK_REC_PATH_DIRECTLY : MSG_CHECK_REC_PATH, on ? 1 : 0, start ? 1 : 0);
                     boolean info = mHandlerThreadHandle.sendMessageDelayed(mess, now ? 0 : MSG_CHECK_REC_PATH_PERIOD);
                 }
             }
         }
 
-        public void sendMsgTryStartTimeshift() {
+        public void sendMsgTryStartTimeshift(int delay) {
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_TRY_START_TIMESHIFT);
-                mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_TRY_START_TIMESHIFT, 1000);
+                mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_TRY_START_TIMESHIFT, delay);
+            }
+        }
+
+        public void sendMsgTryStopTimeshift(int delay) {
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.removeMessages(MSG_TRY_STOP_TIMESHIFT);
+                mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_TRY_STOP_TIMESHIFT, delay);
             }
         }
 
@@ -4882,29 +4937,22 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }
 
-    private boolean isMountedPathAvailable(String path) {
-        boolean result = false;
-        if (TextUtils.isEmpty(path)) {
-            return result;
-        }
-        String volumeState = Environment.getExternalStorageState(new File(path));
-        if (TextUtils.equals(volumeState, Environment.MEDIA_MOUNTED)) {
-            result = true;
-        }
-        Log.d(TAG, "isMountedPathAvailable path = " + path + ", volumeState = " + volumeState + ", result = " + result);
-        return result;
-    }
-
     private boolean resetRecordingPath() {
         String newPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
         boolean changed = false;
 
         String path = SysSettingManager.convertMediaPathToMountedPath(newPath);
-        if (!TextUtils.isEmpty(path) && !isMountedPathAvailable(path)) {
+        if (!TextUtils.isEmpty(path) && !SysSettingManager.isMountedPathAvailable(path) && !getFeatureSupportSeiTvApp()) {
             Log.d(TAG, "removable device has been moved and use default path");
             newPath = DataMananer.PVR_DEFAULT_PATH;
             mDataMananer.saveStringParameters(DataMananer.KEY_PVR_RECORD_PATH, newPath);
             changed = true;
+        }
+        if (getFeatureSupportSeiTvApp()) {
+            if (TextUtils.isEmpty(newPath) || DataMananer.PVR_DEFAULT_PATH.equals(newPath)) {
+                Log.d(TAG, "sei livetv support removable storage only");
+                return false;
+            }
         }
         recordingAddDiskPath(newPath);
         recordingSetDefaultDisk(newPath);
@@ -5911,6 +5959,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return false;
         }
         return true;
+    }
+
+    private boolean playerNotifyCiProfileEvent(String ciNumber) {
+        boolean result = false;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(ciNumber);
+            DtvkitGlueClient.getInstance().request("Player.notifyCiProfileEvent", args);
+            result = true;
+        } catch (Exception e) {
+            Log.e(TAG, "playerNotifyCiProfileEvent = " + e.getMessage());
+            result = false;
+        }
+        return result;
     }
 
     private int[] playerGetDTVKitVideoSize() {
@@ -7009,6 +7071,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private boolean getFeatureSupportFillSurface() {
         return PropSettingManager.getBoolean(PropSettingManager.ENABLE_FILL_SURFACE, false);
+    }
+
+    private boolean getFeatureSupportSeiTvApp() {
+        return PropSettingManager.getBoolean(PropSettingManager.MATCH_SEI_TVAPP_ENABLE, false);
+    }
+
+    private boolean getFeatureSupportCaptioningManager() {
+        return !getFeatureSupportSeiTvApp() && PropSettingManager.getBoolean(PropSettingManager.CAPTIONING_MANAGER_ENABLE, true);
+    }
+
+    private boolean getFeatureSupportManualTimeshift() {
+        return getFeatureSupportSeiTvApp() || PropSettingManager.getBoolean(PropSettingManager.MANUAL_TIMESHIFT_ENABLE, false);
     }
 
     /*

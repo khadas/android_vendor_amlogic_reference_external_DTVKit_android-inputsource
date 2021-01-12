@@ -3270,4 +3270,39 @@ public class ParameterMananer {
             }
         }
     }
+
+    public String getCustomParameter(String key, String defaultJsonValue) {
+        String result = null;
+        Log.d(TAG, "getCustomParameter need to add related code for extends key = " + key + ", defaultJsonValue = " + defaultJsonValue);
+        return result;
+    }
+
+    public void setCustomParameter(String key, String newJsonValues) {
+        Log.d(TAG, "setCustomParameter need to add related code for extends key = " + key + ", newJsonValues = " + newJsonValues);
+    }
+
+    public boolean playerGetSubtitlesOn(int index) {
+        boolean on = false;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(index);
+            on = DtvkitGlueClient.getInstance().request("Player.getSubtitlesOn", args).getBoolean("data");
+        } catch (Exception e) {
+            Log.e(TAG, "playerGetSubtitlesOn = " + e.getMessage());
+        }
+        Log.i(TAG, "playerGetSubtitlesOn on = " + on);
+        return on;
+    }
+
+    public void playerSetSubtitlesOn(boolean on, int index) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(index);
+            args.put(on);
+            DtvkitGlueClient.getInstance().request("Player.setSubtitlesOn", args);
+            Log.i(TAG, "playerSetSubtitlesOn on =  " + on);
+        } catch (Exception e) {
+            Log.e(TAG, "playerSetSubtitlesOn = " + e.getMessage());
+        }
+    }
 }

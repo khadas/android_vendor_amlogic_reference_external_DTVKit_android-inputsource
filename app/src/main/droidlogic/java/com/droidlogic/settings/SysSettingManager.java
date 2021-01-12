@@ -4,6 +4,7 @@ import android.util.Log;
 import android.text.TextUtils;
 import android.content.Context;
 import android.os.storage.StorageManager;
+import android.os.Environment;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -23,6 +24,7 @@ public class SysSettingManager {
     private static final boolean DEBUG = true;
 
     public static final String PVR_DEFAULT_PATH = "/data/vendor/dtvkit";
+    public static final String PVR_DEFAULT_FOLDER = "PVR_DIR";
 
     protected SystemControlManager mSystemControlManager;
     private FileListManager mFileListManager;
@@ -432,8 +434,11 @@ public class SysSettingManager {
         String result = null;
         if (isMediaPath(mediaPath)) {
             String[] split = mediaPath.split("/");
-            if (split != null && split.length > 0) {
-                result = "/storage/" + split[split.length - 1];
+            if (split != null && split.length >= 4) {
+                result = "/storage";
+                for (int i = 3; i < split.length; i++) {
+                    result += "/" + split[i];
+                }
             }
         } else {
             Log.d(TAG, "convertMediaPathToMountedPath not ready");
@@ -445,12 +450,28 @@ public class SysSettingManager {
         String result = null;
         if (isStoragePath(mountPath)) {
             String[] split = mountPath.split("/");
-            if (split != null && split.length > 0) {
-                result = "/mnt/media_rw/" + split[split.length - 1];
+            if (split != null && split.length >= 3) {
+                result = "/mnt/media_rw";
+                for (int i = 2; i < split.length; i++) {
+                    result += "/" + split[i];
+                }
             }
         } else {
             Log.d(TAG, "convertStoragePathToMediaPath not ready");
         }
+        return result;
+    }
+
+    public static boolean isMountedPathAvailable(String path) {
+        boolean result = false;
+        if (TextUtils.isEmpty(path)) {
+            return result;
+        }
+        String volumeState = Environment.getExternalStorageState(new File(path));
+        if (TextUtils.equals(volumeState, Environment.MEDIA_MOUNTED)) {
+            result = true;
+        }
+        Log.d(TAG, "isMountedPathAvailable path = " + path + ", volumeState = " + volumeState + ", result = " + result);
         return result;
     }
 
