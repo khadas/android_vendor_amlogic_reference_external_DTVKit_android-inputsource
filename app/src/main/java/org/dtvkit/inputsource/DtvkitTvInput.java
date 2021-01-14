@@ -4387,7 +4387,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //update video track resolution
             if (TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO.equals(serviceType)) {
                 int[] videoSize = playerGetDTVKitVideoSize();
-                String realtimeVideoFormat = mSysSettingManager.getVideoFormatFromSys();
+                String realtimeVideoFormat = null;//mSysSettingManager.getVideoFormatFromSys();
+                if (videoSize[0] > 0 && videoSize[1] > 0 && videoSize[2] > 0 && videoSize[3] >= 0 && videoSize[3] <= 1) {
+                    realtimeVideoFormat = videoSize[1] + (videoSize[3] == 1 ? "P" : "I");
+                }
                 result = !TextUtils.isEmpty(realtimeVideoFormat);
                 if (result) {
                     Bundle formatbundle = new Bundle();
@@ -5185,11 +5188,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Bundle bundle = new Bundle();
             if (detailsAvailable) {
                 //get values that need to get from sys and need wait for at least 1s after play
-                String decodeInfo = mSysSettingManager.getVideodecodeInfo();
+                /*String decodeInfo = mSysSettingManager.getVideodecodeInfo();
                 int videoWidth = mSysSettingManager.parseWidthFromVdecStatus(decodeInfo);
                 int videoHeight = mSysSettingManager.parseHeightFromVdecStatus(decodeInfo);
                 float videoFrameRate = mSysSettingManager.parseFrameRateStrFromVdecStatus(decodeInfo);
-                String videoFrameFormat = mSysSettingManager.parseFrameFormatStrFromDi0Path();
+                String videoFrameFormat = mSysSettingManager.parseFrameFormatStrFromDi0Path();*/
+                //use dtvkit interface
+                int[] videoStatus = playerGetDTVKitVideoSize();
+                int videoWidth = videoStatus[0];
+                int videoHeight = videoStatus[1];
+                float videoFrameRate = (float)videoStatus[2];
+                String videoFrameFormat = "";
+                if (videoStatus[3] == 1) {//1 means progressive
+                    videoFrameFormat = "P";
+                } else if (videoStatus[3] == 0) {
+                    videoFrameFormat = "I";
+                } else {
+                    Log.d(TAG, "getVideoTrackInfoList no videoFrameFormat");
+                }
                 //set value
                 track.setVideoWidth(videoWidth);
                 track.setVideoHeight(videoHeight);
@@ -5808,7 +5824,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private int[] playerGetDTVKitVideoSize(int index) {
-        int[] result = {0, 0};
+        int[] result = {0, 0, 0, 0};
         try {
             JSONArray args = new JSONArray();
             args.put(index);
@@ -5819,6 +5835,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.d(TAG, "playerGetDTVKitVideoSize videoStreams = " + videoStreams.toString());
                     result[0] = (int)videoStreams.get("width");
                     result[1] = (int)videoStreams.get("height");
+                    result[2] = (int)videoStreams.get("framerate");
+                    result[3] = (int)videoStreams.get("progressive");//1 means progressive
                 }
             } else {
                 Log.d(TAG, "playerGetDTVKitVideoSize then get null");
