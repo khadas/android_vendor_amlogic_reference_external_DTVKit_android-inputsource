@@ -1437,6 +1437,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private boolean mTuned = false;
         private boolean mStarted = false;
         private int mPath = -1;
+        protected HandlerThread mRecordingHandlerThread = null;
         private Handler mRecordingProcessHandler = null;
         private long mCurrentRecordIndex = 0;
         private boolean mRecordStopAndSaveReceived = false;
@@ -1467,7 +1468,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         protected void initRecordWorkThread() {
-            mRecordingProcessHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
+            mRecordingHandlerThread = new HandlerThread("DtvkitRecordingSession " + mCurrentRecordIndex);
+            mRecordingHandlerThread.start();
+            mRecordingProcessHandler = new Handler(mRecordingHandlerThread.getLooper(), new Handler.Callback() {
                 @Override
                 public boolean handleMessage(Message msg) {
                     if (msg.what >= 0 && MSG_STRING.length > msg.what) {
@@ -1926,6 +1929,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 @Override
                 public void run() {
                     Log.d(TAG, "doFinalReleaseByThread start index = " + mCurrentRecordIndex);
+                    if (mRecordingHandlerThread != null) {
+                        mRecordingHandlerThread.getLooper().quitSafely();
+                        mRecordingHandlerThread = null;
+                    }
                     if (mRecordingProcessHandler != null) {
                         mRecordingProcessHandler.removeCallbacksAndMessages(null);
                     }
@@ -2157,6 +2164,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private int timeshiftBufferSizeMBs = 0;
         DtvkitOverlayView mView = null;
         private long mCurrentDtvkitTvInputSessionIndex = 0;
+        protected HandlerThread mLivingHandlerThread = null;
         protected Handler mHandlerThreadHandle = null;
         protected Handler mMainHandle = null;
         private boolean mIsMain = false;
@@ -2677,6 +2685,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mReleaseHandleMessage = false;
                     mHandlerThreadHandle.removeMessages(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG, MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
+                }
+            } else {
+                if (mLivingHandlerThread != null) {
+                    mLivingHandlerThread.getLooper().quitSafely();
+                    mLivingHandlerThread = null;
                 }
             }
             Log.d(TAG, "finalReleaseWorkThread over , mIsPip = " + mIsPip);
@@ -3865,7 +3878,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         protected void initWorkThread() {
             Log.d(TAG, "initWorkThread");
-            mHandlerThreadHandle = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
+            mLivingHandlerThread = new HandlerThread("DtvkitTvInputSession " + mCurrentDtvkitTvInputSessionIndex);
+            mLivingHandlerThread.start();
+            mHandlerThreadHandle = new Handler(mLivingHandlerThread.getLooper(), new Handler.Callback() {
                 @Override
                 public boolean handleMessage(Message msg) {
                     Log.d(TAG, "mHandlerThreadHandle [[[:" + msg.what + ", sessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
