@@ -115,6 +115,7 @@ import java.util.HashMap;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.concurrent.TimeUnit;
 
 import android.media.MediaCodec;
 
@@ -156,6 +157,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     protected HandlerThread mHandlerThread = null;
     private SystemControlEvent mSystemControlEvent;
     protected Handler mInputThreadHandler = null;
+    private Semaphore mMainSessionSemaphore = new Semaphore(1);
+    private Semaphore mPipSessionSemaphore = new Semaphore(1);
 
     /*associate audio*/
     protected boolean mAudioADAutoStart = false;
@@ -595,6 +598,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mHandlerThread = null;
         mInputThreadHandler.removeCallbacksAndMessages(null);
         mInputThreadHandler = null;
+        mMainSessionSemaphore.release();
+        mPipSessionSemaphore.release();
     }
 
     private boolean setTVAspectMode(int mode) {
@@ -2479,6 +2484,29 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.e(TAG, "onTuneByHandlerThreadHandle invalid channelUri = " + channelUri);
                 return false;
             }
+
+            try {
+                if (!mTuned) {
+                    if (!mIsPip) {
+                        if (!mMainSessionSemaphore.tryAcquire(2000, TimeUnit.MILLISECONDS)) {//1000ms timeout
+                            Log.d(TAG, "onTuneByHandlerThreadHandle mMainSessionSemaphore timeout");
+                            mMainSessionSemaphore.release();
+                        } else {
+                            Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mMainSessionSemaphore ok");
+                        }
+                    } else {
+                        if (!mPipSessionSemaphore.tryAcquire(2000, TimeUnit.MILLISECONDS)) {//1000ms timeout
+                            Log.d(TAG, "onTuneByHandlerThreadHandle mPipSessionSemaphore timeout");
+                            mPipSessionSemaphore.release();
+                        } else {
+                            Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mPipSessionSemaphore ok");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "onTuneByHandlerThreadHandle tryAcquire Exception = " + e.getMessage());
+            }
+
             mTuned = true;
             boolean supportFullPipFccArchitecture = getFeatureSupportFullPipFccArchitecture();
             if (!mIsPip) {
@@ -2661,8 +2689,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 playerStop();
                 playerSetSubtitlesOn(false);
                 playerSetTeletextOn(false, -1);
+                mMainSessionSemaphore.release();
             } else {
                 playerPipStop();
+                mPipSessionSemaphore.release();
             }
             finalReleaseWorkThread();
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
@@ -4492,6 +4522,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             recordedProgram = getRecordedProgram(uri);
             if (recordedProgram != null) {
+                try {
+                    if (!mTuned) {
+                        if (!mMainSessionSemaphore.tryAcquire(2000, TimeUnit.MILLISECONDS)) {//1000ms timeout
+                            Log.d(TAG, "setTimeshiftPlay mMainSessionSemaphore timeout");
+                            mMainSessionSemaphore.release();
+                        } else {
+                            Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mMainSessionSemaphore ok");
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.d(TAG, "setTimeshiftPlay tryAcquire Exception = " + e.getMessage());
+                }
+                mTuned = true;
                 if (getFeatureSupportFullPipFccArchitecture() && !mSurfaceSent && mSurface != null) {
                     mSurfaceSent = true;
                     mView.nativeOverlayView.setOverlayTarge(mView.nativeOverlayView.mTarget);
