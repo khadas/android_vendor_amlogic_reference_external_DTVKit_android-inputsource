@@ -39,22 +39,31 @@ public class CiMenuView extends LinearLayout {
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
         public void onSignal(String signal, JSONObject data) {
-            if (signal.equals("CiOpenModule")) {
+            if (signal.equals("CiModuleInsert")) {
+                clearPreviousMenu();
+                menuCloseHandler("Ci Module is inserted", EXIT_TO_QUIT);
+                setMenuVisible();
+                Log.i(TAG, "Ci Menu: OnSignal " + signal);
+            }
+            else if (signal.equals("CiOpenModule")) {
+                clearPreviousMenu();
                 Log.i(TAG, "Ci Menu: OnSignal " + signal);
                 signalTriggered = true;
                 menuHandler();
             }
             else if (signal.equals("CiCloseModule")) {
                 Log.i(TAG, "Ci Menu: OnSignal " + signal);
-
+                clearPreviousMenu();
                 signalTriggered = true;
                 menuCloseHandler("Ci Module closed by HOST", EXIT_TO_QUIT);
+                setMenuInvisible();
             }
             else if (signal.equals("CiRemoveModule")) {
                 Log.i(TAG, "Ci Menu: OnSignal " + signal);
-
+                clearPreviousMenu();
                 signalTriggered = true;
                 menuCloseHandler("Ci Module removed", EXIT_TO_QUIT);
+                setMenuVisible();
             }
         }
     };
@@ -577,10 +586,10 @@ public class CiMenuView extends LinearLayout {
     }
 
     private void menuCloseHandler(final String titleText, final String footerText) {
-        if (isMenuVisible) {
+        // if (isMenuVisible) {
             setMenuTitleText(titleText);
             setMenuFooterText(footerText);
-        }
+        // }
     }
 
     private void setMenuFocus(final int buttonNum) {
