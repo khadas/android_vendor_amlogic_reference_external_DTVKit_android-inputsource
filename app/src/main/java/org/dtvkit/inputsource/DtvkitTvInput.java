@@ -4217,9 +4217,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (audioManager != null) {
                         Log.d(TAG, "setBlockMute = " + mute);
                         if (mute) {
-                            audioManager.setParameters("TV-Mute=1");
+                            audioManager.setParameters("hal_param_tv_mute=1");
                         } else {
-                            audioManager.setParameters("TV-Mute=0");
+                            audioManager.setParameters("hal_param_tv_mute=0");
                         }
                         mParentControlMute = mute;
                     } else {
@@ -4460,28 +4460,28 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             switch (msg) {
                 case MSG_MIX_AD_DUAL_SUPPORT://dual_decoder_surport for ad & main mix on/off
                     if (param1 > 0) {
-                        audioManager.setParameters("dual_decoder_support=1");
+                        audioManager.setParameters("hal_param_dual_dec_support=1");
                     } else {
-                        audioManager.setParameters("dual_decoder_support=0");
+                        audioManager.setParameters("hal_param_dual_dec_support=0");
                     }
                     Log.d(TAG, "setAdFunction MSG_MIX_AD_DUAL_SUPPORT setParameters:"
-                            + "dual_decoder_support=" + (param1 > 0 ? 1 : 0));
+                            + "hal_param_dual_dec_support=" + (param1 > 0 ? 1 : 0));
                     result = true;
                     break;
                 case MSG_MIX_AD_MIX_SUPPORT://Associated audio mixing on/off
                     if (param1 > 0) {
-                        audioManager.setParameters("associate_audio_mixing_enable=1");
+                        audioManager.setParameters("hal_param_ad_mix_enable=1");
                     } else {
-                        audioManager.setParameters("associate_audio_mixing_enable=0");
+                        audioManager.setParameters("hal_param_ad_mix_enable=0");
                     }
                     Log.d(TAG, "setAdFunction MSG_MIX_AD_MIX_SUPPORT setParameters:"
-                            + "associate_audio_mixing_enable=" + (param1 > 0 ? 1 : 0));
+                            + "hal_param_ad_mix_enable=" + (param1 > 0 ? 1 : 0));
                     result = true;
                     break;
                 case MSG_MIX_AD_MIX_LEVEL://Associated audio mixing level
-                    audioManager.setParameters("dual_decoder_mixing_level=" + param1 + "");
+                    audioManager.setParameters("hal_param_dual_dec_mix_level=" + param1 + "");
                     Log.d(TAG, "setAdFunction MSG_MIX_AD_MIX_LEVEL setParameters:"
-                            + "dual_decoder_mixing_level=" + param1);
+                            + "hal_param_dual_dec_mix_level=" + param1);
                     result = true;
                     break;
                 case MSG_MIX_AD_SET_MAIN://set Main Audio by handle
