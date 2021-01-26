@@ -1590,6 +1590,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             DtvkitTvInputSession session = getMainTunerSession();
             if (session != null) {
                 session.removeScheduleTimeshiftRecordingTask();
+            } else {
+                resetRecordingPath();
             }
             numActiveRecordings = recordingGetNumActiveRecordings();
             Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
