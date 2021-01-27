@@ -3582,7 +3582,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                   mHandlerThreadHandle.obtainMessage(MSG_START_MHEG5, 0/*mhegSsupend*/, 0, dvbUri).sendToTarget();
                                }
                            }
-                           notifyVideoAvailable();
+                           if (mTunedChannel != null) {
+                                if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
+                                    notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
+                                } else {
+                                    notifyVideoAvailable();
+                                }
+                            } else {
+                                Log.d(TAG, "on signal starting null mTunedChannel");
+                            }
                            break;
                         case "scambled":
                             /*notify scambled*/
@@ -3726,7 +3734,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 else if (signal.equals("MhegAppStarted"))
                 {
                    Log.i(TAG, "MhegAppStarted");
-                   notifyVideoAvailable();
+                   if (mTunedChannel != null) {
+                        if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
+                            notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
+                        } else {
+                            notifyVideoAvailable();
+                        }
+                    } else {
+                        Log.d(TAG, "on signal MhegAppStarted null mTunedChannel");
+                    }
                 }
                 else if (signal.equals("AppVideoPosition"))
                 {
