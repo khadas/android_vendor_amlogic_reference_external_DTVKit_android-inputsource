@@ -72,16 +72,16 @@ public class TvContractUtils {
 
     public static void updateChannels(Context context, String inputId, boolean isSearched, List<Channel> channels) {
         // Create a map from original network ID to channel row ID for existing channels.
-        ArrayMap<Long, Long> channelMap = new ArrayMap<>();
-        ArrayMap<Long, String> channelSetFavMap = new ArrayMap<>();
-        ArrayMap<Long, String> channelSetSkipMap = new ArrayMap<>();
-        ArrayMap<Long, String> channelSkipValueMap = new ArrayMap<>();
-        ArrayMap<Long, String> channelFavValueMap = new ArrayMap<>();
-        ArrayMap<Long, String> channelFavListValueMap = new ArrayMap<>();
-        ArrayMap<Long, String> channelSetDisPlayNameMap = new ArrayMap<>();
-        ArrayMap<Long, String> channelSetDisPlayNumberMap = new ArrayMap<>();
-        ArrayMap<Long, String> channelDisPlayNameValueMap = new ArrayMap<>();
-        ArrayMap<Long, String> channelDisPlayNumberValueMap = new ArrayMap<>();
+        ArrayMap<String, Long> channelMap = new ArrayMap<>();
+        ArrayMap<String, String> channelSetFavMap = new ArrayMap<>();
+        ArrayMap<String, String> channelSetSkipMap = new ArrayMap<>();
+        ArrayMap<String, String> channelSkipValueMap = new ArrayMap<>();
+        ArrayMap<String, String> channelFavValueMap = new ArrayMap<>();
+        ArrayMap<String, String> channelFavListValueMap = new ArrayMap<>();
+        ArrayMap<String, String> channelSetDisPlayNameMap = new ArrayMap<>();
+        ArrayMap<String, String> channelSetDisPlayNumberMap = new ArrayMap<>();
+        ArrayMap<String, String> channelDisPlayNameValueMap = new ArrayMap<>();
+        ArrayMap<String, String> channelDisPlayNumberValueMap = new ArrayMap<>();
         Uri channelsUri = TvContract.buildChannelsUriForInput(inputId);
         String[] projection = {Channels._ID, Channels.COLUMN_ORIGINAL_NETWORK_ID, Channels.COLUMN_TRANSPORT_STREAM_ID,
                 Channels.COLUMN_SERVICE_ID, Channels.COLUMN_DISPLAY_NAME, Channels.COLUMN_DISPLAY_NUMBER,
@@ -109,6 +109,7 @@ public class TvContractUtils {
                 displayName = cursor.getString(4);
                 displayNumber = cursor.getString(5);
                 int type = cursor.getType(6);//InternalProviderData type
+                int frequency = 0;
                 setFavFlag = "0";
                 setSkipFlag = "0";
                 favValue = "0";
@@ -130,6 +131,7 @@ public class TvContractUtils {
                         skipValue = (String)internalProviderData.get(Channel.KEY_HIDDEN);
                         setDisplayNameFlag = (String)internalProviderData.get(Channel.KEY_SET_DISPLAYNAME);
                         setDisplayNumberFlag = (String)internalProviderData.get(Channel.KEY_SET_DISPLAYNUMBER);
+                        frequency = Integer.valueOf((String)internalProviderData.get(Channel.KEY_FREQUENCY));
                         if (setSkipFlag == null) {
                             setSkipFlag = "0";
                         }
@@ -157,18 +159,21 @@ public class TvContractUtils {
                 } else {
                     if (DEBUG) Log.i(TAG, "COLUMN_INTERNAL_PROVIDER_DATA other type");
                 }
-
-                channelMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, rowId);
+                String uniqueStr = getUniqueStrForChannel(originalNetworkId, transportStreamId, serviceId, frequency);
+                if (uniqueStr == null) {
+                    continue;
+                }
+                channelMap.put(uniqueStr, rowId);
                 if (!isSearched) {
-                    channelSetFavMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setFavFlag);
-                    channelSetSkipMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setSkipFlag);
-                    channelSkipValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, skipValue);
-                    channelFavValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favValue);
-                    channelFavListValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favListValue);
-                    channelSetDisPlayNameMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNameFlag);
-                    channelSetDisPlayNumberMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNumberFlag);
-                    channelDisPlayNameValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, displayName);
-                    channelDisPlayNumberValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, displayNumber);
+                    channelSetFavMap.put(uniqueStr, setFavFlag);
+                    channelSetSkipMap.put(uniqueStr, setSkipFlag);
+                    channelSkipValueMap.put(uniqueStr, skipValue);
+                    channelFavValueMap.put(uniqueStr, favValue);
+                    channelFavListValueMap.put(uniqueStr, favListValue);
+                    channelSetDisPlayNameMap.put(uniqueStr, setDisplayNameFlag);
+                    channelSetDisPlayNumberMap.put(uniqueStr, setDisplayNumberFlag);
+                    channelDisPlayNameValueMap.put(uniqueStr, displayName);
+                    channelDisPlayNumberValueMap.put(uniqueStr, displayNumber);
                 }
             }
         } catch (Exception e) {
@@ -203,18 +208,32 @@ public class TvContractUtils {
             int originalNetworkId = channel.getOriginalNetworkId();
             int transportStreamId = channel.getTransportStreamId();
             int serviceId = channel.getServiceId();
-            long triplet = ((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId;
-            Long rowId = channelMap.get(triplet);
-            String setFavFlag = channelSetFavMap.get(triplet);
-            String setSkipFlag = channelSetSkipMap.get(triplet);
-            String favValue = channelFavValueMap.get(triplet);
-            String favListValue = channelFavListValueMap.get(triplet);
-            String skipValue = channelSkipValueMap.get(triplet);
-            String setDisplayNameFlag = channelSetDisPlayNameMap.get(triplet);
-            String setDisplayNumberFlag = channelSetDisPlayNumberMap.get(triplet);
-            String displayName = channelDisPlayNameValueMap.get(triplet);
-            String displayNumber = channelDisPlayNumberValueMap.get(triplet);
             InternalProviderData internalProviderData = channel.getInternalProviderData();
+            int frequency = 0;
+            if (internalProviderData != null) {
+                try {
+                    frequency = Integer.valueOf((String)internalProviderData.get(Channel.KEY_FREQUENCY));
+                } catch (Exception e) {
+                    Log.d(TAG, "updateChannels no frequency info Exception = " + e.getMessage());
+                }
+            } else {
+                Log.d(TAG, "updateChannels no frequency info");
+                continue;
+            }
+            String uniqueStr = getUniqueStrForChannel(originalNetworkId, transportStreamId, serviceId, frequency);
+            if (uniqueStr == null) {
+                continue;
+            }
+            Long rowId = channelMap.get(uniqueStr);
+            String setFavFlag = channelSetFavMap.get(uniqueStr);
+            String setSkipFlag = channelSetSkipMap.get(uniqueStr);
+            String favValue = channelFavValueMap.get(uniqueStr);
+            String favListValue = channelFavListValueMap.get(uniqueStr);
+            String skipValue = channelSkipValueMap.get(uniqueStr);
+            String setDisplayNameFlag = channelSetDisPlayNameMap.get(uniqueStr);
+            String setDisplayNumberFlag = channelSetDisPlayNumberMap.get(uniqueStr);
+            String displayName = channelDisPlayNameValueMap.get(uniqueStr);
+            String displayNumber = channelDisPlayNumberValueMap.get(uniqueStr);
             byte[] dataByte = null;
             if (setSkipFlag == null) {
                 setSkipFlag = "0";
@@ -282,7 +301,7 @@ public class TvContractUtils {
                 values.putNull(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_DATA);
             }
             if (DEBUG) {
-                Log.d(TAG, String.format("Mapping %d to %d", triplet, rowId));
+                Log.d(TAG, String.format("Mapping %s to %d", uniqueStr, rowId));
             }
             Uri uri = null;
             if (rowId == null) {
@@ -305,7 +324,7 @@ public class TvContractUtils {
                                     TvContract.buildChannelUri(rowId))
                                     .withValues(values)
                                     .build());
-                channelMap.remove(triplet);
+                channelMap.remove(uniqueStr);
             }
             /*if (channel.getChannelLogo() != null && !TextUtils.isEmpty(channel.getChannelLogo())) {
                 logos.put(TvContract.buildChannelLogoUri(uri), channel.getChannelLogo());
@@ -344,6 +363,16 @@ public class TvContractUtils {
                     PREFERENCES_FILE_KEY, Context.MODE_PRIVATE).edit();
             editor.apply();
         }
+    }
+
+    public static String getUniqueStrForChannel(int originalNetworkId, int transportStreamId, int serviceId, int frequency) {
+        String result = null;
+        try {
+            result = String.valueOf(frequency / 1000000) + "-" + String.valueOf(originalNetworkId) + "-" + String.valueOf(transportStreamId) + "-" + String.valueOf(serviceId);
+        } catch (Exception e) {
+            Log.d(TAG, "getUniqueStrForChannel Exception = " + e.getMessage());
+        }
+        return result;
     }
 
     public static boolean updateSingleChannelColumn(ContentResolver contentResolver, long id, String columnKey, Object value) {
