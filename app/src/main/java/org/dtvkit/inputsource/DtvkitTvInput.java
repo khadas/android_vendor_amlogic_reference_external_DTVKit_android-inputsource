@@ -157,8 +157,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     protected HandlerThread mHandlerThread = null;
     private SystemControlEvent mSystemControlEvent;
     protected Handler mInputThreadHandler = null;
-    private Semaphore mMainSessionSemaphore = new Semaphore(1);
-    private Semaphore mPipSessionSemaphore = new Semaphore(1);
+    volatile private Semaphore mMainSessionSemaphore = new Semaphore(1);
+    volatile private Semaphore mPipSessionSemaphore = new Semaphore(1);
+    final private static int SEMAPHORE_TIME_OUT = 3000;
 
     /*associate audio*/
     protected boolean mAudioADAutoStart = false;
@@ -2199,6 +2200,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private int mWinWidth = 0;
         private int mWinHeight = 0;
         private boolean mReleaseHandleMessage = false;
+        private boolean mAquireMainSemaphore = false;
+        private boolean mAquirePipSemaphore = false;
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -2490,23 +2493,44 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             try {
                 if (!mTuned) {
                     if (!mIsPip) {
-                        if (!mMainSessionSemaphore.tryAcquire(2000, TimeUnit.MILLISECONDS)) {//1000ms timeout
-                            Log.d(TAG, "onTuneByHandlerThreadHandle mMainSessionSemaphore timeout");
-                            mMainSessionSemaphore.release();
+                        if (!mMainSessionSemaphore.tryAcquire(SEMAPHORE_TIME_OUT, TimeUnit.MILLISECONDS)) {
+                            if (mReleased) {
+                                Log.d(TAG, "onTuneByHandlerThreadHandle mMainSessionSemaphore timeout but session released");
+                            } else {
+                                Log.d(TAG, "onTuneByHandlerThreadHandle mMainSessionSemaphore timeout");
+                            }
+                            return false;
                         } else {
-                            Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mMainSessionSemaphore ok");
+                            if (mReleased) {
+                                Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mMainSessionSemaphore ok but session released");
+                                return false;
+                            } else {
+                                mAquireMainSemaphore = true;
+                                Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mMainSessionSemaphore ok");
+                            }
                         }
                     } else {
-                        if (!mPipSessionSemaphore.tryAcquire(2000, TimeUnit.MILLISECONDS)) {//1000ms timeout
-                            Log.d(TAG, "onTuneByHandlerThreadHandle mPipSessionSemaphore timeout");
-                            mPipSessionSemaphore.release();
+                        if (!mPipSessionSemaphore.tryAcquire(SEMAPHORE_TIME_OUT, TimeUnit.MILLISECONDS)) {
+                            if (mReleased) {
+                                Log.d(TAG, "onTuneByHandlerThreadHandle mPipSessionSemaphore timeout but session released");
+                            } else {
+                                Log.d(TAG, "onTuneByHandlerThreadHandle mPipSessionSemaphore timeout");
+                            }
+                            return false;
                         } else {
-                            Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mPipSessionSemaphore ok");
+                            if (mReleased) {
+                                Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mPipSessionSemaphore ok but session released");
+                                return false;
+                            } else {
+                                mAquirePipSemaphore = true;
+                                Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mPipSessionSemaphore ok");
+                            }
                         }
                     }
                 }
             } catch (Exception e) {
                 Log.d(TAG, "onTuneByHandlerThreadHandle tryAcquire Exception = " + e.getMessage());
+                return false;
             }
 
             mTuned = true;
@@ -2660,7 +2684,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain || mIsPip) {
                     //release by message queue for current session
                     if (mMainHandle != null) {
-                        mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
+                        mMainHandle.sendMessageAtFrontOfQueue(mMainHandle.obtainMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY));
                     } else {
                         Log.i(TAG, "onRelease mMainHandle == null");
                     }
@@ -2691,10 +2715,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 playerStop();
                 playerSetSubtitlesOn(false);
                 playerSetTeletextOn(false, -1);
-                mMainSessionSemaphore.release();
             } else {
                 playerPipStop();
-                mPipSessionSemaphore.release();
             }
             finalReleaseWorkThread();
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
@@ -2724,6 +2746,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mLivingHandlerThread = null;
                 }
             }
+            if (!mIsPip) {
+                if (mAquireMainSemaphore) {
+                    Log.d(TAG, "finalReleaseWorkThread mMainSessionSemaphore release");
+                    mMainSessionSemaphore.release();
+                } else {
+                    Log.d(TAG, "finalReleaseWorkThread mMainSessionSemaphore not aquired");
+                }
+            } else {
+                if (mAquirePipSemaphore) {
+                    Log.d(TAG, "finalReleaseWorkThread mPipSessionSemaphore release");
+                    mPipSessionSemaphore.release();
+                } else {
+                    Log.d(TAG, "finalReleaseWorkThread mPipSessionSemaphore not aquired");
+                }
+            }
             Log.d(TAG, "finalReleaseWorkThread over , mIsPip = " + mIsPip);
         }
 
@@ -2733,7 +2770,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void sendDoReleaseMessage() {
             if (mHandlerThreadHandle != null) {
-                boolean result = mHandlerThreadHandle.sendEmptyMessage(MSG_DO_RELEASE);
+                boolean result = mHandlerThreadHandle.sendMessageAtFrontOfQueue(mHandlerThreadHandle.obtainMessage(MSG_DO_RELEASE));
                 Log.d(TAG, "sendDoReleaseMessage status = " + result);
             } else {
                 Log.d(TAG, "sendDoReleaseMessage null mHandlerThreadHandle");
@@ -4545,15 +4582,26 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (recordedProgram != null) {
                 try {
                     if (!mTuned) {
-                        if (!mMainSessionSemaphore.tryAcquire(2000, TimeUnit.MILLISECONDS)) {//1000ms timeout
-                            Log.d(TAG, "setTimeshiftPlay mMainSessionSemaphore timeout");
-                            mMainSessionSemaphore.release();
+                        if (!mMainSessionSemaphore.tryAcquire(SEMAPHORE_TIME_OUT, TimeUnit.MILLISECONDS)) {
+                            if (mReleased) {
+                                Log.d(TAG, "setTimeshiftPlay mMainSessionSemaphore timeout but session released");
+                            } else {
+                                Log.d(TAG, "setTimeshiftPlay mMainSessionSemaphore timeout");
+                            }
+                            return;
                         } else {
-                            Log.d(TAG, "onTuneByHandlerThreadHandle Acquire mMainSessionSemaphore ok");
+                            if (mReleased) {
+                                Log.d(TAG, "setTimeshiftPlay Acquire mMainSessionSemaphore ok but session released");
+                                return;
+                            } else {
+                                mAquireMainSemaphore = true;
+                                Log.d(TAG, "setTimeshiftPlay Acquire mMainSessionSemaphore ok");
+                            }
                         }
                     }
                 } catch (Exception e) {
                     Log.d(TAG, "setTimeshiftPlay tryAcquire Exception = " + e.getMessage());
+                    return;
                 }
                 mTuned = true;
                 if (getFeatureSupportFullPipFccArchitecture() && !mSurfaceSent && mSurface != null) {
