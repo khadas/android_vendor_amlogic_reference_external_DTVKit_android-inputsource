@@ -2770,7 +2770,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void sendDoReleaseMessage() {
             if (mHandlerThreadHandle != null) {
-                boolean result = mHandlerThreadHandle.sendMessageAtFrontOfQueue(mHandlerThreadHandle.obtainMessage(MSG_DO_RELEASE));
+                boolean result = mHandlerThreadHandle.sendMessage(mHandlerThreadHandle.obtainMessage(MSG_DO_RELEASE));
                 Log.d(TAG, "sendDoReleaseMessage status = " + result);
             } else {
                 Log.d(TAG, "sendDoReleaseMessage null mHandlerThreadHandle");
