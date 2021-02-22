@@ -2636,7 +2636,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart, false, 0, previousUriStr, nextUriStr).equals("ok");
             } else {
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler, INDEX_FOR_PIP);
-                playResult = playerPlay(INDEX_FOR_PIP, dvbUri, mAudioADAutoStart, false, 0, "", "").equals("ok");
+                playResult = playerPlay(INDEX_FOR_PIP, dvbUri, mAudioADAutoStart, true, 0, "", "").equals("ok");
             }
             if (playResult) {
                 if (mHandlerThreadHandle != null) {
