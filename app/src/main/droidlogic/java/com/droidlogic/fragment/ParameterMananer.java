@@ -1612,22 +1612,6 @@ public class ParameterMananer {
     public boolean importDatabase(String path) {
         boolean result = false;
         JSONObject resultObj = null;
-        boolean fileValid = false;
-        if (path != null) {
-            try {
-                File file = new File(path);
-                if (file != null && file.exists() && file.isFile()) {
-                    fileValid = true;
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "importDatabase file Exception = " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
-        if (!fileValid) {
-            Log.i(TAG, "importDatabase data not available");
-            return result;
-        }
         try {
             JSONArray args = new JSONArray();
             args.put(path);
