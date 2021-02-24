@@ -5304,7 +5304,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             JSONArray args = new JSONArray();
             args.put(index);
             JSONArray audioStreams = DtvkitGlueClient.getInstance().request("Player.getListOfAudioStreams", args).getJSONArray("data");
-            int undefinedIndex = 1;
+            int undefinedIndex = 0;
             for (int i = 0; i < audioStreams.length(); i++)
             {
                 JSONObject audioStream = audioStreams.getJSONObject(i);
@@ -5313,7 +5313,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Bundle bundle = new Bundle();
                 String audioLang = audioStream.getString("language");
                 if (TextUtils.isEmpty(audioLang) || ConstantManager.CONSTANT_UND_FLAG.equals(audioLang)) {
-                    audioLang = ConstantManager.CONSTANT_UND_VALUE + undefinedIndex;
+                    audioLang = ConstantManager.CONSTANT_UND_VALUE + ((undefinedIndex>0)?undefinedIndex:"");
                     undefinedIndex++;
                 } else if (ConstantManager.CONSTANT_QAA.equalsIgnoreCase(audioLang)) {
                     audioLang = ConstantManager.CONSTANT_ORIGINAL_AUDIO;
@@ -5453,7 +5453,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             JSONArray args = new JSONArray();
             args.put(index);
             JSONArray subtitleStreams = DtvkitGlueClient.getInstance().request("Player.getListOfSubtitleStreams", args).getJSONArray("data");
-            int undefinedIndex = 1;
+            int undefinedIndex = 0;
             for (int i = 0; i < subtitleStreams.length(); i++)
             {
                 Bundle bundle = new Bundle();
@@ -5488,7 +5488,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_SUBTITLE, trackId);
                 String subLang = subtitleStream.getString("language");
                 if (TextUtils.isEmpty(subLang) || ConstantManager.CONSTANT_UND_FLAG.equals(subLang)) {
-                    subLang = ConstantManager.CONSTANT_UND_VALUE + undefinedIndex;
+                    subLang = ConstantManager.CONSTANT_UND_VALUE + ((undefinedIndex>0)?undefinedIndex:"");
                     undefinedIndex++;
                 }
                 track.setLanguage(subLang);
@@ -5504,7 +5504,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             JSONArray args1 = new JSONArray();
             args1.put(index);
             JSONArray teletextStreams = DtvkitGlueClient.getInstance().request("Player.getListOfTeletextStreams", args1).getJSONArray("data");
-            undefinedIndex = 1;
+            undefinedIndex = 0;
             for (int i = 0; i < teletextStreams.length(); i++)
             {
                 Bundle bundle = new Bundle();
@@ -5522,7 +5522,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_SUBTITLE, trackId);
                 String teleLang = teletextStream.getString("language");
                 if (TextUtils.isEmpty(teleLang) || ConstantManager.CONSTANT_UND_FLAG.equals(teleLang)) {
-                    teleLang = ConstantManager.CONSTANT_UND_VALUE + undefinedIndex;
+                    teleLang = ConstantManager.CONSTANT_UND_VALUE + ((undefinedIndex>0)?undefinedIndex:"");
                     undefinedIndex++;
                 }
                 track.setLanguage(teleLang);
