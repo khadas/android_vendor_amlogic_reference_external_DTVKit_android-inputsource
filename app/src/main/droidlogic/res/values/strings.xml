@@ -119,4 +119,6 @@
     <string name="strSettingsFormatDialog_formatting_done">Formatting done !</string>
     <string name="strSettingsUpdateNetwork">Update network:</string>
     <string name="strSettingsUpdateNetworkUpdate">Update</string>
+    <string name="strSettingsAutoOrdering">Automatic Ordering:</string>
+    <string name="strSettingsAutoOrdering_enable">Enable</string>
 </resources>

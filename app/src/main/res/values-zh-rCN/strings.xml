@@ -68,6 +68,7 @@
     <string name="dvb_network_change">检测到码流更新, 正在重新搜索新频道!</string>
     <string name="dvb_network_change_confirm">搜索</string>
     <string name="dvb_network_change_cancel">取消</string>
+    <string name="operator_type_setting">运营商类型设置</string>
 
     <!-- pvr record delete -->
     <string name="pvr_record_confirm_delete_schedule">请先删除PVR录制计划和录制文件!</string>

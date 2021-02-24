@@ -10,9 +10,36 @@ import android.view.Window;
 import android.widget.RadioGroup;
 import android.widget.Button;
 import android.media.tv.TvInputInfo;
+import android.content.Context;
+import android.widget.Spinner;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.SimpleAdapter;
+import android.text.TextUtils;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.util.TypedValue;
+import android.widget.TextView;
+import android.view.WindowManager;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+import com.droidlogic.fragment.ParameterMananer;
 
 public class DtvkitDvbScanSelect extends Activity {
     private static final String TAG = "DtvkitDvbScanSelect";
@@ -40,13 +67,17 @@ public class DtvkitDvbScanSelect extends Activity {
 
     private DataMananer mDataMananer;
     private Intent mIntent = null;
-
+    private ParameterMananer mParameterMananer;
+    private Context mContext;
+    private int currentIndex = 0;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.select_search_activity);
+        mContext = this;
         mIntent = getIntent();
         mDataMananer = new DataMananer(this);
+        mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
         initLayout();
     }
 
@@ -94,6 +125,10 @@ public class DtvkitDvbScanSelect extends Activity {
         dvbc.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (mParameterMananer.checkIfGermanyCountry()) {
+                    JSONArray operTypeList = mParameterMananer.getOperatorsTypeList(ParameterMananer.SIGNAL_QAM);
+                    showOperatorTypeConfirmDialog(ParameterMananer.SIGNAL_QAM, mContext, operTypeList);
+                }
                 String pvrFlag = PvrStatusConfirmManager.read(DtvkitDvbScanSelect.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
                 if (pvrStatus != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
                     intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
@@ -128,6 +163,10 @@ public class DtvkitDvbScanSelect extends Activity {
         dvbs.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (mParameterMananer.checkIfGermanyCountry()) {
+                    JSONArray operTypeList = mParameterMananer.getOperatorsTypeList(ParameterMananer.SIGNAL_QPSK);
+                    showOperatorTypeConfirmDialog(ParameterMananer.SIGNAL_QPSK, mContext, operTypeList);
+                }
                 String pvrFlag = PvrStatusConfirmManager.read(DtvkitDvbScanSelect.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
                 if (pvrStatus != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
                     intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
@@ -197,5 +236,74 @@ public class DtvkitDvbScanSelect extends Activity {
                 dvbs.requestFocus();
                 break;
         }
+    }
+
+    private void showOperatorTypeConfirmDialog(final int tunerType, final Context context, final JSONArray operatorsTypeArray) {
+        Log.d(TAG, "showOperatorTypeConfirmDialog");
+        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        final AlertDialog alert = builder.create();
+        final View dialogView = View.inflate(context, R.layout.operator_type_setting, null);
+        final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
+        final ListView listView = (ListView) dialogView.findViewById(R.id.dialog_listview);
+        final List<HashMap<String, Object>> dataList = new ArrayList<HashMap<String, Object>>();
+        if (operatorsTypeArray != null && operatorsTypeArray.length() > 0) {
+            JSONObject operTypeObj = null;
+            String name = null;
+            for (int i = 0; i < operatorsTypeArray.length(); i++) {
+                HashMap<String, Object> map = new HashMap<String, Object>();
+                try {
+                    operTypeObj = operatorsTypeArray.getJSONObject(i);
+                    name = operTypeObj.getString("operators_name");
+                    map.put("name", name);
+                    dataList.add(map);
+                } catch (Exception e) {
+                    Log.d(TAG, "get operator type data Exception = " + e.getMessage());
+                }
+            }
+        } else {
+            Log.d(TAG, "showOperatorTypeConfirmDialog no operatorsTypeArray");
+            return;
+        }
+
+        SimpleAdapter adapter = new SimpleAdapter(context, dataList,
+                R.layout.operator_type_list,
+                new String[] {"name"},
+                new int[] {R.id.name});
+
+        listView.setAdapter(adapter);
+        listView.setSelection(currentIndex);
+        title.setText(R.string.operator_type_setting);
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, final int position, long id) {
+                Log.d(TAG, "showOperatorTypeConfirmDialog onItemClick position = " + position);
+                int index = mParameterMananer.getOperatorTypeIndex(tunerType);
+                if (index == position) {
+                    Log.d(TAG, "showOperatorTypeConfirmDialog same position = " + position);
+                    alert.dismiss();
+                    return;
+                }
+                Log.d(TAG, "showOperatorTypeConfirmDialog onItemClick position = " + position);
+                mParameterMananer.setOperatorType(tunerType, position);
+                currentIndex = position;
+                alert.dismiss();
+            }
+        });
+        alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                Log.d(TAG, "showOperatorTypeConfirmDialog onDismiss");
+            }
+        });
+
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        alert.setView(dialogView);
+        alert.show();
+        WindowManager.LayoutParams params = alert.getWindow().getAttributes();
+        params.width = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 500, context.getResources().getDisplayMetrics());
+        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        alert.getWindow().setAttributes(params);
+
     }
 }

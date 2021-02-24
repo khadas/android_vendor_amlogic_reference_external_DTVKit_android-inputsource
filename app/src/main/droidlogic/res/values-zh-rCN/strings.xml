@@ -118,4 +118,6 @@
     <string name="strSettingsFormatDialog_formatting_done">格式化完成 !</string>
     <string name="strSettingsUpdateNetwork">更新网络:</string>
     <string name="strSettingsUpdateNetworkUpdate">更新</string>
+    <string name="strSettingsAutoOrdering">自动排序:</string>
+    <string name="strSettingsAutoOrdering_enable">开</string>
 </resources>

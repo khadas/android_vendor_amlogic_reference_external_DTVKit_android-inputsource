@@ -146,6 +146,13 @@ public class ParameterMananer {
     public static final int DTV_TYPE_DVBC = 1;
     public static final int DTV_TYPE_ISDBT = 2;
 
+
+    public static final int SIGNAL_QPSK = 1; // digital satellite
+    public static final int SIGNAL_COFDM = 2; // digital terrestrial
+    public static final int SIGNAL_QAM   = 4; // digital cable
+    public static final int SIGNAL_ISDBT  = 5;
+    public static final int SIGNAL_ANALOG = 8;
+
     public static final String[] DIALOG_SET_ITEM_UNICABLE_KEY_LIST = {KEY_UNICABLE_SWITCH, KEY_USER_BAND, KEY_UB_FREQUENCY, KEY_POSITION};
 
     /*public static final String KEY_DTVKIT_COUNTRY = "dtvkit_country";
@@ -2884,6 +2891,117 @@ public class ParameterMananer {
         return result;
     }
 
+    public boolean checkIfGermanyCountry() {
+        final String GERMANY_ISO3_NAME = "deu";
+        String currentCountryName = getCurrentCountryIso3Name();
+        if (GERMANY_ISO3_NAME.equalsIgnoreCase(currentCountryName)) {
+            return true;
+        }
+        return false;
+    }
+
+    // operatorsType = [{"operators_name":"KDG","operators_value":0},{"operators_name":"Unitymedia","operators_value":1},{"operators_name":"Other Operators","operators_value":2}]
+    public JSONArray getOperatorsTypeList(int tunerType) {
+        JSONArray operatorsType = null;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(tunerType);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.GetOperatorsTypeList",args);
+        if (obj != null) {
+            Log.d(TAG, "getOperatorsTypeList resultObj:" + obj.toString());
+        } else {
+            Log.d(TAG, "getOperatorsTypeList then get null");
+            return operatorsType;
+        }
+            operatorsType = obj.getJSONArray("data");
+            for (int i = 0; i < operatorsType.length(); i++) {
+                JSONObject netWork = operatorsType.getJSONObject(i);
+                Log.i(TAG, "getOperatorsTypeList operatorsType = " + operatorsType.toString());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getOperatorsTypeList Exception = " + e.getMessage());
+        }
+            return operatorsType;
+    }
+
+    public int getOperatorTypeIndex(int tunerType) {
+        int index = 0;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(tunerType);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.GetOperatorsType", args);
+            if (obj != null) {
+                index = obj.getInt("data");
+                Log.d(TAG, "get operator type index =" + index);
+            } else {
+                Log.d(TAG, "can't get operator Type");
+                return index;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getOperatorTypeIndex Exception = " + e.getMessage());
+        }
+        return index;
+    }
+
+    public JSONObject setOperatorType(int tunerType, int operatorType) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(tunerType);
+            args.put(operatorType);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.SetOperatorsType", args);
+            if (resultObj != null) {
+                Log.d(TAG, "setOperatorType resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setOperatorType then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setOperatorType Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public boolean checkIfItalyCountry() {
+       final String ITALY_ISO3_NAME = "ita";
+       String currentCountryName = getCurrentCountryIso3Name();
+       if (ITALY_ISO3_NAME.equalsIgnoreCase(currentCountryName)) {
+           return true;
+       }
+       return false;
+    }
+
+    public boolean getAutomaticOrderingEnabled() {
+        boolean result = false;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getGetAutomaticOrderingEnabled", new JSONArray());
+            if (obj != null) {
+                result = obj.getBoolean("data");
+            } else {
+                Log.d(TAG, "getAutomaticOrderingEnabled obj is null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getAutomaticOrderingEnabled Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+        }
+        return result;
+    }
+
+    public void setAutomaticOrderingEnabled(boolean bOrdering) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(bOrdering);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.SetAutomaticOrderingEnabled", args);
+            if (resultObj != null) {
+                Log.d(TAG, "setAutomaticOrderingEnabled resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setAutomaticOrderingEnabled then get null");
+            }
+
+        } catch (Exception e) {
+            Log.d(TAG, "setAutomaticOrderingEnabled Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+        }
+    }
     /*
     * obj: {"accepted":true,"data":[{"blocked":false,"freq":706000000,"hidden":false,"is_data":false,"lcn":1,"name":"Supernova","network_id":12455,"radio":false,"sate_name":"","sig_name":"DVB-T","subtitles":false,"transponder":"","uri":"dvb:\/\/217c.6fd4.000e","video_codec":"MPEG","video_pid":0}]}
     */

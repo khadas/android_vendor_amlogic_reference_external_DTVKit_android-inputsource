@@ -167,6 +167,7 @@ public class DtvkitDvbSettings extends Activity {
         CheckBox recordFrequency = (CheckBox)findViewById(R.id.record_full_frequency);
         CheckBox adSupport = (CheckBox)findViewById(R.id.ad_audio_checkbox);
         Button networkUpdate = (Button)findViewById(R.id.network_update_button);
+        CheckBox auto_ordering = (CheckBox)findViewById(R.id.auto_ordering_checkbox);
         initSpinnerParameter();
         if (update) {
             Log.d(TAG, "initLayout update");
@@ -361,6 +362,12 @@ public class DtvkitDvbSettings extends Activity {
                 showNetworkInfoConfirmDialog(DtvkitDvbSettings.this, mParameterMananer.getNetworksOfRegion());
             }
         });
+
+       auto_ordering.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                mParameterMananer.setAutomaticOrderingEnabled(auto_ordering.isChecked());
+            }
+        });
     }
 
     private void initSpinnerParameter() {
@@ -375,6 +382,8 @@ public class DtvkitDvbSettings extends Activity {
         CheckBox recordFrequency = (CheckBox)findViewById(R.id.record_full_frequency);
         CheckBox adSupport = (CheckBox)findViewById(R.id.ad_audio_checkbox);
         LinearLayout networkUpdateContainer = (LinearLayout)findViewById(R.id.network_update);
+        LinearLayout autoOrderingContainer = (LinearLayout)findViewById(R.id.auto_ordering);
+        CheckBox auto_ordering = (CheckBox)findViewById(R.id.auto_ordering_checkbox);
         List<String> list = null;
         ArrayAdapter<String> adapter = null;
         int select = 0;
@@ -447,6 +456,13 @@ public class DtvkitDvbSettings extends Activity {
             networkUpdateContainer.setVisibility(View.VISIBLE);
         } else {
             networkUpdateContainer.setVisibility(View.GONE);
+        }
+
+        if (mParameterMananer.checkIfItalyCountry()) {
+            autoOrderingContainer.setVisibility(View.VISIBLE);
+            auto_ordering.setChecked(mParameterMananer.getAutomaticOrderingEnabled());
+        } else {
+            autoOrderingContainer.setVisibility(View.GONE);
         }
     }
 
