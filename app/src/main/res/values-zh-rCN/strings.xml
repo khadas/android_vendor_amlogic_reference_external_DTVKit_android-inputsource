@@ -70,6 +70,8 @@
     <string name="dvb_network_change_cancel">取消</string>
     <string name="operator_type_setting">运营商类型设置</string>
     <string name="automatic_searching_setting">自动搜台设置</string>
+    <string name="dvb_network_change_search_no_result">没有搜索到新节目！</string>
+    <string name="dvb_network_change_search_channel_unavailable">没有搜索到更多新节目 !</string>
 
     <!-- pvr record delete -->
     <string name="pvr_record_confirm_delete_schedule">请先删除PVR录制计划和录制文件!</string>

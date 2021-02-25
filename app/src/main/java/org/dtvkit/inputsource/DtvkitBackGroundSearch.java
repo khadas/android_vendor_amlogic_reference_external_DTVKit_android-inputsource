@@ -127,7 +127,8 @@ public class DtvkitBackGroundSearch {
             } else {
                 args.put(false);//nit
                 args.put(mFrequency);//hz
-                args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
+                //use auto to search all mode
+                args.put("AUTO"/*DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]*/);
                 args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE));
             }
             return args;
@@ -276,29 +277,63 @@ public class DtvkitBackGroundSearch {
         }
     }
 
-    private void stopMonitoringSync() {
+    private void stopMonitoringSync(boolean error) {
         mStartSync = false;
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(mReceiver);
         if (mBgCallback != null) {
-            String firstServiceName = "";
-            String firstServiceDisplayNumber = "";
             try {
-                firstServiceName = (mServiceList != null && mServiceList.length() > 0) ? mServiceList.getJSONObject(0).getString("name") : "";
-                firstServiceDisplayNumber = (mServiceList != null && mServiceList.length() > 0) ? String.format(Locale.ENGLISH, "%d", mServiceList.getJSONObject(0).getInt("lcn")) : "";
-            } catch (JSONException e) {
-                Log.e(TAG, "stopMonitoringSync firstService JSONException = " + e.getMessage());
-            }
-            try {
-                JSONObject mess = new JSONObject();
-                mess.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SAVE_FINISH);
-                mess.put(SINGLE_FREQUENCY_CHANNEL_NAME, firstServiceName);
-                mess.put(SINGLE_FREQUENCY_CHANNEL_DISPLAY_NUNMBER, firstServiceDisplayNumber);
+                JSONObject mess = getFirstTwoSearchedChannel(mFrequency, error);
                 mBgCallback.onMessageCallback(mess);
                 Log.i(TAG, "stopMonitoringSync onMessageCallback " + mess.toString());
-            } catch (JSONException e) {
-                Log.i(TAG, "stopMonitoringSync JSONException " + e.getMessage());
+            } catch (Exception e) {
+                Log.i(TAG, "stopMonitoringSync Exception " + e.getMessage());
             }
         }
+    }
+
+    private JSONObject getFirstTwoSearchedChannel(int frequency, boolean error) {
+        JSONObject result = null;
+        String firstServiceName = "";
+        String firstServiceDisplayNumber = "";
+        int foundFrequency = 0;
+        int foundCount = 0;
+        if (mServiceList == null || mServiceList.length() == 0 || error) {
+            try {
+                if (result == null) {
+                    result = new JSONObject();
+                    result.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SAVE_FINISH);
+                }
+            } catch (JSONException e) {
+                Log.i(TAG, "getFirstTwoSearchedChannel JSONException1 = " + e.getMessage());
+            }
+        } else {
+            try {
+                for (int i = 0; i < mServiceList.length(); i++) {
+                    firstServiceName = mServiceList.getJSONObject(i).getString("name");
+                    firstServiceDisplayNumber = String.format(Locale.ENGLISH, "%d", mServiceList.getJSONObject(i).getInt("lcn"));
+                    foundFrequency = mServiceList.getJSONObject(i).getInt("freq");
+                    if (foundFrequency == frequency) {
+                        if (result == null) {
+                            result = new JSONObject();
+                            result.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SAVE_FINISH);
+                        }
+                        result.put(SINGLE_FREQUENCY_CHANNEL_NAME + foundCount, firstServiceName);
+                        result.put(SINGLE_FREQUENCY_CHANNEL_DISPLAY_NUNMBER + foundCount, firstServiceDisplayNumber);
+                        foundCount++;
+                        if (foundCount >= 2) {
+                            break;
+                        }
+                    }
+                }
+                if (result == null) {
+                    result = new JSONObject();
+                    result.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SAVE_FINISH);
+                }
+            } catch (JSONException e) {
+                Log.i(TAG, "getFirstTwoSearchedChannel JSONException2 = " + e.getMessage());
+            }
+        }
+        return result;
     }
 
     private int getFoundServiceNumber() {
@@ -371,8 +406,9 @@ public class DtvkitBackGroundSearch {
         if (intent != null) {
             String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
             if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
-                mStartSync = false;
-                stopMonitoringSync();
+                stopMonitoringSync(false);
+            } else if (status.equals(EpgSyncJobService.SYNC_ERROR)) {
+                stopMonitoringSync(true);
             }
         } else {
             Log.d(TAG, "responseOnReceive null");

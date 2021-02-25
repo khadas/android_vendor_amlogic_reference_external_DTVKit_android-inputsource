@@ -125,6 +125,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.concurrent.TimeUnit;
+import java.util.Comparator;
+import java.util.Collections;
 
 import android.media.MediaCodec;
 
@@ -175,8 +177,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     protected int mAudioADMixingLevel = 50;
     protected int mAudioADVolume = 100;
 
-    private boolean mDvbNetworkChangeSearchStatus = false;
-    private boolean mParentControlMute = false;
+    volatile private boolean mDvbNetworkChangeSearchStatus = false;
+    private Channel mMainDvbChannel = null;
+    private Channel mPipDvbChannel = null;
 
     private enum PlayerState {
         STOPPED, PLAYING
@@ -647,11 +650,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     public final Session onCreateSession(String inputId) {
         Log.i(TAG, "onCreateSession " + inputId);
         initDtvkitTvInput();
-        /*if (mSession != null) {
-            mSession.releaseSignalHandler();
-            mSession.finalReleaseWorkThread();
-        }
-        mSession = new DtvkitTvInputSession(this);*/
         mDtvkitTvInputSessionCount++;
         DtvkitTvInputSession session = new DtvkitTvInputSession(this);
         addTunerSession(session);
@@ -2307,14 +2305,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             sendSetSurfaceMessage(null, null);
                             Log.d(TAG, "onSetSurface null");
                             mSurface = null;
-                            //doRelease();
                             sendDoReleaseMessage();
                             writeSysFs("/sys/class/video/video_inuse", "0");
                         }
                     } else {
                         if (mSurface != null && mSurface != surface) {
                             Log.d(TAG, "TvView swithed,  onSetSurface null first");
-                            //doRelease();
                             sendDoReleaseMessage();
                             //mHardware.setSurface(null, null);
                             sendSetSurfaceMessage(null, null);
@@ -2434,6 +2430,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public void onOverlayViewSizeChanged(int width, int height) {
+            Log.i(TAG, "onOverlayViewSizeChanged " + width + ", " + height + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             if (mView == null) {
                 mView = new DtvkitOverlayView(mContext, mMainHandle);
             }
@@ -2477,7 +2474,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
         public boolean onTune(Uri channelUri) {
-            Log.i(TAG, "onTune " + channelUri + "index = " + mCurrentDtvkitTvInputSessionIndex);
+            Log.i(TAG, "onTune " + channelUri + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             if (ContentUris.parseId(channelUri) == -1) {
                 Log.e(TAG, "DtvkitTvInputSession onTune invalid channelUri = " + channelUri);
                 return false;
@@ -2501,7 +2498,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         protected boolean onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
-            Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + "index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
+            Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + ", index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
 
             if (ContentUris.parseId(channelUri) == -1) {
                 Log.e(TAG, "onTuneByHandlerThreadHandle invalid channelUri = " + channelUri);
@@ -2708,7 +2705,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 } else {
                     //release directly as new session has created
-                    finalReleaseWorkThread();
+                    finalReleaseWorkThread(false, false);
                     doDestroyOverlay();
                 }
                 //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
@@ -2719,9 +2716,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.i(TAG, "onRelease over index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
         }
 
-        private void doRelease() {
-            Log.i(TAG, "doRelease index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
-            removeTunerSession(this);
+        private void doRelease(boolean keepSession, boolean needUpdate) {
+            Log.i(TAG, "doRelease index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip + ", keepSession = " + keepSession + ", needUpdate = " + needUpdate);
+            if (!keepSession) {
+                removeTunerSession(this);
+            }
             releaseSignalHandler();
             if (!mIsPip) {
                 removeScheduleTimeshiftRecordingTask();
@@ -2736,12 +2735,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else {
                 playerPipStop();
             }
-            finalReleaseWorkThread();
+            finalReleaseWorkThread(keepSession, needUpdate);
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
         }
 
-        private synchronized void finalReleaseWorkThread() {
-            Log.d(TAG, "finalReleaseWorkThread index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
+        private synchronized void finalReleaseWorkThread(boolean keepSession, boolean needUpdate) {
+            Log.d(TAG, "finalReleaseWorkThread index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip + ", keepSession = " + keepSession + ", needUpdate = " + needUpdate);
             mReleaseHandleMessage = true;
             if (mMainHandle != null) {
                 mMainHandle.removeCallbacksAndMessages(null);
@@ -2752,11 +2751,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //don't set it to none
             //mMainHandle = null;
             //mHandlerThreadHandle = null;
-            if (mDvbNetworkChangeSearchStatus && mHandlerThreadHandle != null) {
-                if (!(mStreamChangeUpdateDialog != null && mStreamChangeUpdateDialog.isShowing())) {
-                    mReleaseHandleMessage = false;
+            if (keepSession && mHandlerThreadHandle != null) {
+                mReleaseHandleMessage = false;
+                if (needUpdate && !(mStreamChangeUpdateDialog != null && mStreamChangeUpdateDialog.isShowing())) {
                     mHandlerThreadHandle.removeMessages(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
-                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG, MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
+                    mHandlerThreadHandle.sendMessageDelayed(mHandlerThreadHandle.obtainMessage(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG, (mIsPip ?  INDEX_FOR_PIP : INDEX_FOR_MAIN), 0), MSG_SHOW_STREAM_CHANGE_DELAY);
                 }
             } else {
                 if (mLivingHandlerThread != null) {
@@ -2792,6 +2791,25 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "sendDoReleaseMessage status = " + result);
             } else {
                 Log.d(TAG, "sendDoReleaseMessage null mHandlerThreadHandle");
+            }
+        }
+
+        private void sendDoReleaseSpecifiedSessionMessage(DtvkitTvInputSession session, boolean needKeep, boolean needUpdate) {
+            if (mHandlerThreadHandle != null) {
+                boolean result = mHandlerThreadHandle.sendMessage(mHandlerThreadHandle.obtainMessage(MSG_DO_RELEASE_SPECIFIELD_SESSION,
+                        needKeep ? 1 : 0, needUpdate ? 1 : 0, session));
+                Log.d(TAG, "sendDoReleaseSpecifiedSessionMessage status = " + result);
+            } else {
+                Log.d(TAG, "sendDoReleaseSpecifiedSessionMessage null mHandlerThreadHandle");
+            }
+        }
+
+        private void doReleaseSpecifiedSession(DtvkitTvInputSession session, boolean needKeep, boolean needUpdate) {
+            if (session != null) {
+                Log.d(TAG, "doReleaseSpecifiedSession");
+                session.doRelease(needKeep, needUpdate);
+            } else {
+                Log.d(TAG, "doReleaseSpecifiedSession null session");
             }
         }
 
@@ -3760,13 +3778,32 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.d(TAG, "DvbNetworkChange or DvbUpdatedService not dvbc or dvbt and is " + channelSignalType);
                         return;
                     }
-                    if (!mDvbNetworkChangeSearchStatus) {
+                    boolean needUpdate = false;
+                    if (mIsPip && !mDvbNetworkChangeSearchStatus) {
+                        mDvbNetworkChangeSearchStatus = true;
+                        DtvkitTvInputSession mainSession = getMainTunerSession();
+                        mPipDvbChannel = DtvkitTvInputSession.this.mTunedChannel;
+                        if (mainSession != null) {
+                            mMainDvbChannel = mainSession.mTunedChannel;
+                            sendDoReleaseSpecifiedSessionMessage(mainSession, true, false);
+                        } else {
+                            Log.i(TAG, "DvbNetworkChange or DvbUpdatedService no mainSession");
+                        }
+                        needUpdate = true;
+                    } else if ((!mIsPip && !mDvbNetworkChangeSearchStatus)) {
                         mDvbNetworkChangeSearchStatus = true;
                         DtvkitTvInputSession pipSession = getPipTunerSession();
-                        if (!mIsPip && pipSession != null) {
-                            pipSession.sendDoReleaseMessage();
+                        mMainDvbChannel = DtvkitTvInputSession.this.mTunedChannel;
+                        if (pipSession != null) {
+                            mPipDvbChannel = pipSession.mTunedChannel;
+                            sendDoReleaseSpecifiedSessionMessage(pipSession, true, false);
+                        } else {
+                            Log.i(TAG, "DvbNetworkChange or DvbUpdatedService no pipSession");
                         }
-                        sendDoReleaseMessage();
+                        needUpdate = true;
+                    }
+                    if (needUpdate) {
+                        sendDoReleaseSpecifiedSessionMessage(DtvkitTvInputSession.this, true, true);
                     }
                 }
                 else if (signal.equals("DvbUpdatedChannelData"))
@@ -3935,6 +3972,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_TRY_START_TIMESHIFT = 16;
         protected static final int MSG_UPDATE_TRACKS_AND_SELECT = 17;
         protected static final int MSG_SELECT_TRACK = 18;
+        protected static final int MSG_DO_RELEASE_SPECIFIELD_SESSION = 19;
 
         //audio ad
         public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
@@ -4020,10 +4058,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             doSetSurface((Map<String, Object>)msg.obj);
                             break;
                         case MSG_DO_RELEASE:
-                            doRelease();
+                            doRelease(false, false);
                             break;
                         case MSG_RELEASE_WORK_THREAD:
-                            finalReleaseWorkThread();
+                            finalReleaseWorkThread(false, false);
                             break;
                         case MSG_GET_SIGNAL_STRENGTH:
                             sendCurrentSignalInfomation();
@@ -4064,7 +4102,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         case MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG:
                             if (mMainHandle != null) {
                                 mMainHandle.removeMessages(MSG_DISPLAY_STREAM_CHANGE_DIALOG);
-                                mMainHandle.sendEmptyMessage(MSG_DISPLAY_STREAM_CHANGE_DIALOG);
+                                mMainHandle.sendMessage(mMainHandle.obtainMessage(MSG_DISPLAY_STREAM_CHANGE_DIALOG, (int)msg.arg1, 0));
                             }
                             break;
                         case MSG_TRY_START_TIMESHIFT:
@@ -4075,6 +4113,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             break;
                         case MSG_SELECT_TRACK:
                             doSelectTrack(msg.arg1, (String)msg.obj);
+                            break;
+                        case MSG_DO_RELEASE_SPECIFIELD_SESSION:
+                            doReleaseSpecifiedSession((DtvkitTvInputSession)msg.obj, msg.arg1 == 1 ? true : false, msg.arg2 == 1 ? true : false);
                             break;
                         case MSG_SCHEDULE_TIMESHIFT_RECORDING_TASK:
                             timeshiftRecordingTask();
@@ -4109,7 +4150,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
                             break;
                     }
-                    Log.d(TAG, "mHandlerThreadHandle    " + msg.what + ", sessionIndex" + mCurrentDtvkitTvInputSessionIndex + "done]]]");
+                    Log.d(TAG, "mHandlerThreadHandle    " + msg.what + ", sessionIndex" + mCurrentDtvkitTvInputSessionIndex + " done]]]");
                     return true;
                 }
             });
@@ -4371,7 +4412,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         if (mHandlerThreadHandle != null) {
                             mHandlerThreadHandle.removeCallbacksAndMessages(null);
                         }
-                        showSearchConfirmDialog(DtvkitTvInput.this, mTunedChannel);
+                        showSearchConfirmDialog(DtvkitTvInput.this, mTunedChannel, (int)msg.arg1);
                         break;
                     case MSG_SET_TELETEXT_MIX_NORMAL:
                         if (!mTeleTextMixNormal) {
@@ -7078,7 +7119,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }; */
 
-    private void showSearchConfirmDialog(final Context context, final Channel channel) {
+    private void showSearchConfirmDialog(final Context context, final Channel channel, final int index) {
         if (context == null || channel == null) {
             Log.d(TAG, "showSearchConfirmDialog null context or input");
             return;
@@ -7092,6 +7133,26 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         final Button confirm = (Button) dialogView.findViewById(R.id.confirm);
         final Button cancel = (Button) dialogView.findViewById(R.id.cancel);
         final int[] tempStatus = new int[1];//0 for flag that exit is pressed by user, 1 for exit by search over
+        String tempChannelSignalType;
+        int tempUpdateFrequency;
+        try {
+            tempChannelSignalType = channel.getInternalProviderData().get("channel_signal_type").toString();
+        } catch (Exception e) {
+            Log.i(TAG, "onMessageCallback channelSignalType Exception " + e.getMessage());
+            tempChannelSignalType = null;
+        }
+        try {
+            tempUpdateFrequency = Integer.valueOf(channel.getInternalProviderData().get("frequency").toString());
+        } catch (Exception e) {
+            Log.i(TAG, "onMessageCallback frequency Exception " + e.getMessage());
+            tempUpdateFrequency = -1;
+        }
+        final String channelSignalType = tempChannelSignalType;
+        final int updateFrequency = tempUpdateFrequency;
+        if (!TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2)) {
+            Log.d(TAG, "showSearchConfirmDialog not dvbc or dvbt and is " + channelSignalType);
+            return;
+        }
         final DtvkitBackGroundSearch.BackGroundSearchCallback callback = new DtvkitBackGroundSearch.BackGroundSearchCallback() {
             @Override
             public void onMessageCallback(JSONObject mess) {
@@ -7109,29 +7170,103 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             if (alert != null) {
                                 alert.dismiss();
                             }
-                            DtvkitTvInputSession session = getMainTunerSession();
-                            if (session != null) {
-                                Channel newChannel = null;
+                            DtvkitTvInputSession mainSession = getMainTunerSession();
+                            DtvkitTvInputSession pipSession = getPipTunerSession();
+                            DtvkitTvInputSession updateSession = null;
+                            DtvkitTvInputSession restoreSession = null;
+                            Channel restoreChannel = null;
+                            Channel newUpdateChannel = null;
+                            if (INDEX_FOR_MAIN == index) {
+                                updateSession = mainSession;
+                                restoreSession = pipSession;
+                                restoreChannel = mPipDvbChannel;
+                                mainSession.mPreviousBufferUri = null;
+                                mainSession.mNextBufferUri = null;
+                            } else if (INDEX_FOR_PIP == index) {
+                                updateSession = pipSession;
+                                restoreSession = mainSession;
+                                restoreChannel = mMainDvbChannel;
+                            }
+                            if (updateSession != null) {
                                 Uri channelUri = null;
-                                String serviceName = null;
+                                String serviceName0 = null;
                                 try {
-                                    serviceName = mess.getString(DtvkitBackGroundSearch.SINGLE_FREQUENCY_CHANNEL_NAME);
+                                    serviceName0 = mess.getString(DtvkitBackGroundSearch.SINGLE_FREQUENCY_CHANNEL_NAME + 0);
                                 } catch (Exception e) {
                                     Log.i(TAG, "onMessageCallback SINGLE_FREQUENCY_CHANNEL_NAME Exception " + e.getMessage());
                                 }
-                                if (!TextUtils.isEmpty(serviceName)) {
-                                    newChannel = TvContractUtils.getChannelByDisplayName(context.getContentResolver(), serviceName);
+                                if (!TextUtils.isEmpty(serviceName0)) {
+                                    newUpdateChannel = TvContractUtils.getChannelByDisplayName(context.getContentResolver(), serviceName0, updateFrequency);
                                 }
-                                if (newChannel != null) {
-                                    channelUri = TvContract.buildChannelUri(newChannel.getId());
+                                if (newUpdateChannel != null) {
+                                    channelUri = TvContract.buildChannelUri(newUpdateChannel.getId());
                                 }
                                 if (channelUri != null) {
-                                    session.onTune(channelUri);
-                                    session.notifyChannelRetuned(channelUri);
+                                    updateSession.onTune(channelUri);
+                                    updateSession.notifyChannelRetuned(channelUri);
                                     Log.d(TAG, "onMessageCallback notifyChannelRetuned " + channelUri);
                                 } else {
                                     mDvbNetworkChangeSearchStatus = false;
+                                    mMainDvbChannel = null;
+                                    mPipDvbChannel = null;
                                     Log.d(TAG, "onMessageCallback none channels");
+                                    Toast.makeText(
+                                            DtvkitTvInput.this,
+                                            R.string.dvb_network_change_search_no_result, Toast.LENGTH_SHORT)
+                                            .show();
+                                }
+                            }
+                            if (restoreSession != null && restoreChannel != null) {
+                                int restoreFrequency = -1;
+                                String serviceName1 = null;
+                                try {
+                                    restoreFrequency = Integer.valueOf(restoreChannel.getInternalProviderData().get("frequency").toString());
+                                } catch (Exception e) {
+                                    Log.i(TAG, "onMessageCallback restoreFrequency frequency Exception " + e.getMessage());
+                                }
+                                try {
+                                    serviceName1 = mess.getString(DtvkitBackGroundSearch.SINGLE_FREQUENCY_CHANNEL_NAME + 1);
+                                } catch (Exception e) {
+                                    Log.i(TAG, "onMessageCallback serviceName1 SINGLE_FREQUENCY_CHANNEL_NAME Exception " + e.getMessage());
+                                }
+                                if (restoreFrequency != updateFrequency) {
+                                    Uri restoreUri = TvContract.buildChannelUri(restoreChannel.getId());
+                                    restoreSession.onTune(restoreUri);
+                                    restoreSession.notifyChannelRetuned(restoreUri);
+                                    Log.d(TAG, "onMessageCallback restoreSession notifyChannelRetuned " + restoreUri);
+                                } else {
+                                    restoreChannel = null;
+                                    if (newUpdateChannel != null) {
+                                        /*List<Channel> allChannels = TvContractUtils.getChannels(context.getContentResolver());
+                                        List<Channel> sameFrequencyChannels = new ArrayList<Channel>();
+                                        for (Channel single : allChannels) {
+                                            int singleFrequency = Integer.valueOf(single.getInternalProviderData().get("frequency").toString());
+                                            if (singleFrequency == updateFrequency && newUpdateChannel.getId() != single.getId()) {
+                                                sameFrequencyChannels.add(single);
+                                            }
+                                        }
+                                        Collections.sort(sameFrequencyChannels, new TvContractUtils.CompareDisplayNumber());
+                                        if (sameFrequencyChannels != null && sameFrequencyChannels.size() > 0) {
+                                            restoreChannel = sameFrequencyChannels.get(0);
+                                        }*/
+                                        if (!TextUtils.isEmpty(serviceName1)) {
+                                            restoreChannel = TvContractUtils.getChannelByDisplayName(context.getContentResolver(), serviceName1, updateFrequency);
+                                        }
+                                    }
+                                    if (restoreChannel != null) {
+                                        Uri restoreUri = TvContract.buildChannelUri(restoreChannel.getId());
+                                        restoreSession.onTune(restoreUri);
+                                        restoreSession.notifyChannelRetuned(restoreUri);
+                                        Log.d(TAG, "onMessageCallback restoreSession new channel notifyChannelRetuned " + restoreUri);
+                                    } else {
+                                        Uri restoreUri = TvContract.buildChannelUri(-1);
+                                        restoreSession.notifyChannelRetuned(restoreUri);
+                                        Log.d(TAG, "onMessageCallback restoreSession doesn't have available channel");
+                                        Toast.makeText(
+                                                DtvkitTvInput.this,
+                                                R.string.dvb_network_change_search_channel_unavailable, Toast.LENGTH_SHORT)
+                                                .show();
+                                    }
                                 }
                             }
                             break;
@@ -7142,19 +7277,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             }
         };
-        String channelSignalType = null;
-        int frequency = -1;
-        try {
-            channelSignalType = channel.getInternalProviderData().get("channel_signal_type").toString();
-            frequency = Integer.valueOf(channel.getInternalProviderData().get("frequency").toString());
-        } catch (Exception e) {
-            Log.i(TAG, "onMessageCallback channelSignalType Exception " + e.getMessage());
-        }
-        if (!TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2)) {
-            Log.d(TAG, "showSearchConfirmDialog not dvbc or dvbt and is " + channelSignalType);
-            return;
-        }
-        final DtvkitBackGroundSearch setup = new DtvkitBackGroundSearch(context, channelSignalType, frequency, channel.getInputId(), callback);
+
+        final DtvkitBackGroundSearch setup = new DtvkitBackGroundSearch(context, channelSignalType, updateFrequency, channel.getInputId(), callback);
         setup.startSearch();
         title.setText(R.string.dvb_network_change);
         confirm.setVisibility(View.GONE);
@@ -7186,6 +7310,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     EpgSyncJobService.cancelAllSyncRequests(DtvkitTvInput.this);
                     EpgSyncJobService.requestImmediateSyncSearchedChannel(DtvkitTvInput.this, mInputId, true, new ComponentName(DtvkitTvInput.this, DtvkitEpgSync.class));
                     mDvbNetworkChangeSearchStatus = false;
+                    mMainDvbChannel = null;
+                    mPipDvbChannel = null;
                 }
             }
         });

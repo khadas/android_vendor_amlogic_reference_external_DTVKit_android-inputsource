@@ -51,6 +51,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Comparator;
+import java.util.Collections;
 
 /**
  * Static helper methods for working with {@link android.media.tv.TvContract}.
@@ -519,7 +521,7 @@ public class TvContractUtils {
      * @param displayName of channel.
      * @return An channel object with specified displayName.
      */
-    public static Channel getChannelByDisplayName(ContentResolver resolver, String displayName) {
+    public static Channel getChannelByDisplayName(ContentResolver resolver, String displayName, int frequency) {
         Cursor cursor = null;
         String selection = TvContract.Channels.COLUMN_DISPLAY_NAME + "=?";
         String[] selectionArgs = new String[]{displayName};
@@ -529,8 +531,18 @@ public class TvContractUtils {
                 Log.w(TAG, "getChannelByDisplayName No channel matches " + displayName);
                 return null;
             }
-            cursor.moveToNext();
-            return Channel.fromCursor(cursor);
+            Channel channel = null;
+            int foundFrequency = 0;
+            while (cursor != null && cursor.moveToNext()) {
+                channel = Channel.fromCursor(cursor);
+                foundFrequency = Integer.valueOf(channel.getInternalProviderData().get("frequency").toString());
+                if (frequency <= 0) {
+                    break;
+                } else if (frequency == foundFrequency) {
+                    break;
+                }
+            }
+            return channel;
         } catch (Exception e) {
             Log.w(TAG, "displayName Unable to get the channel " + displayName, e);
             return null;
@@ -737,6 +749,55 @@ public class TvContractUtils {
                 }
             }
             return null;
+        }
+    }
+
+    public static class CompareDisplayNumber implements Comparator<Channel> {
+
+        @Override
+        public int compare(Channel o1, Channel o2) {
+            int result = compareString(o1.getDisplayNumber(), o2.getDisplayNumber());
+            return result;
+        }
+
+        private int compareString(String a, String b) {
+            if (a == null) {
+                return b == null ? 0 : -1;
+            }
+            if (b == null) {
+                return 1;
+            }
+
+            int[] disnumbera = getMajorAndMinor(a);
+            int[] disnumberb = getMajorAndMinor(b);
+            if (disnumbera[0] != disnumberb[0]) {
+                return (disnumbera[0] - disnumberb[0]) > 0 ? 1 : -1;
+            } else if (disnumbera[1] != disnumberb[1]) {
+                return (disnumbera[1] - disnumberb[1]) > 0 ? 1 : -1;
+            }
+            return 0;
+        }
+
+        private int[] getMajorAndMinor(String disnumber) {
+            int[] result = {-1, -1};//major, minor
+            String[] splitone = (disnumber != null ? disnumber.split("-") : null);
+            if (splitone != null && splitone.length > 0) {
+                int length = 2;
+                if (splitone.length <= 2) {
+                    length = splitone.length;
+                } else {
+                    Log.d(TAG, "informal disnumber");
+                    return result;
+                }
+                for (int i = 0; i < length; i++) {
+                    try {
+                       result[i] = Integer.valueOf(splitone[i]);
+                    } catch (NumberFormatException e) {
+                        Log.d(TAG, splitone[i] + " not integer:" + e.getMessage());
+                    }
+                }
+            }
+            return result;
         }
     }
 }
