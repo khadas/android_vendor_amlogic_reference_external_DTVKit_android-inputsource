@@ -5311,7 +5311,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "getAudioTrackInfoList audioStream = " + audioStream.toString());
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_AUDIO, Integer.toString(audioStream.getInt("index")));
                 Bundle bundle = new Bundle();
-                String audioLang = audioStream.getString("language");
+                String audioLang = ISO639Data.parse(audioStream.getString("language"));
                 if (TextUtils.isEmpty(audioLang) || ConstantManager.CONSTANT_UND_FLAG.equals(audioLang)) {
                     audioLang = ConstantManager.CONSTANT_UND_VALUE + ((undefinedIndex>0)?undefinedIndex:"");
                     undefinedIndex++;
@@ -5486,7 +5486,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 }
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_SUBTITLE, trackId);
-                String subLang = subtitleStream.getString("language");
+                String subLang = ISO639Data.parse(subtitleStream.getString("language"));
                 if (TextUtils.isEmpty(subLang) || ConstantManager.CONSTANT_UND_FLAG.equals(subLang)) {
                     subLang = ConstantManager.CONSTANT_UND_VALUE + ((undefinedIndex>0)?undefinedIndex:"");
                     undefinedIndex++;
@@ -5520,7 +5520,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     continue;
                 }
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_SUBTITLE, trackId);
-                String teleLang = teletextStream.getString("language");
+                String teleLang = ISO639Data.parse(teletextStream.getString("language"));
                 if (TextUtils.isEmpty(teleLang) || ConstantManager.CONSTANT_UND_FLAG.equals(teleLang)) {
                     teleLang = ConstantManager.CONSTANT_UND_VALUE + ((undefinedIndex>0)?undefinedIndex:"");
                     undefinedIndex++;
