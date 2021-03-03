@@ -318,17 +318,30 @@ public class SysSettingManager {
         return result;
     }
 
-    public static boolean isDeviceExist(String devicePath) {
+    public boolean isDeviceExist(String devicePath) {
         boolean result = false;
         if (devicePath != null) {
-            try {
-                File file = new File(devicePath);
-                if (file != null && file.exists() && file.isDirectory()) {
-                    result = true;
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                List<Map<String, Object>> deviceList = getWriteableDevices();
+                if (deviceList != null && deviceList.size() > 0) {
+                    for (Map<String, Object> map : deviceList) {
+                        String path = (String) map.get(FileListManager.KEY_PATH);
+                        if (path.equals(devicePath)) {
+                            result = true;
+                            break;
+                        }
+                    }
                 }
-            } catch (Exception e) {
-                Log.e(TAG, "isDeviceExist Exception = " + e.getMessage());
-                e.printStackTrace();
+            } else {
+                try {
+                    File file = new File(devicePath);
+                    if (file != null && file.exists() && file.isDirectory()) {
+                        result = true;
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "isDeviceExist Exception = " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
         }
         return result;

@@ -442,7 +442,7 @@ public class DtvkitDvbSettings extends Activity {
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         pvr_path.setAdapter(adapter);
         String devicePath = mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
-        if (!SysSettingManager.isDeviceExist(devicePath)) {
+        if (!mSysSettingManager.isDeviceExist(devicePath)) {
             select = 0;
             mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, SysSettingManager.PVR_DEFAULT_PATH);
         } else {

@@ -1777,7 +1777,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     data = new InternalProviderData();
                     String currentPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
                     int pathExist = 0;
-                    if (SysSettingManager.isDeviceExist(currentPath)) {
+                    if (mSysSettingManager.isDeviceExist(currentPath)) {
                         pathExist = 1;
                     }
                     if (SysSettingManager.isMediaPath(currentPath)) {
