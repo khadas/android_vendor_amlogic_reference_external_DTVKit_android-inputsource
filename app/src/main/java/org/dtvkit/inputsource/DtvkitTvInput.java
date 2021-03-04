@@ -4264,23 +4264,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private void setBlockMute(boolean mute) {
             Log.d(TAG, "setBlockMute = " + mute + ", index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
             if (!getFeatureSupportFullPipFccArchitecture()) {
-                AudioManager audioManager = null;
-                if (mParentControlMute != mute) {
-                    if (mContext != null) {
-                        audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
-                    }
-                    if (audioManager != null) {
-                        Log.d(TAG, "setBlockMute = " + mute);
-                        if (mute) {
-                            audioManager.setParameters("hal_param_tv_mute=1");
-                        } else {
-                            audioManager.setParameters("hal_param_tv_mute=0");
-                        }
-                        mParentControlMute = mute;
-                    } else {
-                        Log.i(TAG, "setBlockMute can't get audioManager");
-                    }
-                }
+                playerSetMute(mute);
             } else {
                 if (!mIsPip) {
                     playerSetMute(mute);
