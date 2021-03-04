@@ -254,7 +254,7 @@ static void postDvbParam(const std::string& resource, const std::string json, in
 }
 
 DTVKitClientJni::DTVKitClientJni()  {
-    mDkSession = DTVKitHidlClient::connect(CONNECT_TYPE_HAL);
+    mDkSession = DTVKitHidlClient::connect(DTVKitHidlClient::CONNECT_TYPE_HAL);
     mDkSession->setListener(this);
 }
 

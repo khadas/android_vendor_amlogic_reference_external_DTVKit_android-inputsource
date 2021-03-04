@@ -54,7 +54,7 @@ DTVKitHidlClient::DTVKitHidlClient(connect_type_t type): mType(type)
 {
     mDTVKitServer = getDTVKitService();
     mDTVKitHidlCallback = new DTVKitHidlCallback(this);
-    mDTVKitServer->setCallback(mDTVKitHidlCallback, static_cast<ConnectType>(type));
+    mDTVKitServer->setCallback(mDTVKitHidlCallback, static_cast<DTVKitConnectType>(type));
 }
 
 DTVKitHidlClient::~DTVKitHidlClient()
@@ -73,7 +73,7 @@ void DTVKitHidlClient::reconnect()
     mDTVKitServer.clear();
     //reconnect to server
     mDTVKitServer = getDTVKitService();
-    mDTVKitServer->setCallback(mDTVKitHidlCallback, static_cast<ConnectType>(mType));
+    mDTVKitServer->setCallback(mDTVKitHidlCallback, static_cast<DTVKitConnectType>(mType));
 }
 
 void DTVKitHidlClient::disconnect()
