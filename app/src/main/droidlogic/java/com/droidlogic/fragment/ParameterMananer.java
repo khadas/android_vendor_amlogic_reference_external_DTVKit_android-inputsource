@@ -167,6 +167,12 @@ public class ParameterMananer {
     //add for associate audio setting
     public static final String TV_KEY_AD_SWITCH = "ad_switch";
 
+    //add automatic searching setting
+    public static final String AUTO_SEARCHING_MODE = "auto_searching_mode";
+    public static final String AUTO_SEARCHING_HOUR = "auto_searching_hour";
+    public static final String AUTO_SEARCHING_MINUTE = "auto_searching_minute";
+    public static final String AUTO_SEARCHING_REPTITION = "auto_searching_reptition";
+
     public ParameterMananer(Context context, DtvkitGlueClient client) {
         this.mContext = context;
         this.mDtvkitGlueClient = client;
@@ -559,6 +565,10 @@ public class ParameterMananer {
             case KEY_LNB_CUSTOM_HIGH_MAX:
                 defValue = VALUE_LNB_CUSTOM_MAX;
                 break;
+            case AUTO_SEARCHING_MODE:
+            case AUTO_SEARCHING_REPTITION:
+                defValue = 0;
+                break;
             default:
                 defValue = 0;
                 break;
@@ -634,6 +644,12 @@ public class ParameterMananer {
                 break;
             case KEY_LNB_CUSTOM:
                 defValue = "";
+                break;
+            case AUTO_SEARCHING_HOUR:
+                defValue = "4";
+                break;
+            case AUTO_SEARCHING_MINUTE:
+                defValue = "30";
                 break;
             default:
                 defValue = "";

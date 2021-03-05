@@ -121,4 +121,6 @@
     <string name="strSettingsUpdateNetworkUpdate">Update</string>
     <string name="strSettingsAutoOrdering">Automatic Ordering:</string>
     <string name="strSettingsAutoOrdering_enable">Enable</string>
+    <string name="strSettingsAutoSearching">Automatic Searching:</string>
+    <string name="strSettingsAutoSearchingSetting">Setting</string>
 </resources>

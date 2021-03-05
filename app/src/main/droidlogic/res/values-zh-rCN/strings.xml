@@ -120,4 +120,6 @@
     <string name="strSettingsUpdateNetworkUpdate">更新</string>
     <string name="strSettingsAutoOrdering">自动排序:</string>
     <string name="strSettingsAutoOrdering_enable">开</string>
+    <string name="strSettingsAutoSearching">自动搜索:</string>
+    <string name="strSettingsAutoSearchingSetting">设置</string>
 </resources>

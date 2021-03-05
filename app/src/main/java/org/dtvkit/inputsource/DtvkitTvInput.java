@@ -53,6 +53,8 @@ import android.content.Intent;
 import java.io.File;
 
 import android.media.AudioManager;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 
 import android.net.Uri;
 import android.os.Build;
@@ -80,6 +82,8 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.os.SystemProperties;
 import android.widget.Toast;
+import java.util.Calendar;
+import java.util.Date;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.dtvkit.companionlibrary.model.Channel;
@@ -91,6 +95,11 @@ import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import android.os.PowerManager;
+import java.lang.reflect.Method;
+import android.os.SystemClock;
+
 /*
 dtvkit
  */
@@ -217,7 +226,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private static String unZipDirStr = "vendorfont";
     private static String uncryptDirStr = "font";
     private static String fonts = "font";
-
+    private String intenAction = "org.dtvkit.inputsource.AutomaticSearching";
+    private AutomaticSearchingReceiver mAutomaticSearchingReceiver = null;
     public final int SUBCTL_HK_DVBSUB = 0x02;
     public final int SUBCTL_HK_TTXSUB = 0x04;
     public final int SUBCTL_HK_SCTE27 = 0x08;
@@ -242,6 +252,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     //stream change and update dialog
     private AlertDialog mStreamChangeUpdateDialog = null;
 
+    private AlarmManager mAlarmManager = null;
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
     }
@@ -296,6 +307,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mContentResolver = getContentResolver();
         mContentResolver.registerContentObserver(TvContract.Channels.CONTENT_URI, true, mContentObserver);
         mContentResolver.registerContentObserver(TvContract.RecordedPrograms.CONTENT_URI, true, mRecordingsContentObserver);
+        mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
 
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED);
@@ -306,6 +318,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         intentFilter1.addAction(Intent.ACTION_LOCKED_BOOT_COMPLETED);
         intentFilter1.addAction(Intent.ACTION_BOOT_COMPLETED);
         registerReceiver(mBootBroadcastReceiver, intentFilter1);
+
+        mAutomaticSearchingReceiver = new AutomaticSearchingReceiver();
+        IntentFilter intentFilter2 = new IntentFilter();
+        intentFilter2.addAction(intenAction);
+        registerReceiver(mAutomaticSearchingReceiver, intentFilter2);
         sendEmptyMessageToInputThreadHandler(MSG_START_CA_SETTINGS_SERVICE);
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY);
     }
@@ -591,6 +608,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         Log.i(TAG, "onDestroy");
         unregisterReceiver(mParentalControlsBroadcastReceiver);
         unregisterReceiver(mBootBroadcastReceiver);
+        unregisterReceiver(mAutomaticSearchingReceiver);
         mContentResolver.unregisterContentObserver(mContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingManagerHandler);
@@ -7074,19 +7092,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         final Button confirm = (Button) dialogView.findViewById(R.id.confirm);
         final Button cancel = (Button) dialogView.findViewById(R.id.cancel);
         final int[] tempStatus = new int[1];//0 for flag that exit is pressed by user, 1 for exit by search over
-        final DtvkitSingleFrequencySetup.SingleFrequencyCallback callback = new DtvkitSingleFrequencySetup.SingleFrequencyCallback() {
+        final DtvkitBackGroundSearch.BackGroundSearchCallback callback = new DtvkitBackGroundSearch.BackGroundSearchCallback() {
             @Override
             public void onMessageCallback(JSONObject mess) {
                 if (mess != null) {
                     Log.d(TAG, "onMessageCallback " + mess.toString());
                     String status = null;
                     try {
-                        status = mess.getString(DtvkitSingleFrequencySetup.SINGLE_FREQUENCY_STATUS_ITEM);
+                        status = mess.getString(DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_ITEM);
                     } catch (Exception e) {
                         Log.i(TAG, "onMessageCallback SINGLE_FREQUENCY_STATUS_ITEM Exception " + e.getMessage());
                     }
                     switch (status) {
-                        case DtvkitSingleFrequencySetup.SINGLE_FREQUENCY_STATUS_SAVE_FINISH: {
+                        case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SAVE_FINISH: {
                             tempStatus[0] = 1;
                             if (alert != null) {
                                 alert.dismiss();
@@ -7097,7 +7115,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 Uri channelUri = null;
                                 String serviceName = null;
                                 try {
-                                    serviceName = mess.getString(DtvkitSingleFrequencySetup.SINGLE_FREQUENCY_CHANNEL_NAME);
+                                    serviceName = mess.getString(DtvkitBackGroundSearch.SINGLE_FREQUENCY_CHANNEL_NAME);
                                 } catch (Exception e) {
                                     Log.i(TAG, "onMessageCallback SINGLE_FREQUENCY_CHANNEL_NAME Exception " + e.getMessage());
                                 }
@@ -7136,7 +7154,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.d(TAG, "showSearchConfirmDialog not dvbc or dvbt and is " + channelSignalType);
             return;
         }
-        final DtvkitSingleFrequencySetup setup = new DtvkitSingleFrequencySetup(context, channelSignalType, frequency, channel.getInputId(), callback);
+        final DtvkitBackGroundSearch setup = new DtvkitBackGroundSearch(context, channelSignalType, frequency, channel.getInputId(), callback);
         setup.startSearch();
         title.setText(R.string.dvb_network_change);
         confirm.setVisibility(View.GONE);
@@ -7247,5 +7265,158 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //select default for all conflict items
             mParameterMananer.dealRestLcnConflictAsDefault(array, 0);
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    public class AutomaticSearchingReceiver extends BroadcastReceiver {
+        private static final String TAG = "AutomaticSearchingReceiver";
+        //hold wake lock for 5s to ensure the coming recording schedules
+        private static final String WAKE_LOCK_NAME = "AutomaticSearchingReceiver";
+        private static final long WAKE_LOCK_TIMEOUT = 5000;
+        private PowerManager.WakeLock mWakeLock = null;
+        private PendingIntent mAlarmIntent = null;
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "Automatic searching onReceive");
+            if (intent == null) return;
+
+            String action = intent.getAction();
+            Log.d(TAG, "Automatic searching action =" + action);
+            if (action.equals(intenAction)) {
+                String strMode = intent.getStringExtra("mode");
+                int mode = Integer.parseInt(strMode);
+                //if need to light the screen please run the interface below
+                if (mode == 2) {//operate mode
+                    checkSystemWakeUp(context);
+                }
+                //avoid suspend when excute appointed pvr record
+                if (mode == 1) { //standby mode
+                    acquireWakeLock(context);
+                }
+
+                String strReptition = intent.getStringExtra("repetition");
+                int repetition = Integer.parseInt(strReptition);
+                setNextAlarm(context);
+                final DtvkitBackGroundSearch.BackGroundSearchCallback bgcallback = new DtvkitBackGroundSearch.BackGroundSearchCallback() {
+                    @Override
+                    public void onMessageCallback(JSONObject mess) {
+                        if (mess != null) {
+                            Log.d(TAG, "onMessageCallback " + mess.toString());
+                            String status = null;
+                            try {
+                                status = mess.getString(DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_ITEM);
+                            } catch (Exception e) {
+                                Log.i(TAG, "onMessageCallback SINGLE_FREQUENCY_STATUS_ITEM Exception " + e.getMessage());
+                            }
+
+                            switch (status) {
+                                case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SAVE_FINISH: {
+                                    Log.d(TAG, "waiting for doing something");
+                                    if (mode == 1) { //standby mode
+                                        releaseWakeLock();
+                                    }
+                                    break;
+                                }
+
+                            }
+
+                        }
+                    }
+
+                };
+
+                DtvkitBackGroundSearch dtvkitBgSearch = new DtvkitBackGroundSearch(context, mInputId, bgcallback);
+                dtvkitBgSearch.startBackGroundAutoSearch();
+            }
+        }
+
+        private void checkSystemWakeUp(Context context) {
+            PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            boolean isScreenOpen = powerManager.isScreenOn();
+            Log.d(TAG, "checkSystemWakeUp isScreenOpen = " + isScreenOpen);
+            //Resume if the system is suspending
+            if (!isScreenOpen) {
+                Log.d(TAG, "checkSystemWakeUp wakeUp the android.");
+                long time = SystemClock.uptimeMillis();
+                wakeUp(powerManager, time);
+            }
+        }
+
+        private void wakeUp(PowerManager powerManager, long time) {
+             try {
+                 Class<?> cls = Class.forName("android.os.PowerManager");
+                 Method method = cls.getMethod("wakeUp", long.class);
+                 method.invoke(powerManager, time);
+             } catch(Exception e) {
+                 e.printStackTrace();
+                 Log.d(TAG, "wakeUp Exception = " + e.getMessage());
+             }
+        }
+
+        private void goToSleep(PowerManager powerManager, long time) {
+             try {
+                 Class<?> cls = Class.forName("android.os.PowerManager");
+                 Method method = cls.getMethod("goToSleep", long.class);
+                 method.invoke(powerManager, time);
+             } catch(Exception e) {
+                 e.printStackTrace();
+                 Log.d(TAG, "goToSleep Exception = " + e.getMessage());
+             }
+        }
+
+        private  synchronized void acquireWakeLock(Context context) {
+            if (mWakeLock == null) {
+                PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+                mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_NAME);
+                if (mWakeLock != null) {
+                    Log.d(TAG, "acquireWakeLock " + WAKE_LOCK_NAME + " " + mWakeLock);
+                    if (mWakeLock.isHeld()) {
+                        mWakeLock.release();
+                    }
+                    mWakeLock.acquire();
+                }
+            }
+        }
+
+
+        private synchronized void releaseWakeLock() {
+            if (mWakeLock != null) {
+                Log.d(TAG, "releaseWakeLock " + WAKE_LOCK_NAME + " " + mWakeLock);
+                if (mWakeLock.isHeld()) {
+                    mWakeLock.release();
+                }
+                mWakeLock = null;
+            }
+        }
+
+        private void setNextAlarm(Context context) {
+            String hour = mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_HOUR);
+            String minute = mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_MINUTE);
+            int mode  = mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_MODE);
+            int repetition = mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_REPTITION);
+            Intent intent = new Intent(intenAction);
+            intent.putExtra("mode", mode+"");
+            intent.putExtra("repetition", repetition+"");
+            if (mAlarmIntent != null) {
+                mAlarmManager.cancel(mAlarmIntent);
+            }
+            mAlarmIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
+            Calendar cal = Calendar.getInstance();
+            long current = System.currentTimeMillis();
+            cal.setTimeInMillis(current);
+            cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hour));
+            cal.set(Calendar.MINUTE, Integer.parseInt(minute));
+            if (repetition == 0) {
+                long alarmtime = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY;
+                long alarmtime1 = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY * 7;
+                Log.d(TAG, "daily =" + new Date(alarmtime).toString() + "   weekly =" + new Date(alarmtime1).toString());
+                mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime/*wakeAt*/, mAlarmIntent);
+            } else if (repetition == 1) {
+                long alarmtime = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY * 7;
+                mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime/*wakeAt*/, mAlarmIntent);
+            }
+        }
+
     }
 }

@@ -35,7 +35,7 @@
         <LinearLayout
             android:id="@+id/country_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_margin="5dp"
             android:layout_weight="1"
             android:gravity="center_vertical"
@@ -58,7 +58,7 @@
         <LinearLayout
             android:id="@+id/main_audio_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_margin="5dp"
             android:layout_weight="1"
             android:orientation="horizontal"
@@ -81,7 +81,7 @@
         <LinearLayout
             android:id="@+id/assist_audio_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="horizontal"
             android:layout_margin="5dp"
             android:layout_weight="1"
@@ -104,7 +104,7 @@
         <LinearLayout
             android:id="@+id/main_subtitle_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="horizontal"
             android:layout_margin="5dp"
             android:layout_weight="1"
@@ -127,7 +127,7 @@
         <LinearLayout
             android:id="@+id/assist_subtitle_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="horizontal"
             android:layout_margin="5dp"
             android:layout_weight="1"
@@ -149,7 +149,7 @@
         <LinearLayout
             android:id="@+id/teletext_charset_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="horizontal"
             android:layout_margin="5dp"
             android:layout_weight="1"
@@ -171,7 +171,7 @@
         <LinearLayout
             android:id="@+id/hearing_impaired_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="horizontal"
             android:layout_margin="5dp"
             android:layout_weight="1"
@@ -193,7 +193,7 @@
         <LinearLayout
             android:id="@+id/storage_select_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="horizontal"
             android:layout_margin="5dp"
             android:layout_weight="1"
@@ -215,8 +215,9 @@
             <Button
                 android:id="@+id/storage_refresh"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="50dp"
                 android:gravity="center_vertical"
+                android:textAllCaps="false"
                 android:text="@string/strSettingsRefresh"/>
 
             <CheckBox
@@ -229,7 +230,7 @@
         <LinearLayout
             android:id="@+id/ad_audio"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="horizontal"
             android:layout_margin="5dp"
             android:layout_weight="1"
@@ -252,7 +253,7 @@
         <LinearLayout
             android:id="@+id/network_update"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="horizontal"
             android:layout_margin="5dp"
             android:layout_weight="1"
@@ -268,15 +269,16 @@
             <Button
                 android:id="@+id/network_update_button"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="50dp"
                 android:gravity="center_vertical"
+                android:textAllCaps="false"
                 android:text="@string/strSettingsUpdateNetworkUpdate" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/auto_ordering"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:orientation="horizontal"
             android:layout_margin="5dp"
             android:layout_weight="1"
@@ -295,6 +297,30 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:text="@string/strSettingsAutoOrdering_enable" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/auto_searching"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:orientation="horizontal"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/auto_searching_text"
+                android:layout_width="@dimen/dvb_language_text_width"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:text="@string/strSettingsAutoSearching" />
+
+            <Button
+                android:id="@+id/auto_searching_button"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:gravity="center_vertical"
+                android:textAllCaps="false"
+                android:text="@string/strSettingsAutoSearchingSetting" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

@@ -46,8 +46,8 @@ import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.dtvkit.companionlibrary.model.Channel;
 
-public class DtvkitSingleFrequencySetup {
-    private static final String TAG = "DtvkitSingleFrequencySetup";
+public class DtvkitBackGroundSearch {
+    private static final String TAG = "DtvkitBackGroundSearch";
     private static final boolean DEBUG = true;
 
     private DataMananer mDataMananer;
@@ -61,7 +61,7 @@ public class DtvkitSingleFrequencySetup {
     private boolean mIsDvbt2 = false;
     private int mFrequency = -1;//hz
     private String mInputId;
-    private SingleFrequencyCallback mSingleFrequencyCallback;
+    private BackGroundSearchCallback mBgCallback;
     private Handler mMainHandler = new Handler();
 
     public static final String SINGLE_FREQUENCY_STATUS_ITEM = "status_item";
@@ -96,13 +96,21 @@ public class DtvkitSingleFrequencySetup {
         }
     };
 
-    public DtvkitSingleFrequencySetup(Context context, String channelSignalType, int frequency, String inputId, SingleFrequencyCallback callback) {
+    public DtvkitBackGroundSearch(Context context, String channelSignalType, int frequency, String inputId, BackGroundSearchCallback callback) {
         mContext = context;
         mIsDvbt = !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC);
         mIsDvbt2 = TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2);
         mFrequency = frequency;
         mInputId = inputId;
-        mSingleFrequencyCallback = callback;
+        mBgCallback = callback;
+        mDataMananer = new DataMananer(context);
+    }
+
+    public DtvkitBackGroundSearch(Context context, String inputId, BackGroundSearchCallback callback) {
+        mContext = context;
+        mIsDvbt = true;
+        mInputId = inputId;
+        mBgCallback = callback;
         mDataMananer = new DataMananer(context);
     }
 
@@ -125,6 +133,35 @@ public class DtvkitSingleFrequencySetup {
             return args;
         } else {
             return null;
+        }
+    }
+
+    public void startBackGroundAutoSearch() {
+        startMonitoringSearch();
+        mFoundServiceNumber = 0;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(false); // Commit
+            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
+        } catch (Exception e) {
+            Log.i(TAG, "startBackGroundAutoSearch Failed to finish search " + e.getMessage());
+            return;
+        }
+
+        try {
+            JSONArray args = new JSONArray();
+            args.put(true);
+            if (args != null) {
+                String command = (mIsDvbt ? "Dvbt.startSearch" : "Dvbc.startSearch");
+                Log.d(TAG, "startBackGroundAutoSearch command = " + command + ", args = " + args.toString());
+                DtvkitGlueClient.getInstance().request(command, args);
+                mStartSearch = true;
+            } else {
+                stopSearch();
+            }
+        } catch (Exception e) {
+            Log.i(TAG, "startBackGroundAutoSearch search Exception " + e.getMessage());
+            stopSearch();
         }
     }
 
@@ -197,11 +234,11 @@ public class DtvkitSingleFrequencySetup {
 
     private void startMonitoringSearch() {
         DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
-        if (mSingleFrequencyCallback != null) {
+        if (mBgCallback != null) {
             try {
                 JSONObject mess = new JSONObject();
                 mess.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SEARCH_START);
-                mSingleFrequencyCallback.onMessageCallback(mess);
+                mBgCallback.onMessageCallback(mess);
                 Log.i(TAG, "startMonitoringSearch " + mess.toString());
             } catch (JSONException e) {
                 Log.i(TAG, "startMonitoringSearch JSONException " + e.getMessage());
@@ -211,11 +248,11 @@ public class DtvkitSingleFrequencySetup {
 
     private void stopMonitoringSearch() {
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
-        if (mSingleFrequencyCallback != null) {
+        if (mBgCallback != null) {
             try {
                 JSONObject mess = new JSONObject();
                 mess.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SEARCH_FINISH);
-                mSingleFrequencyCallback.onMessageCallback(mess);
+                mBgCallback.onMessageCallback(mess);
                 Log.i(TAG, "stopMonitoringSearch " + mess.toString());
             } catch (JSONException e) {
                 Log.i(TAG, "stopMonitoringSearch JSONException " + e.getMessage());
@@ -227,11 +264,11 @@ public class DtvkitSingleFrequencySetup {
         mStartSync = true;
         LocalBroadcastManager.getInstance(mContext).registerReceiver(mReceiver,
                 new IntentFilter(EpgSyncJobService.ACTION_SYNC_STATUS_CHANGED));
-        if (mSingleFrequencyCallback != null) {
+        if (mBgCallback != null) {
             try {
                 JSONObject mess = new JSONObject();
                 mess.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SAVE_START);
-                mSingleFrequencyCallback.onMessageCallback(mess);
+                mBgCallback.onMessageCallback(mess);
                 Log.i(TAG, "startMonitoringSync " + mess.toString());
             } catch (JSONException e) {
                 Log.i(TAG, "startMonitoringSync JSONException " + e.getMessage());
@@ -242,7 +279,7 @@ public class DtvkitSingleFrequencySetup {
     private void stopMonitoringSync() {
         mStartSync = false;
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(mReceiver);
-        if (mSingleFrequencyCallback != null) {
+        if (mBgCallback != null) {
             String firstServiceName = "";
             String firstServiceDisplayNumber = "";
             try {
@@ -256,7 +293,7 @@ public class DtvkitSingleFrequencySetup {
                 mess.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SAVE_FINISH);
                 mess.put(SINGLE_FREQUENCY_CHANNEL_NAME, firstServiceName);
                 mess.put(SINGLE_FREQUENCY_CHANNEL_DISPLAY_NUNMBER, firstServiceDisplayNumber);
-                mSingleFrequencyCallback.onMessageCallback(mess);
+                mBgCallback.onMessageCallback(mess);
                 Log.i(TAG, "stopMonitoringSync onMessageCallback " + mess.toString());
             } catch (JSONException e) {
                 Log.i(TAG, "stopMonitoringSync JSONException " + e.getMessage());
@@ -312,12 +349,12 @@ public class DtvkitSingleFrequencySetup {
             int progress = getSearchProcess(data);
             if (progress < 100) {
                 Log.d(TAG, "onSignal progress = " + progress);
-                if (mSingleFrequencyCallback != null) {
+                if (mBgCallback != null) {
                     try {
                         JSONObject mess = new JSONObject();
                         mess.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SEARCH_PROGRESS);
                         mess.put(SINGLE_FREQUENCY_STATUS_SEARCH_PROGRESS, progress);
-                        mSingleFrequencyCallback.onMessageCallback(mess);
+                        mBgCallback.onMessageCallback(mess);
                         Log.i(TAG, "onSignal search progress " + mess.toString());
                     } catch (JSONException e) {
                         Log.i(TAG, "onSignal JSONException1 " + e.getMessage());
@@ -342,7 +379,7 @@ public class DtvkitSingleFrequencySetup {
         }
     }
 
-    public interface SingleFrequencyCallback {
+    public interface BackGroundSearchCallback {
         void onMessageCallback(JSONObject mess);
     }
 }

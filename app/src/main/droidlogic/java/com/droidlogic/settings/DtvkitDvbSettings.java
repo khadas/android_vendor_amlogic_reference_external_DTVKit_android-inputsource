@@ -14,6 +14,10 @@ import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
+import android.widget.EditText;
+import android.widget.Toast;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.TextUtils;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -27,6 +31,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.content.BroadcastReceiver;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -37,6 +43,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Calendar;
+import java.util.Date;
 
 import com.droidlogic.fragment.ParameterMananer;
 
@@ -47,6 +55,7 @@ import android.content.ComponentName;
 import android.media.tv.TvInputInfo;
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.dtvkit.inputsource.DtvkitEpgSync;
+//import org.dtvkit.inputsource.AutomaticSearchingReceiver;
 
 import com.droidlogic.settings.SysSettingManager;
 import com.droidlogic.settings.PropSettingManager;
@@ -68,6 +77,7 @@ public class DtvkitDvbSettings extends Activity {
     private StorageStatusBroadcastReceiver mStorageStatusBroadcastReceiver = null;
     private String mCurrentFormattingDeviceId = null;
     private String mCurrentFormattingVolumeId = null;
+    private PendingIntent mAlarmIntent = null;
 
     protected static final int MSG_DO_FORMAT = 1;
     protected static final int MSG_FORMAT_DONE = 2;
@@ -77,6 +87,16 @@ public class DtvkitDvbSettings extends Activity {
     protected static final int PERIOD_SHOW_DONE = 1000;
     protected static final int PERIOD_SHOW_DONE_TIME_OUT = 10000;
     protected static final int PERIOD_RIGHT_NOW = 0;
+
+    private String intenAction = "org.dtvkit.inputsource.AutomaticSearching";
+    private int mAutoSearchingMode = 0;
+    private int mRepetition        = 0;
+    private String mHour           = "4";
+    private String mMinute         = "30";
+    private int mAlarmCnt          = 0;
+    private AlarmManager mAlarmManager;
+    private static final int DAILY = 0;
+    private static final int WEEKLY = 0;
 
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -119,6 +139,7 @@ public class DtvkitDvbSettings extends Activity {
         setContentView(R.layout.lanuage_settings);
         mParameterMananer = new ParameterMananer(this, mDtvkitGlueClient);
         mSysSettingManager = new SysSettingManager(this);
+        mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         updateStorageList();
         initLayout(false);
     }
@@ -168,6 +189,7 @@ public class DtvkitDvbSettings extends Activity {
         CheckBox adSupport = (CheckBox)findViewById(R.id.ad_audio_checkbox);
         Button networkUpdate = (Button)findViewById(R.id.network_update_button);
         CheckBox auto_ordering = (CheckBox)findViewById(R.id.auto_ordering_checkbox);
+        Button auto_searching = (Button)findViewById(R.id.auto_searching_button);
         initSpinnerParameter();
         if (update) {
             Log.d(TAG, "initLayout update");
@@ -368,6 +390,14 @@ public class DtvkitDvbSettings extends Activity {
                 mParameterMananer.setAutomaticOrderingEnabled(auto_ordering.isChecked());
             }
         });
+
+        auto_searching.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "Automatic Searching setting");
+                showAutomaticSearchingSettingDialog(DtvkitDvbSettings.this);
+            }
+        });
     }
 
     private void initSpinnerParameter() {
@@ -384,6 +414,7 @@ public class DtvkitDvbSettings extends Activity {
         LinearLayout networkUpdateContainer = (LinearLayout)findViewById(R.id.network_update);
         LinearLayout autoOrderingContainer = (LinearLayout)findViewById(R.id.auto_ordering);
         CheckBox auto_ordering = (CheckBox)findViewById(R.id.auto_ordering_checkbox);
+        LinearLayout autoSearchingContainer = (LinearLayout)findViewById(R.id.auto_searching);
         List<String> list = null;
         ArrayAdapter<String> adapter = null;
         int select = 0;
@@ -461,8 +492,11 @@ public class DtvkitDvbSettings extends Activity {
         if (mParameterMananer.checkIfItalyCountry()) {
             autoOrderingContainer.setVisibility(View.VISIBLE);
             auto_ordering.setChecked(mParameterMananer.getAutomaticOrderingEnabled());
+
+            autoSearchingContainer.setVisibility(View.VISIBLE);
         } else {
             autoOrderingContainer.setVisibility(View.GONE);
+            autoSearchingContainer.setVisibility(View.GONE);
         }
     }
 
@@ -711,5 +745,206 @@ public class DtvkitDvbSettings extends Activity {
         params.height = WindowManager.LayoutParams.WRAP_CONTENT;
         alert.getWindow().setAttributes(params);
         //alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
+    }
+
+    private void showAutomaticSearchingSettingDialog(final Context context) {
+        Log.d(TAG, "showNetworkInfoConfirmDialog");
+        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        final AlertDialog alert = builder.create();
+        final View dialogView = View.inflate(context, R.layout.automatic_searching_setting, null);
+        final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
+        Spinner mode = (Spinner)dialogView.findViewById(R.id.mode_spinner);
+        Spinner repetition = (Spinner)dialogView.findViewById(R.id.repetition_setting_spinner);
+        EditText hour = (EditText)dialogView.findViewById(R.id.hour_text);
+        EditText minute = (EditText)dialogView.findViewById(R.id.minute_text);
+
+        List<String> modeList = new ArrayList();
+        modeList.add("OFF");
+        modeList.add("standby mode");
+        modeList.add("operate mode");
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, modeList);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+        mode.setAdapter(adapter);
+        mode.setSelection(mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_MODE));
+
+        mode.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                Log.d(TAG, "mode onItemSelected position = " + position);
+                if (mAutoSearchingMode == position) {
+
+                } else {
+                    mAutoSearchingMode = position;
+                }
+
+                Log.d(TAG, "mAutoSearchingMode =" + mAutoSearchingMode);
+                mParameterMananer.saveIntParameters(mParameterMananer.AUTO_SEARCHING_MODE, mAutoSearchingMode);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // TODO Auto-generated method stub
+            }
+        });
+
+        List<String> repList = new ArrayList();
+        repList.add("daily");
+        repList.add("weekly");
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, repList);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+        repetition.setAdapter(adapter);
+        repetition.setSelection(mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_REPTITION));
+        repetition.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                Log.d(TAG, "repetition onItemSelected position = " + position);
+                if (mRepetition == position) {
+
+                } else {
+                    mRepetition = position;
+                }
+                Log.d(TAG, "mRepetition =" + mRepetition);
+                mParameterMananer.saveIntParameters(mParameterMananer.AUTO_SEARCHING_REPTITION, mRepetition);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // TODO Auto-generated method stub
+            }
+        });
+
+        hour.setText(mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_HOUR));
+        hour.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before,int count) {
+                Log.d(TAG, "hour onTextChanged start= " + start + "before =" + before + "count =" + count);
+                String strValue = s.toString();
+                if (strValue.equals(""))
+                    return;
+                int value = Integer.parseInt(strValue);
+                Log.d(TAG, "value = " + value);
+                if (value > 24 || value < 0) {
+                    Log.d(TAG, "input time isn't correct!");
+                    Toast.makeText(DtvkitDvbSettings.this, "input time isn't correct", 1).show();
+                }
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                Log.d(TAG, "hour beforeTextChanged start= " + start + "after =" + after + "count =" + count);
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                Log.d(TAG, "hour afterTextChanged = " +s.toString());
+                if (mHour.equals(s.toString())) {
+
+                } else {
+                    mHour = s.toString();
+                }
+
+                mParameterMananer.saveStringParameters(mParameterMananer.AUTO_SEARCHING_HOUR, mHour);
+            }
+
+        });
+
+        minute.setText(mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_MINUTE));
+
+        minute.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before,int count) {
+                Log.d(TAG, "minute onTextChanged start= " + start + "before =" + before + "count =" + count);
+                String strValue = s.toString();
+                if (strValue.equals(""))
+                    return;
+                int value = Integer.parseInt(strValue);
+                Log.d(TAG, "value = " + value);
+                if (value > 60 || value < 0) {
+                    Log.d(TAG, "input time isn't correct!");
+                    Toast.makeText(DtvkitDvbSettings.this, "input time isn't correct", 1).show();
+                }
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                Log.d(TAG, "minute beforeTextChanged start= " + start + "after =" + after + "count =" + count);
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (mMinute.equals(s.toString())) {
+
+                } else {
+                    mMinute = s.toString();
+                }
+
+                Log.d(TAG, "mMinute = " + mMinute);
+                mParameterMananer.saveStringParameters(mParameterMananer.AUTO_SEARCHING_MINUTE, mMinute);
+            }
+
+        });
+
+        title.setText(R.string.automatic_searching_setting);
+
+        alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                Log.d(TAG, "showAutomaticSearchingSettingDialog onDismiss");
+                updateAlarmTime();
+            }
+        });
+
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+        alert.setView(dialogView);
+        alert.show();
+        WindowManager.LayoutParams params = alert.getWindow().getAttributes();
+        params.width = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 500, context.getResources().getDisplayMetrics());
+        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        alert.getWindow().setAttributes(params);
+
+    }
+
+    private void updateAlarmTime() {
+        String hour = mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_HOUR);
+        String minute = mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_MINUTE);
+        int mode  = mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_MODE);
+        int repetition = mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_REPTITION);
+
+        Log.d(TAG, "mode:" + mode + "hour:" + hour + "minute = " + minute + "repetition =" + repetition);
+        if (mode == 0) {
+            Log.d(TAG, "automatic searching function is off");
+            return;
+        }
+        Intent intent = new Intent(intenAction);
+        intent.putExtra("mode", mode+"");
+        intent.putExtra("repetition", repetition+"");
+        if (mAlarmIntent != null) {
+            mAlarmManager.cancel(mAlarmIntent);
+        }
+        mAlarmIntent = PendingIntent.getBroadcast(DtvkitDvbSettings.this, 0, intent, 0);
+
+        Calendar cal = Calendar.getInstance();
+        long current = System.currentTimeMillis();
+        cal.setTimeInMillis(current);
+        cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hour));
+        cal.set(Calendar.MINUTE, Integer.parseInt(minute));
+
+        long alarmtime = cal.getTimeInMillis();
+        /*
+        if (repetition == DAILY) {//daily
+            mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, alarmtime, AlarmManager.INTERVAL_DAY, alarmIntent);
+        } else if (repetition == WEEKLY) { //weekly
+            mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, alarmtime, AlarmManager.INTERVAL_DAY * 7, alarmIntent);
+        }*/
+        Log.d(TAG, "current =" + new Date(current).toString() + "   alarmtime =" + new Date(alarmtime).toString());
+        if (current > alarmtime) {
+            if (repetition == DAILY) {//daily
+                mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime + AlarmManager.INTERVAL_DAY, mAlarmIntent);
+            } else if (repetition == WEEKLY) { //weekly
+                mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime + AlarmManager.INTERVAL_DAY * 7, mAlarmIntent);
+            }
+        } else {
+            mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime/*wakeAt*/, mAlarmIntent);
+        }
     }
 }
