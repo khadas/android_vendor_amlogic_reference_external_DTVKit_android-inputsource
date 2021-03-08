@@ -96,8 +96,8 @@ std::string DTVKitHidlClient::request(const std::string& resource, const std::st
     return result;
 }
 
-void DTVKitHidlClient::setAfd(int afd) {
-    mDTVKitServer->setAfd(afd);
+void DTVKitHidlClient::setAfd(int player, int afd) {
+    mDTVKitServer->setAfd(player, afd);
 }
 
 void DTVKitHidlClient::setSubtitleFlag(int flag) {

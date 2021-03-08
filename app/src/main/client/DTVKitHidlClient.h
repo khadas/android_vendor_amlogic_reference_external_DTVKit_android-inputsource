@@ -89,7 +89,7 @@ public:
     void disconnect();
     void setListener(const sp<DTVKitListener> &listener);
     std::string request(const std::string& resource, const std::string& json);
-    void setAfd(int afd);
+    void setAfd(int player, int afd);
     void setSubtitleFlag(int flag);
 
 private:

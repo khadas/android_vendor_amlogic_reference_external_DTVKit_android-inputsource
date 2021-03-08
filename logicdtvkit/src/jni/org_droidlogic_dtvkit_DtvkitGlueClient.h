@@ -38,7 +38,8 @@ enum {
     SUBTITLE_STOP,
     SUBTITLE_PAUSE,
     SUBTITLE_RESUME,
-    TELETEXT_EVENT
+    TELETEXT_EVENT,
+    SUBTITLE_TUNE,
 };
 
 typedef struct datablock_s {
@@ -65,7 +66,7 @@ public:
 
     static DTVKitClientJni *GetInstance();
     std::string request(const std::string& resource, const std::string& json);
-    void setAfd(int afd);
+    void setAfd(int player, int afd);
     void setSubtitleFlag(int flag);
 
 private:
@@ -84,7 +85,7 @@ class SubtitleDataListenerImpl : public SubtitleListener {
                 int videoWidth, int videoHeight, int cmd);
         virtual void onSubtitleDataEvent(int event, int id) {}
         void onSubtitleAvail(int avail) {};
-        void onSubtitleAfdEvent(int afd);
+        void onSubtitleAfdEvent(int dec_id, int afd);
         void onSubtitleDimension(int width, int height) {}
         void onSubtitleLanguage(std::string lang) {};
         void onSubtitleInfo(int what, int extra) {};

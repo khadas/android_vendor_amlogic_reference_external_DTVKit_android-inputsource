@@ -65,14 +65,14 @@ static jboolean g_bSubStatus = false;
 
 static void postSubtitleDataEx(int type, int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, const char *data);
 static void clearSubtitleDataEx();
-static void setAFDToDVBCore(uint8_t afd);
+static void setAFDToDVBCore(int dec_id, uint8_t afd);
 static void postMixVideoEvent(int event);
 static void setSubtitleOn(int pid, int type, int magazine, int page, int demuxId);
 static void setSubtitleOff();
 static void setSubtitlePause();
 static void setSubtitleResume();
 static void notitySubtitleTeletextEvent(int eventType);
-
+static void subtitleTune(int type, int param1, int param2, int param3);
 
 void SubtitleDataListenerImpl::onSubtitleEvent(const char *data, int size, int parserType,
             int x, int y, int width, int height,
@@ -84,8 +84,8 @@ void SubtitleDataListenerImpl::onSubtitleEvent(const char *data, int size, int p
     }
 }
 
-void SubtitleDataListenerImpl::onSubtitleAfdEvent(int afd) {
-    setAFDToDVBCore(afd);
+void SubtitleDataListenerImpl::onSubtitleAfdEvent(int dec_id, int afd) {
+    setAFDToDVBCore(dec_id, afd);
 
 }
 
@@ -213,10 +213,10 @@ static void clearCCSubtitleData()
 
 }
 
-static void setAFDToDVBCore(uint8_t afd) {
+static void setAFDToDVBCore(int dec_id, uint8_t afd) {
     ALOGV("AFD value = 0x%xdfrom subtitleserver", afd);
     if (mpDtvkitJni != NULL)
-        mpDtvkitJni->setAfd(afd);
+        mpDtvkitJni->setAfd(dec_id, afd);
 }
 
 static void postMixVideoEvent(int event) {
@@ -273,8 +273,8 @@ std::string DTVKitClientJni::request(const std::string& resource, const std::str
     return mDkSession->request(resource, json);
 }
 
-void DTVKitClientJni::setAfd(int afd) {
-    mDkSession->setAfd(afd);
+void DTVKitClientJni::setAfd(int player, int afd) {
+    mDkSession->setAfd(player, afd);
 }
 
 void DTVKitClientJni::setSubtitleFlag(int flag) {
@@ -347,6 +347,10 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
             case TELETEXT_EVENT:
                 ALOGD("event type = %d", parcel.event_type);
                 notitySubtitleTeletextEvent(parcel.event_type);
+            break;
+            case SUBTITLE_TUNE:
+                subtitleTune(parcel.bodyInt[0], parcel.bodyInt[1],
+                             parcel.bodyInt[2], parcel.bodyInt[3]);
             break;
             default:
                 ALOGD("get funname = %d", parcel.funname);
@@ -480,6 +484,15 @@ static void setSubtitleResume()
             DetachJniEnv();
         }
     }
+}
+
+static void subtitleTune(int type, int param1, int param2, int param3)
+{
+   ALOGD("SubtitleServiceCtl: subtitleTune(type:%d, params:%d,%d,%d)", type, param1, param2, param3);
+   if (mSubContext != nullptr)
+   {
+      mSubContext->setPipId(type + 1, param1);
+   }
 }
 
 static void attachSubtitleCtl(JNIEnv *env, jclass clazz __unused, jint flag)
