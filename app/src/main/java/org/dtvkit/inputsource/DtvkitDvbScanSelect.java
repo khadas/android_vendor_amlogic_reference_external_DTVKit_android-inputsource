@@ -125,7 +125,7 @@ public class DtvkitDvbScanSelect extends Activity {
         dvbc.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mParameterMananer.checkIfGermanyCountry()) {
+                if (mParameterMananer.checkIsGermanyCountry()) {
                     JSONArray operTypeList = mParameterMananer.getOperatorsTypeList(ParameterMananer.SIGNAL_QAM);
                     showOperatorTypeConfirmDialog(ParameterMananer.SIGNAL_QAM, mContext, operTypeList);
                 }
@@ -163,7 +163,7 @@ public class DtvkitDvbScanSelect extends Activity {
         dvbs.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mParameterMananer.checkIfGermanyCountry()) {
+                if (mParameterMananer.checkIsGermanyCountry()) {
                     JSONArray operTypeList = mParameterMananer.getOperatorsTypeList(ParameterMananer.SIGNAL_QPSK);
                     showOperatorTypeConfirmDialog(ParameterMananer.SIGNAL_QPSK, mContext, operTypeList);
                 }

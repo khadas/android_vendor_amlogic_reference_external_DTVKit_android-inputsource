@@ -489,13 +489,16 @@ public class DtvkitDvbSettings extends Activity {
             networkUpdateContainer.setVisibility(View.GONE);
         }
 
-        if (mParameterMananer.checkIfItalyCountry()) {
+        if (mParameterMananer.checkIsItalyCountry()) {
             autoOrderingContainer.setVisibility(View.VISIBLE);
             auto_ordering.setChecked(mParameterMananer.getAutomaticOrderingEnabled());
-
-            autoSearchingContainer.setVisibility(View.VISIBLE);
         } else {
             autoOrderingContainer.setVisibility(View.GONE);
+        }
+
+        if (mParameterMananer.checkIsItalyCountry() || mParameterMananer.checkIsNordigCountry()) {
+            autoSearchingContainer.setVisibility(View.VISIBLE);
+        } else {
             autoSearchingContainer.setVisibility(View.GONE);
         }
     }
@@ -894,7 +897,7 @@ public class DtvkitDvbSettings extends Activity {
             }
         });
 
-        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         alert.setView(dialogView);
         alert.show();
         WindowManager.LayoutParams params = alert.getWindow().getAttributes();

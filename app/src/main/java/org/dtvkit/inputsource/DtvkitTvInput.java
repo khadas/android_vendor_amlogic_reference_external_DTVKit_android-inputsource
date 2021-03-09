@@ -2667,6 +2667,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     userDataStatus(true);
                     playerInitAssociateDualSupport();
                 }
+
+                try {
+                    String signalType = tunedChannel.getInternalProviderData().get("channel_signal_type").toString();
+                    mParameterMananer.saveStringParameters(ParameterMananer.AUTO_SEARCHING_SIGNALTYPE, signalType);
+                } catch(Exception e) {
+                    Log.i(TAG, "SignalType Exception " + e.getMessage());
+                }
             } else {
                 DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
                 mTunedChannel = null;
@@ -7452,7 +7459,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
                 };
 
-                DtvkitBackGroundSearch dtvkitBgSearch = new DtvkitBackGroundSearch(context, mInputId, bgcallback);
+                String signalType = "";
+                boolean bIsDvbt = false;
+                signalType = mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_SIGNALTYPE);
+                Log.d(TAG, "signalType = " + signalType);
+                bIsDvbt = signalType.equals("DVB-T") ? true : false;
+                DtvkitBackGroundSearch dtvkitBgSearch = new DtvkitBackGroundSearch(context, bIsDvbt, mInputId, bgcallback);
                 dtvkitBgSearch.startBackGroundAutoSearch();
             }
         }
@@ -7535,11 +7547,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             cal.set(Calendar.MINUTE, Integer.parseInt(minute));
             if (repetition == 0) {
                 long alarmtime = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY;
-                long alarmtime1 = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY * 7;
-                Log.d(TAG, "daily =" + new Date(alarmtime).toString() + "   weekly =" + new Date(alarmtime1).toString());
+                Log.d(TAG, "daily =" + new Date(alarmtime).toString());
                 mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime/*wakeAt*/, mAlarmIntent);
             } else if (repetition == 1) {
                 long alarmtime = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY * 7;
+                Log.d(TAG, "weekly =" + new Date(alarmtime).toString());
                 mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime/*wakeAt*/, mAlarmIntent);
             }
         }

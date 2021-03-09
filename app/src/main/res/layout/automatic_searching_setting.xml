@@ -61,31 +61,31 @@
                 android:gravity="center_vertical"
                 android:text="@string/time_setting" />
 
-		    <EditText
-		        android:id="@+id/hour_text"
+            <EditText
+                android:id="@+id/hour_text"
                 android:layout_width="@dimen/dvb_language_text_width"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:ems="10"
-		        android:gravity="center|center_horizontal"
-		        android:inputType="number" />
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ems="10"
+                android:gravity="center|center_horizontal"
+                android:inputType="number" />
 
-		    <TextView
-		        android:id="@+id/textView"
+            <TextView
+                android:id="@+id/textView"
                 android:layout_width="@dimen/dvb_language_text_width"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:gravity="center|center_horizontal"
-		        android:text=":" />
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center|center_horizontal"
+                android:text=":" />
 
-		    <EditText
-		        android:id="@+id/minute_text"
+            <EditText
+                android:id="@+id/minute_text"
                 android:layout_width="@dimen/dvb_language_text_width"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:ems="10"
-		        android:gravity="center|center_horizontal"
-		        android:inputType="number" />
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ems="10"
+                android:gravity="center|center_horizontal"
+                android:inputType="number" />
         </LinearLayout>
 
         <LinearLayout

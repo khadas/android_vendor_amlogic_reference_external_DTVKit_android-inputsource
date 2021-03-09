@@ -168,10 +168,11 @@ public class ParameterMananer {
     public static final String TV_KEY_AD_SWITCH = "ad_switch";
 
     //add automatic searching setting
-    public static final String AUTO_SEARCHING_MODE = "auto_searching_mode";
-    public static final String AUTO_SEARCHING_HOUR = "auto_searching_hour";
-    public static final String AUTO_SEARCHING_MINUTE = "auto_searching_minute";
-    public static final String AUTO_SEARCHING_REPTITION = "auto_searching_reptition";
+    public static final String AUTO_SEARCHING_MODE       = "auto_searching_mode";
+    public static final String AUTO_SEARCHING_HOUR       = "auto_searching_hour";
+    public static final String AUTO_SEARCHING_MINUTE     = "auto_searching_minute";
+    public static final String AUTO_SEARCHING_REPTITION  = "auto_searching_reptition";
+    public static final String AUTO_SEARCHING_SIGNALTYPE = "channel_signal_type";
 
     public ParameterMananer(Context context, DtvkitGlueClient client) {
         this.mContext = context;
@@ -2907,7 +2908,7 @@ public class ParameterMananer {
         return result;
     }
 
-    public boolean checkIfGermanyCountry() {
+    public boolean checkIsGermanyCountry() {
         final String GERMANY_ISO3_NAME = "deu";
         String currentCountryName = getCurrentCountryIso3Name();
         if (GERMANY_ISO3_NAME.equalsIgnoreCase(currentCountryName)) {
@@ -2978,7 +2979,7 @@ public class ParameterMananer {
         return resultObj;
     }
 
-    public boolean checkIfItalyCountry() {
+    public boolean checkIsItalyCountry() {
        final String ITALY_ISO3_NAME = "ita";
        String currentCountryName = getCurrentCountryIso3Name();
        if (ITALY_ISO3_NAME.equalsIgnoreCase(currentCountryName)) {
@@ -2986,6 +2987,21 @@ public class ParameterMananer {
        }
        return false;
     }
+
+    //Norway, Finland, Sweden, Iceland, Denmark are Nordig;
+    public boolean checkIsNordigCountry() {
+        boolean is_nordig = false;
+
+        try {
+            JSONArray args = new JSONArray();
+            is_nordig = DtvkitGlueClient.getInstance().request("Dvb.isNordigCountry", args).getBoolean("data");
+            Log.i(TAG, "getCurrentCountryIsNordig:" + is_nordig);
+        } catch (Exception e) {
+            Log.e(TAG, "getCurrentCountryIsNordig " + e.getMessage());
+        }
+        return is_nordig;
+    }
+
 
     public boolean getAutomaticOrderingEnabled() {
         boolean result = false;

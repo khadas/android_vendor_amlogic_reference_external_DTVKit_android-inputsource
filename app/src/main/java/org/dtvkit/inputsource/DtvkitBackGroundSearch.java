@@ -106,9 +106,9 @@ public class DtvkitBackGroundSearch {
         mDataMananer = new DataMananer(context);
     }
 
-    public DtvkitBackGroundSearch(Context context, String inputId, BackGroundSearchCallback callback) {
+    public DtvkitBackGroundSearch(Context context, boolean isdvbt, String inputId, BackGroundSearchCallback callback) {
         mContext = context;
-        mIsDvbt = true;
+        mIsDvbt = isdvbt;
         mInputId = inputId;
         mBgCallback = callback;
         mDataMananer = new DataMananer(context);
