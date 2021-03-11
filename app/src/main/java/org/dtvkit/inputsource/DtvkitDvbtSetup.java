@@ -264,7 +264,7 @@ public class DtvkitDvbtSetup extends Activity {
                         break;
                     }
                     case MSG_FINISH_SEARCH: {
-                        onSearchFinished(msg.arg1 == 1);
+                        prepareSearchFinished(msg.arg1 == 1);
                         break;
                     }
                     case MSG_ON_SIGNAL: {
@@ -740,12 +740,106 @@ public class DtvkitDvbtSetup extends Activity {
         }
     }
 
+    private void prepareSearchFinished(boolean skipConfirmNetwork) {
+        boolean needSetTargetRegion = false;
+        boolean autoSearch = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE) == DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO;
+        JSONArray array = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_COUNTRY, -1, -1, -1);
+        if (mParameterMananer.needConfirmTargetRegion(array)) {
+            needSetTargetRegion = true;
+        }
+        if (autoSearch && needSetTargetRegion && !skipConfirmNetwork) {
+            final TargetRegionManager regionManager = new TargetRegionManager(DtvkitDvbtSetup.this);
+            regionManager.setRegionCallback(new TargetRegionManager.TargetRegionsCallbacks() {
+                @Override
+                public Map<String, Integer> requestRegionList(int target_id) {
+                    HashMap<String, Integer> map = new HashMap<String, Integer>();
+                    JSONArray array = null;
+                    switch (target_id) {
+                        case TargetRegionManager.TARGET_REGION_COUNTRY:
+                            array = mParameterMananer.getTargetRegions(target_id, -1, -1, -1);
+                            break;
+                        case TargetRegionManager.TARGET_REGION_PRIMARY:
+                            array = mParameterMananer.getTargetRegions(target_id,
+                                        regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
+                                        -1, -1);
+                            break;
+                        case TargetRegionManager.TARGET_REGION_SECONDARY:
+                            array = mParameterMananer.getTargetRegions(target_id,
+                                        regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
+                                        regionManager.getRegionCode(regionManager.TARGET_REGION_PRIMARY),
+                                        -1);
+                            break;
+                        case TargetRegionManager.TARGET_REGION_TERTIARY:
+                            array = mParameterMananer.getTargetRegions(target_id,
+                                        regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
+                                        regionManager.getRegionCode(regionManager.TARGET_REGION_PRIMARY),
+                                        regionManager.getRegionCode(regionManager.TARGET_REGION_SECONDARY));
+                            break;
+                    }
+                    if (array != null && array.length() > 0) {
+                        JSONObject region = null;
+                        String region_name = null;
+                        int region_code = -1;
+                        for (int i = 0; i < array.length(); i++) {
+                            region = mParameterMananer.getJSONObjectFromJSONArray(array, i);
+                            region_name = mParameterMananer.getTargetRegionName(target_id, region);
+                            region_code = mParameterMananer.getTargetRegionCode(target_id, region);
+                            map.put(region_name, region_code);
+                        }
+                    } else {
+                        Log.d(TAG, "No regions for target_id " + target_id);
+                    }
+                    if (map.size() > 0)
+                        return map;
+                    return null;
+                }
+
+                @Override
+                public boolean onRegionSelected(int target_id, int selection_id) {
+                    return true;
+                }
+
+                @Override
+                public void onFinishWithSelections(int country, int primary, int secondary, int tertiary) {
+                    if (country != -1) {
+                        mParameterMananer.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_COUNTRY, country);
+                    }
+
+                    if (primary != -1) {
+                        mParameterMananer.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_PRIMARY, primary);
+                    }
+                    if (secondary != -1) {
+                        mParameterMananer.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_SECONDARY, secondary);
+                    }
+                    if (tertiary != -1) {
+                        mParameterMananer.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_TERTIARY, tertiary);
+                    }
+                    onSearchFinished(skipConfirmNetwork);
+                }
+            });
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    regionManager.start();
+                }
+            });
+        } else {
+            onSearchFinished(skipConfirmNetwork);
+        }
+
+    }
+
     private void onSearchFinished(boolean skipConfirmNetwork) {
         mStartSearch = false;
         enableStopSearchButton(false);
         setSearchStatus("Finishing search", "");
         setSearchProgressIndeterminate(true);
         stopMonitoringSearch();
+
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit

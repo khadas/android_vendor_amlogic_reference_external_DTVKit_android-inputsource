@@ -91,4 +91,12 @@
     <string name="ci_profile_channel_updating">CI 频道正在更新，请稍后!</string>
     <string name="ci_profile_channel_update_confirm">更新</string>
     <string name="ci_profile_channel_update_cancel">取消</string>
+
+    <!-- TargetRegion -->
+    <string name="target_region_title">设置偏好区域</string>
+    <string name="primary_region">主要区域</string>
+    <string name="secondary_region">二级区域</string>
+    <string name="tertiary_region">三级区域</string>
+    <string name="no_sub_regions">无次级区域</string>
+    <string name="target_region_country">国家</string>
 </resources>

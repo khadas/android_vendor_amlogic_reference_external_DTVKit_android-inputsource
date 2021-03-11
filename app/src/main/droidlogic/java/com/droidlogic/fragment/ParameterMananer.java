@@ -23,6 +23,8 @@ import android.util.Log;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.dtvkit.inputsource.DataMananer;
+import org.dtvkit.inputsource.ISO639Data;
+import org.dtvkit.inputsource.TargetRegionManager;
 
 import com.droidlogic.app.DataProviderManager;
 
@@ -3304,5 +3306,148 @@ public class ParameterMananer {
         } catch (Exception e) {
             Log.e(TAG, "playerSetSubtitlesOn = " + e.getMessage());
         }
+    }
+
+    public boolean needConfirmTargetRegion(JSONArray array) {
+        boolean result = false;
+        final String ENG_ISO3_NAME = "gbr";
+        String currentCountryName = getCurrentCountryIso3Name();
+        if (ENG_ISO3_NAME.equalsIgnoreCase(currentCountryName)) {
+            if (array != null && array.length() > 0) {
+                result = true;
+            }
+        }
+        return result;
+    }
+
+    public JSONArray getTargetRegions(int target_id, int country, int primary, int secondary) {
+        JSONArray result = null;
+        String request = null;
+        JSONArray args = new JSONArray();
+        switch (target_id) {
+            case TargetRegionManager.TARGET_REGION_COUNTRY:
+                request = "Dvb.getGetNetworkTargetCountries";
+                break;
+            case TargetRegionManager.TARGET_REGION_PRIMARY:
+                request = "Dvb.getNetworkPrimaryTargetRegions";
+                if (country > 0) {
+                    args.put(country);
+                }
+                break;
+            case TargetRegionManager.TARGET_REGION_SECONDARY:
+                request = "Dvb.getNetworkSecondaryTargetRegions";
+                if (country > 0 && primary >= 0) {
+                    args.put(country);
+                    args.put(primary);
+                }
+                break;
+            case TargetRegionManager.TARGET_REGION_TERTIARY:
+                request = "Dvb.getNetworkTertiaryTargetRegions";
+                if (country > 0 && primary >= 0 && secondary >= 0) {
+                    args.put(country);
+                    args.put(primary);
+                    args.put(secondary);
+                }
+
+                break;
+            default:
+                request = "Dvb.getNetworkPrimaryTargetRegions";
+                break;
+        }
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request(request, args);
+            if (obj != null) {
+                Log.d(TAG, "getTargetRegions resultObj:" + obj.toString());
+            } else {
+                Log.d(TAG, "getTargetRegions then get null");
+                return result;
+            }
+            result = obj.getJSONArray("data");
+        } catch (Exception e) {
+            Log.e(TAG, "getTargetRegions Exception = " + e.getMessage());
+        }
+        return result;
+    }
+
+    public JSONObject setTargetRegionSelection(int target_id, int selection) {
+        JSONObject resultObj = null;
+        String request = null;
+        if (selection == -1) {
+            Log.d(TAG, "setTargetRegionSelection invalid region");
+            return resultObj;
+        } else {
+            Log.d(TAG, "setTargetRegionSelection target=" + target_id + ", region = " + selection);
+        }
+        switch (target_id) {
+            case TargetRegionManager.TARGET_REGION_COUNTRY:
+                request = "Dvb.SetNetworkTargetCountry";
+                break;
+            case TargetRegionManager.TARGET_REGION_PRIMARY:
+                request = "Dvb.setNetworkPrimaryTargetRegion";
+                break;
+            case TargetRegionManager.TARGET_REGION_SECONDARY:
+                request = "Dvb.setNetworkSecondaryTargetRegion";
+                break;
+            case TargetRegionManager.TARGET_REGION_TERTIARY:
+                request = "Dvb.setNetworkTertiaryTargetRegion";
+                break;
+            default:
+                break;
+        }
+        if (request == null) return resultObj;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(selection);
+            resultObj = DtvkitGlueClient.getInstance().request(request, args);
+            if (resultObj != null) {
+                Log.d(TAG, "setTargetRegionSelection resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setTargetRegionSelection then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setTargetRegionSelection Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public String getTargetRegionName(int region_id, JSONObject obj) {
+        String result = null;
+        int country_code = -1;
+        if (obj != null && obj.length() > 0) {
+            try {
+                if (region_id == TargetRegionManager.TARGET_REGION_COUNTRY) {
+                    country_code = obj.getInt("country_code");
+                    if (country_code > 0) {
+                        byte[] tmp = {(byte)((country_code & 0xff0000) >> 16),
+                                      (byte)((country_code & 0x00ff00) >> 8),
+                                      (byte)((country_code & 0x0000ff))};
+                        String lan_iso3166_a3 = new String(tmp);
+                        result = ISO639Data.getCountryNameFromCode(lan_iso3166_a3);
+                    }
+                } else {
+                    result = obj.getString("region_name");
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "getTargetRegionName Exception = " + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public int getTargetRegionCode(int region_id, JSONObject obj) {
+        int result = -1;//invalid
+        if (obj != null && obj.length() > 0) {
+            try {
+                if (region_id == TargetRegionManager.TARGET_REGION_COUNTRY) {
+                    result = obj.getInt("country_code");
+                } else {
+                    result = obj.getInt("region_code");
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "getTargetRegionCode Exception = " + e.getMessage());
+            }
+        }
+        return result;
     }
 }

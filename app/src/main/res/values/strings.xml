@@ -117,4 +117,12 @@
     <string name="ci_profile_channel_updating">CI channels updating, please wait !</string>
     <string name="ci_profile_channel_update_confirm">update</string>
     <string name="ci_profile_channel_update_cancel">cancel</string>
+
+    <!-- TargetRegion -->
+    <string name="target_region_title">Select preferred region for programme sorting.</string>
+    <string name="primary_region">Primary Region</string>
+    <string name="secondary_region">Secondary Region</string>
+    <string name="tertiary_region">Tertiary Region</string>
+    <string name="no_sub_regions">No sub-regions</string>
+    <string name="target_region_country">Country</string>
 </resources>
