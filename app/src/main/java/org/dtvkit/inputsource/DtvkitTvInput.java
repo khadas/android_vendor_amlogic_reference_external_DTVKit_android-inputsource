@@ -180,6 +180,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     volatile private boolean mDvbNetworkChangeSearchStatus = false;
     private Channel mMainDvbChannel = null;
     private Channel mPipDvbChannel = null;
+    // Mutex for all mutable shared state.
+    private final Object mLock = new Object();
 
     private enum PlayerState {
         STOPPED, PLAYING
@@ -5075,26 +5077,28 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private String playerPlay(int index, String dvbUri, boolean ad_enable, boolean disable_audio, int surface, String uri_cache1, String uri_cache2) {
-        try {
-            JSONArray args = new JSONArray();
-            args.put(index);
-            args.put(dvbUri);
-            args.put(ad_enable);
-            args.put(disable_audio);
-            args.put(surface);
-            args.put(uri_cache1);
-            args.put(uri_cache2);
-            Log.d(TAG, "player.play: "+dvbUri);
+        synchronized (mLock) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                args.put(dvbUri);
+                args.put(ad_enable);
+                args.put(disable_audio);
+                args.put(surface);
+                args.put(uri_cache1);
+                args.put(uri_cache2);
+                Log.d(TAG, "player.play: "+dvbUri);
 
-            JSONObject resp = DtvkitGlueClient.getInstance().request("Player.play", args);
-            boolean ok = resp.optBoolean("data");
-            if (ok)
-                return "ok";
-            else
-                return resp.optString("data", "");
-        } catch (Exception e) {
-            Log.e(TAG, "playerPlay = " + e.getMessage());
-            return "unknown error";
+                JSONObject resp = DtvkitGlueClient.getInstance().request("Player.play", args);
+                boolean ok = resp.optBoolean("data");
+                if (ok)
+                    return "ok";
+                else
+                    return resp.optString("data", "");
+            } catch (Exception e) {
+                Log.e(TAG, "playerPlay = " + e.getMessage());
+                return "unknown error";
+            }
         }
     }
 
@@ -5112,13 +5116,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private void playerStop(int index, boolean stopFcc) {
-        try {
-            JSONArray args = new JSONArray();
-            args.put(index);
-            args.put(stopFcc);
-            DtvkitGlueClient.getInstance().request("Player.stop", args);
-        } catch (Exception e) {
-            Log.e(TAG, "playerStop = " + e.getMessage());
+     synchronized (mLock) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                args.put(stopFcc);
+                DtvkitGlueClient.getInstance().request("Player.stop", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerStop = " + e.getMessage());
+            }
         }
     }
 

@@ -34,8 +34,6 @@ public class DtvkitGlueClient {
     private AudioHandler mAudioHandler;
    // private SystemControlHandler mSysControlHandler;
     private SubtitleListener mListener;
-    // Mutex for all mutable shared state.
-    private final Object mLock = new Object();
     private native void nativeconnectdtvkit(DtvkitGlueClient client);
     private native void nativedisconnectdtvkit();
     private native void nativeSetMutilSurface(int index, Surface surface);
