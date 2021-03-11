@@ -1038,7 +1038,7 @@ public class DtvkitDvbtSetup extends Activity {
             }
         });
 
-        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG);
         alert.setView(dialogView);
         alert.show();
         WindowManager.LayoutParams params = alert.getWindow().getAttributes();
@@ -1163,7 +1163,7 @@ public class DtvkitDvbtSetup extends Activity {
             }
         });
 
-        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG);
         alert.setView(dialogView);
         alert.show();
         WindowManager.LayoutParams params = alert.getWindow().getAttributes();
