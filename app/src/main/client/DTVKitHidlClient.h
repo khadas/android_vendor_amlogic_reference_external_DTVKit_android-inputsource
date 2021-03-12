@@ -31,7 +31,7 @@ namespace android {
 using ::vendor::amlogic::hardware::dtvkitserver::V1_0::IDTVKitServer;
 using ::vendor::amlogic::hardware::dtvkitserver::V1_0::IDTVKitServerCallback;
 using ::vendor::amlogic::hardware::dtvkitserver::V1_0::DTVKitHidlParcel;
-using ::vendor::amlogic::hardware::dtvkitserver::V1_0::ConnectType;
+using ::vendor::amlogic::hardware::dtvkitserver::V1_0::DTVKitConnectType;
 using ::android::hardware::hidl_array;
 using ::android::hardware::hidl_string;
 using ::android::hardware::hidl_memory;
@@ -39,11 +39,6 @@ using ::android::hardware::hidl_vec;
 using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
-
-typedef enum {
-    CONNECT_TYPE_HAL            = 0,
-    CONNECT_TYPE_EXTEND         = 1
-} connect_type_t;
 
 typedef struct s_dvb_subt_info
 {
@@ -81,6 +76,11 @@ public:
 
 class DTVKitHidlClient : virtual public RefBase {
 public:
+    typedef enum {
+        CONNECT_TYPE_HAL            = 0,
+        CONNECT_TYPE_EXTEND         = 1
+    } connect_type_t;
+
     static sp<DTVKitHidlClient> connect(connect_type_t type);
     DTVKitHidlClient(connect_type_t type);
     ~DTVKitHidlClient();
