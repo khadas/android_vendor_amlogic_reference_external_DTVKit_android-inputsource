@@ -34,14 +34,14 @@
 
             <TextView
                 android:id="@+id/mode_text"
-                android:layout_width="@dimen/dvb_language_text_width"
+                android:layout_width="@dimen/automatic_searching_item_width"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:text="@string/mode_setting" />
 
             <Spinner
                 android:id="@+id/mode_spinner"
-                android:layout_width="@dimen/dvb_language_item_width"
+                android:layout_width="@dimen/automatic_searching_item_width"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical" />
         </LinearLayout>
@@ -50,20 +50,20 @@
             android:id="@+id/time_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="5dp"
+            android:layout_margin="2dp"
             android:orientation="horizontal"
             android:gravity="center_vertical" >
 
             <TextView
                 android:id="@+id/time_text"
-                android:layout_width="@dimen/dvb_language_text_width"
+                android:layout_width="@dimen/automatic_searching_item_width"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:text="@string/time_setting" />
 
             <EditText
                 android:id="@+id/hour_text"
-                android:layout_width="@dimen/dvb_language_text_width"
+                android:layout_width="@dimen/automatic_searching_item_width"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:ems="10"
@@ -72,7 +72,7 @@
 
             <TextView
                 android:id="@+id/textView"
-                android:layout_width="@dimen/dvb_language_text_width"
+                android:layout_width="@dimen/automatic_searching_item_width"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center|center_horizontal"
@@ -80,12 +80,22 @@
 
             <EditText
                 android:id="@+id/minute_text"
-                android:layout_width="@dimen/dvb_language_text_width"
+                android:layout_width="@dimen/automatic_searching_item_width"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:ems="10"
                 android:gravity="center|center_horizontal"
                 android:inputType="number" />
+
+            <TextView
+                android:id="@+id/hours"
+                android:layout_width="@dimen/automatic_searching_item_width"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:textSize="@dimen/automatic_searching_hour_text"
+                android:singleLine="true"
+                android:text="@string/strSettingsAutoSearchingHourFormat" />
         </LinearLayout>
 
         <LinearLayout
@@ -98,14 +108,14 @@
 
             <TextView
                 android:id="@+id/repetition_text"
-                android:layout_width="@dimen/dvb_language_text_width"
+                android:layout_width="@dimen/automatic_searching_item_width"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:text="@string/repetition_setting" />
 
             <Spinner
                 android:id="@+id/repetition_setting_spinner"
-                android:layout_width="@dimen/dvb_language_item_width"
+                android:layout_width="@dimen/automatic_searching_item_width"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical" />
         </LinearLayout>

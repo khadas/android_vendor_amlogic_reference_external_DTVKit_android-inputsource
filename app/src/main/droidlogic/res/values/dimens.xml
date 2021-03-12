@@ -15,5 +15,7 @@
     <dimen name="dvb_search_text_size">38sp</dimen>
     <dimen name="dvb_language_text_width">200dp</dimen>
     <dimen name="dvb_language_item_width">200dp</dimen>
+    <dimen name="automatic_searching_item_width">125dp</dimen>
+    <dimen name="automatic_searching_hour_text">10sp</dimen>
 
 </resources>

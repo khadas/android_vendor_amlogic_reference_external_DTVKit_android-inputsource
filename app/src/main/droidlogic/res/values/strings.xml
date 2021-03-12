@@ -123,4 +123,6 @@
     <string name="strSettingsAutoOrdering_enable">Enable</string>
     <string name="strSettingsAutoSearching">Automatic Searching:</string>
     <string name="strSettingsAutoSearchingSetting">Setting</string>
+    <string name="strSettingsAutoSearchingHourFormat">(24-hour format)</string>
+
 </resources>

@@ -495,12 +495,6 @@ public class DtvkitDvbSettings extends Activity {
         } else {
             autoOrderingContainer.setVisibility(View.GONE);
         }
-
-        if (mParameterMananer.checkIsItalyCountry() || mParameterMananer.checkIsNordigCountry()) {
-            autoSearchingContainer.setVisibility(View.VISIBLE);
-        } else {
-            autoSearchingContainer.setVisibility(View.GONE);
-        }
     }
 
     private List<String> getHearingImpairedOption() {
@@ -763,8 +757,8 @@ public class DtvkitDvbSettings extends Activity {
 
         List<String> modeList = new ArrayList();
         modeList.add("OFF");
-        modeList.add("standby mode");
-        modeList.add("operate mode");
+        modeList.add("standby");
+        modeList.add("operate");
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, modeList);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         mode.setAdapter(adapter);
