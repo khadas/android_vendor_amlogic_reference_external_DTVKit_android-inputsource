@@ -58,7 +58,8 @@ static jboolean g_bSubStatus = false;
 #define SUBTITLE_SUB_TYPE_SCTE   3
 #define SUBTITLE_SUB_TYPE_TTX    4
 
-#define SUBTITLE_SUB_TYPE_CLOSED_CAPTION 10
+#define START_SUB_TYOE_CLOSED_CAPTION -5
+#define CALLBACK_SUB_TYPE_CLOSED_CAPTION 10
 #define TT_EVENT_INDEXPAGE 14
 #define TT_EVENT_GO_TO_PAGE 30
 #define TT_EVENT_GO_TO_SUBTITLE 31
@@ -159,7 +160,7 @@ static void postSubtitleDataEx(int type, int width, int height, int dst_x, int d
     if (!bSubOn) return;
 
     if (env != NULL) {
-        if (type == SUBTITLE_SUB_TYPE_CLOSED_CAPTION) {
+        if (type == CALLBACK_SUB_TYPE_CLOSED_CAPTION) {
             jstring jccData = env->NewStringUTF((char *)data);
             env->CallVoidMethod(DtvkitObject, notifyCCSubtitleCallbackEx, true, jccData);
             env->DeleteLocalRef(jccData);
@@ -406,7 +407,7 @@ static void setSubtitleOn(int pid, int type, int magazine, int page, int demuxId
 {
     if (mSubContext != nullptr) {
         setSubtitleOff();
-        if (type == SUBTITLE_SUB_TYPE_CLOSED_CAPTION) {
+        if (type == START_SUB_TYOE_CLOSED_CAPTION) {
             clearCCSubtitleData();
         }
     }
@@ -419,7 +420,11 @@ static void setSubtitleOn(int pid, int type, int magazine, int page, int demuxId
     } else {
         mSubContext->setSubType(type + DTVKIT_SUBTITLE_ADD_OFFSET);
     }
-    mSubContext->setSubPid(pid);
+    if (type == START_SUB_TYOE_CLOSED_CAPTION) {
+      mSubContext->selectCcChannel(pid);
+    } else {
+      mSubContext->setSubPid(pid);
+    }
     int iotType = SUBTITLE_DEMUX_SOURCE;
     //if (type == SUBTITLE_SUB_TYPE_SCTE) {
     //    iotType = SUBTITLE_SCTE27_SOURCE;

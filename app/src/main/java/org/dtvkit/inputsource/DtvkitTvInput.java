@@ -446,7 +446,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private int getSubtitleFlag() {
-       return SystemProperties.getInt("persist.vendor.tif.subtitleflg", Default_SubCtlFlg);
+        int ret = Default_SubCtlFlg;
+        if (mSystemControlManager != null) {
+            ret = mSystemControlManager.getPropertyInt("persist.vendor.tif.subtitleflg", Default_SubCtlFlg);
+        }
+
+        return ret;
     }
 
     private synchronized void initDtvkitTvInput() {
@@ -455,13 +460,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return;
         }
         Log.d(TAG, "initDtvkitTvInput start");
-        int subFlg = getSubtitleFlag();
-        if (subFlg >= SUBCTL_HK_DVBSUB) {
-            DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
-            if ((subFlg & SUBCTL_HK_CC) == SUBCTL_HK_CC) {
-                initFont(); //init closed caption font
-            }
-        }
         mSysSettingManager = new SysSettingManager(this);
         mDataMananer = new DataMananer(this);
         onChannelsChanged();
@@ -475,6 +473,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
         updateRecorderNumber();
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_DTVKIT_SATELLITE);
+
+        int subFlg = getSubtitleFlag();
+        if (subFlg >= SUBCTL_HK_DVBSUB) {
+            DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
+            if ((subFlg & SUBCTL_HK_CC) == SUBCTL_HK_CC) {
+                initFont(); //init closed caption font
+            }
+        }
+
         Log.d(TAG, "initDtvkitTvInput end");
         mIsInited = true;
     }
