@@ -7029,6 +7029,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         Log.d(TAG, "onHardwareAdded ," + "DeviceId :" + hardwareInfo.getDeviceId());
         if (hardwareInfo.getDeviceId() != 19)
             return null;
+        if (null != mHardware)
+            return null;
         mTvInputHardwareInfo = hardwareInfo;
         mTvInputInfo = buildTvInputInfo(2, null);
         setInputId(mTvInputInfo.getId());
