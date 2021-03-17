@@ -3992,6 +3992,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 {
                     mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
                 }
+                else if (signal.equals("SubtitleOpened"))
+                {
+                    mMainHandle.sendEmptyMessage(MSG_EVENT_SUBTITLE_OPENED);
+                }
             }
         };
 
@@ -4053,6 +4057,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_SET_TELETEXT_MIX_TRANSPARENT = 7;
         protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 8;
         protected static final int MSG_FILL_SURFACE = 9;
+        protected static final int MSG_EVENT_SUBTITLE_OPENED = 10;
 
         protected static final int MSG_SHOW_TUNING_IMAGE = 20;
         protected static final int MSG_HIDE_TUNING_IMAGE = 21;
@@ -4493,6 +4498,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         break;
                     case MSG_FILL_SURFACE:
                         fillSurfaceWithFixColor();
+                        break;
+                    case MSG_EVENT_SUBTITLE_OPENED:
+                        initSubtitleOrTeletextIfNeed();
                         break;
                     default:
                         Log.d(TAG, "MainHandler default");
