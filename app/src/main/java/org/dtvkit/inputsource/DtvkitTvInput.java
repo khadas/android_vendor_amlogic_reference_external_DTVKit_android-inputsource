@@ -3726,6 +3726,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             startPosition = originalStartPosition = TvInputManager.TIME_SHIFT_INVALID_TIME;
                             timeshifting = false;
                             notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+                            playerSetSubtitlesOn(false);
+                            playerStopTeletext();
+                            dvrSubtitleFlag = 0;
                             break;
                     }
                 } else if (signal.equals("RecordingStatusChanged")) {
