@@ -820,9 +820,10 @@ public class DtvkitDvbSettings extends Activity {
                     return;
                 int value = Integer.parseInt(strValue);
                 Log.d(TAG, "value = " + value);
-                if (value > 24 || value < 0) {
+                if (value > 23 || value < 0) {
                     Log.d(TAG, "input time isn't correct!");
-                    Toast.makeText(DtvkitDvbSettings.this, "input time isn't correct", 1).show();
+                    Toast.makeText(DtvkitDvbSettings.this, "input time is wrong, please re-enter", 1).show();
+                    hour.setText("");
                 }
             }
 
@@ -839,8 +840,11 @@ public class DtvkitDvbSettings extends Activity {
                 } else {
                     mHour = s.toString();
                 }
-
-                mParameterMananer.saveStringParameters(mParameterMananer.AUTO_SEARCHING_HOUR, mHour);
+                if (mHour.equals(""))
+                    return;
+                int value = Integer.parseInt(mHour);
+                if (value < 24 && value >= 0)
+                    mParameterMananer.saveStringParameters(mParameterMananer.AUTO_SEARCHING_HOUR, mHour);
             }
 
         });
@@ -856,9 +860,10 @@ public class DtvkitDvbSettings extends Activity {
                     return;
                 int value = Integer.parseInt(strValue);
                 Log.d(TAG, "value = " + value);
-                if (value > 60 || value < 0) {
+                if (value > 59 || value < 0) {
                     Log.d(TAG, "input time isn't correct!");
-                    Toast.makeText(DtvkitDvbSettings.this, "input time isn't correct", 1).show();
+                    Toast.makeText(DtvkitDvbSettings.this, "input time is wrong, please re-enter", 1).show();
+                    minute.setText("");
                 }
             }
 
@@ -874,9 +879,12 @@ public class DtvkitDvbSettings extends Activity {
                 } else {
                     mMinute = s.toString();
                 }
-
                 Log.d(TAG, "mMinute = " + mMinute);
-                mParameterMananer.saveStringParameters(mParameterMananer.AUTO_SEARCHING_MINUTE, mMinute);
+                if (mMinute.equals(""))
+                    return;
+                int value = Integer.parseInt(mMinute);
+                if (value < 60 && value >= 0)
+                    mParameterMananer.saveStringParameters(mParameterMananer.AUTO_SEARCHING_MINUTE, mMinute);
             }
 
         });
