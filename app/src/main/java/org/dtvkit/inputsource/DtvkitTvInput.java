@@ -302,6 +302,27 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     };
 
+    protected final BroadcastReceiver mStorageEventReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action.equals(Intent.ACTION_MEDIA_MOUNTED)) {
+                String mountPath = intent.getData().getPath();
+                Log.d(TAG, "mStorageEventReceiver mountPath = " + mountPath);
+                if (getFeatureSupportNewTvApp() && SysSettingManager.isStoragePath(mountPath)) {
+                    if (mInputThreadHandler != null) {
+                        //mInputThreadHandler.removeMessages(MSG_ADD_DTVKIT_DISK_PATH);
+                        Message mess = mInputThreadHandler.obtainMessage(MSG_ADD_DTVKIT_DISK_PATH, 0, 0, mountPath);
+                        boolean info = mInputThreadHandler.sendMessageDelayed(mess, 0);
+                        Log.d(TAG, "sendMessage MSG_ADD_DTVKIT_DISK_PATH " + info);
+                    }
+                }
+            } else {
+                Log.d(TAG, "mStorageEventReceiver other action");
+            }
+        }
+    };
+
     protected final BroadcastReceiver mCiTestBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -424,6 +445,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         IntentFilter intentFilter3 = new IntentFilter();
         intentFilter3.addAction(ConstantManager.ACTION_CI_PLUS_INFO);
         registerReceiver(mCiTestBroadcastReceiver, intentFilter3);
+
+        IntentFilter intentFilter4 = new IntentFilter();
+        intentFilter4.addAction(Intent.ACTION_MEDIA_MOUNTED);
+        intentFilter4.addDataScheme(ContentResolver.SCHEME_FILE);
+        registerReceiver(mStorageEventReceiver, intentFilter4);
+
         sendEmptyMessageToInputThreadHandler(MSG_START_CA_SETTINGS_SERVICE);
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY);
     }
@@ -433,6 +460,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     protected static final int MSG_START_CA_SETTINGS_SERVICE = 1;
     protected static final int MSG_CHECK_TV_PROVIDER_READY = 2;
     protected static final int MSG_CHECK_DTVKIT_SATELLITE = 3;
+    protected static final int MSG_ADD_DTVKIT_DISK_PATH = 4;
 
     protected static final int PERIOD_RIGHT_NOW = 0;
     protected static final int PERIOD_CHECK_TV_PROVIDER_DELAY = 10;
@@ -470,6 +498,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     case MSG_UPDATE_RECORDING_PROGRAM:{
                         syncRecordingProgramsWithDtvkit((JSONObject)msg.obj);
+                        break;
+                    }
+                    case MSG_ADD_DTVKIT_DISK_PATH:{
+                        recordingAddDiskPath(SysSettingManager.convertStoragePathToMediaPath((String)msg.obj) + "/" + SysSettingManager.PVR_DEFAULT_FOLDER);
                         break;
                     }
                     default:
@@ -718,6 +750,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         unregisterReceiver(mBootBroadcastReceiver);
         unregisterReceiver(mAutomaticSearchingReceiver);
         unregisterReceiver(mCiTestBroadcastReceiver);
+        unregisterReceiver(mStorageEventReceiver);
         mContentResolver.unregisterContentObserver(mContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingManagerHandler);
@@ -2694,9 +2727,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             Channel tunedChannel  = getChannel(channelUri);
             final String dvbUri = getChannelInternalDvbUri(tunedChannel);
+            boolean mainMuteStatus = false;
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
 
             if (!mIsPip) {
+                mainMuteStatus = playerGetMute();
                 if (tunedChannel != null) {
                     String previousCiNumber = null;
                     if (mPreviousTunedChannel != null) {
@@ -2776,7 +2811,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (mNextBufferUri != null) {
                     nextUriStr = getChannelInternalDvbUriForFcc(mNextBufferUri);
                 }
-                playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart, false, 0, previousUriStr, nextUriStr).equals("ok");
+                playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart, mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
             } else {
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler, INDEX_FOR_PIP);
                 playResult = playerPlay(INDEX_FOR_PIP, dvbUri, mAudioADAutoStart, true, 0, "", "").equals("ok");
@@ -5325,6 +5360,26 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         } catch (Exception e) {
             Log.e(TAG, "playerSetMute = " + e.getMessage());
         }
+    }
+
+    private boolean playerGetMute() {
+        return playerGetMute(INDEX_FOR_MAIN);
+    }
+
+    private boolean playerGetMute(int index) {
+        boolean result = false;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(index);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Player.getMute", args);
+            if (obj != null && obj.getBoolean("accepted") ) {
+                result = obj.getBoolean("data");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "playerGetMute = " + e.getMessage());
+        }
+        Log.d(TAG, "playerGetMute result = " + result);
+        return result;
     }
 
     private void playerSetSubtitlesOn(boolean on) {
