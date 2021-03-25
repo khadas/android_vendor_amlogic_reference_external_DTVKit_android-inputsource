@@ -253,6 +253,12 @@ static void postDvbParam(const std::string& resource, const std::string json, in
     }
 
 }
+pthread_once_t once = PTHREAD_ONCE_INIT;
+void  DTVKitClientJni::once_run(void)
+{
+    if (NULL == mInstance)
+         mInstance = new DTVKitClientJni();
+}
 
 DTVKitClientJni::DTVKitClientJni()  {
     mDkSession = DTVKitHidlClient::connect(DTVKitHidlClient::CONNECT_TYPE_HAL);
@@ -261,8 +267,7 @@ DTVKitClientJni::DTVKitClientJni()  {
 
 DTVKitClientJni *DTVKitClientJni::mInstance = NULL;
 DTVKitClientJni *DTVKitClientJni::GetInstance() {
-    if (NULL == mInstance)
-         mInstance = new DTVKitClientJni();
+    pthread_once(&once, once_run);
     return mInstance;
 }
 
@@ -284,7 +289,7 @@ void DTVKitClientJni::setSubtitleFlag(int flag) {
 
 void DTVKitClientJni::notify(const parcel_t &parcel) {
     AutoMutex _l(mLock);
-    ALOGD("notify msgType = %d", parcel.msgType);
+    ALOGD("notify msgType = %d  this:%p", parcel.msgType, this);
     if (parcel.msgType == DTVKIT_DRAW) {
         datablock_t datablock;
         datablock.width      = parcel.bodyInt[0];
