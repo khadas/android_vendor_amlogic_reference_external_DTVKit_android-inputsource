@@ -137,6 +137,10 @@ public class DtvkitSettingService extends Service {
         @Override
         public void setHearingImpairedSwitchStatus(boolean on) throws RemoteException {
             mParameterManager.setHearingImpairedSwitchStatus(on);
+            if (mParameterManager.playerGetSubtitlesOn(0)) {
+                mParameterManager.playerSetSubtitlesOn(false, 0);
+                mParameterManager.playerSetSubtitlesOn(true, 0);
+            }
         }
 
         @Override

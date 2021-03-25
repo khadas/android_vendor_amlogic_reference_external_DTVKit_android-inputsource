@@ -4271,7 +4271,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 else if (signal.equals("SubtitleOpened"))
                 {
-                    mMainHandle.sendEmptyMessage(MSG_EVENT_SUBTITLE_OPENED);
+                    mMainHandle.sendEmptyMessageDelayed(MSG_EVENT_SUBTITLE_OPENED, 2000);
                 }
             }
         };
