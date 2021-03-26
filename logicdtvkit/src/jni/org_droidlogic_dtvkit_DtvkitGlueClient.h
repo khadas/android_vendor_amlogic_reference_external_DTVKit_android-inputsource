@@ -70,6 +70,7 @@ public:
     void setSubtitleFlag(int flag);
 
 private:
+    static void  once_run(void);
     sp<DTVKitHidlClient> mDkSession;
     mutable Mutex mLock;
     static DTVKitClientJni *mInstance;
