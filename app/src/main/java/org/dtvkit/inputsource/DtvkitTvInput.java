@@ -2293,6 +2293,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else if (signal.equals("RecordingDiskFull")) {
                     //tell application to deal current running pvr
                     notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
+                } else if (signal.equals("RecordingsDiskRm")) {
+                    //tell application current pvr disk remove now
+                    Bundle event = new Bundle();
+                    event.putString(ConstantManager.KEY_INFO, "Stop record due to disk remove");
+                    notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
                 }
             }
         };
@@ -4264,10 +4269,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 else if (signal.equals("RecordingDiskFull"))
                 {
-                    /*free disk space excceds the property's setting*/
-                    Bundle event = new Bundle();
-                    event.putString(ConstantManager.KEY_INFO, "Stop timeshift due to insufficient storage");
-                    notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                    if (timeshiftRecorderState != RecorderState.STOPPED) {
+                        /*free disk space excceds the property's setting*/
+                        Bundle event = new Bundle();
+                        event.putString(ConstantManager.KEY_INFO, "Stop timeshift due to insufficient storage");
+                        notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                    }
                 }
                 else if (signal.equals("tt_mix_separate"))
                 {
