@@ -609,7 +609,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
         updateRecorderNumber();
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_DTVKIT_SATELLITE);
-
+        resetRecordingPath();
         int subFlg = getSubtitleFlag();
         if (subFlg >= SUBCTL_HK_DVBSUB) {
             DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
@@ -1228,6 +1228,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             try {
                 mContentResolver.applyBatch(TvContract.AUTHORITY, ops);
+                //notify it as background process can receive it imediately
+                if (isSdkAfterAndroidQ()) {
+                    getContentResolver().notifyChange(TvContract.RecordedPrograms.CONTENT_URI, null, 1 << 15/*ContentResolver.NOTIFY_NO_DELAY*/);
+                }
             } catch (Exception e) {
                 Log.e(TAG, "recordings DB update failed.");
             }
@@ -5295,11 +5299,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             newPath = DataMananer.PVR_DEFAULT_PATH;
             mDataMananer.saveStringParameters(DataMananer.KEY_PVR_RECORD_PATH, newPath);
             changed = true;
+        } else {
+            Log.d(TAG, "resetRecordingPath newLiveTv can set default path");
         }
         if (getFeatureSupportNewTvApp()) {
             if (TextUtils.isEmpty(newPath) || DataMananer.PVR_DEFAULT_PATH.equals(newPath)) {
                 Log.d(TAG, "sei livetv support removable storage only");
                 return false;
+            } else {
+                Log.d(TAG, "resetRecordingPath newLiveTv newPath = " + newPath);
             }
         }
         recordingAddDiskPath(newPath);
@@ -5748,7 +5756,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 bundle.putFloat(ConstantManager.KEY_TVINPUTINFO_VIDEO_FRAME_RATE, videoFrameRate);
                 bundle.putString(ConstantManager.KEY_TVINPUTINFO_VIDEO_FRAME_FORMAT, videoFrameFormat != null ? videoFrameFormat : "");
                 //video format framework example "VIDEO_FORMAT_360P" "VIDEO_FORMAT_576I"
-                String videoFormat = tunedChannel != null ? tunedChannel.getVideoFormat() : "";
+                //comment it as video format will be updated in checkRealTimeResolution
+                /*String videoFormat = tunedChannel != null ? tunedChannel.getVideoFormat() : "";
                 if (tunedChannel != null) {
                     //update video format such as VIDEO_FORMAT_1080P VIDEO_FORMAT_1080I
                     String buildVideoFormat = "VIDEO_FORMAT_" + videoHeight + videoFrameFormat;
@@ -5757,7 +5766,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         bundle.putString(ConstantManager.KEY_TVINPUTINFO_VIDEO_FORMAT, videoFormat != null ? videoFormat : "");
                         TvContractUtils.updateSingleChannelColumn(DtvkitTvInput.this.getContentResolver(), tunedChannel.getId(), TvContract.Channels.COLUMN_VIDEO_FORMAT, buildVideoFormat);
                     }
-                }
+                }*/
             }
             //get values from db
             String videoCodec = tunedChannel != null ? tunedChannel.getVideoCodec() : "";
