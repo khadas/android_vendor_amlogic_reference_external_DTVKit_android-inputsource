@@ -2679,15 +2679,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             //sendSetSurfaceMessage(null, null);
                             Log.d(TAG, "onSetSurface null");
                             mSurface = null;
-                            sendDoReleaseMessage();
+                            //sendDoReleaseMessage();
+                            doRelease(false, false);
                             writeSysFs("/sys/class/video/video_inuse", "0");
                         }
                     } else {
                         if (mSurface != null && mSurface != surface) {
                             Log.d(TAG, "TvView swithed,  onSetSurface null first");
-                            sendDoReleaseMessage();
-                            mHardware.setSurface(null, null);
                             //sendSetSurfaceMessage(null, null);
+                            mHardware.setSurface(null, null);
+                            //sendDoReleaseMessage();
+                            doRelease(false, false);
                         }
                         AudioConfigManager.getInstance(getApplication()).refreshAudioCfgBySrc(AudioConfigManager.AUDIO_OUTPUT_DELAY_SOURCE_DTV);
                         mHardware.setSurface(surface, mConfigs[0]);
@@ -2715,7 +2717,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             sendSetSurfaceMessage(null, mPipConfigs[0]);
                         }
                     }
-                    sendDoReleaseMessage();
+                    //sendDoReleaseMessage();
+                    doRelease(false, false);
                 }
                 if (mSurface != surface) {
                     mSurfaceSent = false;
