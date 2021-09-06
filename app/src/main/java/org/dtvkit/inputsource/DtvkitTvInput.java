@@ -116,6 +116,7 @@ import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.fragment.ParameterMananer;
 
 //import com.droidlogic.app.tv.TvControlManager;
+import com.droidlogic.app.AudioConfigManager;
 import com.droidlogic.app.SystemControlManager;
 import com.droidlogic.app.SystemControlEvent;
 import com.droidlogic.app.CCSubtitleView;
@@ -2663,6 +2664,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             mHardware.setSurface(null, null);
                             //sendSetSurfaceMessage(null, null);
                         }
+                        AudioConfigManager.getInstance(getApplication()).refreshAudioCfgBySrc(AudioConfigManager.AUDIO_OUTPUT_DELAY_SOURCE_DTV);
                         mHardware.setSurface(surface, mConfigs[0]);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                         if (mSystemControlManager != null) {
