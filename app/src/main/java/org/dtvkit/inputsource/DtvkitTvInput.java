@@ -282,10 +282,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (isParentControlEnabled != getParentalControlOn()) {
                     setParentalControlOn(isParentControlEnabled);
                 }
-                if (rating >= 4 && rating <= 18) {
-                    if (getParentalControlAge() != rating && isParentControlEnabled) {
-                        setParentalControlAge(rating);
-                    }
+                if (getParentalControlAge() != rating && isParentControlEnabled) {
+                    setParentalControlAge(rating);
                 }
             }
         }
