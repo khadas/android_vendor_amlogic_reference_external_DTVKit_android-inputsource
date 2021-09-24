@@ -4440,21 +4440,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.e(TAG, "CiOpSearchFinished Exception = " + e.getMessage());
                     }
                 }
-                else if (signal.equals("IgnoreUserInput")) {
+                else if (signal.equals("ignore_input")) {
                     //tell app to disable key event
                     try {
-                        String event = data.getString("data");
-                        Log.d(TAG, "System is doing " + event + " can not handle user input");
+                        // String event = data.getString("data");
+                        Log.d(TAG, "System is doing " + " can not handle user input");
                         Bundle inputBundle = new Bundle();
                         inputBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_IGNORE_INPUT);
-                        inputBundle.putString(ConstantManager.VALUE_CI_PLUS_EVENT_DETAIL, event);
+                        // inputBundle.putString(ConstantManager.VALUE_CI_PLUS_EVENT_DETAIL, event);
                         sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, inputBundle);
                         mCiAuthenticatedStatus = true;
                     } catch (Exception e) {
                         Log.d(TAG, "IgnoreUserInput Exception = " + e.getMessage());
                     }
                 }
-                else if (signal.equals("ReceiveUserInput")) {
+                else if (signal.equals("receive_input")) {
                     //tell app to key event can work normally
                     try {
                         Log.d(TAG, "Work complete, input can received now");
