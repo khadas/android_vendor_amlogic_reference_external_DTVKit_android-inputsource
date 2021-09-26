@@ -2718,6 +2718,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                     }
                     //sendDoReleaseMessage();
+                    if (mSystemControlManager != null) {
+                        mSystemControlManager.SetDtvKitSourceEnable(0);
+                        mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.valueOf(INPUT_MPEG), 0, 0);
+                    }
                     doRelease(false, false);
                 }
                 if (mSurface != surface) {
@@ -2967,6 +2971,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (isSdkAfterAndroidQ()) {
                         mHardware.setSurface(mSurface, mConfigs[1]);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
+                        if (mSystemControlManager != null) {
+                            mSystemControlManager.SetDtvKitSourceEnable(1);
+                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.valueOf(INPUT_DVB), 0, 0);
+                        }
                     } else {
                         DtvkitGlueClient.getInstance().setMutilSurface(INDEX_FOR_MAIN, mSurface);
                     }
@@ -5369,6 +5377,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (isSdkAfterAndroidQ()) {
                         mHardware.setSurface(mSurface, mConfigs[1]);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
+                        if (mSystemControlManager != null) {
+                            mSystemControlManager.SetDtvKitSourceEnable(1);
+                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.valueOf(INPUT_DVB), 0, 0);
+                        }
                     } else {
                         DtvkitGlueClient.getInstance().setMutilSurface(INDEX_FOR_MAIN, mSurface);
                     }
