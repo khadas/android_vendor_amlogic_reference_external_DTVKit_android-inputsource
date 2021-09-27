@@ -24,6 +24,7 @@ class CiPowerMonitor {
     private PowerManager.WakeLock mProfileWakeLock = null;
     private Handler mHandler;
     private final static int MAX_CI_CAM_POWER_TIMEOUT = 240;
+    private final Object mCiplusPowerdownLock = new Object();
 
     private final DtvkitGlueClient.SignalHandler mSignalHandler = new DtvkitGlueClient.SignalHandler() {
         @RequiresApi(api = Build.VERSION_CODES.M)
@@ -67,21 +68,25 @@ class CiPowerMonitor {
     }
 
     private void startCiplusPowerdownMonitor() {
-        if (mIsStarted) {
-            return;
+        synchronized (mCiplusPowerdownLock) {
+                if (mIsStarted) {
+                    return;
+                }
+                DtvkitGlueClient.getInstance().registerSignalHandler(mSignalHandler);
+                acquireCiplusWakeLock();
+                noticePowerDown();
+                startTimeoutHandler();
+                mIsStarted = true;
         }
-        DtvkitGlueClient.getInstance().registerSignalHandler(mSignalHandler);
-        acquireCiplusWakeLock();
-        noticePowerDown();
-        startTimeoutHandler();
-        mIsStarted = true;
     }
 
     private void stopCiplusPowerdownMonitor() {
-        if (mIsStarted) {
-            DtvkitGlueClient.getInstance().unregisterSignalHandler(mSignalHandler);
-            releaseCiplusWakeLock();
-            mIsStarted = false;
+        synchronized (mCiplusPowerdownLock) {
+                if (mIsStarted) {
+                    DtvkitGlueClient.getInstance().unregisterSignalHandler(mSignalHandler);
+                    releaseCiplusWakeLock();
+                    mIsStarted = false;
+                }
         }
     }
 
