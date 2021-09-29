@@ -67,6 +67,7 @@ import android.os.Looper;
 import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.util.LongSparseArray;
 import android.view.Gravity;
@@ -467,6 +468,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     };
 
+    private final BroadcastReceiver syncReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, final Intent intent) {
+            String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
+            if (EpgSyncJobService.SYNC_FINISHED.equals(status)) {
+                sendEmptyMessageToInputThreadHandler(MSG_STOP_MONITOR_SYNCING);
+                DtvkitTvInputSession mainSession = getMainTunerSession();
+                if (mainSession != null) {
+                    mainSession.sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
+                }
+            }
+        }
+    };
+
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onCreate() {
@@ -528,6 +543,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     protected static final int MSG_CHECK_DTVKIT_SATELLITE = 3;
     protected static final int MSG_ADD_DTVKIT_DISK_PATH = 4;
     protected static final int MSG_UPDATE_DTVKIT_DATABASE = 5;
+    protected static final int MSG_START_MONITOR_SYNCING = 6;
+    protected static final int MSG_STOP_MONITOR_SYNCING  = 7;
 
     protected static final int PERIOD_RIGHT_NOW = 0;
     protected static final int PERIOD_CHECK_TV_PROVIDER_DELAY = 10;
@@ -573,6 +590,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     case MSG_ADD_DTVKIT_DISK_PATH:{
                         recordingAddDiskPath(SysSettingManager.convertStoragePathToMediaPath((String)msg.obj) + "/" + SysSettingManager.PVR_DEFAULT_FOLDER);
+                        break;
+                    }
+                    case MSG_START_MONITOR_SYNCING: {
+                        LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(syncReceiver,
+                            new IntentFilter(EpgSyncJobService.ACTION_SYNC_STATUS_CHANGED));
+                        break;
+                    }
+                    case MSG_STOP_MONITOR_SYNCING: {
+                        LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(syncReceiver);
                         break;
                     }
                     default:
@@ -2915,41 +2941,38 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         @Override
         public boolean onTune(Uri channelUri) {
             Log.i(TAG, "onTune " + channelUri + ", index = " + mCurrentDtvkitTvInputSessionIndex);
-            if (ContentUris.parseId(channelUri) == -1) {
-                playerSetServiceMute(true);
-                Log.e(TAG, "DtvkitTvInputSession onTune invalid channelUri = " + channelUri);
-                return false;
-            }
-            if (mMainHandle != null) {
-                mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
-                mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
-                mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
-            }
-
-            mPreviousTunedChannel = mTunedChannel;
-            Channel targetChannel = getChannel(channelUri);
-            mTunedChannel = (targetChannel != null) ? targetChannel : getFirstChannel();
-
-            if (mTunedChannel != null) {
-                mParameterMananer.saveChannelIdForSource(mTunedChannel.getId());
-
-                if (mHandlerThreadHandle != null) {
-                    mHandlerThreadHandle.removeMessages(MSG_ON_TUNE);
-                    Message mess = mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 0, 0, TvContract.buildChannelUri(mTunedChannel.getId()));
-                    boolean info = mHandlerThreadHandle.sendMessage(mess);
-                    Log.d(TAG, "sendMessage " + info);
-                }
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.removeMessages(MSG_ON_TUNE);
+                Message mess = mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 0, 0, channelUri);
+                boolean info = mHandlerThreadHandle.sendMessage(mess);
+                Log.d(TAG, "sendMessage " + info);
             }
 
             Log.i(TAG, "onTune will be Done in onTuneByHandlerThreadHandle");
-            return mTunedChannel != null;
+            return true;
         }
 
         protected boolean onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
             Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + ", index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
 
-            if (ContentUris.parseId(channelUri) == -1) {
-                Log.e(TAG, "onTuneByHandlerThreadHandle invalid channelUri = " + channelUri);
+            if (ContentUris.parseId(channelUri) == -1 && getFirstChannel() == null) {
+                mhegStop();
+                playerStop();
+                playerSetServiceMute(true);
+                Log.d(TAG, "onTuneByHandlerThreadHandle no channel.");
+                return false;
+            }
+
+            if (mMainHandle != null) {
+                mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
+                mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
+                mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
+            }
+            mPreviousTunedChannel = mTunedChannel;
+            Channel targetChannel = getChannel(channelUri);
+            mTunedChannel = (targetChannel != null) ? targetChannel : getFirstChannel();
+            if (mTunedChannel == null) {
+                Log.e(TAG, "onTuneByHandlerThreadHandle no channel tune to:" + channelUri);
                 return false;
             }
 
@@ -3039,7 +3062,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.i(TAG, "onTuneByHandlerThreadHandle pip tune");
             }
 
-            Channel tunedChannel  = getChannel(channelUri);
+            Channel tunedChannel  = mTunedChannel;
+            mParameterMananer.saveChannelIdForSource(mTunedChannel.getId());
             String dvbUri = null;
             boolean isVirtual = false;
             if (tunedChannel != null) {
@@ -4416,6 +4440,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     int dvbSource = getCurrentDvbSource();
                     EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
                     EpgSyncJobService.requestImmediateSync(outService.get(), mInputId, false, false, sync);
+                    sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);
                 }
                 else if (signal.equals("CiplusUpdateService"))
                 {
