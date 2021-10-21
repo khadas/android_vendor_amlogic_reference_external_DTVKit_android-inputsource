@@ -57,8 +57,10 @@ public class DtvkitBackGroundSearch {
     private int mFoundServiceNumber = 0;
 
     private Context mContext;
-    private boolean mIsDvbt = false;
-    private boolean mIsDvbt2 = false;
+    private String mCurrentSignalType;
+    private boolean mIsTS2;
+    private String mUpdateDvbUri;
+    private int mCurrentDvbSource;
     private int mFrequency = -1;//hz
     private String mInputId;
     private BackGroundSearchCallback mBgCallback;
@@ -96,50 +98,147 @@ public class DtvkitBackGroundSearch {
         }
     };
 
-    public DtvkitBackGroundSearch(Context context, String channelSignalType, int frequency, String inputId, BackGroundSearchCallback callback) {
+    public DtvkitBackGroundSearch(Context context, int dvbSource, String signalType, String dvbUri, int frequency, String inputId, BackGroundSearchCallback callback) {
         mContext = context;
-        mIsDvbt = !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC);
-        mIsDvbt2 = TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2);
+        mCurrentSignalType = signalType;
+        if (TvContract.Channels.TYPE_DVB_T2.equals(signalType)
+            || TvContract.Channels.TYPE_DVB_S2.equals(signalType)) {
+            mIsTS2 = true;
+        }
+        mUpdateDvbUri = dvbUri;
+        mCurrentDvbSource = dvbSource;
         mFrequency = frequency;
         mInputId = inputId;
         mBgCallback = callback;
         mDataMananer = new DataMananer(context);
     }
 
-    public DtvkitBackGroundSearch(Context context, boolean isdvbt, String inputId, BackGroundSearchCallback callback) {
+    public DtvkitBackGroundSearch(Context context, int dvbSource, String inputId, BackGroundSearchCallback callback) {
+        //auto scan mode
         mContext = context;
-        mIsDvbt = isdvbt;
+        mCurrentDvbSource = dvbSource;
+        mCurrentSignalType = "TYPE_" + dvbSourceToSyncType();
+        mIsTS2 = false;//auto scan not use this para
+        mUpdateDvbUri = null;
         mInputId = inputId;
         mBgCallback = callback;
         mDataMananer = new DataMananer(context);
     }
 
+    boolean isCurrentSignalSupportBackgroundSearch(boolean isAuto) {
+        boolean ret = (mCurrentDvbSource == ParameterMananer.SIGNAL_COFDM
+            || mCurrentDvbSource == ParameterMananer.SIGNAL_QAM);
+        if (!isAuto) {
+            ret |= (mCurrentDvbSource == ParameterMananer.SIGNAL_QPSK);
+        }
+        return ret;
+    }
+
+    private String getStartSearchCommand(boolean isAutoScan) {
+        String ret = null;
+        switch (mCurrentDvbSource) {
+            case ParameterMananer.SIGNAL_COFDM: {
+                if (isAutoScan) {
+                    ret = "Dvbt.startSearch";
+                } else {
+                    ret = "Dvbt.startManualSearchByFreq";
+                }
+            }
+            break;
+            case ParameterMananer.SIGNAL_QAM: {
+                if (isAutoScan) {
+                    ret = "Dvbc.startSearchEx";
+                } else {
+                    ret = "Dvbc.startManualSearchByFreq";
+                }
+            }
+            break;
+            case ParameterMananer.SIGNAL_QPSK: {
+                if (!isAutoScan) {
+                    ret = "Dvbs.updateSearch";
+                }
+            }
+            break;
+            default:
+                break;
+        }
+        return ret;
+    }
+
+    private String getFinishSearchCommand() {
+        String ret = null;
+        switch (mCurrentDvbSource) {
+            case ParameterMananer.SIGNAL_COFDM: {
+                ret = "Dvbt.finishSearch";
+            }
+            break;
+            case ParameterMananer.SIGNAL_QAM: {
+                ret = "Dvbt.finishSearch";
+            }
+            break;
+            case ParameterMananer.SIGNAL_QPSK: {
+                ret = "Dvbs.finishSearch";
+            }
+            break;
+            default:
+                break;
+        }
+        return ret;
+    }
+
+    private String dvbSourceToSyncType() {
+        String result = null;
+
+        switch (mCurrentDvbSource) {
+            case ParameterMananer.SIGNAL_COFDM:
+                result = "DVB_T";
+                break;
+            case ParameterMananer.SIGNAL_QAM:
+                result = "DVB_C";
+                break;
+            case ParameterMananer.SIGNAL_QPSK:
+                result = "DVB_S";
+                break;
+            case ParameterMananer.SIGNAL_ISDBT:
+                result = "ISDB_T";
+                break;
+        }
+        return result;
+
+    }
+
     private JSONArray initSearchParameter() {
         JSONArray args = new JSONArray();
-        args.put(true);// retune
-        if (mFrequency != -1) {
-            if (mIsDvbt) {
-                args.put(false);//nit
-                args.put(mFrequency);//hz
-                args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
-                args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
-                args.put(mIsDvbt2 ? DataMananer.VALUE_DVBT_TYPE_LIST[1] : DataMananer.VALUE_DVBT_TYPE_LIST[0]);
-            } else {
-                args.put(false);//nit
-                args.put(mFrequency);//hz
-                //use auto to search all mode
-                args.put("AUTO"/*DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]*/);
-                args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE));
-            }
-            return args;
+        if (mCurrentDvbSource == ParameterMananer.SIGNAL_QPSK) {
+            args.put(mUpdateDvbUri);
         } else {
-            return null;
+            args.put(true);// retune
+            if (mFrequency != -1) {
+                if (mCurrentDvbSource == ParameterMananer.SIGNAL_COFDM) {
+                    args.put(false);//nit
+                    args.put(mFrequency);//hz
+                    args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
+                    args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
+                    args.put(mIsTS2 ? DataMananer.VALUE_DVBT_TYPE_LIST[1] : DataMananer.VALUE_DVBT_TYPE_LIST[0]);
+                } else {
+                    args.put(false);//nit
+                    args.put(mFrequency);//hz
+                    //use auto to search all mode
+                    args.put("AUTO"/*DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]*/);
+                    args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE));
+                }
+                return args;
+            } else {
+                return null;
+            }
         }
+        return args;
     }
 
     private JSONArray initAutoScanParameter() {
+        //only for dvbt/dvbc
         JSONArray args = new JSONArray();
-        if (mIsDvbt) {
+        if (mCurrentDvbSource == ParameterMananer.SIGNAL_COFDM) {
             args.put(true);// retune
             args.put(false);//nit
         } else {
@@ -151,12 +250,19 @@ public class DtvkitBackGroundSearch {
     }
 
     public void startBackGroundAutoSearch() {
+        if (!isCurrentSignalSupportBackgroundSearch(true)) {
+            mBgCallback = null;
+            return;
+        }
         startMonitoringSearch();
         mFoundServiceNumber = 0;
         try {
             JSONArray args = new JSONArray();
             args.put(false); // Commit
-            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
+            String finishCommand = getFinishSearchCommand();
+            if (!TextUtils.isEmpty(finishCommand)) {
+                DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
+            }
         } catch (Exception e) {
             Log.i(TAG, "startBackGroundAutoSearch Failed to finish search " + e.getMessage());
             return;
@@ -166,10 +272,12 @@ public class DtvkitBackGroundSearch {
             JSONArray args = initAutoScanParameter();
             args.put(true);
             if (args != null) {
-                String command = (mIsDvbt ? "Dvbt.startSearch" : "Dvbc.startSearchEx");
+                String command = getStartSearchCommand(true);
                 Log.d(TAG, "startBackGroundAutoSearch command = " + command + ", args = " + args.toString());
-                DtvkitGlueClient.getInstance().request(command, args);
-                mStartSearch = true;
+                if (!TextUtils.isEmpty(command)) {
+                    DtvkitGlueClient.getInstance().request(command, args);
+                    mStartSearch = true;
+                }
             } else {
                 stopSearch();
             }
@@ -180,12 +288,19 @@ public class DtvkitBackGroundSearch {
     }
 
     public void startSearch() {
+        if (!isCurrentSignalSupportBackgroundSearch(false)) {
+            mBgCallback = null;
+            return;
+        }
         startMonitoringSearch();
         mFoundServiceNumber = 0;
         try {
             JSONArray args = new JSONArray();
             args.put(false); // Commit
-            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
+            String finishCommand = getFinishSearchCommand();
+            if (!TextUtils.isEmpty(finishCommand)) {
+                DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
+            }
         } catch (Exception e) {
             Log.i(TAG, "startSearch Failed to finish search " + e.getMessage());
             return;
@@ -194,10 +309,12 @@ public class DtvkitBackGroundSearch {
         try {
             JSONArray args = initSearchParameter();
             if (args != null) {
-                String command = (mIsDvbt ? "Dvbt.startManualSearchByFreq" : "Dvbc.startManualSearchByFreq");
+                String command = getStartSearchCommand(false);
                 Log.d(TAG, "startSearch command = " + command + ", args = " + args.toString());
-                DtvkitGlueClient.getInstance().request(command, args);
-                mStartSearch = true;
+                if (!TextUtils.isEmpty(command)) {
+                    DtvkitGlueClient.getInstance().request(command, args);
+                    mStartSearch = true;
+                }
             } else {
                 stopSearch();
             }
@@ -213,7 +330,10 @@ public class DtvkitBackGroundSearch {
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
-            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
+            String finishCommand = getFinishSearchCommand();
+            if (!TextUtils.isEmpty(finishCommand)) {
+                DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
+            }
         } catch (Exception e) {
             Log.i(TAG, "stopSearch failed to finish search Exception " + e.getMessage());
             return;
@@ -226,7 +346,10 @@ public class DtvkitBackGroundSearch {
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
-            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
+            String finishCommand = getFinishSearchCommand();
+            if (!TextUtils.isEmpty(finishCommand)) {
+                DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
+            }
         } catch (Exception e) {
             Log.i(TAG, "onSearchFinished failed to finish search Exception " + e.getMessage());
             return;
@@ -245,7 +368,7 @@ public class DtvkitBackGroundSearch {
         // If the intent that started this activity is from Live Channels app
         Bundle parameters = new Bundle();
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
-        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, mIsDvbt ? "DVB-T" : "DVB-C");
+        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, dvbSourceToSyncType());
         EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(mContext, mInputId, (mFoundServiceNumber > 0),new ComponentName(mContext, DtvkitEpgSync.class), parameters);
     }
 
@@ -396,7 +519,9 @@ public class DtvkitBackGroundSearch {
     }
 
     private void responseOnSignal(String signal, JSONObject data) {
-        if ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged"))) {
+        if (signal.equals("DvbtStatusChanged")
+            || signal.equals("DvbcStatusChanged")
+            || signal.equals("DvbsStatusChanged")) {
             int progress = getSearchProcess(data);
             if (progress < 100) {
                 Log.d(TAG, "onSignal progress = " + progress);

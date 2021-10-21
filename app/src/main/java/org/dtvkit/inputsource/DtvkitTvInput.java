@@ -4544,10 +4544,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             Log.i(TAG, "DvbNetworkChange or DvbUpdatedService get channel_signal_type Exception " + e.getMessage());
                         }
                     }
-                    if (!TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2)) {
-                        Log.d(TAG, "DvbNetworkChange or DvbUpdatedService not dvbc or dvbt and is " + channelSignalType);
-                        return;
-                    }
+                    //if (!TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2)) {
+                    //    Log.d(TAG, "DvbNetworkChange or DvbUpdatedService not dvbc or dvbt and is " + channelSignalType);
+                    //    return;
+                    //}
                     boolean needUpdate = false;
                     if (mIsPip && !mDvbNetworkChangeSearchStatus) {
                         mDvbNetworkChangeSearchStatus = true;
@@ -8398,14 +8398,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         final Button confirm = (Button) dialogView.findViewById(R.id.confirm);
         final Button cancel = (Button) dialogView.findViewById(R.id.cancel);
         final int[] tempStatus = new int[1];//0 for flag that exit is pressed by user, 1 for exit by search over
-        String tempChannelSignalType;
+
+        String tempChannelSignalType = channel.getType();
+        String tempDvbUri = getChannelInternalDvbUri(channel);
         int tempUpdateFrequency;
-        try {
-            tempChannelSignalType = channel.getInternalProviderData().get("channel_signal_type").toString();
-        } catch (Exception e) {
-            Log.i(TAG, "onMessageCallback channelSignalType Exception " + e.getMessage());
-            tempChannelSignalType = null;
-        }
+
         try {
             tempUpdateFrequency = Integer.valueOf(channel.getInternalProviderData().get("frequency").toString());
         } catch (Exception e) {
@@ -8414,10 +8411,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
         final String channelSignalType = tempChannelSignalType;
         final int updateFrequency = tempUpdateFrequency;
-        if (!TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2)) {
-            Log.d(TAG, "showSearchConfirmDialog not dvbc or dvbt and is " + channelSignalType);
-            return;
-        }
+        final String updateUri = tempDvbUri;
         final DtvkitBackGroundSearch.BackGroundSearchCallback callback = new DtvkitBackGroundSearch.BackGroundSearchCallback() {
             @Override
             public void onMessageCallback(JSONObject mess) {
@@ -8546,7 +8540,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         };
 
-        final DtvkitBackGroundSearch setup = new DtvkitBackGroundSearch(context, channelSignalType, updateFrequency, channel.getInputId(), callback);
+        final DtvkitBackGroundSearch setup = new DtvkitBackGroundSearch(context,
+            getCurrentDvbSource(),
+            channelSignalType,
+            updateUri,
+            updateFrequency,
+            channel.getInputId(),
+            callback);
         setup.startSearch();
         title.setText(R.string.dvb_network_change);
         confirm.setVisibility(View.GONE);
@@ -8780,14 +8780,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
                 };
 
-                String signalType = "";
-                boolean bIsDvbt = false;
-                if (dvbSource == ParameterMananer.SIGNAL_COFDM) {
-                    bIsDvbt = true;
-                } else if (dvbSource == ParameterMananer.SIGNAL_QAM) {
-                    bIsDvbt = false;
-                }
-                DtvkitBackGroundSearch dtvkitBgSearch = new DtvkitBackGroundSearch(context, bIsDvbt, mInputId, bgcallback);
+                DtvkitBackGroundSearch dtvkitBgSearch = new DtvkitBackGroundSearch(context, dvbSource, mInputId, bgcallback);
                 dtvkitBgSearch.startBackGroundAutoSearch();
             }
         }
