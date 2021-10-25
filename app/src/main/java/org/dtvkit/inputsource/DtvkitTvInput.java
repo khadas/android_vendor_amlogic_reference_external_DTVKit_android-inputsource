@@ -146,6 +146,13 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipEntry;
 import java.util.Enumeration;
 
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.LinkProperties;
+import android.net.Network;
+import android.net.RouteInfo;
+import android.net.NetworkInfo;
+import java.net.InetAddress;
 
 public class DtvkitTvInput extends TvInputService implements SystemControlEvent.DisplayModeListener  {
     private static final String TAG = "DtvkitTvInput";
@@ -283,6 +290,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private boolean mCusEnableDtvAutoTime = false;
     private AutoTimeManager mAutoTimeManager = null;
 
+    private ConnectivityManager mConnectivityManager;
 
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
@@ -349,6 +357,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             } else {
                 Log.d(TAG, "mStorageEventReceiver other action");
+            }
+        }
+    };
+
+    protected final BroadcastReceiver mNetStateChangeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null) {
+                String action = intent.getAction();
+
+                if (ConnectivityManager.CONNECTIVITY_ACTION.equals(action)) {
+                    setDnsProp();
+                }
             }
         }
     };
@@ -471,6 +492,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mContentResolver.registerContentObserver(TvContract.RecordedPrograms.CONTENT_URI, true, mRecordingsContentObserver);
         mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
 
+        mConnectivityManager = (ConnectivityManager)this.getSystemService(ConnectivityManager.class);//Context.CONNECTIVITY_SERVICE
+        mSystemControlManager = SystemControlManager.getInstance();
+
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED);
         intentFilter.addAction(TvInputManager.ACTION_PARENTAL_CONTROLS_ENABLED_CHANGED);
@@ -497,6 +521,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         intentFilter4.addAction(Intent.ACTION_MEDIA_MOUNTED);
         intentFilter4.addDataScheme(ContentResolver.SCHEME_FILE);
         registerReceiver(mStorageEventReceiver, intentFilter4);
+
+        IntentFilter intentFilter5 = new IntentFilter();
+        intentFilter5.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        registerReceiver(mNetStateChangeReceiver, intentFilter5);
+        setDnsProp();
 
         sendEmptyMessageToInputThreadHandler(MSG_START_CA_SETTINGS_SERVICE);
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY);
@@ -657,10 +686,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mDataMananer = new DataMananer(this);
         //onChannelsChanged();
         onRecordingsChanged();
-        mSystemControlManager = SystemControlManager.getInstance();
         mSystemControlEvent = SystemControlEvent.getInstance(null);
         mSystemControlEvent.setDisplayModeListener(this);
-        mSystemControlManager.setListener(mSystemControlEvent);
+        if (mSystemControlManager != null)
+        {
+            mSystemControlManager.setListener(mSystemControlEvent);
+        }
         //DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
         DtvkitGlueClient.getInstance().registerSignalHandler(mRecordingManagerHandler);
         mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
@@ -873,6 +904,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         unregisterReceiver(mAutomaticSearchingReceiver);
         unregisterReceiver(mCiTestBroadcastReceiver);
         unregisterReceiver(mStorageEventReceiver);
+        unregisterReceiver(mNetStateChangeReceiver);
         if (mAutoTimeManager != null) {
             mAutoTimeManager.release();
         }
@@ -8902,5 +8934,29 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         params.height = WindowManager.LayoutParams.WRAP_CONTENT;
         alert.getWindow().setAttributes(params);
         alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
+    }
+
+    private void setDnsProp() {
+        Network defaultNetwork = null;
+        LinkProperties defLinkProperties = null;
+
+        Log.d(TAG, "setDnsProp network change action");
+        if (mConnectivityManager != null) {
+            defaultNetwork = mConnectivityManager.getActiveNetwork();
+            if (defaultNetwork != null) {
+                defLinkProperties = mConnectivityManager.getLinkProperties(defaultNetwork);
+            }
+        }
+
+        if (null != defLinkProperties) {
+            Log.e(TAG, "setDnsProp dns size = " + defLinkProperties.getDnsServers().size());
+            if (mSystemControlManager != null) {
+                for (int i = 0; i < defLinkProperties.getDnsServers().size(); i++) {
+                    String dnsPropName = "vendor.tv.dtv.net.dns" + String.valueOf(i + 1);
+                    Log.e(TAG, "setDnsProp, dnsPropName = " + dnsPropName + ", dns = " + defLinkProperties.getDnsServers().get(i).getHostAddress());
+                    PropSettingManager.setProp(dnsPropName, defLinkProperties.getDnsServers().get(i).getHostAddress());
+                }
+            }
+        }
     }
 }
