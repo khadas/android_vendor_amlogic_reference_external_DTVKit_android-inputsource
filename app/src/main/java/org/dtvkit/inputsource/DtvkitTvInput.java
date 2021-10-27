@@ -3004,7 +3004,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mView.nativeOverlayView.setOverlayTarge(mView.nativeOverlayView.mTarget);
                     mView.mSubServerView.setOverlaySubtitleListener(mView.mSubServerView.mSubListener);
                     if (isSdkAfterAndroidQ()) {
-                        mHardware.setSurface(mSurface, mConfigs[1]);
+                        mHardware.setSurface(mSurface, mConfigs[0]);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                         if (mSystemControlManager != null) {
                             mSystemControlManager.SetDtvKitSourceEnable(1);
@@ -5424,7 +5424,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mView.nativeOverlayView.setOverlayTarge(mView.nativeOverlayView.mTarget);
                     mView.mSubServerView.setOverlaySubtitleListener(mView.mSubServerView.mSubListener);
                     if (isSdkAfterAndroidQ()) {
-                        mHardware.setSurface(mSurface, mConfigs[1]);
+                        mHardware.setSurface(mSurface, mConfigs[0]);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                         if (mSystemControlManager != null) {
                             mSystemControlManager.SetDtvKitSourceEnable(1);
