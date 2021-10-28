@@ -119,6 +119,7 @@ import com.droidlogic.fragment.ParameterMananer;
 //import com.droidlogic.app.tv.TvControlManager;
 import com.droidlogic.app.AudioConfigManager;
 import com.droidlogic.app.SystemControlManager;
+import com.droidlogic.app.SystemControlManager.tvin_cutwin_t;
 import com.droidlogic.app.SystemControlEvent;
 import com.droidlogic.app.CCSubtitleView;
 
@@ -2668,9 +2669,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private boolean mReleaseHandleMessage = false;
         private boolean mAquireMainSemaphore = false;
         private boolean mAquirePipSemaphore = false;
-
-        private static final int INPUT_MPEG = 10;
-        private static final int INPUT_DVB  = 11;
         private final WeakReference<DtvkitTvInput> outService;
 
         private final class AvailableState {
@@ -2763,7 +2761,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             }
                             if (mSystemControlManager != null) {
                                 mSystemControlManager.SetDtvKitSourceEnable(0);
-                                mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.valueOf(INPUT_MPEG), 0, 0);
+                                mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.XXXX, 0, 0);
                             }
                             //sendSetSurfaceMessage(null, null);
                             Log.d(TAG, "onSetSurface null");
@@ -2784,7 +2782,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                         if (mSystemControlManager != null) {
                             mSystemControlManager.SetDtvKitSourceEnable(1);
-                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.valueOf(INPUT_DVB), 0, 0);
+                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.DTV, 0, 0);
                         }
                         //sendSetSurfaceMessage(surface, mConfigs[0]);
                         mSurface = surface;
@@ -2808,7 +2806,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     //sendDoReleaseMessage();
                     if (mSystemControlManager != null) {
                         mSystemControlManager.SetDtvKitSourceEnable(0);
-                        mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.valueOf(INPUT_MPEG), 0, 0);
+                        mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.XXXX, 0, 0);
                     }
                     doRelease(false, false);
                 }
@@ -3068,7 +3066,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                         if (mSystemControlManager != null) {
                             mSystemControlManager.SetDtvKitSourceEnable(1);
-                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.valueOf(INPUT_DVB), 0, 0);
+                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.DTV, 0, 0);
                         }
                     } else {
                         DtvkitGlueClient.getInstance().setMutilSurface(INDEX_FOR_MAIN, mSurface);
@@ -4703,19 +4701,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
                    }
                    //add for pip setting
-                   if (!mIsPip) {
+                   if (!mIsPip/*mIsMain*/) {
+                       tvin_cutwin_t pq_overscan = SysContManager.GetOverscanParams(SystemControlManager.Display_Mode.DISPLAY_MODE_169);
                        String crop = new StringBuilder()
-                           .append(voff0).append(" ")
-                           .append(hoff0).append(" ")
-                           .append(voff1).append(" ")
-                           .append(hoff1).toString();
+                           .append(voff0 + pq_overscan.vs).append(" ")
+                           .append(hoff0 + pq_overscan.hs).append(" ")
+                           .append(voff1 + pq_overscan.ve).append(" ")
+                           .append(hoff1 + pq_overscan.he).toString();
 
                            if (UiSettingMode != 6) {//not afd
                                Log.i(TAG, "Not AFD mode!");
                            } else {
                                Log.d(TAG, "AppVideoPosition crop:("+crop+")");
                                SysContManager.writeSysFs("/sys/class/video/crop", crop);
-                               playerSetVideoCrop(INDEX_FOR_MAIN, voff0, hoff0, voff1, hoff1);
+                               playerSetVideoCrop(INDEX_FOR_MAIN, voff0 + pq_overscan.vs, hoff0 + pq_overscan.hs, voff1 + pq_overscan.ve, hoff1 + pq_overscan.he);
                            }
                        Log.d(TAG, "AppVideoPosition layoutSurface("+left+","+top+","+right+","+bottom+")(LTRB)");
                        layoutSurface(left,top,right,bottom);
@@ -5492,7 +5491,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                         if (mSystemControlManager != null) {
                             mSystemControlManager.SetDtvKitSourceEnable(1);
-                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.valueOf(INPUT_DVB), 0, 0);
+                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.DTV, 0, 0);
                         }
                     } else {
                         DtvkitGlueClient.getInstance().setMutilSurface(INDEX_FOR_MAIN, mSurface);
