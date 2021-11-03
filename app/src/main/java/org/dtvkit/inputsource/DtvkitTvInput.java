@@ -283,6 +283,33 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private ConnectivityManager mConnectivityManager;
 
+    private PendingTuneEvent mPendingTune = new PendingTuneEvent();
+
+    private class PendingTuneEvent {
+        private long mSessionId;
+        private Uri mUri;
+        private boolean hasPendingTune = false;
+
+        public void PendingTuneEvent() {}
+        public void setPendingEvent(Uri uri, long id) {
+            Log.d(TAG, "PendingTune, uri=" + uri+ ",id:"+id);
+            mSessionId = id;
+            mUri = uri;
+            hasPendingTune = true;
+        }
+
+        public boolean hasPendingEventToProcess(long id) {
+            Log.d(TAG, "hasPendingEventToProcess, id=" + id+ ",mSessionId:"+mSessionId);
+            return hasPendingTune && (mSessionId == id);
+        }
+
+        public void reset() {
+            mUri = null;
+            mSessionId = -1;
+            hasPendingTune = false;
+       }
+    }
+
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
     }
@@ -2791,6 +2818,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.d(TAG, "onSetSurface will be set to dtvkit when tuning");
                 }
             }
+            if (mPendingTune.hasPendingEventToProcess(mCurrentDtvkitTvInputSessionIndex)) {
+                onTune(mPendingTune.mUri);
+                mPendingTune.reset();
+            }
             return true;
         }
 
@@ -2934,7 +2965,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mNextBufferUri = next != null ? Uri.parse(next) : null;
                 }
             }
-            return onTune(channelUri);
+            if (null == mSurface) {
+                Log.i(TAG, "onTune " + channelUri + ", index = " + mCurrentDtvkitTvInputSessionIndex + "Surface is null");
+                mPendingTune.setPendingEvent(channelUri, mCurrentDtvkitTvInputSessionIndex);
+                return false;
+            } else {
+                return onTune(channelUri);
+            }
         }
 
         @RequiresApi(api = Build.VERSION_CODES.M)
@@ -3140,6 +3177,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 setAdFunction(MSG_MIX_AD_SWITCH_ENABLE, 0);
             }
             boolean playResult = false;
+            if (null == mSurface)
+                return playResult;
             if (!mIsPip) {
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 String previousUriStr = "";
