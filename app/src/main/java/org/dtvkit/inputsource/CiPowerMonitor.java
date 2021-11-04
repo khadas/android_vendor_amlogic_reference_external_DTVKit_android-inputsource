@@ -33,6 +33,9 @@ class CiPowerMonitor {
             if (("power_ok").equals(signal)) {
                 stopCiplusPowerdownMonitor();
             }
+            if (("rec stop").equals(signal)) {
+                reStartCiplusPowerdownMonitor();
+            }
         }
     };
 
@@ -77,6 +80,16 @@ class CiPowerMonitor {
                 noticePowerDown();
                 startTimeoutHandler();
                 mIsStarted = true;
+        }
+    }
+
+    private void reStartCiplusPowerdownMonitor() {
+        synchronized (mCiplusPowerdownLock) {
+            if (mIsStarted && !isPowerInterActive()) {
+                stopTimeoutHandler();
+                noticePowerDown();
+                startTimeoutHandler();
+            }
         }
     }
 
