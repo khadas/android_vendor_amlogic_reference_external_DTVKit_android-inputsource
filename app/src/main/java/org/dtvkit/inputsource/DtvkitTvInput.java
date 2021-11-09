@@ -65,6 +65,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Looper;
+import android.os.Process;
 import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
@@ -510,6 +511,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
     };
+    private Handler mMainHandler;
+    private void runOnMainThread(Runnable r) {
+        // Android MainThread is the first thread, same as pid.
+        if (Process.myPid() != Process.myTid()) {
+            synchronized(this) {
+                if (mMainHandler == null) {
+                    mMainHandler = new Handler(Looper.getMainLooper());
+                }
+            }
+            mMainHandler.post(r);
+        } else {
+            r.run();
+        }
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
@@ -1573,13 +1588,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_SET_TELETEXT_MIX_TRANSPARENT = 7;
         protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 8;
 
-        Semaphore sem = new Semaphore(1);
         private final DtvkitGlueClient.SubtitleListener mSubListener = new DtvkitGlueClient.SubtitleListener() {
             @Override
             public void drawEx(int parserType, int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, int[] data) {
                 Log.v(TAG, "SubtitleServiceDraw: type= "+ parserType + ", srcw= " + src_width +
                ", srch= " + src_height + ", x= " + dst_x + ", y= " + dst_y +
                ", dstw= " + dst_width + ", dsth= " + dst_height + ", pause= " + mPauseExDraw);
+                runOnMainThread(() -> {
                 if (mPauseExDraw > 0) {
                     return;
                 }
@@ -1588,17 +1603,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (src_width == 0 || src_height == 0) {
                     if (dst_width == 9999 && overlay1 != null) {
                         /* 9999 dst_width indicates the overlay should be cleared */
-                        sem.acquireUninterruptibly();
                         Canvas canvas = new Canvas(overlay1);
                         canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                        sem.release();
                         postInvalidate();
                     }
                 } else {
                     if (data.length == 0)
                         return;
                     /* Build an array of ARGB_8888 pixels as signed ints and add this part to the region */
-                    sem.acquireUninterruptibly();
                     if (overlay1 == null) {
                         /* TODO The overlay size should come from the tif (and be updated on onOverlayViewSizeChanged) */
                         overlay1 = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
@@ -1648,12 +1660,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Paint paint = new Paint();
                     paint.setAntiAlias(true);
                     paint.setFilterBitmap(true);
-                    paint.setDither(true);
                     canvas.drawBitmap(region, null, overlay_dst, paint);
                     region.recycle();
-                    sem.release();
                     postInvalidate();
                 }
+                });
             }
 
             @Override
@@ -1719,39 +1730,38 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         public void clearSubtitle(){
-            sem.acquireUninterruptibly();
+            runOnMainThread(() -> {
             if (overlay1 != null) {
                 Canvas canvas = new Canvas(overlay1);
                 canvas.drawColor(0, PorterDuff.Mode.CLEAR);
             }
-            sem.release();
+            });
         }
 
         public void setOverlaySubtitleListener(DtvkitGlueClient.SubtitleListener listener) {
-            sem.acquireUninterruptibly();
+            runOnMainThread(() -> {
             DtvkitGlueClient.getInstance().setSubtileListener(listener);
-            sem.release();
+            });
         }
 
         public void destroy() {
-            sem.acquireUninterruptibly();
+            runOnMainThread(() -> {
             //DtvkitGlueClient.getInstance().setSubtileListener(null);
             if (overlay1 != null) {
                 overlay1.recycle();
                 overlay1 = null;
             }
-            sem.release();
+            });
         }
 
         @Override
         protected void onDraw(Canvas canvas)
         {
-            sem.acquireUninterruptibly();
+            // onDraw is called in mainthread by android framework.
             super.onDraw(canvas);
             if (overlay1 != null) {
                 canvas.drawBitmap(overlay1, src, dst, null);
             }
-            sem.release();
         }
     }
 
