@@ -2760,15 +2760,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     writeSysFs("/sys/class/video/video_inuse", "0");
                                 }
                             }
-                            if (mSystemControlManager != null) {
-                                mSystemControlManager.SetDtvKitSourceEnable(0);
-                                mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.XXXX, 0, 0);
-                            }
                             //sendSetSurfaceMessage(null, null);
-                            Log.d(TAG, "onSetSurface null");
-                            mSurface = null;
                             //sendDoReleaseMessage();
                             doRelease(false, false);
+                            mSurface = null;
                         }
                     } else {
                         if (mSurface != null && mSurface != surface) {
@@ -2781,10 +2776,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         AudioConfigManager.getInstance(getApplication()).refreshAudioCfgBySrc(AudioConfigManager.AUDIO_OUTPUT_DELAY_SOURCE_DTV);
                         mHardware.setSurface(surface, mConfigs[0]);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
-                        if (mSystemControlManager != null) {
-                            mSystemControlManager.SetDtvKitSourceEnable(1);
-                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.DTV, 0, 0);
-                        }
                         //sendSetSurfaceMessage(surface, mConfigs[0]);
                         mSurface = surface;
                     }
@@ -2805,10 +2796,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                     }
                     //sendDoReleaseMessage();
-                    if (mSystemControlManager != null) {
-                        mSystemControlManager.SetDtvKitSourceEnable(0);
-                        mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.XXXX, 0, 0);
-                    }
                     doRelease(false, false);
                 }
                 if (mSurface != surface) {
@@ -3065,10 +3052,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (isSdkAfterAndroidQ()) {
                         mHardware.setSurface(mSurface, mConfigs[0]);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
-                        if (mSystemControlManager != null) {
-                            mSystemControlManager.SetDtvKitSourceEnable(1);
-                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.DTV, 0, 0);
-                        }
                     } else {
                         DtvkitGlueClient.getInstance().setMutilSurface(INDEX_FOR_MAIN, mSurface);
                     }
@@ -3176,8 +3159,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 setAdFunction(MSG_MIX_AD_SWITCH_ENABLE, 0);
             }
             boolean playResult = false;
-            if (null == mSurface)
+            if (null == mSurface) {
                 return playResult;
+            }
+            if (mSystemControlManager != null) {
+                mSystemControlManager.SetDtvKitSourceEnable(1);
+                mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.DTV, 0, 0);
+            }
             if (!mIsPip) {
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 String previousUriStr = "";
@@ -3288,6 +3276,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 playerPipStop();
             }
             finalReleaseWorkThread(keepSession, needUpdate);
+
+            if ((mSystemControlManager != null) && (mSurface != null)) {
+                mSystemControlManager.SetDtvKitSourceEnable(0);
+                mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.XXXX, 0, 0);
+            }
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
         }
 
