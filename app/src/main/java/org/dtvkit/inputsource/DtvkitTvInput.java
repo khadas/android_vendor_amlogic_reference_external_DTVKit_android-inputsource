@@ -2974,7 +2974,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 boolean info = mHandlerThreadHandle.sendMessage(mess);
                 Log.d(TAG, "sendMessage " + info);
             }
-
+            if (playerGetSubtitlesOn()) {
+                playerSetSubtitlesOn(false);
+            }
             Log.i(TAG, "onTune will be Done in onTuneByHandlerThreadHandle");
             return true;
         }
@@ -4382,6 +4384,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 mMainHandle.sendEmptyMessage(MSG_SHOW_SCAMBLEDTEXT);
                             } else {
                                 Log.d(TAG, "mMainHandle is null");
+                            }
+                            if (playerGetSubtitlesOn()) {
+                                playerSetSubtitlesOn(false);
                             }
                             break;
                         default:
