@@ -1112,10 +1112,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (enableCC) {
                 this.addView(mCCSubView);
             }
-            this.addView(ciOverlayView);
             initRelativeLayout();
             this.addView(mCasOsm);
             mCasOsm.setVisibility(View.GONE);
+            this.addView(ciOverlayView);
         }
 
         public void destroy() {
@@ -1252,13 +1252,29 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public void showScrambledText(String text, boolean isPip) {
             if (mText != null && mRelativeLayout != null) {
                 Log.d(TAG, "showText");
+
                 mText.setText(text);
                 if (mText.getVisibility() != View.VISIBLE) {
                     mText.setVisibility(View.VISIBLE);
                 }
+
                 //display black background
-                if (isPip)
-                    showTuningImage(null);
+                ColorDrawable colorDrawable = new ColorDrawable();
+                int color = Color.argb(255, 0, 0, 0);
+
+                if (mSystemControlManager != null) {
+                    if (mSystemControlManager.getScreenColorForSignalChange() == 0)
+                    {
+                        color = Color.argb(255, 0, 0, 0); //black
+                    }
+                    else
+                    {
+                        color = Color.argb(255, 3, 0, 247); //blue
+                    }
+                }
+
+                colorDrawable.setColor(color);
+                showTuningImage(colorDrawable);
             }
         }
 
