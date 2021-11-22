@@ -173,7 +173,7 @@ public class DtvkitBackGroundSearch {
             }
             break;
             case ParameterMananer.SIGNAL_QAM: {
-                ret = "Dvbt.finishSearch";
+                ret = "Dvbc.finishSearch";
             }
             break;
             case ParameterMananer.SIGNAL_QPSK: {
