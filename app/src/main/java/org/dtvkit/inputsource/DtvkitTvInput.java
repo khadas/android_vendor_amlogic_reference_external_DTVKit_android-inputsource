@@ -2974,9 +2974,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 boolean info = mHandlerThreadHandle.sendMessage(mess);
                 Log.d(TAG, "sendMessage " + info);
             }
-            if (playerGetSubtitlesOn()) {
-                playerSetSubtitlesOn(false);
-            }
             Log.i(TAG, "onTune will be Done in onTuneByHandlerThreadHandle");
             return true;
         }
