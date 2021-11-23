@@ -24,6 +24,13 @@ import java.util.HashMap;
 public class DtvkitEpgSync extends EpgSyncJobService {
     private static final String TAG = "EpgSyncJobService";
 
+    public static final int SIGNAL_QPSK = 1; // digital satellite
+    public static final int SIGNAL_COFDM = 2; // digital terrestrial
+    public static final int SIGNAL_QAM   = 4; // digital cable
+    public static final int SIGNAL_ISDBT  = 5;
+    public static final int SIGNAL_ANALOG = 8;
+
+
     private final static HashMap<String, ArrayList<String>> genresMap = new HashMap<String, ArrayList<String>>();
 
     static {
@@ -154,6 +161,10 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             String request = "Dvb.getListOfServices";
             if (!syncCurrent) {
                 request = "Dvb.getFullListOfServices";
+            } else {
+                if (TextUtils.isEmpty(getChannelTypeFilter())) {
+                    setChannelTypeFilter(dvbSourceToChannelTypeString(getCurrentDvbSource()));
+                }
             }
             JSONObject obj = DtvkitGlueClient.getInstance().request(request, new JSONArray());
 
@@ -617,6 +628,39 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             } catch (Exception e) {
                 Log.e(TAG, "getDtvkitChannelUri Exception = " + e.getMessage());
             }
+        }
+        return result;
+    }
+
+    private int getCurrentDvbSource() {
+        int source = SIGNAL_COFDM;
+        try {
+            JSONObject sourceReq = DtvkitGlueClient.getInstance().request("Dvb.GetDvbSource", new JSONArray());
+            if (sourceReq != null) {
+                source = sourceReq.optInt("data");
+            }
+        } catch (Exception e) {
+        }
+        return source;
+    }
+
+    private String dvbSourceToChannelTypeString(int source) {
+        String result = "TYPE_DVB_T";
+        switch (source) {
+            case SIGNAL_COFDM:
+                result = "TYPE_DVB_T";
+                break;
+            case SIGNAL_QAM:
+                result = "TYPE_DVB_C";
+                break;
+            case SIGNAL_QPSK:
+                result = "TYPE_DVB_S";
+                break;
+            case SIGNAL_ISDBT:
+                result = "TYPE_ISDB_T";
+                break;
+            default:
+                break;
         }
         return result;
     }

@@ -426,6 +426,10 @@ public abstract class EpgSyncJobService extends JobService {
         mChannelTypeFilter = type;
     }
 
+    public static String getChannelTypeFilter() {
+        return mChannelTypeFilter;
+    }
+
     /**
      * @hide
      */
