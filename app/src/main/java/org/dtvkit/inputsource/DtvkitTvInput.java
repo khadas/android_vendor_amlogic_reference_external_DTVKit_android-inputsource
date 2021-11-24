@@ -2639,6 +2639,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Bundle event = new Bundle();
                     event.putString(ConstantManager.KEY_INFO, "Stop record due to disk remove");
                     notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+                    doStopRecording();
                 } else if (signal.equals("TuneResourceBusy")) {
                     //tell application TuneResourceBusy and need to stop
                     Bundle event = new Bundle();
