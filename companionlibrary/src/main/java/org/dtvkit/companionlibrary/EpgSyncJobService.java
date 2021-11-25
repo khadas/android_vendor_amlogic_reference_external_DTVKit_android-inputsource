@@ -36,6 +36,7 @@ import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.LongSparseArray;
 import android.util.SparseArray;
@@ -164,6 +165,7 @@ public abstract class EpgSyncJobService extends JobService {
      * @return The list of channels for your app.
      */
     public abstract List<Channel> getChannels(boolean syncCurrent);
+    public abstract boolean checkSignalTypesMatch(String signalType);
 
     /**
      * Returns the programs that will appear for each channel.
@@ -476,7 +478,23 @@ public abstract class EpgSyncJobService extends JobService {
                 broadcastError(ERROR_EPG_SYNC_CANCELED);
                 return null;
             }
+
             List<Channel> tvChannels = getChannels(syncCurrent);
+
+            if (syncCurrent) {
+                if (!TextUtils.isEmpty(syncSignalType) && !checkSignalTypesMatch(syncSignalType)) {
+                    //dvb source changed, should cancel this job
+                    broadcastError(ERROR_EPG_SYNC_CANCELED);
+                    return null;
+                }
+
+                if (!TextUtils.isEmpty(mChannelTypeFilter) && !checkSignalTypesMatch(mChannelTypeFilter)) {
+                    //dvb source changed, should cancel this job
+                    broadcastError(ERROR_EPG_SYNC_CANCELED);
+                    return null;
+                }
+            }
+
             TvContractUtils.updateChannels(mContext, mInputId, mIsSearchedChannel, tvChannels, mChannelTypeFilter, extras);
             LongSparseArray<Channel> channelMap = TvContractUtils.buildChannelMap(
                     mContext.getContentResolver(), mInputId);

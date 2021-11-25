@@ -309,6 +309,17 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         return channels;
     }
 
+    /*param signalType should not null*/
+    @Override
+    public boolean checkSignalTypesMatch(String signalType) {
+        String currentSignalType = dvbSourceToChannelTypeString(getCurrentDvbSource());
+        if (signalType.contains("TYPE_")) {
+            return currentSignalType.equals(signalType);
+        } else {
+            return currentSignalType.equals(searchSignalTypeToChannelType(signalType));
+        }
+    }
+
     @Override
     public List<Program> getProgramsForChannel(Uri channelUri, Channel channel, long startMs, long endMs) {
         List<Program> programs = new ArrayList<>();
@@ -660,6 +671,29 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 result = "TYPE_ISDB_T";
                 break;
             default:
+                break;
+        }
+        return result;
+    }
+
+    private static String searchSignalTypeToChannelType(String searchSignalType) {
+        String result = null;
+
+        if (TextUtils.isEmpty(searchSignalType)) {
+            return null;
+        }
+        switch (searchSignalType) {
+            case "DVB-T":
+                result = "TYPE_DVB_T";
+                break;
+            case "DVB-C":
+                result = "TYPE_DVB_C";
+                break;
+            case "DVB-S":
+                result = "TYPE_DVB_S";
+                break;
+            case "ISDB-T":
+                result = "TYPE_ISDB_T";
                 break;
         }
         return result;
