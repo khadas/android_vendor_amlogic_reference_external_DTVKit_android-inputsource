@@ -8528,10 +8528,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     channelUri = TvContract.buildChannelUri(newUpdateChannel.getId());
                                 }
                                 if (channelUri != null) {
-                                    updateSession.onTune(channelUri);
-                                    updateSession.notifyChannelRetuned(channelUri);
-                                    updateSession.notifySessionEvent(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
-                                    Log.d(TAG, "onMessageCallback notifyChannelRetuned " + channelUri);
+                                    Bundle bundle = new Bundle();
+                                    bundle.putParcelable("channelUri", channelUri);
+                                    updateSession.notifySessionEvent(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
+                                    Log.w(TAG, "tv app tuneChannel ifNeeded, " + channelUri);
                                 } else {
                                     mDvbNetworkChangeSearchStatus = false;
                                     mMainDvbChannel = null;
@@ -8558,10 +8558,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 }
                                 if (restoreFrequency != updateFrequency) {
                                     Uri restoreUri = TvContract.buildChannelUri(restoreChannel.getId());
-                                    restoreSession.onTune(restoreUri);
-                                    restoreSession.notifyChannelRetuned(restoreUri);
-                                    restoreSession.notifySessionEvent(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
-                                    Log.d(TAG, "onMessageCallback restoreSession notifyChannelRetuned " + restoreUri);
+                                    Bundle bundle = new Bundle();
+                                    bundle.putParcelable("channelUri", restoreUri);
+                                    restoreSession.notifySessionEvent(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
+                                    Log.w(TAG, "tv app tuneChannel ifNeeded, " + restoreUri);
                                 } else {
                                     restoreChannel = null;
                                     if (newUpdateChannel != null) {
@@ -8583,10 +8583,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     }
                                     if (restoreChannel != null) {
                                         Uri restoreUri = TvContract.buildChannelUri(restoreChannel.getId());
-                                        restoreSession.onTune(restoreUri);
-                                        restoreSession.notifyChannelRetuned(restoreUri);
-                                        restoreSession.notifySessionEvent(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
-                                        Log.d(TAG, "onMessageCallback restoreSession new channel notifyChannelRetuned " + restoreUri);
+                                        Bundle bundle = new Bundle();
+                                        bundle.putParcelable("channelUri", restoreUri);
+                                        restoreSession.notifySessionEvent(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
+                                        Log.w(TAG, "tv app tuneChannel ifNeeded, " + restoreUri);
                                     } else {
                                         Uri restoreUri = TvContract.buildChannelUri(-1);
                                         restoreSession.notifyChannelRetuned(restoreUri);
