@@ -2,6 +2,7 @@ package com.droidlogic.dtvkit.inputsource;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -23,6 +24,7 @@ import android.widget.SimpleAdapter;
 import android.text.TextUtils;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.ContentResolver;
 import android.util.TypedValue;
 import android.widget.TextView;
 import android.view.WindowManager;
@@ -38,6 +40,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.fragment.ParameterMananer;
@@ -135,6 +138,9 @@ public class DtvkitDvbScanSelect extends Activity {
                     public void passwordRight(String password) {
                         Log.d(TAG, "password is right");
                         mParameterMananer.saveStringParameters(mParameterMananer.SECURITY_PASSWORD, password);
+                        getContentResolver().notifyChange(
+                            Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
+                            null, ContentResolver.NOTIFY_SYNC_TO_NETWORK);
                     }
                     @Override
                     public void onKeyBack() {

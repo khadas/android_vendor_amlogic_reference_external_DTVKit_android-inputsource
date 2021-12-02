@@ -124,6 +124,7 @@ import com.droidlogic.app.SystemControlManager;
 import com.droidlogic.app.SystemControlManager.tvin_cutwin_t;
 import com.droidlogic.app.SystemControlEvent;
 import com.droidlogic.app.CCSubtitleView;
+import com.droidlogic.app.DataProviderManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -278,6 +279,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private boolean mCusEnableDtvAutoTime = false;
     private AutoTimeManager mAutoTimeManager = null;
+    private String mPincode = null;
 
     private ConnectivityManager mConnectivityManager;
 
@@ -506,6 +508,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
     };
+
+    private final ContentObserver mDroidLogicDbContentObserver = new ContentObserver(null) {
+        @Override
+        public void onChange(boolean selfChange) {
+            if (mSystemControlManager != null) {
+                String buildFingerprint = mSystemControlManager.getPropertyString("ro.build.fingerprint", "");
+                //Only for trunk use, to match CiPluse case
+                //Trunk has no separate CI menu, we use same security PIN code for CI CAM
+                //When doing this CI case, please change PIN code in security menu first
+                //Custom will has their own design, so use fingerprint to limit this logic.
+                if (buildFingerprint.contains("Amlogic")) {
+                    removeMessageInInputThreadHandler(MSG_CHECK_PINCODE_CHANGED);
+                    sendDelayedEmptyMessageToInputThreadHandler(MSG_CHECK_PINCODE_CHANGED, 1000);
+                }
+            }
+        }
+    };
+
     private Handler mMainHandler;
     private void runOnMainThread(Runnable r) {
         // Android MainThread is the first thread, same as pid.
@@ -533,6 +553,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mTvInputManager = (TvInputManager)this.getSystemService(Context.TV_INPUT_SERVICE);
         mContentResolver = getContentResolver();
         //mContentResolver.registerContentObserver(TvContract.Channels.CONTENT_URI, true, mContentObserver);
+        mContentResolver.registerContentObserver(
+            Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME), true, mDroidLogicDbContentObserver);
         mContentResolver.registerContentObserver(TvContract.RecordedPrograms.CONTENT_URI, true, mRecordingsContentObserver);
         mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
 
@@ -584,6 +606,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     protected static final int MSG_UPDATE_DTVKIT_DATABASE = 5;
     protected static final int MSG_START_MONITOR_SYNCING = 6;
     protected static final int MSG_STOP_MONITOR_SYNCING  = 7;
+    protected static final int MSG_CHECK_PINCODE_CHANGED = 8;
 
     protected static final int PERIOD_RIGHT_NOW = 0;
     protected static final int PERIOD_CHECK_TV_PROVIDER_DELAY = 10;
@@ -638,6 +661,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     case MSG_STOP_MONITOR_SYNCING: {
                         LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(syncReceiver);
+                        break;
+                    }
+                    case MSG_CHECK_PINCODE_CHANGED: {
+                        String pinCode = mParameterMananer.getStringParameters(ParameterMananer.SECURITY_PASSWORD);
+                        if (!pinCode.equals(mPincode)) {
+                            Log.d(TAG, "pin code changed, SetPinCodeToCam.");
+                            mPincode = pinCode;
+                            mParameterMananer.setPinCodeToCam(mPincode);
+                        }
                         break;
                     }
                     default:
@@ -764,6 +796,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mCusFeatureSubtitleCfg = getCustomFeatureSubtitleCfg();
         mCusFeatureAudioCfg = getCustomFeatureAudioCfg();
         mCusEnableDtvAutoTime = (getCustomFeatureAutoTimeCfg() > 0);
+        mPincode = mParameterMananer.getStringParameters(ParameterMananer.SECURITY_PASSWORD);
         if (mCusEnableDtvAutoTime) {
             AutoTimeManager.AutoManagerCallback autoManagerCallback = new AutoTimeManager.AutoManagerCallback() {
                 @Override
@@ -964,6 +997,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mAutoTimeManager.release();
         }
         //mContentResolver.unregisterContentObserver(mContentObserver);
+        mContentResolver.unregisterContentObserver(mDroidLogicDbContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingManagerHandler);
         //DtvkitGlueClient.getInstance().setSystemControlHandler(null);

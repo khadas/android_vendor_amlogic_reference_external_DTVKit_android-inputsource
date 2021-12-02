@@ -2680,4 +2680,15 @@ public class ParameterMananer {
         }
         return result;
     }
+
+    public void setPinCodeToCam(String pinCode) {
+        boolean result = false;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(pinCode);
+            DtvkitGlueClient.getInstance().request("Dvb.SetPinCodeToCam", args);
+        } catch (Exception e) {
+        }
+    }
+
 }

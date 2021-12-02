@@ -3,6 +3,7 @@ package com.droidlogic.settings;
 import android.util.Log;
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Spinner;
@@ -29,6 +30,7 @@ import android.content.Context;
 import android.widget.TextView;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ContentResolver;
 import android.net.Uri;
 import android.content.BroadcastReceiver;
 import android.app.AlarmManager;
@@ -58,7 +60,7 @@ import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 
 //import com.droidlogic.dtvkit.inputsource.AutomaticSearchingReceiver;
-
+import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.settings.SysSettingManager;
 import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.fragment.PasswordCheckUtil;
@@ -220,6 +222,9 @@ public class DtvkitDvbSettings extends Activity {
                     public void passwordRight(String password) {
                         Log.d(TAG, "password is right");
                         mParameterMananer.saveStringParameters(mParameterMananer.SECURITY_PASSWORD, password);
+                        getContentResolver().notifyChange(
+                            Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
+                            null, ContentResolver.NOTIFY_SYNC_TO_NETWORK);
                     }
                     @Override
                     public void onKeyBack() {
