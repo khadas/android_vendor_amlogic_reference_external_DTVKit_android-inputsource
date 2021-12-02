@@ -50,52 +50,61 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>-->
-        <activity android:name=".DtvkitDvbScanSelect">
+        <activity android:exported="true"
+             android:name=".DtvkitDvbScanSelect">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <activity android:name=".DtvkitDvbcSetup">
+        <activity android:exported="false"
+             android:name=".DtvkitDvbcSetup">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <activity android:name=".DtvkitDvbsSetup">
+        <activity android:exported="false"
+             android:name=".DtvkitDvbsSetup">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <activity android:name=".DtvkitIsdbtSetup">
+        <activity android:exported="false"
+             android:name=".DtvkitIsdbtSetup">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <activity android:name=".DtvkitDvbtSetup">
+        <activity android:exported="false"
+             android:name=".DtvkitDvbtSetup">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <activity android:name="com.droidlogic.settings.DtvkitDvbSettings">
+        <activity android:exported="false"
+             android:name="com.droidlogic.settings.DtvkitDvbSettings">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <activity android:name=".Setup">
+        <activity android:exported="false"
+             android:name=".Setup">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <activity android:name="com.droidlogic.fragment.ScanMainActivity">
+        <activity android:exported="false"
+             android:name="com.droidlogic.fragment.ScanMainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <activity android:name="com.droidlogic.readdbfile.ReadDbActivity">
+        <activity android:exported="false"
+             android:name="com.droidlogic.readdbfile.ReadDbActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <service
+        <service android:exported="false"
             android:name=".DtvkitTvInput"
             android:label="DTVKit2"
             android:permission="android.permission.BIND_TV_INPUT">

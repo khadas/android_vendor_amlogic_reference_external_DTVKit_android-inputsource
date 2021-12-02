@@ -16,13 +16,6 @@ LOCAL_STATIC_JAVA_LIBRARIES += \
 
 LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/aidl
 
-#LOCAL_JAVA_LIBRARIES += \
-#    android.hidl.base-V1.0-java \
-#    android.hidl.manager-V1.0-java
-
-#LOCAL_STATIC_JAVA_LIBRARIES += \
-#    vendor.amlogic.hardware.dtvkitserver-V1.0-java
-
 LOCAL_SRC_FILES := $(call all-subdir-java-files) $(call all-subdir-Iaidl-files)
 
 #TARGET_BUILD_APPS := inputsource # for normal app (embedded ndk jni)
@@ -32,7 +25,15 @@ LOCAL_CERTIFICATE := platform
 LOCAL_PROGUARD_ENABLED := disabled
 
 LOCAL_JNI_SHARED_LIBRARIES := libdtvkit_jni
-LOCAL_JAVA_LIBRARIES += droidlogic droidlogic-dtvkit
+
+ifeq (1, $(strip $(shell expr $(PLATFORM_VERSION) \< 12)))
+LOCAL_JAVA_LIBRARIES += droidlogic droidlogic.dtvkit.software.core
+LOCAL_REQUIRED_MODULES := droidlogic droidlogic.dtvkit.software.core
+else
+LOCAL_REQUIRED_MODULES := droidlogic.software.core droidlogic.dtvkit.software.core
+LOCAL_JAVA_LIBRARIES += droidlogic.software.core droidlogic.dtvkit.software.core
+LOCAL_USES_LIBRARIES := droidlogic.software.core droidlogic.dtvkit.software.core
+endif
 LOCAL_DEX_PREOPT := false
 LOCAL_VENDOR_MODULE := true
 

@@ -25,6 +25,9 @@ LOCAL_C_INCLUDES += \
 LOCAL_C_INCLUDES += \
    external/libcxx/include
 
+
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+
 LOCAL_CPPFLAGS += -std=c++14
 
 LOCAL_MODULE:= libdtvkithidlclient
