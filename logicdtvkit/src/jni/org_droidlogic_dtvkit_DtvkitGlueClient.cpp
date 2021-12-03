@@ -70,7 +70,7 @@ static void postSubtitleDataEx(int type, int width, int height, int dst_x, int d
 static void clearSubtitleDataEx();
 static void setAFDToDVBCore(int dec_id, uint8_t afd);
 static void postMixVideoEvent(int event);
-static void setSubtitleOn(int pid, int type, int magazine, int page, int demuxId);
+static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int magazine, int page, int demuxId);
 static void setSubtitleOff();
 static void setSubtitlePause();
 static void setSubtitleResume();
@@ -339,10 +339,16 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
                 ALOGD("funname =%d, isdvbsubt = %d, pid = %d,  subt_type = %d, cpage = %d, apage = %d", parcel.funname,
                 parcel.is_dvb_subt, parcel.pid, parcel.subt_type, parcel.subt.cpage, parcel.subt.apage);
                 if (parcel.is_dvb_subt || parcel.pid == 0) { //pid =0 defaul cc
-                    setSubtitleOn(parcel.pid, parcel.subt_type, parcel.subt.cpage, parcel.subt.apage, parcel.demux_num);
+                    setSubtitleOn(parcel.pid, 0, 0, parcel.subt_type, parcel.subt.cpage, parcel.subt.apage, parcel.demux_num);
                 } else {
                     ALOGD("parcel.ttxt.magazine = %d, parcel.ttxt.page = %d", parcel.ttxt.magazine, parcel.ttxt.page);
-                    setSubtitleOn(parcel.pid, parcel.subt_type, parcel.ttxt.magazine, parcel.ttxt.page,
+                    uint16_t onid = 0;
+                    uint16_t tsid = 0;
+                    if (parcel.bodyInt.size() >= 2) {
+                        onid = parcel.bodyInt[0];
+                        tsid = parcel.bodyInt[1];
+                    }
+                    setSubtitleOn(parcel.pid, onid, tsid, parcel.subt_type, parcel.ttxt.magazine, parcel.ttxt.page,
                     parcel.demux_num);
                 }
             }
@@ -414,7 +420,7 @@ static void setSubtitleOff()
     clearSubtitleDataEx();
 }
 
-static void setSubtitleOn(int pid, int type, int magazine, int page, int demuxId)
+static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int magazine, int page, int demuxId)
 {
     if (mSubContext != nullptr) {
         setSubtitleOff();
@@ -422,8 +428,8 @@ static void setSubtitleOn(int pid, int type, int magazine, int page, int demuxId
             clearCCSubtitleData();
         }
     }
-    ALOGD("SubtitleServiceCtl:setSubtitleOn with.pid=%d, type=%d,magazine=%d, page=%d, demuxId = %d.",
-        pid, type, magazine, page, demuxId);
+    ALOGD("SubtitleServiceCtl:setSubtitleOn with.pid=(%d,%u,%u), type=%d,magazine=%d, page=%d, demuxId = %d.",
+        pid, onid, tsid, type, magazine, page, demuxId);
     setSubtitleStatus(true);
     if (type == SUBTITLE_SUB_TYPE_TTX || type == SUBTITLE_SUB_TYPE_TTXSUB) {
         mSubContext->setSubType(SUBTITLE_SUB_TYPE_TTXSUB + DTVKIT_SUBTITLE_ADD_OFFSET);
@@ -431,9 +437,9 @@ static void setSubtitleOn(int pid, int type, int magazine, int page, int demuxId
         mSubContext->setSubType(type + DTVKIT_SUBTITLE_ADD_OFFSET);
     }
     if (type == START_SUB_TYOE_CLOSED_CAPTION) {
-      mSubContext->selectCcChannel(pid);
+        mSubContext->selectCcChannel(pid);
     } else {
-      mSubContext->setSubPid(pid);
+        mSubContext->setSubPid(pid, onid, tsid);
     }
     int iotType = SUBTITLE_DEMUX_SOURCE;
     //if (type == SUBTITLE_SUB_TYPE_SCTE) {
