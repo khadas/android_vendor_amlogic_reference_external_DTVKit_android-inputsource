@@ -1675,28 +1675,33 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     int y = dst_y;
                     int w = src_width;
                     int h = src_height;
+                    int dw = dst_width;
+                    int dh = dst_height;
                     if (parserType == SUBTITLE_SUB_TYPE_TTX) {
                         x = 120;//ttx fixed with 480x525 shown in 720x480
                         y = 0;
                         w = 480;
                         h = 525;
+                        dw = 720;
+                        dh = 480;
                     }
-                    if ((dst_width == 0)
-                        || (dst_height == 0)
-                        || (dst_width < (w + x))
-                        || (dst_height < (h + y))) {
+
+                    if ((dw == 0)
+                        || (dh == 0)
+                        || (dw < (w + x))
+                        || (dh < (h + y))) {
                         overlay_dst.left = x;
                         overlay_dst.top = y;
                         overlay_dst.right = overlay1.getWidth() - overlay_dst.left;
                         overlay_dst.bottom = overlay1.getHeight() - overlay_dst.top;
                     } else {
                         if (x > 0) {
-                            float scaleX = (float)(overlay1.getWidth())/(float)(dst_width);
+                            float scaleX = (float)(overlay1.getWidth())/(float)(dw);
                             overlay_dst.left = (int)(scaleX*x);
                             overlay_dst.right = (int)(scaleX*(w + x));
                         }
                         if (y > 0) {
-                            float scaleY = (float)(overlay1.getHeight())/(float)(dst_height);
+                            float scaleY = (float)(overlay1.getHeight())/(float)(dh);
                             overlay_dst.top = (int)(scaleY*y);
                             overlay_dst.bottom = (int)(scaleY*(h + y));
                         }
