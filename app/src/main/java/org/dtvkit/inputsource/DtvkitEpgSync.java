@@ -684,15 +684,19 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         }
         switch (searchSignalType) {
             case "DVB-T":
+            case "DVB_T":
                 result = "TYPE_DVB_T";
                 break;
             case "DVB-C":
+            case "DVB_C":
                 result = "TYPE_DVB_C";
                 break;
             case "DVB-S":
+            case "DVB_S":
                 result = "TYPE_DVB_S";
                 break;
             case "ISDB-T":
+            case "ISDB_T":
                 result = "TYPE_ISDB_T";
                 break;
         }
