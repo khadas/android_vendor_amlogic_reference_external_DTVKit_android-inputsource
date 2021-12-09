@@ -2264,12 +2264,13 @@ public class ParameterMananer {
         }
     }
 
-    public boolean needConfirmTargetRegion(JSONArray array) {
+    public boolean needConfirmTargetRegion(JSONArray countryArray, JSONArray primaryArray, JSONArray secondaryArray, JSONArray tertiaryArray) {
         boolean result = false;
         final String ENG_ISO3_NAME = "gbr";
         String currentCountryName = getCurrentCountryIso3Name();
         if (ENG_ISO3_NAME.equalsIgnoreCase(currentCountryName)) {
-            if (array != null && array.length() > 1) {
+            if ((countryArray != null && countryArray.length() > 1) || (primaryArray != null && primaryArray.length() > 1)
+                    || (secondaryArray != null && secondaryArray.length() > 1) || (tertiaryArray != null && tertiaryArray.length() > 1)) {
                 result = true;
             }
         }

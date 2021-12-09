@@ -947,13 +947,26 @@ public class DtvkitDvbtSetup extends Activity {
             Log.d(TAG, "sendMessage MSG_FINISH_SEARCH " + info);
         }
     }
-
     private void prepareSearchFinished(boolean skipConfirmNetwork) {
         boolean needSetTargetRegion = false;
         boolean autoSearch = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE) == DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO;
-        JSONArray array = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_COUNTRY, -1, -1, -1);
-        if (mParameterMananer.needConfirmTargetRegion(array)) {
-            needSetTargetRegion = true;
+        try {
+            JSONArray countryArray = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_COUNTRY, -1, -1, -1);
+            JSONArray primaryArray = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_PRIMARY,
+                    countryArray.length() > 0 ? (int) (((JSONObject) (countryArray.get(0))).get("country_code")) : -1, -1, -1);
+            JSONArray secondaryArray = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_SECONDARY,
+                    countryArray.length() > 0 ? (int) (((JSONObject) (countryArray.get(0))).get("country_code")) : -1,
+                    primaryArray.length() > 0 ? (int) (((JSONObject) (primaryArray.get(0))).get("region_code")) : -1,
+                    -1);
+            JSONArray tertiaryArray = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_TERTIARY,
+                    countryArray.length() > 0 ? (int) (((JSONObject) (countryArray.get(0))).get("country_code")) : -1,
+                    primaryArray.length() > 0 ? (int) (((JSONObject) (primaryArray.get(0))).get("region_code")) : -1,
+                    secondaryArray.length() > 0 ? (int) (((JSONObject) (secondaryArray.get(0))).get("region_code")) : -1);
+            if (mParameterMananer.needConfirmTargetRegion(countryArray, primaryArray, secondaryArray, tertiaryArray)) {
+                needSetTargetRegion = true;
+            }
+        } catch (Exception e) {
+            Log.i(TAG,"getTargetRegions error " + e.getMessage());
         }
         if (autoSearch && needSetTargetRegion && !skipConfirmNetwork) {
             final TargetRegionManager regionManager = new TargetRegionManager(DtvkitDvbtSetup.this);

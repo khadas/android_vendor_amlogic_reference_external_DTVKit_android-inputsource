@@ -156,7 +156,7 @@ public abstract class EpgSyncJobService extends JobService {
 
     private final SparseArray<EpgSyncTask> mTaskArray = new SparseArray<>();
     private static final Object mContextLock = new Object();
-    private Context mContext;
+    protected Context mContext;
     private static String mChannelTypeFilter;
 
     /**

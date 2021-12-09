@@ -13,6 +13,7 @@ import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 import com.droidlogic.dtvkit.companionlibrary.model.Program;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.settings.PropSettingManager;
+import com.droidlogic.fragment.ParameterMananer;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -29,7 +30,8 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     public static final int SIGNAL_QAM   = 4; // digital cable
     public static final int SIGNAL_ISDBT  = 5;
     public static final int SIGNAL_ANALOG = 8;
-
+    private ParameterMananer mParameterMananer = new ParameterMananer(mContext, DtvkitGlueClient.getInstance());
+    private boolean mIsUK = "gbr".equals(mParameterMananer.getCurrentCountryIso3Name());
 
     private final static HashMap<String, ArrayList<String>> genresMap = new HashMap<String, ArrayList<String>>();
 
@@ -535,11 +537,19 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 case "childrens":
                     return new String[]{TvContract.Programs.Genres.FAMILY_KIDS};
                 case "music":
-                    return new String[]{TvContract.Programs.Genres.MUSIC};
+                    if (mIsUK) {
+                        return new String[]{TvContract.Programs.Genres.ENTERTAINMENT};
+                    } else {
+                        return new String[]{TvContract.Programs.Genres.MUSIC};
+                    }
                 case "arts":
                     return new String[]{TvContract.Programs.Genres.ARTS};
                 case "social":
-                    return new String[]{TvContract.Programs.Genres.LIFE_STYLE};
+                    if (mIsUK) {
+                        return new String[]{TvContract.Programs.Genres.NEWS};
+                    } else {
+                        return new String[]{TvContract.Programs.Genres.LIFE_STYLE};
+                    }
                 case "education":
                     return new String[]{TvContract.Programs.Genres.EDUCATION};
                 case "leisure":
