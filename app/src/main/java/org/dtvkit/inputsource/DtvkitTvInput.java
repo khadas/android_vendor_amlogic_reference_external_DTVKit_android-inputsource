@@ -3141,7 +3141,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
             Channel tunedChannel  = mTunedChannel;
-            mParameterMananer.saveChannelIdForSource(mTunedChannel.getId());
+            if (!mIsPip) {
+                mParameterMananer.saveChannelIdForSource(mTunedChannel.getId());
+            }
             String dvbUri = null;
             boolean isVirtual = false;
             if (tunedChannel != null) {
