@@ -23,6 +23,9 @@ public class DtvkitGlueClient {
     public static final int INDEX_FOR_MAIN = 0;
     public static final int INDEX_FOR_PIP = 1;
 
+    private static final int REQUEST_MESSAGE_TIMEOUT_SHORT_MILLIS = 1000;
+    private static final int REQUEST_MESSAGE_TIMEOUT_LONG_MILLIS = 3000;
+
     private static DtvkitGlueClient mSingleton = null;
     private ArrayList<Pair<Integer, SignalHandler>> mHandlers = new ArrayList<>();
     // Notification object used to listen to the start of the rpcserver daemon.
@@ -266,7 +269,16 @@ public class DtvkitGlueClient {
     public JSONObject request(String resource, JSONArray arguments) throws Exception {
         //mSingleton.connectIfUnconnected();
         try {
+            long startTime = System.nanoTime();
             JSONObject object = new JSONObject(nativerequest(resource, arguments.toString()));
+            long durationMs = (System.nanoTime() - startTime) / (1000 * 1000);
+            if (durationMs > REQUEST_MESSAGE_TIMEOUT_LONG_MILLIS) {
+                Log.e(TAG, "[critical]request (" + resource + " : " + arguments + ") took too long time (duration="
+                    + durationMs + "ms)");
+            } else if (durationMs > REQUEST_MESSAGE_TIMEOUT_SHORT_MILLIS) {
+                Log.w(TAG, "[warning]request (" + resource + " : " + arguments + ") took a long time (duration="
+                    + durationMs + "ms)");
+            }
             if (object.getBoolean("accepted")) {
                 return object;
             } else {

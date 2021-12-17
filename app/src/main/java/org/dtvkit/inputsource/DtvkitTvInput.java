@@ -4842,6 +4842,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
                     }
                 }
+                else if (signal.equals("RecordingsDiskRm"))
+                {
+                    tryStopTimeshifting();
+                }
                 else if (signal.equals("tt_mix_separate"))
                 {
                     mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_SEPARATE);
