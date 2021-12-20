@@ -33,126 +33,6 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     private ParameterMananer mParameterMananer = new ParameterMananer(mContext, DtvkitGlueClient.getInstance());
     private boolean mIsUK = "gbr".equals(mParameterMananer.getCurrentCountryIso3Name());
 
-    private final static HashMap<String, ArrayList<String>> genresMap = new HashMap<String, ArrayList<String>>();
-
-    static {
-        ArrayList<String> moviesList = new ArrayList<>();
-        moviesList.add("movie/drama (general)");
-        moviesList.add("detective/thriller");
-        moviesList.add("adventure/western/war");
-        moviesList.add("science fiction/fantasy/horror");
-        moviesList.add("comedy");
-        moviesList.add("soap/melodrama/folkloric");
-        moviesList.add("romance");
-        moviesList.add("serious/classical/religious/historical movie/drama");
-        moviesList.add("adult movie/drama");
-        genresMap.put("movies", moviesList);
-
-        ArrayList<String> newsList = new ArrayList<>();
-        newsList.add("news/current affairs (general)");
-        newsList.add("news/weather report");
-        newsList.add("news magazine");
-        newsList.add("documentary");
-        newsList.add("discussion/interview/debate");
-        genresMap.put("news", newsList);
-
-        ArrayList<String> entertainmentList = new ArrayList<>();
-        entertainmentList.add("show/game show (general)");
-        entertainmentList.add("game show/quiz/contest");
-        entertainmentList.add("variety show");
-        entertainmentList.add("talk show");
-        genresMap.put("entertainment", entertainmentList);
-
-        ArrayList<String> sportList = new ArrayList<>();
-        sportList.add("sports (general)");
-        sportList.add("special events (Olympic Games, World Cup, etc.)");
-        sportList.add("sports magazines");
-        sportList.add("football/soccer");
-        sportList.add("tennis/squash");
-        sportList.add("athletics");
-        sportList.add("motor sport");
-        sportList.add("water sport");
-        sportList.add("winter sports");
-        sportList.add("equestrian");
-        sportList.add("martial sports");
-        genresMap.put("sport", sportList);
-
-        ArrayList<String> childrensList = new ArrayList<>();
-        childrensList.add("children's/youth programmes (general)");
-        childrensList.add("pre-school children's programmes");
-        childrensList.add("entertainment programmes for 6 to14");
-        childrensList.add("entertainment programmes for 10 to 16");
-        childrensList.add("informational/educational/school programmes");
-        childrensList.add("cartoons/puppets");
-        genresMap.put("childrens", childrensList);
-
-        ArrayList<String> musicList = new ArrayList<>();
-        musicList.add("music/ballet/dance (general)");
-        musicList.add("rock/pop");
-        musicList.add("serious music/classical music");
-        musicList.add("folk/traditional music");
-        musicList.add("jazz");
-        musicList.add("musical/opera");
-        musicList.add("ballet");
-        genresMap.put("music", musicList);
-
-        ArrayList<String> artsList = new ArrayList<>();
-        artsList.add("arts/culture (without music, general)");
-        artsList.add("performing arts");
-        artsList.add("religion");
-        artsList.add("popular culture/traditional arts");
-        artsList.add("literature");
-        artsList.add("film/cinema");
-        artsList.add("experimental film/video");
-        artsList.add("broadcasting/press");
-        artsList.add("new media");
-        artsList.add("arts/culture magazines");
-        artsList.add("fashion");
-        genresMap.put("arts", artsList);
-
-        ArrayList<String> socialList = new ArrayList<>();
-        socialList.add("social/political issues/economics (general)");
-        socialList.add("magazines/reports/documentary");
-        socialList.add("economics/social advisory");
-        socialList.add("remarkable people");
-        genresMap.put("social", socialList);
-
-        ArrayList<String> educationList = new ArrayList<>();
-        educationList.add("education/science/factual topics (general)");
-        educationList.add("nature/animals/environment");
-        educationList.add("technology/natural sciences");
-        educationList.add("medicine/physiology/psychology");
-        educationList.add("foreign countries/expeditions");
-        educationList.add("social/spiritual sciences");
-        educationList.add("further education");
-        educationList.add("languages");
-        genresMap.put("education", educationList);
-
-        ArrayList<String> leisureList = new ArrayList<>();
-        leisureList.add("leisure hobbies (general)");
-        leisureList.add("tourism/travel");
-        leisureList.add("handicraft");
-        leisureList.add("motoring");
-        leisureList.add("fitness and health");
-        leisureList.add("cooking");
-        leisureList.add("advertisement/shopping");
-        leisureList.add("gardening");
-        genresMap.put("leisure", leisureList);
-
-        ArrayList<String> specialList = new ArrayList<>();
-        specialList.add("original language");
-        specialList.add("black and white");
-        specialList.add("unpublished");
-        specialList.add("live broadcast");
-        specialList.add("plano-stereoscopic");
-        specialList.add("local or regional");
-        genresMap.put("special", specialList);
-
-        ArrayList<String> adultList = new ArrayList<>();
-        adultList.add("adult (general)");
-        genresMap.put("adult", adultList);
-    }
-
     @Override
     public List<Channel> getChannels(boolean syncCurrent) {
         List<Channel> channels = new ArrayList<>();
@@ -328,6 +208,8 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         long starttime, endtime;
         int parental_rating;
         int content_value;
+        String content_level_1;
+        String content_level_2;
         try {
             String dvbUri = getDtvkitChannelUri(channel);
 
@@ -354,19 +236,24 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                     Log.i(TAG, "Skip##  startMs:endMs=["+startMs+":"+endMs+"]  event:startT:endT=["+starttime+":"+endtime+"]");
                     continue;
                 }else{
-                    if (content_value > 0xff) {
-                        String genre_l = getGenreL2Desc(event.getString("genre"), content_value);
-                        if (!TextUtils.isEmpty(genre_l)) {
-                            data.put("genre", genre_l);
+                    content_level_1 = event.getString("content_level_1");
+                    content_level_2 = event.getString("content_level_2");
+                    String[] genres = getGenres(event.getString("genre"), content_value);
+                    String genre_str;
+                    if (genres.length == 0) {
+                        genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
+                        if (!TextUtils.isEmpty(genre_str)) {
+                            data.put("genre", genre_str);
                         }
                     }
+
                     Program pro = new Program.Builder()
                             .setChannelId(channel.getId())
                             .setTitle(event.getString("name"))
                             .setStartTimeUtcMillis(starttime)
                             .setEndTimeUtcMillis(endtime)
                             .setDescription(event.getString("description"))
-                            .setCanonicalGenres(getGenres(event.getString("genre"), content_value))
+                            .setCanonicalGenres(genres)
                             .setInternalProviderData(data)
                             .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name")))
                             .build();
@@ -402,12 +289,19 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 InternalProviderData data = new InternalProviderData();
                 data.put("dvbUri", dvbUri);
                 int content_value = event.optInt("content_value");
-                if (content_value > 0xff) {
-                    String genre_l = getGenreL2Desc(event.getString("genre"), content_value);
-                    if (!TextUtils.isEmpty(genre_l)) {
-                        data.put("genre", genre_l);
+                String content_level_1 = event.getString("content_level_1");
+                String content_level_2 = event.getString("content_level_2");
+
+                String[] genres = getGenres(event.getString("genre"), content_value);
+                String genre_str;
+                Log.e(TAG, "getGenres length = " + genres.length);
+                if (genres.length == 0) {
+                    genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
+                    if (!TextUtils.isEmpty(genre_str)) {
+                        data.put("genre", genre_str);
                     }
                 }
+
                 parental_rating = event.getInt("rating");
                 Program pro = new Program.Builder()
                         .setChannelId(channel.getId())
@@ -416,7 +310,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setEndTimeUtcMillis(event.getLong("endutc") * 1000)
                         .setDescription(event.getString("description"))
                         .setLongDescription(event.getString("description_extern"))
-                        .setCanonicalGenres(getGenres(event.getString("genre"), content_value))
+                        .setCanonicalGenres(genres)
                         .setInternalProviderData(data)
                         .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name")))
                         .build();
@@ -449,10 +343,15 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 InternalProviderData data = new InternalProviderData();
                 data.put("dvbUri", dvbUri);
                 int content_value = now.optInt("content_value");
-                if (content_value > 0xff) {
-                    String genre_l = getGenreL2Desc(now.getString("genre"), content_value);
-                    if (!TextUtils.isEmpty(genre_l)) {
-                        data.put("genre", genre_l);
+                String content_level_1 = now.getString("content_level_1");
+                String content_level_2 = now.getString("content_level_2");
+
+                String[] genres = getGenres(now.getString("genre"), content_value);
+                String genre_str;
+                if (genres.length == 0) {
+                    genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
+                    if (!TextUtils.isEmpty(genre_str)) {
+                        data.put("genre", genre_str);
                     }
                 }
                 programs.add(new Program.Builder()
@@ -461,7 +360,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setStartTimeUtcMillis(now.getLong("startutc") * 1000)
                         .setEndTimeUtcMillis(now.getLong("endutc") * 1000)
                         .setDescription(now.getString("description"))
-                        .setCanonicalGenres(getGenres(now.getString("genre"), content_value))
+                        .setCanonicalGenres(genres)
                         .setInternalProviderData(data)
                         .build());
             }
@@ -471,10 +370,15 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 InternalProviderData data = new InternalProviderData();
                 data.put("dvbUri", dvbUri);
                 int content_value = next.optInt("content_value");
-                if (content_value > 0xff) {
-                    String genre_l = getGenreL2Desc(next.getString("genre"), content_value);
-                    if (!TextUtils.isEmpty(genre_l)) {
-                        data.put("genre", genre_l);
+                String content_level_1 = next.getString("content_level_1");
+                String content_level_2 = next.getString("content_level_2");
+
+                String[] genres = getGenres(next.getString("genre"), content_value);
+                String genre_str;
+                if (genres.length == 0) {
+                    genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
+                    if (!TextUtils.isEmpty(genre_str)) {
+                        data.put("genre", genre_str);
                     }
                 }
                 programs.add(new Program.Builder()
@@ -483,7 +387,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setStartTimeUtcMillis(next.getLong("startutc") * 1000)
                         .setEndTimeUtcMillis(next.getLong("endutc") * 1000)
                         .setDescription(next.getString("description"))
-                        .setCanonicalGenres(getGenres(next.getString("genre"), content_value))
+                        .setCanonicalGenres(genres)
                         .setInternalProviderData(data)
                         .build());
             }
@@ -557,20 +461,6 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 default:
                     return new String[]{};
             }
-        }
-    }
-
-    private String getGenreL2Desc(String genre, int content_value) {
-        if (content_value > 0xff) {
-            int lvl_2 = content_value & 0x0f;
-            String value = "";
-            try {
-                value = genresMap.get(genre).get(lvl_2);
-            } catch (Exception e) {
-            }
-            return value;
-        } else {
-            return "";
         }
     }
 
