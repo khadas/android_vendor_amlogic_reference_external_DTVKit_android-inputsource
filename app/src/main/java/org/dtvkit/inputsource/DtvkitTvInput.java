@@ -120,6 +120,7 @@ import com.droidlogic.fragment.ParameterMananer;
 
 //import com.droidlogic.app.tv.TvControlManager;
 import com.droidlogic.app.AudioConfigManager;
+import com.droidlogic.app.AudioSystemCmdManager;
 import com.droidlogic.app.SystemControlManager;
 import com.droidlogic.app.SystemControlManager.tvin_cutwin_t;
 import com.droidlogic.app.SystemControlEvent;
@@ -2735,6 +2736,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private boolean mReleaseHandleMessage = false;
         private boolean mAquireMainSemaphore = false;
         private boolean mAquirePipSemaphore = false;
+        private AudioSystemCmdManager mAudioSystemCmdManager;
         private final WeakReference<DtvkitTvInput> outService;
 
         private final class AvailableState {
@@ -2768,6 +2770,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             intentFilter.addAction(Intent.ACTION_MEDIA_EJECT);
             intentFilter.addDataScheme("file");
             outService.get().registerReceiver(mMediaReceiver, intentFilter);
+            mAudioSystemCmdManager = AudioSystemCmdManager.getInstance(getApplicationContext());
         }
 
         private void initTimeShift() {
@@ -2823,6 +2826,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             //sendSetSurfaceMessage(null, null);
                             //sendDoReleaseMessage();
                             doRelease(false, false);
+                            mAudioSystemCmdManager.updateAudioPortGain(-1);
                             mSurface = null;
                         }
                     } else {
@@ -2835,6 +2839,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                         AudioConfigManager.getInstance(getApplication()).refreshAudioCfgBySrc(AudioConfigManager.AUDIO_OUTPUT_DELAY_SOURCE_DTV);
                         mHardware.setSurface(surface, mConfigs[0]);
+                        /* refer this SOURCE_TYPE_DTV(1) in DroidLogicTvUtils.java */
+                        mAudioSystemCmdManager.updateAudioPortGain(1);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                         //sendSetSurfaceMessage(surface, mConfigs[0]);
                         mSurface = surface;
@@ -3220,11 +3226,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             mDvbNetworkChangeSearchStatus = false;
             mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
-            if (mAudioADAutoStart) {
-                setAdFunction(MSG_MIX_AD_SWITCH_ENABLE, 1);
-            } else {
-                setAdFunction(MSG_MIX_AD_SWITCH_ENABLE, 0);
-            }
+            mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0, 0);
             boolean playResult = false;
             if (null == mSurface) {
                 return playResult;
@@ -3875,16 +3877,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else if (TextUtils.equals(DataMananer.ACTION_DTV_ENABLE_AUDIO_AD, action)) {
                 mAudioADAutoStart = data.getInt(DataMananer.PARA_ENABLE) == 1;
                 Log.d(TAG, "do private cmd: ACTION_DTV_ENABLE_AUDIO_AD: "+ mAudioADAutoStart);
-                setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, mAudioADAutoStart ? 1 : 0);
-                setAdFunction(MSG_MIX_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0);
-                setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
+                setAdAssociate(mAudioADAutoStart);
+                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0, 0);
+                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_MIX_LEVEL, 0, mAudioADMixingLevel);
             } else if (TextUtils.equals(DataMananer.ACTION_AD_MIXING_LEVEL, action)) {
                 mAudioADMixingLevel = data.getInt(DataMananer.PARA_VALUE1);
                 Log.d(TAG, "do private cmd: ACTION_AD_MIXING_LEVEL: "+ mAudioADMixingLevel);
-                setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
+                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_MIX_LEVEL, 0, mAudioADMixingLevel);
             } else if (TextUtils.equals(DataMananer.ACTION_AD_VOLUME_LEVEL, action)) {
                 mAudioADVolume = data.getInt(DataMananer.PARA_VALUE1);
-                setAdFunction(MSG_MIX_AD_SET_VOLUME, mAudioADVolume);
+                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SET_VOLUME, mAudioADVolume, 0);
             } else if (TextUtils.equals(PropSettingManager.ACTON_CONTROL_TIMESHIFT, action)) {
                 if (data != null) {
                     boolean status = data.getBoolean(PropSettingManager.VALUE_CONTROL_TIMESHIFT, false);
@@ -4882,15 +4884,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_DO_RELEASE_SPECIFIELD_SESSION = 17;
         protected static final int MSG_TRY_STOP_TIMESHIFT = 18;
 
-        //audio ad
-        public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
-        public static final int MSG_MIX_AD_MIX_SUPPORT = 21;
-        public static final int MSG_MIX_AD_MIX_LEVEL = 22;
-        public static final int MSG_MIX_AD_SET_MAIN = 23;
-        public static final int MSG_MIX_AD_SET_ASSOCIATE = 24;
-        public static final int MSG_MIX_AD_SWITCH_ENABLE = 25;
-        public static final int MSG_MIX_AD_SET_VOLUME = 26;
-
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
         protected static final int MSG_TIMESHIFT_RESUME = 31;
@@ -5202,20 +5195,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             boolean adOn = playergetAudioDescriptionOn();
             Log.d(TAG, "playerInitAssociateDualSupport mAudioADAutoStart = " + mAudioADAutoStart + ", mAudioADMixingLevel = " + mAudioADMixingLevel + ", mAudioADVolume = " + mAudioADVolume);
             if (mAudioADAutoStart) {
-                //setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 1);
-                //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 1);
-                //setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
-                //if (!adOn) {
-                    setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
-                    setAdFunction(MSG_MIX_AD_SET_VOLUME, mAudioADVolume);
-                    //setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 1);
-                //}
-            } else {
-                //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
-                //setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 0);
-                //if (adOn) {
-                    //setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 0);
-                //}
+                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_MIX_LEVEL, 0, mAudioADMixingLevel);
+                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SET_VOLUME, 0, mAudioADVolume);
             }
             result = true;
             return result;
@@ -5223,9 +5204,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private boolean playerResetAssociateDualSupport() {
             boolean result = false;
-            setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 0);
-            //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
-            //setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 0);
+            setAdAssociate(false);
+            mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_MIX_LEVEL, 0, mAudioADMixingLevel);
             result = true;
             return result;
         }
@@ -5448,76 +5428,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return result;
         }
 
-        private boolean setAdFunction(int msg, int param1) {
+        private void setAdMain(int param1) {
             boolean result = false;
-            AudioManager audioManager = null;
-            if (outService.get() != null) {
-                audioManager = (AudioManager) outService.get().getSystemService(Context.AUDIO_SERVICE);
-            }
-            if (audioManager == null) {
-                Log.i(TAG, "setAdFunction null audioManager");
-                return result;
-            }
-            //Log.d(TAG, "setAdFunction msg = " + msg + ", param1 = " + param1);
-            switch (msg) {
-                case MSG_MIX_AD_DUAL_SUPPORT://dual_decoder_surport for ad & main mix on/off
-                    if (param1 > 0) {
-                        audioManager.setParameters("hal_param_dual_dec_support=1");
-                    } else {
-                        audioManager.setParameters("hal_param_dual_dec_support=0");
-                    }
-                    Log.d(TAG, "setAdFunction MSG_MIX_AD_DUAL_SUPPORT setParameters:"
-                            + "hal_param_dual_dec_support=" + (param1 > 0 ? 1 : 0));
-                    result = true;
-                    break;
-                case MSG_MIX_AD_MIX_SUPPORT://Associated audio mixing on/off
-                    if (param1 > 0) {
-                        audioManager.setParameters("hal_param_ad_mix_enable=1");
-                    } else {
-                        audioManager.setParameters("hal_param_ad_mix_enable=0");
-                    }
-                    Log.d(TAG, "setAdFunction MSG_MIX_AD_MIX_SUPPORT setParameters:"
-                            + "hal_param_ad_mix_enable=" + (param1 > 0 ? 1 : 0));
-                    result = true;
-                    break;
-                case MSG_MIX_AD_MIX_LEVEL://Associated audio mixing level
-                    audioManager.setParameters("hal_param_dual_dec_mix_level=" + param1 + "");
-                    Log.d(TAG, "setAdFunction MSG_MIX_AD_MIX_LEVEL setParameters:"
-                            + "hal_param_dual_dec_mix_level=" + param1);
-                    result = true;
-                    break;
-                case MSG_MIX_AD_SET_MAIN://set Main Audio by handle
-                    result = playerSelectAudioTrack(param1);
-                    Log.d(TAG, "setAdFunction MSG_MIX_AD_SET_MAIN result=" + result
-                            + ", setAudioStream " + param1);
-                    break;
-                case MSG_MIX_AD_SET_ASSOCIATE://set Associate Audio by handle
-                    result = playersetAudioDescriptionOn(param1 == 1);
-                    result = playerPipsetAudioDescriptionOn(param1 == 1);
-                    Log.d(TAG, "setAdFunction MSG_MIX_AD_SET_ASSOCIATE result=" + result
-                            + "setAudioDescriptionOn " + (param1 == 1));
-                    break;
-                case MSG_MIX_AD_SWITCH_ENABLE:
-                    if (param1 > 0) {
-                        audioManager.setParameters("ad_switch_enable=1");
-                    } else {
-                        audioManager.setParameters("ad_switch_enable=0");
-                    }
-                    Log.d(TAG, "setAdFunction MSG_MIX_AD_SWITCH_ENABLE setParameters:"
-                            + "ad_switch_enable==" + (param1 > 0 ? 1 : 0));
-                    result = true;
-                    break;
-                case MSG_MIX_AD_SET_VOLUME:
-                    audioManager.setParameters("dual_decoder_advol_level=" + param1 + "");
-                    Log.d(TAG, "setAdFunction MSG_MIX_AD_SET_VOLUME setParameters:"
-                            + "dual_decoder_advol_level=" + param1);
-                    result = true;
-                    break;
-                default:
-                    Log.i(TAG,"setAdFunction unkown  msg = " + msg + ", param1 = " + param1);
-                    break;
-            }
-            return result;
+            result = playerSelectAudioTrack(param1);
+            Log.d(TAG, "setAdMain result=" + result + ", setAudioStream " + param1);
+        }
+
+        private void setAdAssociate(boolean enable) {
+            boolean result = false;
+            result = playersetAudioDescriptionOn(enable);
+            result = playerPipsetAudioDescriptionOn(enable);
+            Log.d(TAG, "setAdAssociate result=" + result + "setAudioDescriptionOn:" + enable);
         }
 
         private void setTimeshiftPlay(Uri uri) {
