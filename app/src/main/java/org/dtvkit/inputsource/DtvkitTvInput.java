@@ -3056,6 +3056,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mTunedChannel == null) {
                 Log.e(TAG, "onTuneByHandlerThreadHandle no channel tune to:" + channelUri);
                 return false;
+            } else {
+                if (targetChannel == null) {
+                    Log.w(TAG, "onTuneByHandlerThreadHandle: targechannel not exist,"
+                        + "we will tune to the first channel and notice livetv do refresh.");
+                    sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
+                }
             }
 
             try {
