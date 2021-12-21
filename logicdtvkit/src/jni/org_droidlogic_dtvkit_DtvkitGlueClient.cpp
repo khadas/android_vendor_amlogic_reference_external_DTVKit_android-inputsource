@@ -454,6 +454,11 @@ static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int m
             mSubContext->ttControl(TT_EVENT_GO_TO_PAGE, magazine, page, 0, 0);
         } else if (type == SUBTITLE_SUB_TYPE_TTXSUB) {
             mSubContext->ttControl(TT_EVENT_GO_TO_SUBTITLE, magazine, page, 0, 0);
+        } else if (type == SUBTITLE_SUB_TYPE_DVB) {
+            if (magazine != 0 || page != 0) {
+                mSubContext->setCompositionPageId(magazine);
+                mSubContext->setAncillaryPageId(page);
+            }
         }
     }
 
