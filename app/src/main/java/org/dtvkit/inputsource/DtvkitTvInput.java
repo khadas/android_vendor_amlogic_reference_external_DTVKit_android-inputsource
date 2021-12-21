@@ -4305,9 +4305,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
                                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
                                 }
-                                if (!getFeatureSupportManualTimeshift()) {
-                                    monitorTimeshiftRecordingPathAndTryRestart(true, true, true);
-                                }
                             }
                             else if (type.equals("dvbrecording")) {
                                 setBlockMute(false);
