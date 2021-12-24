@@ -2249,16 +2249,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             mStarted = false;
             recordingPending = false;
-
-            /*if there's a live play,
-              should lock here, may run into a race condition*/
-            if (!getFeatureSupportManualTimeshift()) {
-                DtvkitTvInputSession session = getMainTunerSession();
-                if ((session != null && session.mTunedChannel != null &&
-                         session.mHandlerThreadHandle != null)) {
-                   session.sendMsgTryStartTimeshift(500);
-                }
-            }
         }
 
         private void updateRecordingToDb(boolean insert, boolean check, Object obj) {
@@ -4478,10 +4468,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (activeRecordings != null && activeRecordings.length() < numRecorders &&
                             timeshiftRecorderState == RecorderState.STOPPED && scheduleTimeshiftRecording) {
                         timeshiftAvailable.setYes();
-                        /*no scheduling, taken over by MSG_CHECK_REC_PATH*/
-                        /*if (!getFeatureSupportManualTimeshift()) {
-                            scheduleTimeshiftRecordingTask();
-                        }*/
                     }
 
                     if (checkActiveRecordings(activeRecordings,
