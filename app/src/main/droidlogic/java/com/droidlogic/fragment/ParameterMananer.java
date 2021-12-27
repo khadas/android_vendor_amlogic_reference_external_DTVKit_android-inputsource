@@ -1578,12 +1578,17 @@ public class ParameterMananer {
                 Log.d(TAG, "startTuneAction null args");
                 return null;
             }
-            Log.i(TAG, "startTuneAction:" + args.toString());
-            resultObj = DtvkitGlueClient.getInstance().request("Dvbs.tuneActionStartEx", args);
+            String action = "Dvbs.tuneActionStartEx";
+            if (args.length() == 1) {
+                //no tp selected
+                action = "Dvbs.testLnbStart";
+            }
+            Log.i(TAG, "" + action + ":" + args.toString());
+            resultObj = DtvkitGlueClient.getInstance().request(action, args);
             if (resultObj != null) {
-                Log.d(TAG, "startTuneAction resultObj:" + resultObj.toString());
+                Log.d(TAG, "" + action + " resultObj:" + resultObj.toString());
             } else {
-                Log.d(TAG, "startTuneAction then get null");
+                Log.d(TAG, "" + action + " then get null");
             }
         } catch (Exception e) {
             Log.d(TAG, "startTuneAction Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
@@ -1623,13 +1628,17 @@ public class ParameterMananer {
         boolean tpIsDvbs2 = "DVBS2".equals(tpSystem) ? true : false;
         String modulation = getDvbsParaManager().getSatelliteWrap().getTransponderByName(sate, tp).getModulation();
 
-        result.put(sate);
-        result.put(tpFreq);
-        result.put(tpPolarity);
-        result.put(tpSymbol);
-        result.put(tpFec);
-        result.put(tpIsDvbs2);
-        result.put(modulation);
+        if (TextUtils.isEmpty(tp)) {
+            result.put(lnb);
+        } else {
+            result.put(sate);
+            result.put(tpFreq);
+            result.put(tpPolarity);
+            result.put(tpSymbol);
+            result.put(tpFec);
+            result.put(tpIsDvbs2);
+            result.put(modulation);
+        }
         return result;
     }
 
