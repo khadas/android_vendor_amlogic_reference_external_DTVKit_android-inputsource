@@ -2884,6 +2884,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (isPipConfig) {
                     mPipHardware.setSurface(surface, config);
                 } else {
+                    if (surface == null) {
+                        mAudioSystemCmdManager.updateAudioPortGain(-1);
+                    }
                     mHardware.setSurface(surface, config);
                 }
             }
@@ -3112,6 +3115,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mView.mSubServerView.setOverlaySubtitleListener(mView.mSubServerView.mSubListener);
                     if (isSdkAfterAndroidQ()) {
                         mHardware.setSurface(mSurface, mConfigs[0]);
+                        mAudioSystemCmdManager.updateAudioPortGain(1);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                     } else {
                         DtvkitGlueClient.getInstance().setMutilSurface(INDEX_FOR_MAIN, mSurface);
@@ -3133,6 +3137,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mSurfaceSent = true;
                     if (isSdkAfterAndroidQ()) {
                         mPipHardware.setSurface(mSurface, mPipConfigs[0]);
+                        mAudioSystemCmdManager.updateAudioPortGain(1);
                         setSurfaceTunnelId(INDEX_FOR_PIP, 2);
                     } else {
                         DtvkitGlueClient.getInstance().setMutilSurface(INDEX_FOR_PIP, mSurface);
@@ -5462,6 +5467,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mView.mSubServerView.setOverlaySubtitleListener(mView.mSubServerView.mSubListener);
                     if (isSdkAfterAndroidQ()) {
                         mHardware.setSurface(mSurface, mConfigs[0]);
+                        mAudioSystemCmdManager.updateAudioPortGain(1);
                         setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                         if (mSystemControlManager != null) {
                             mSystemControlManager.SetDtvKitSourceEnable(1);
