@@ -11,6 +11,7 @@ LOCAL_RESOURCE_DIR := frameworks/support/leanback/src/main/res \
    $(LOCAL_PATH)/droidlogic/res
 
 LOCAL_STATIC_JAVA_LIBRARIES += \
+   guava \
    companionlibrary \
    android-support-v17-leanback \
    libvewdcore-shared-hbbtv \
