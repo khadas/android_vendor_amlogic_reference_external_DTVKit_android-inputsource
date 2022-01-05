@@ -4421,9 +4421,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                            if (mTunedChannel != null) {
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
                                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
-                                } else if (TvContractUtils.getBooleanFromChannelInternalProviderData(
-                                        mTunedChannel, Channel.KEY_IS_DATA_SERVICE, false)) {
-                                    notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
                                 }
                             } else {
                                 Log.d(TAG, "on signal starting null mTunedChannel");
@@ -4450,6 +4447,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         default:
                             Log.i(TAG, "Unhandled state: " + state);
                             break;
+                    }
+                    if (mHandlerThreadHandle == null) {
+                        return;
+                    }
+                    if ("starting".equals(state)) {
+                        if (TvContractUtils.getBooleanFromChannelInternalProviderData(
+                                mTunedChannel, Channel.KEY_IS_DATA_SERVICE, false)) {
+                            if (!mHandlerThreadHandle.hasMessages(MSG_TUNE_UNKNOWN_REASON)) {
+                                mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_TUNE_UNKNOWN_REASON, 2300);
+                            }
+                        }
+                    } else {
+                        mHandlerThreadHandle.removeMessages(MSG_TUNE_UNKNOWN_REASON);
                     }
                 } else if (signal.equals("PlayerTimeshiftRecorderStatusChanged")) {
                     switch (playerGetTimeshiftRecorderState(data)) {
@@ -4877,6 +4887,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_SELECT_TRACK = 16;
         protected static final int MSG_DO_RELEASE_SPECIFIELD_SESSION = 17;
         protected static final int MSG_TRY_STOP_TIMESHIFT = 18;
+        protected static final int MSG_TUNE_UNKNOWN_REASON = 19;
 
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
@@ -5063,6 +5074,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             Bundle updateEvent = new Bundle();
                             updateEvent.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED);
                             sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, updateEvent);
+                            break;
+                        case MSG_TUNE_UNKNOWN_REASON:
+                            Log.d(TAG, "data_service may not play well!");
+                            notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
                             break;
                         default:
                             Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
