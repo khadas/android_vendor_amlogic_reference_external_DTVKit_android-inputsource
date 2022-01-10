@@ -8492,6 +8492,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.i(TAG, "onMessageCallback SINGLE_FREQUENCY_STATUS_ITEM Exception " + e.getMessage());
                     }
                     switch (status) {
+                        case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SEARCH_TERMINATE: {
+                            tempStatus[0] = 1;
+                            if (alert != null) {
+                                alert.dismiss();
+                            }
+                            break;
+                        }
                         case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SAVE_FINISH: {
                             tempStatus[0] = 1;
                             if (alert != null) {
