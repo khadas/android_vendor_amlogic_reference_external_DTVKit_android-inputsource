@@ -8921,7 +8921,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mAlarmIntent != null) {
                 mAlarmManager.cancel(mAlarmIntent);
             }
-            mAlarmIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
+            mAlarmIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE);
             Calendar cal = Calendar.getInstance();
             long current = System.currentTimeMillis();
             cal.setTimeInMillis(current);

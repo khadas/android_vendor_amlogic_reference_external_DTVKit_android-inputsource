@@ -1039,7 +1039,7 @@ public class DtvkitDvbSettings extends Activity {
         if (mAlarmIntent != null) {
             mAlarmManager.cancel(mAlarmIntent);
         }
-        mAlarmIntent = PendingIntent.getBroadcast(DtvkitDvbSettings.this, 0, intent, 0);
+        mAlarmIntent = PendingIntent.getBroadcast(DtvkitDvbSettings.this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
 
         Calendar cal = Calendar.getInstance();
         long current = System.currentTimeMillis();
