@@ -1544,6 +1544,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         if (recordings != null) {
             for (int i = 0; i < recordings.length(); i++) {
                 try {
+                    if (Long.valueOf(recordings.getJSONObject(i).getString("length")) == 0)
+                        continue;
                     if (data != null) {
                         data.put(RecordedProgram.RECORD_FILE_PATH, mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH));
                     }
