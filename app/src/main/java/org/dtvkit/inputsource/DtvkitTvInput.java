@@ -3240,6 +3240,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (mNextBufferUri != null) {
                     nextUriStr = getChannelInternalDvbUriForFcc(mNextBufferUri);
                 }
+                if (mainMuteStatus && previousUriStr != null && nextUriStr != null) {
+                    mainMuteStatus = false;
+                }
                 playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart, mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
             } else {
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler, INDEX_FOR_PIP);
