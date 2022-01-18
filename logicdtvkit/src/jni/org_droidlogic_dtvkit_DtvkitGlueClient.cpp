@@ -37,6 +37,12 @@ static JavaVM   *gJavaVM = NULL;
 sp<DTVKitClientJni> mpDtvkitJni;
 static jmethodID notifySubtitleCallback;
 static jmethodID notifyDvbCallback;
+static jmethodID notifyPidFilterData;
+
+static uint8_t*  gJbuffer = NULL; //java direct buffer
+static int       gJbufSize = 0;
+
+
 static jobject DtvkitObject;
 //sp<Surface> mSurface;
 //sp<NativeHandle> mSourceHandle;
@@ -153,6 +159,32 @@ static void postSubtitleData(int width, int height, int dst_x, int dst_y, int ds
     }
 }
 
+static void postPidFilterData(int length, uint8_t* data)
+{
+    //ALOGD("callback postPidFilterData data = %p", data);
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
+
+    if (env != NULL) {
+        if (length <= gJbufSize)
+        {
+            memset(gJbuffer, 0x0, gJbufSize);
+            memcpy(gJbuffer, data, length);
+            //ALOGI("Get Pid Filter len %d",length);
+        }
+        else
+        {
+            ALOGE("Callback overflow len %d",length);
+        }
+
+        env->CallVoidMethod(DtvkitObject, notifyPidFilterData);
+    }
+    if (attached) {
+        DetachJniEnv();
+    }
+}
+
+
 static void postSubtitleDataEx(int type, int width, int height, int dst_x, int dst_y, int dst_width, int dst_height,const char *data)
 {
     //ALOGD("callback sendSubtitleData data = %p", data);
@@ -187,6 +219,7 @@ static void postSubtitleDataEx(int type, int width, int height, int dst_x, int d
         DetachJniEnv();
     }
 }
+
 
 static void clearSubtitleDataEx()
 {
@@ -292,7 +325,10 @@ void DTVKitClientJni::setSubtitleFlag(int flag) {
 
 void DTVKitClientJni::notify(const parcel_t &parcel) {
     AutoMutex _l(mLock);
-    ALOGD("notify msgType = %d  this:%p", parcel.msgType, this);
+    if (parcel.msgType != HBBTV_DRAW) {
+        ALOGD("notify msgType = %d  this:%p", parcel.msgType, this);
+    }
+
     if (parcel.msgType == DTVKIT_DRAW) {
         datablock_t datablock;
         datablock.width      = parcel.bodyInt[0];
@@ -375,6 +411,20 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
             break;
         }
     }
+
+    if (parcel.msgType == HBBTV_DRAW) {
+        //ALOGD("notify msgType = %d  this:%p", parcel.msgType, this);
+        sp<IMemory> memory = mapMemory(parcel.mem);
+        if (memory == nullptr) {
+            ALOGE("[%s] memory map is null", __FUNCTION__);
+            return;
+        }
+        uint8_t *data = static_cast<uint8_t*>(static_cast<void*>(memory->getPointer()));
+        memory->read();
+        memory->commit();
+
+        postPidFilterData(memory->getSize(), data);
+    }
 }
 
 static void getSubtitleListenerImpl() {
@@ -383,11 +433,14 @@ static void getSubtitleListenerImpl() {
     }
 }
 
-static void connectdtvkit(JNIEnv *env, jclass clazz __unused, jobject obj)
+static void connectdtvkit(JNIEnv *env, jclass clazz __unused, jobject obj, jobject buffer)
 {
     ALOGI("ref dtvkit");
     mpDtvkitJni  =  DTVKitClientJni::GetInstance();
     DtvkitObject = env->NewGlobalRef(obj);
+    gJbuffer = (uint8_t*)env->GetDirectBufferAddress(buffer);
+    gJbufSize = env->GetDirectBufferCapacity(buffer);
+    ALOGE("native buffer info %p,length %d\n", gJbuffer, gJbufSize);
 }
 
 static void disconnectdtvkit(JNIEnv *env, jclass clazz __unused)
@@ -662,7 +715,7 @@ static void resetForSeek() {
 
 static JNINativeMethod gMethods[] = {
 {
-    "nativeconnectdtvkit", "(Lorg/droidlogic/dtvkit/DtvkitGlueClient;)V",
+    "nativeconnectdtvkit", "(Lorg/droidlogic/dtvkit/DtvkitGlueClient;Ljava/nio/ByteBuffer;)V",
     (void *) connectdtvkit
 },
 {
@@ -745,6 +798,7 @@ int register_org_droidlogic_dtvkit_DtvkitGlueClient(JNIEnv *env)
     GET_METHOD_ID(notifyDvbCallback, clazz, "notifyDvbCallback", "(Ljava/lang/String;Ljava/lang/String;I)V");
     GET_METHOD_ID(notifySubtitleCallback, clazz, "notifySubtitleCallback", "(IIIIII[I)V");
     GET_METHOD_ID(notifySubtitleCallbackEx, clazz, "notifySubtitleCallbackEx", "(IIIIIII[I)V");
+    GET_METHOD_ID(notifyPidFilterData, clazz, "notifyPidFilterData", "()V");
     GET_METHOD_ID(notifySubtitleCbCtlEx, clazz, "notifySubtitleCbCtlEx", "(I)V");
     GET_METHOD_ID(notifyCCSubtitleCallbackEx, clazz, "notifyCCSubtitleCallbackEx", "(ZLjava/lang/String;)V");
     GET_METHOD_ID(notifyMixVideoEventCallback, clazz, "notifyMixVideoEventCallback", "(I)V");

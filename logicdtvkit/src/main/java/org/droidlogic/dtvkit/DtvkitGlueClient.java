@@ -12,6 +12,7 @@ import org.json.JSONObject;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 
+import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -22,7 +23,7 @@ public class DtvkitGlueClient {
 
     public static final int INDEX_FOR_MAIN = 0;
     public static final int INDEX_FOR_PIP = 1;
-
+    public static final int DIRECT_BUFFER_SIZE = 188;
     private static final int REQUEST_MESSAGE_TIMEOUT_SHORT_MILLIS = 1000;
     private static final int REQUEST_MESSAGE_TIMEOUT_LONG_MILLIS = 3000;
 
@@ -35,9 +36,11 @@ public class DtvkitGlueClient {
     //private HALCallback mHALCallback;
     private OverlayTarget mTarget;
     private AudioHandler mAudioHandler;
+    private ByteBuffer mDirectBuffer = null;
    // private SystemControlHandler mSysControlHandler;
     private SubtitleListener mListener;
-    private native void nativeconnectdtvkit(DtvkitGlueClient client);
+    private PidFilterListener mPidListener;
+    private native void nativeconnectdtvkit(DtvkitGlueClient client, ByteBuffer buffer);
     private native void nativedisconnectdtvkit();
     private native void nativeSetMutilSurface(int index, Surface surface);
     private native void nativeSetSurface(Surface surface);
@@ -62,6 +65,14 @@ public class DtvkitGlueClient {
          if (mTarget != null) {
             mTarget.draw(width, height, dstx, dsty, dstwidth, dstheight, data);
          }
+    }
+
+    public void notifyPidFilterData() {
+        //Log.d(TAG, "notifyPidFilterData received!!!");
+        if (mPidListener != null) {
+            mDirectBuffer.clear();
+            mPidListener.onPidFilterData(mDirectBuffer);//ByteBuffer data
+        }
     }
 
     public void notifySubtitleCallbackEx(int type, int width, int height, int dstx, int dsty, int dstwidth, int dstheight, int[] data)
@@ -216,9 +227,14 @@ public class DtvkitGlueClient {
         void mixVideoEvent(int event);
     }
 
+    public interface PidFilterListener {
+        void onPidFilterData(ByteBuffer data);
+    }
+
     protected DtvkitGlueClient() {
         // Singleton
-        nativeconnectdtvkit(this);
+        mDirectBuffer = ByteBuffer.allocateDirect(DIRECT_BUFFER_SIZE);
+        nativeconnectdtvkit(this, mDirectBuffer);
     }
 
     public synchronized static DtvkitGlueClient getInstance() {
@@ -264,6 +280,10 @@ public class DtvkitGlueClient {
 
     public void setSubtileListener(SubtitleListener Listener) {
         mListener = Listener;
+    }
+
+    public void setPidFilterListener(PidFilterListener Listener) {
+        mPidListener = Listener;
     }
 
     public JSONObject request(String resource, JSONArray arguments) throws Exception {

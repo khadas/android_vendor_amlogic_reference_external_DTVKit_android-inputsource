@@ -30,7 +30,8 @@ using amlogic::SubtitleListener;
 enum {
     REQUEST        = 0,
     DTVKIT_DRAW    = 1,
-    SUBSERVER_DRAW = 2
+    SUBSERVER_DRAW = 2,
+    HBBTV_DRAW     = 3,
 };
 
 enum {

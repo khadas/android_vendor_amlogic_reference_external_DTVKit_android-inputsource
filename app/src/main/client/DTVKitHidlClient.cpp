@@ -123,7 +123,7 @@ void DTVKitHidlClient::setSubtitleFlag(int flag) {
 }
 
 Return<void> DTVKitHidlClient::DTVKitHidlCallback::notifyCallback(const DTVKitHidlParcel& hidlParcel) {
-    ALOGD("[%s] notifyCallback msgType = %d", __FUNCTION__, hidlParcel.msgType);
+    //ALOGD("[%s] notifyCallback msgType = %d", __FUNCTION__, hidlParcel.msgType);
     sp<DTVKitListener> listener;
     {
         Mutex::Autolock _l(mLock);
