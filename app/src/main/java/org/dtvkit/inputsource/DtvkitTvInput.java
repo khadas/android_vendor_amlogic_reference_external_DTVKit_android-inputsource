@@ -3314,8 +3314,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     && mSurface != null
                     && mSurfaceSent == true
                     && mView != null) {
-                    mView.nativeOverlayView.setOverlayTarge(null);
-                    mView.mSubServerView.setOverlaySubtitleListener(null);
+                    if (!mIsPip) {
+                        mView.nativeOverlayView.setOverlayTarge(null);
+                        mView.mSubServerView.setOverlaySubtitleListener(null);
+                    }
                 }
             }
             releaseSignalHandler();
