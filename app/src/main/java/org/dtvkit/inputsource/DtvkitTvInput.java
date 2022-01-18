@@ -2814,12 +2814,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             //all case use message to release related resource as semaphare has been applied
                             setOverlayViewEnabled(false);
                             mHardware.setSurface(null, null);
+                            mSurface = null;
+                            mReleased = true;
+                            mMainSessionSemaphore.release();
                             writeSysFs("/sys/class/video/video_inuse", "0");
                             //sendSetSurfaceMessage(null, null);
                             //sendDoReleaseMessage();
                             doRelease(false, false);
                             mAudioSystemCmdManager.updateAudioPortGain(-1);
-                            mSurface = null;
                         }
                     } else {
                         if (mSurface != null && mSurface != surface) {
@@ -3310,6 +3312,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void doRelease(boolean keepSession, boolean needUpdate) {
             Log.i(TAG, "doRelease index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip + ", keepSession = " + keepSession + ", needUpdate = " + needUpdate);
+            mPendingTune.reset();
             if (!keepSession) {
                 removeTunerSession(this);
                 if (getFeatureSupportFullPipFccArchitecture()
