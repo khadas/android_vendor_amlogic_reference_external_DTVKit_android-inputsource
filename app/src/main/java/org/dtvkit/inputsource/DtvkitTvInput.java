@@ -118,6 +118,9 @@ import com.droidlogic.settings.SysSettingManager;
 import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.fragment.ParameterMananer;
 
+//Hbbtv
+import com.amlogic.hbbtv.HbbTvManager;
+
 //import com.droidlogic.app.tv.TvControlManager;
 import com.droidlogic.app.AudioConfigManager;
 import com.droidlogic.app.AudioSystemCmdManager;
@@ -215,6 +218,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     //ci authentication
     private boolean mCiAuthenticatedStatus = false;
 
+
+    //hbbtv
+    private HbbTvManager mHbbTvManager = null;
     private static enum PlayerState {
         STOPPED, PLAYING
     }
@@ -1038,6 +1044,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         initDtvkitTvInput();
         DtvkitTvInputSession session = new DtvkitTvInputSession(new WeakReference<>(this));
         addTunerSession(session);
+        mHbbTvManager = new HbbTvManager(this,session,inputId);
+        mHbbTvManager.initBrowser();
         //mSystemControlManager.SetDtvKitSourceEnable(1);
         return session;
     }
@@ -1138,6 +1146,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             nativeOverlayView = new NativeOverlayView(getContext());
             ciOverlayView = new CiMenuView(getContext());
             mSubServerView = new SubtitleServerView(getContext(), mainHandler);
+            mHbbTvManager.setSubtitleView(mSubServerView);
             if (enableCC) {
                 mCCSubView     = new CCSubtitleView(getContext());
             }
@@ -1147,6 +1156,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (enableCC) {
                 this.addView(mCCSubView);
             }
+            this.addView(mHbbTvManager.getHbbTvView());
             initRelativeLayout();
             this.addView(mCasOsm);
             mCasOsm.setVisibility(View.GONE);
@@ -1183,6 +1193,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 removeView(mCasOsm);
                 mCasOsm = null;
             }
+            removeView(mHbbTvManager.getHbbTvView());
+            mHbbTvManager.onDestroy();
         }
 
         public void hideOverLay() {
@@ -1462,6 +1474,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 clearCasView();
                 result = true;
             }
+            else if (mHbbTvManager.handleKeyDown(keyCode,event)) {
+                result = true;
+                mhegTookKey = false;
+                Log.d(TAG,"hbbtv manager the handle key down result = " + result);
+            }
             else {
                 mhegTookKey = false;
                 result = false;
@@ -1474,6 +1491,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             if (ciOverlayView.handleKeyUp(keyCode, event) || mhegTookKey) {
                 result = true;
+            } else if (mHbbTvManager.handleKeyUp(keyCode,event)) {
+                result = true;
+                Log.d(TAG,"hbbtv manager the handle key up result = " + result);
             } else {
                 result = false;
             }
@@ -3056,6 +3076,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mPreviousTunedChannel = mTunedChannel;
             Channel targetChannel = getChannel(channelUri);
             mTunedChannel = (targetChannel != null) ? targetChannel : getFirstChannel();
+            mHbbTvManager.setTuneChannelUri(channelUri);
             if (mTunedChannel == null) {
                 Log.e(TAG, "onTuneByHandlerThreadHandle no channel tune to:" + channelUri);
                 return false;
@@ -3273,6 +3294,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else {
                 DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
                 mTunedChannel = null;
+                mHbbTvManager.setTuneChannelUri(null);
                 notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
 
@@ -3479,7 +3501,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public boolean onSelectTrack(int type, String trackId) {
             Log.i(TAG, "onSelectTrack " + type + ", " + trackId + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             boolean result = false;
-            if (mHandlerThreadHandle != null) {
+            if (mHandlerThreadHandle != null && mHbbTvManager.checkIsBroadcastOwnResource()) {
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_SELECT_TRACK, type, 0, trackId);
                 result = mHandlerThreadHandle.sendMessage(mess);
                 Log.d(TAG, "onSelectTrack sendMessage result " + result);
@@ -3893,13 +3915,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mAudioADVolume = data.getInt(DataMananer.PARA_VALUE1);
                 mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SET_VOLUME, mAudioADVolume, 0);
             } else if (TextUtils.equals(PropSettingManager.ACTON_CONTROL_TIMESHIFT, action)) {
-                if (data != null) {
-                    boolean status = data.getBoolean(PropSettingManager.VALUE_CONTROL_TIMESHIFT, false);
-                    if (status) {
-                        sendMsgTryStartTimeshift(0);
-                    } else {
-                        sendMsgTryStopTimeshift(0);
+
+                if (!mHbbTvManager.isApplicationRunning()) {
+                    if (data != null) {
+                        boolean status = data.getBoolean(PropSettingManager.VALUE_CONTROL_TIMESHIFT, false);
+                        if (status) {
+                            sendMsgTryStartTimeshift(0);
+                        } else {
+                            sendMsgTryStopTimeshift(0);
+                        }
                     }
+                } else {
+                     Log.d(TAG,"the hbbtv runing");
                 }
             } else if (TextUtils.equals("delete_profile", action)) {
                 String ciNumber = data.getString("ci_number");

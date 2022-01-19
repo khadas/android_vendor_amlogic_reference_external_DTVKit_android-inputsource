@@ -29,6 +29,8 @@
     <uses-permission android:name="com.android.providers.tv.permission.ACCESS_ALL_EPG_DATA" />
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.DEVICE_POWER"/>
+    <uses-permission android:name="com.vewd.core.service.CLIENT_ACCESS"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
     <application
         android:allowBackup="true"
@@ -134,5 +136,10 @@
                 <action android:name="com.droidlogic.dtvkit.inputsource.service.DtvkitSettingService" />
             </intent-filter>
         </service>
+        <meta-data android:name="com.vewd.core.browser_service_package"
+            android:value="com.vewd.core.service"/>
+        <meta-data android:name="com.vewd.core.browser_service_class"
+            android:value="com.vewd.core.service.BrowserServiceImpl"/>
+
     </application>
 </manifest>

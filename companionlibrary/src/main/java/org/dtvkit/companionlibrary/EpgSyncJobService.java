@@ -124,6 +124,9 @@ public abstract class EpgSyncJobService extends JobService {
     /** The key corresponding to the job service's status. */
     public static final String SYNC_STATUS = "sync_status";
 
+    public static final String SYNC_REASON = "sync_reason";
+    public static final String SYNC_BYSCAN = "sync_byscan";
+    public static final String SYNC_BYOTHER = "sync_byother";
     /** Indicates that the EPG sync was canceled before being completed. */
     public static final int ERROR_EPG_SYNC_CANCELED = 1;
     /** Indicates that the input id was not defined and the EPG sync cannot complete. */
@@ -153,6 +156,7 @@ public abstract class EpgSyncJobService extends JobService {
     public static final String BUNDLE_VALUE_SYNC_SEARCHED_MODE_UPDATE = "UPDATE";
     public static final String BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE = "BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE";
     public static final String BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY = "BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY";
+    public static final String BUNDLE_KEY_SYNC_REASON = "BUNDLE_KEY_SYNC_REASON";
 
     private final SparseArray<EpgSyncTask> mTaskArray = new SparseArray<>();
     private static final Object mContextLock = new Object();
@@ -382,6 +386,7 @@ public abstract class EpgSyncJobService extends JobService {
         persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NOW_NEXT, true);
         persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_CHANNEL_ONLY, false);
         persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, searchedChannel);
+        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_REASON, true);
         if (parameters != null) {
             Set<String> keySet = parameters.keySet();
             Object obj = null;
@@ -440,6 +445,7 @@ public abstract class EpgSyncJobService extends JobService {
         private String mInputId;
         private boolean mIsSearchedChannel;
         static final int MSG_SEND_BROADCAST = 1;
+        private boolean mUpdateByScan = false;
 
         Handler mHandler = new Handler() {
             @Override
@@ -463,6 +469,7 @@ public abstract class EpgSyncJobService extends JobService {
             PersistableBundle extras = params.getExtras();
             mInputId = extras.getString(BUNDLE_KEY_INPUT_ID);
             mIsSearchedChannel = extras.getBoolean(BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, false);
+            mUpdateByScan = extras.getBoolean(BUNDLE_KEY_SYNC_REASON, false);
             String syncSignalType = extras.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE);
             boolean syncCurrent = true;
             if ("full".equals(syncSignalType)) {
@@ -595,6 +602,14 @@ public abstract class EpgSyncJobService extends JobService {
             intent.putExtra(
                     BUNDLE_KEY_INPUT_ID, jobParams.getExtras().getString(BUNDLE_KEY_INPUT_ID));
             intent.putExtra(SYNC_STATUS, SYNC_FINISHED);
+
+            Log.d(TAG, "finishEpgSync notify Update channel mUpdateByScan = " + mUpdateByScan);
+            if (mUpdateByScan) {
+                intent.putExtra(SYNC_REASON, SYNC_BYSCAN);
+            } else {
+                intent.putExtra(SYNC_REASON, SYNC_BYOTHER);
+            }
+            mUpdateByScan = false;
             LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
         }
 

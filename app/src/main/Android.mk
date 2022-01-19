@@ -12,7 +12,9 @@ LOCAL_RESOURCE_DIR := frameworks/support/leanback/src/main/res \
 
 LOCAL_STATIC_JAVA_LIBRARIES += \
    companionlibrary \
-   android-support-v17-leanback
+   android-support-v17-leanback \
+   libvewdcore-shared-hbbtv \
+   libvewdcore-client-hbbtv
 
 LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/aidl
 
@@ -39,5 +41,26 @@ LOCAL_VENDOR_MODULE := true
 
 #LOCAL_PRIVATE_PLATFORM_APIS := true
 include $(BUILD_PACKAGE)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE_CLASS := JAVA_LIBRARIES
+LOCAL_MODULE := libvewdcore-shared-hbbtv
+LOCAL_SDK_VERSION := current
+LOCAL_SRC_FILES := hbbtv/libs/vewdcore-shared.jar
+LOCAL_UNINSTALLABLE_MODULE := true
+
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE_CLASS := JAVA_LIBRARIES
+LOCAL_MODULE := libvewdcore-client-hbbtv
+LOCAL_SDK_VERSION := current
+LOCAL_SRC_FILES := hbbtv/libs/vewdcore-client.jar
+LOCAL_UNINSTALLABLE_MODULE := true
+
+include $(BUILD_PREBUILT)
+
 include $(call all-makefiles-under, $(LOCAL_PATH))
 
