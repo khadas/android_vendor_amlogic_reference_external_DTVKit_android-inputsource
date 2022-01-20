@@ -118,6 +118,11 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 data.put("is_data", service.getBoolean("is_data"));
                 data.put("channel_signal_type", service.getString("sig_name"));
                 data.put("scrambled", service.getBoolean("scrambled")?1:0);//to match with droidlogic_tv.jar
+                if (service.has("is_hdtv")) {
+                    data.put("is_hdtv", service.getBoolean("is_hdtv")?1:0);
+                } else {
+                    data.put("is_hdtv", 0);
+                }
                 if (service.has("mod")) {
                     data.put("modulation", parseModulationInt(service.getString("mod")));
                 } else {
