@@ -40,6 +40,7 @@ public class HbbTvManager{
     private String mInuputId;
     private Uri mTuneChannelUri = null;
     private boolean mOwnResourceByBr = true;
+    private HbbTvUISetting mHbbTvUISetting;
     private final BroadcastResourceManager mBroadcastResourceManager =
             BroadcastResourceManager.getInstance();
 
@@ -58,6 +59,7 @@ public class HbbTvManager{
         mAmlHbbTvView = new AmlHbbTvView(mContext);
         mAmlTunerDelegate = new AmlTunerDelegate(mContext,mSession,mInuputId,mAmlHbbTvView);
         mPreferencesManager = new PreferencesManager(mPreferencesManagerDelegate);
+        mHbbTvUISetting = new HbbTvUISetting();
     }
 
    /**
@@ -133,8 +135,12 @@ public class HbbTvManager{
     public void onDestroy() {
         Log.i(TAG,"onDestroy start");
         if (mAmlHbbTvView != null) {
-            Log.d(TAG,"onDestroy  destroying");
-            mAmlHbbTvView.dispose();
+            if (mAmlHbbTvView.isInitialized()) {
+                Log.d(TAG,"onDestroy  destroying");
+                mAmlHbbTvView.dispose();
+            } else {
+                Log.d(TAG,"mAmlHbbTvView  not init");
+            }
             mAmlHbbTvView = null;
         }
         if (mAmlTunerDelegate != null) {
@@ -269,7 +275,12 @@ public class HbbTvManager{
     }
 
     public boolean isApplicationRunning() {
-       return mAmlHbbTvView.isApplicationRunning();
+        if (mAmlHbbTvView.isInitialized()) {
+            Log.d(TAG,"isApplicationRunning");
+            return mAmlHbbTvView.isApplicationRunning();
+        } else {
+            return false;
+        }
     }
 
     private boolean isResourceOwnedByBr() {
@@ -298,6 +309,52 @@ public class HbbTvManager{
                 }
 
             };
+
+    public boolean getHbbTvFeature() {
+       return mHbbTvUISetting.getHbbTvFeature();
+    }
+
+    public void setHbbTvFeature(boolean status) {
+        mHbbTvUISetting.setHbbTvFeature(status);
+    }
+
+    public boolean getHbbTvServiceStatusForCurChannel() {
+        return mHbbTvUISetting.getHbbTvServiceStatusForCurChannel();
+    }
+
+
+    public void setHbbTvServiceStatusForCurChannel(boolean status) {
+        mHbbTvUISetting.setHbbTvServiceStatusForCurChannel(status);
+    }
+
+     public boolean getHbbTvTrackingStatus() {
+        return mHbbTvUISetting.getHbbTvTrackingStatus();
+     }
+
+
+    public void setHbbTvTrackingStatus(boolean status) {
+        mHbbTvUISetting.setHbbTvTrackingStatus(status);
+    }
+
+    public boolean getHbbtvCookiesStatus() {
+        return mHbbTvUISetting.getHbbtvCookiesStatus();
+    }
+
+    public void setHbbTvCookiesStatus(boolean status) {
+        mHbbTvUISetting.setHbbTvCookiesStatus(status);
+    }
+
+    public void clearHbbTvCookies() {
+        mHbbTvUISetting.clearHbbTvCookies();
+    }
+
+    public boolean getHbbTvDistinctiveIdentifierStatus() {
+        return mHbbTvUISetting.getHbbTvDistinctiveIdentifierStatus();
+    }
+
+    public void setHbbTvDistinctiveIdentifierStatus(boolean status) {
+        mHbbTvUISetting.setHbbTvDistinctiveIdentifierStatus(status);
+    }
 }
 
 
