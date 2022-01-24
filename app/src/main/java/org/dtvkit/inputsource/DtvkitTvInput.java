@@ -6051,6 +6051,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Cursor cursor = null;
             Uri uri = TvContract.buildChannelsUriForInput(mInputId);
             String signalType = dvbSourceToChannelTypeString(getCurrentDvbSource());
+            boolean isOpEnv = isInOpProfileEnv();
             try {
                 if (uri != null) {
                     cursor = outService.get().getContentResolver().query(uri, Channel.PROJECTION, null, null, null);
@@ -6061,8 +6062,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 while (cursor.moveToNext()) {
                     Channel nextChannel = Channel.fromCursor(cursor);
                     if (nextChannel != null && nextChannel.getType().contains(signalType)) {
-                        channel = nextChannel;
-                        break;
+                        String profileName =
+                            TvContractUtils.getStringFromChannelInternalProviderData(nextChannel, Channel.KEY_CHANNEL_PROFILE, null);
+                        boolean isOpchannel = !TextUtils.isEmpty(profileName);
+                        if (isOpchannel == isOpEnv) {
+                            channel = nextChannel;
+                            break;
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -8273,6 +8279,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
        } catch (Exception e) {
        }
        return source;
+   }
+
+   private boolean isInOpProfileEnv() {
+       int env = 0;
+       try {
+           JSONObject envObject = DtvkitGlueClient.getInstance().request("Dvb.IsOperatorProfileEnv", new JSONArray());
+           if (envObject != null) {
+               env = envObject.optInt("data");
+           }
+       } catch (Exception e) {
+       }
+       return env == 1;
    }
 
    private JSONArray recordingGetListOfScheduledRecordings() {
