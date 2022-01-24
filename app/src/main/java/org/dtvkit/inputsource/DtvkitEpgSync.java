@@ -278,6 +278,10 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         }
                     }
 
+                    if (!TextUtils.isEmpty(event.getString("guidance"))) {
+                        data.put("guidance",event.getString("guidance"));
+                    }
+
                     Program pro = new Program.Builder()
                             .setChannelId(channel.getId())
                             .setTitle(event.getString("name"))
@@ -333,6 +337,10 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                     }
                 }
 
+                if (!TextUtils.isEmpty(event.getString("guidance"))) {
+                    data.put("guidance",event.getString("guidance"));
+                }
+
                 parental_rating = event.getInt("rating");
                 Program pro = new Program.Builder()
                         .setChannelId(channel.getId())
@@ -385,6 +393,11 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         data.put("genre", genre_str);
                     }
                 }
+
+                if (!TextUtils.isEmpty(now.getString("guidance"))) {
+                    data.put("guidance",now.getString("guidance"));
+                }
+
                 programs.add(new Program.Builder()
                         .setChannelId(channel.getId())
                         .setTitle(now.getString("name"))
@@ -412,6 +425,11 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         data.put("genre", genre_str);
                     }
                 }
+
+                if (!TextUtils.isEmpty(next.getString("guidance"))) {
+                    data.put("guidance",next.getString("guidance"));
+                }
+
                 programs.add(new Program.Builder()
                         .setChannelId(channel.getId())
                         .setTitle(next.getString("name"))
