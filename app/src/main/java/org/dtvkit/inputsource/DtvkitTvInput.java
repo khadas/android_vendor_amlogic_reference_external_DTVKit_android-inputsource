@@ -4933,9 +4933,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                            if (UiSettingMode != 6) {//not afd
                                Log.i(TAG, "Not AFD mode!");
                            } else {
-                               Log.d(TAG, "AppVideoPosition crop:("+crop+")");
-                               SysContManager.writeSysFs("/sys/class/video/crop", crop);
-                               playerSetVideoCrop(INDEX_FOR_MAIN, voff0 + pq_overscan.vs, hoff0 + pq_overscan.hs, voff1 + pq_overscan.ve, hoff1 + pq_overscan.he);
+                               if (getIsFixedTunnel() == 0) {
+                                   Log.i(TAG, "AppVideoPosition crop:("+crop+")");
+                                   SysContManager.writeSysFs("/sys/class/video/crop", crop);
+                               } else {
+                                   Log.i(TAG, "playerSetVideoCrop when FixedTunnel ");
+                                   playerSetVideoCrop(INDEX_FOR_MAIN, hoff0 + pq_overscan.hs, voff0 + pq_overscan.vs, hoff1 + pq_overscan.he, voff1 + pq_overscan.ve);
+                               }
                            }
                        Log.d(TAG, "AppVideoPosition layoutSurface("+left+","+top+","+right+","+bottom+")(LTRB)");
                        layoutSurface(left,top,right,bottom);
@@ -5857,6 +5861,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.i(TAG, "timeshiftRecordingTask");
             resetRecordingPath();
             tryStartTimeshifting();
+        }
+
+        private int getIsFixedTunnel() {
+            return PropSettingManager.getInt("vendor.tv.fixed_tunnel", 0);
         }
 
         private int getTimeshiftBufferSizeMins() {
