@@ -17,7 +17,6 @@ import com.vewd.core.shared.MediaComponentsPreferences;
 import com.amlogic.hbbtv.utils.StringUtils;
 import com.amlogic.hbbtv.utils.UserAgentUtils;
 import com.amlogic.hbbtv.utils.KeyEventUtils;
-import com.amlogic.hbbtv.utils.PreferencesManager;
 import com.amlogic.hbbtv.utils.BroadcastResourceManager;
 
 import com.droidlogic.dtvkit.inputsource.DtvkitTvInput;
@@ -31,7 +30,7 @@ public class HbbTvManager{
     private static final String TAG = "HbbTvManager";
     private AmlHbbTvView mAmlHbbTvView;
     private DtvkitTvInput.DtvkitTvInputSession mSession;
-    private PreferencesManager mPreferencesManager;
+    private HbbtvPreferencesManager mPreferencesManager;
     private AmlTunerDelegate mAmlTunerDelegate;
     private AmlViewClient mAmlViewClient;
     private AmlChromeClient mAmlChromeClient;
@@ -58,7 +57,7 @@ public class HbbTvManager{
         mInuputId = inputId;
         mAmlHbbTvView = new AmlHbbTvView(mContext);
         mAmlTunerDelegate = new AmlTunerDelegate(mContext,mSession,mInuputId,mAmlHbbTvView);
-        mPreferencesManager = new PreferencesManager(mPreferencesManagerDelegate);
+        mPreferencesManager = new HbbtvPreferencesManager(mAmlHbbTvView);
         mHbbTvUISetting = new HbbTvUISetting();
     }
 
@@ -117,11 +116,11 @@ public class HbbTvManager{
         mAmlHbbTvView.setUserAgentSuffix(UserAgentUtils.getVendorUserAgentSuffix());
         mAmlHbbTvView.init();
         mAmlHbbTvView.requestFocus();
-        mAmlHbbTvView.setPref("xhr_origin_check_enabled", "false");
-        mAmlHbbTvView.setPref("device_unique_number", "123456");
-        mAmlHbbTvView.setPref("manufacturer_secret_number", "T950D4");
-        mAmlHbbTvView.setPref("hbbtv_parental_rating_check", "false");
-        //set preferred language
+
+        //set references
+        mPreferencesManager.setDeviceUniqueNumber(null);
+        mPreferencesManager.setManufacturerSecretNumber(null);
+        mPreferencesManager.setConfigurationCountryid();
         mPreferencesManager.updateHbbTvMediaComponentsPreferences();
         //mAmlHbbTvView.loadUrlApplication("http://itv.mit-xperts.com/hbbtvtest");
         Log.d(TAG,"initializeHbbTvView end");
@@ -292,23 +291,6 @@ public class HbbTvManager{
         mOwnResourceByBr = flag;
         Log.i(TAG,"setResourceOwnedByBr mOwnResourceByBr = " + mOwnResourceByBr);
     }
-
-    private PreferencesManager.Delegate mPreferencesManagerDelegate =
-            new PreferencesManager.Delegate() {
-
-                @Override
-                public void setMediaComponentsPreferences(MediaComponentsPreferences preferences) {
-                    if (preferences.preferredAudioLanguages != null &&
-                       preferences.preferredSubtitlesLanguages != null ) {
-                        Log.d(TAG, "AudioLanguages = " + preferences.preferredAudioLanguages.get(0));
-                        Log.d(TAG, "SubtitlesLanguages = " + preferences.preferredSubtitlesLanguages.get(0));
-                        Log.d(TAG, "enableSubtitles = " + preferences.enableSubtitles);
-                        mAmlHbbTvView.setMediaComponentsPreferences(preferences);
-                    }
-
-                }
-
-            };
 
     public boolean getHbbTvFeature() {
        return mHbbTvUISetting.getHbbTvFeature();

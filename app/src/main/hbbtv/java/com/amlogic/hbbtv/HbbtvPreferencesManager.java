@@ -5,7 +5,7 @@
  * without Vewd's prior, explicit and written consent.
  */
 
-package com.amlogic.hbbtv.utils;
+package com.amlogic.hbbtv;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -30,20 +30,17 @@ import com.vewd.core.shared.MediaComponentsPreferences;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 
-public class PreferencesManager {
+public class HbbtvPreferencesManager {
 
     private static final String TAG = "PreferencesManager";
-    private static final String PREF_DEFAULT_LANGUAGE = "en";
-
+    private static final String PREF_DEFAULT_LANGUAGE = "eng";
+    private static final String PREF_DEFAULT_COUNTRY  = "GBR";
     private static final int INDEX_FOR_MAIN = 0;
 
-    public interface Delegate {
-        public void setMediaComponentsPreferences(MediaComponentsPreferences preferences);
-    }
 
-    public PreferencesManager(Delegate delegate) {
+    public HbbtvPreferencesManager(AmlHbbTvView amlHbbTvView) {
         Log.d(TAG,"Init PreferencesManager");
-        mDelegate = delegate;
+        mAmlHbbTvView = amlHbbTvView;
    }
 
     private boolean getSubtitlesEnabled() {
@@ -164,9 +161,19 @@ public class PreferencesManager {
         MediaComponentsPreferences prefs = buildMediaComponentsPreferences(
                 preferredSubtitlesLanguages, preferredAudioLanguages, enableSubtitles,
                 enableNormalAudio, enableAudioDescriptions, timeShiftSynchronized);
-        mDelegate.setMediaComponentsPreferences(prefs);
+        setMediaComponentsPreferences(prefs);
     }
 
+
+    public void setMediaComponentsPreferences(MediaComponentsPreferences preferences) {
+        if (preferences.preferredAudioLanguages != null &&
+           preferences.preferredSubtitlesLanguages != null ) {
+            Log.d(TAG, "AudioLanguages = " + preferences.preferredAudioLanguages.get(0));
+            Log.d(TAG, "SubtitlesLanguages = " + preferences.preferredSubtitlesLanguages.get(0));
+            Log.d(TAG, "enableSubtitles = " + preferences.enableSubtitles);
+            mAmlHbbTvView.setMediaComponentsPreferences(preferences);
+        }
+    }
 
     private MediaComponentsPreferences buildMediaComponentsPreferences(
             ArrayList<String> preferredSubtitlesLanguages,
@@ -191,6 +198,47 @@ public class PreferencesManager {
         return prefs;
     }
 
-    private Delegate mDelegate;
+    public void setXhrOriginCheckEnabled(boolean enableXhr) {
+        Log.d(TAG, "xhr_origin_check_enabled = " + enableXhr);
+        mAmlHbbTvView.setPref("xhr_origin_check_enabled", "false");
+    }
+
+    public void setDeviceUniqueNumber(String uniqueNumber) {
+        Log.d(TAG, "device_unique_number = " + uniqueNumber);
+        mAmlHbbTvView.setPref("device_unique_number", "123456");
+    }
+
+    public void setManufacturerSecretNumber(String secretNumber) {
+        Log.d(TAG, "manufacturer_secret_number = " + secretNumber);
+        mAmlHbbTvView.setPref("manufacturer_secret_number", "T950D4");
+    }
+
+
+    public void setConfigurationCountryid() {
+        String countryCode = null;
+        JSONObject obj = null;
+
+        try {
+            JSONArray args = new JSONArray();
+            obj = DtvkitGlueClient.getInstance().request("Hbbtv.HBBGetGetCurCountryCode", args);
+            if (obj != null && obj.getBoolean("accepted")) {
+                obj = (JSONObject)obj.get("data");
+                countryCode = obj.getString("countryCode");
+            }
+            else {
+                countryCode = PREF_DEFAULT_LANGUAGE;
+            }
+        }
+        catch (Exception e) {
+            Log.d(TAG, "Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            return;
+        }
+
+        Log.d(TAG,"countryCode :" + countryCode);
+        mAmlHbbTvView.setPref("ooif.configuration.country_id", countryCode);
+        return;
+    }
+
+    private AmlHbbTvView mAmlHbbTvView;
 
 }
