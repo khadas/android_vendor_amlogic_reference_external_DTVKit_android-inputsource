@@ -239,12 +239,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private RecorderState timeshiftRecorderState = RecorderState.STOPPED;
-    private boolean timeshifting = false;
+    private boolean mIsTimeshiftingPlayed = false;
     private int numRecorders = 0;
     private int numActiveRecordings = 0;
 
-    private boolean scheduleTimeshiftRecording = false;
-    private Handler scheduleTimeshiftRecordingHandler = null;
     private static long mDtvkitTvInputSessionCount = 0;
     private long mDtvkitRecordingSessionCount = 0;
     private DataMananer mDataMananer;
@@ -2277,13 +2275,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     return;
                 } else {
                     recordingPending = true;
-
-                    boolean returnToLive = timeshifting;
-                    Log.i(TAG, "stopping timeshift [return live:"+returnToLive+"]");
+                    boolean return_to_livetv = timeshiftRecorderState != RecorderState.STOPPED;
+                    if (return_to_livetv) {
+                        Log.i(TAG, "stopping timeshift [return live:" + return_to_livetv + "]");
+                        playerStopTimeshiftRecording(return_to_livetv);
+                    }
                     timeshiftRecorderState = RecorderState.STOPPED;
-                    scheduleTimeshiftRecording = false;
-                    timeshifting = false;
-                    playerStopTimeshiftRecording(returnToLive);
+                    mIsTimeshiftingPlayed = false;
                 }
             }
 
@@ -2407,7 +2405,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private void updateRecordingToDb(boolean insert, boolean check, Object obj) {
             endRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);
             endRecordSystemTimeMillis = System.currentTimeMillis();
-            scheduleTimeshiftRecording = true;
             Log.d(TAG, "updateRecordingToDb:"+recordingUri);
             if (recordingUri != null)
             {
@@ -2864,7 +2861,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private int m_surface_bottom = 0;
         private boolean mTeleTextMixNormal = true;
         private int dvrSubtitleFlag = 0;
-        private MountEventReceiver mMediaReceiver;
 
         private boolean mTimeShiftInited = false;
         private boolean mTuned = false;
@@ -2903,16 +2899,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             super(service.get().getApplicationContext());
             outService = service;
             mCurrentDtvkitTvInputSessionIndex = ++mDtvkitTvInputSessionCount;
-            Log.i(TAG, "DtvkitTvInputSession creat");
+            Log.i(TAG, "DtvkitTvInputSession create");
             mCaptioningManager =
                 (CaptioningManager) outService.get().getSystemService(Context.CAPTIONING_SERVICE);
             initWorkThread();
-            mMediaReceiver = new MountEventReceiver();
-            IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(Intent.ACTION_MEDIA_REMOVED);
-            intentFilter.addAction(Intent.ACTION_MEDIA_EJECT);
-            intentFilter.addDataScheme("file");
-            outService.get().registerReceiver(mMediaReceiver, intentFilter);
             mAudioSystemCmdManager = AudioSystemCmdManager.getInstance(getApplicationContext());
         }
 
@@ -3271,16 +3261,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     setSurfaceTunnelId(INDEX_FOR_MAIN, 1);
                     playerSetRectangle(0, 0, mWinWidth, mWinHeight);
                 }
+
                 removeScheduleTimeshiftRecordingTask();
                 initTimeShift();
+                // before tune to new channel, stop timeshift first.
+                boolean ret = true;
                 if (timeshiftRecorderState != RecorderState.STOPPED) {
                     Log.i(TAG, "reset timeshiftState to STOPPED.");
-                    timeshiftRecorderState = RecorderState.STOPPED;
-                    timeshifting = false;
-                    scheduleTimeshiftRecording = false;
-                    playerStopTimeshiftRecording(false);
+                    ret = stopTimeshiftRecordingInSession(true);
+                    if (ret) {
+                        timeshiftRecorderState = RecorderState.STOPPED;
+                    }
                 }
-                timeshiftAvailable.setYes(true);
+                if (ret) {
+                    timeshiftAvailable.setYes(true);
+                }
             } else {
                 if (!mSurfaceSent && mSurface != null) {
                     mSurfaceSent = true;
@@ -3449,8 +3444,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else {
                 Log.i(TAG, "onRelease mMainHandle == null");
             }
-            outService.get().unregisterReceiver(mMediaReceiver);
-            mMediaReceiver = null;
             hideStreamChangeUpdateDialog();
             Log.i(TAG, "onRelease over index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
         }
@@ -3472,16 +3465,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             releaseSignalHandler();
             if (!mIsPip) {
-                removeScheduleTimeshiftRecordingTask();
-                scheduleTimeshiftRecording = false;
-                timeshiftRecorderState = RecorderState.STOPPED;
-                timeshifting = false;
                 mhegStop();
-
+                removeScheduleTimeshiftRecordingTask();
+                if (timeshiftRecorderState != RecorderState.STOPPED) {
+                    if (stopTimeshiftRecordingInSession(false)) {
+                        timeshiftRecorderState = RecorderState.STOPPED;
+                    }
+                }
                 DtvkitTvInputSession pipSession = getPipTunerSession();
                 if (getTunerSession(mCurrentDtvkitTvInputSessionIndex + 1) == null
                     || (pipSession != null && pipSession.mCurrentDtvkitTvInputSessionIndex == mDtvkitTvInputSessionCount)) {
-                    playerStopTimeshiftRecording(false);
                     playerStop();
                 }
                 playerSetSubtitlesOn(false);
@@ -4109,7 +4102,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        @RequiresApi(api = Build.VERSION_CODES.M)
+        @Override
         public void onTimeShiftPlay(Uri uri) {
             Log.i(TAG, "onTimeShiftPlay " + uri);
             if (mHandlerThreadHandle != null) {
@@ -4121,7 +4114,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         }
 
+        @Override
         public void onTimeShiftPause() {
+            Log.i(TAG, "onTimeShiftPause ");
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_PASUE);
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_TIMESHIFT_PASUE, 0, 0, null);
@@ -4130,6 +4125,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
+        @Override
         public void onTimeShiftResume() {
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_RESUME);
@@ -4139,8 +4135,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
+        @Override
         public void onTimeShiftSeekTo(long timeMs) {
-            Log.i(TAG, "onTimeShiftSeekTo:  " + timeMs);
+            Log.i(TAG, "onTimeShiftSeekTo: " + timeMs);
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_SEEK);
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_TIMESHIFT_SEEK, 0, 0, timeMs);
@@ -4149,7 +4146,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        @RequiresApi(api = Build.VERSION_CODES.M)
+        @Override
         public void onTimeShiftSetPlaybackParams(PlaybackParams params) {
             Log.i(TAG, "onTimeShiftSetPlaybackParams");
             if (mHandlerThreadHandle != null) {
@@ -4160,7 +4157,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
+        @Override
         public long onTimeShiftGetStartPosition() {
+            String comments = "";
             if (timeshiftRecorderState != RecorderState.STOPPED) {
                 long truncated = playerGetElapsedAndTruncated()[1];
                 long diff = PropSettingManager.getStreamTimeDiff();
@@ -4168,23 +4167,28 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (originalStartPosition != 0 && originalStartPosition != TvInputManager.TIME_SHIFT_INVALID_TIME) {
                     startPosition = originalStartPosition + truncated + diff;
                 }
-                Log.i(TAG, "timeshifting. start position: " + startPosition + ", (truncated:" + truncated + ", diff:" + diff + ")ms");
+                comments = " timeshifting. " + "(truncated:" + truncated + ", diff:" + diff + ")ms";
             }
-            Log.i(TAG, "onTimeShiftGetStartPosition startPosition:" + startPosition + ", as date = " + ConvertSettingManager.convertLongToDate(startPosition));
+            Log.i(TAG, "startPosition:" + startPosition + ", as date = "
+                + ConvertSettingManager.convertLongToDate(startPosition)
+                + comments);
             return startPosition;
         }
 
+        @Override
         public long onTimeShiftGetCurrentPosition() {
+            String comments = "";
             if (startPosition == 0) /* Playing back recorded program */ {
                 if (playerState == PlayerState.PLAYING) {
                     long e_t_l[] = playerGetElapsedAndTruncated();
                     long length = e_t_l[2];
                     currentPosition = e_t_l[0];
-                    if ((length - currentPosition) < 1000)
+                    if ((length - currentPosition) < 1000) {
                         currentPosition = recordedProgram.getRecordingDurationMillis();
-                    Log.i(TAG, "playing back record program. current position: " + currentPosition);
+                    }
+                    comments = "playing back record program.";
                 }
-            } else if (timeshifting) {
+            } else if (timeshiftRecorderState == RecorderState.RECORDING) {
                 long e_t_l[] = playerGetElapsedAndTruncated();
                 long elapsed = e_t_l[0];
                 long length = e_t_l[2];
@@ -4194,19 +4198,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                    currentPosition = PropSettingManager.getCurrentStreamTime(true);
                 else
                    currentPosition = elapsed + originalStartPosition + diff;
-                Log.i(TAG, "timeshifting. current position: " + currentPosition + ", (elapsed:" + elapsed+ ", (length:" + length +  ", (playSpeed:" + playSpeed +  ", diff:" + diff + ")ms");
+                comments = "timeshifting." + ", (elapsed:" + elapsed + ", (length:" + length +  ", (playSpeed:" + playSpeed +  ", diff:" + diff + ")ms";
             } else if (startPosition == TvInputManager.TIME_SHIFT_INVALID_TIME) {
                 currentPosition = TvInputManager.TIME_SHIFT_INVALID_TIME;
-                Log.i(TAG, "Invalid time. Current position: " + currentPosition);
+                comments = "Invalid time.";
             } else {
                 if (!mIsPip) {
                     currentPosition = /*System.currentTimeMillis()*/PropSettingManager.getCurrentStreamTime(true);
                 } else {
                     currentPosition = PropSettingManager.getCurrentPipStreamTime(true);
                 }
-                Log.i(TAG, "live tv. current position: " + currentPosition);
+                comments = "live tv.";
             }
-            Log.d(TAG, "onTimeShiftGetCurrentPosition currentPosition = " + currentPosition + ", as date = " + ConvertSettingManager.convertLongToDate(currentPosition));
+            Log.d(TAG, "currentPosition = " + currentPosition
+                    + ", as date = " + ConvertSettingManager.convertLongToDate(currentPosition)
+                    + ", " + comments);
             return currentPosition;
         }
 
@@ -4441,6 +4447,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             } catch (JSONException e) {
                                 Log.e(TAG, e.getMessage());
                             }
+                            /*
+                             * type: "dvblive"         -> livetv streaming
+                             * type: "dvbrecording"    -> dvr playback
+                             * type: "dvbtimeshifting" -> timeshift streaming
+                             */
                             if (type.equals("dvblive")) {
                                 if (mTunedChannel != null) {
                                     if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
@@ -4547,8 +4558,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             }
                             if (timeshiftRecorderState != RecorderState.STOPPED) {
                                 removeScheduleTimeshiftRecordingTask();
-                                scheduleTimeshiftRecording = false;
-                                playerStopTimeshiftRecording(false);
+                                stopTimeshiftRecordingInSession(false);
                                 timeshiftRecorderState = RecorderState.STOPPED;
                                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                             }
@@ -4639,7 +4649,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         case "off":
                             timeshiftRecorderState = RecorderState.STOPPED;
                             startPosition = originalStartPosition = TvInputManager.TIME_SHIFT_INVALID_TIME;
-                            timeshifting = false;
                             notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                             playerSetSubtitlesOn(false);
                             playerStopTeletext();
@@ -4650,7 +4659,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     JSONArray activeRecordings = recordingGetActiveRecordings(data);
 
                     if (activeRecordings != null && activeRecordings.length() < numRecorders &&
-                            timeshiftRecorderState == RecorderState.STOPPED && scheduleTimeshiftRecording) {
+                            timeshiftRecorderState == RecorderState.STOPPED) {
                         timeshiftAvailable.setYes();
                     }
 
@@ -4673,17 +4682,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Bundle event = new Bundle();
                         event.putString(ConstantManager.KEY_INFO, "not allowed to record a non-av service");
                         notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
-                        /*notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);*/
 
                         /*timeshiftAvailable will be disabled further in this tune*/
                         timeshiftAvailable.disable();
 
-                        boolean returnToLive = timeshifting;
-                        Log.i(TAG, "stopping timeshift [return live:" + returnToLive + "]");
+                        boolean return_to_livetv = timeshiftRecorderState != RecorderState.STOPPED;
+                        if (return_to_livetv) {
+                            Log.i(TAG, "stopping timeshift [return live:" + return_to_livetv + "]");
+                            stopTimeshiftRecordingInSession(return_to_livetv);
+                        }
                         timeshiftRecorderState = RecorderState.STOPPED;
-                        scheduleTimeshiftRecording = false;
-                        timeshifting = false;
-                        playerStopTimeshiftRecording(returnToLive);
+                        mIsTimeshiftingPlayed = false;
                     }
                 }
                 else if (signal.equals("DvbUpdatedEventPeriods"))
@@ -5286,7 +5295,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             TvContentRating[] ratings;
 
             //get current position as timeshift may seek to related position
-            currentStreamTime = timeshifting ? onTimeShiftGetCurrentPosition() : PropSettingManager.getCurrentStreamTime(true);
+            currentStreamTime = mIsTimeshiftingPlayed ? onTimeShiftGetCurrentPosition() : PropSettingManager.getCurrentStreamTime(true);
             if (currentStreamTime == 0)
                 return 0;
             Log.d(TAG, "currentStreamTime:("+currentStreamTime+")");
@@ -5690,24 +5699,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         private void setTimeshiftPasue() {
-            Log.i(TAG, "setTimeshiftPasue timeshiftRecorderState:"+timeshiftRecorderState+" timeshifting:"+timeshifting);
-            if (timeshiftRecorderState == RecorderState.RECORDING && !timeshifting) {
+            Log.i(TAG, "setTimeshiftPasue ");
+            if (playTimeshiftRecordingInSession(timeshiftRecorderState, true, true)) {
                 Log.i(TAG, "starting pause playback ");
-                timeshifting = true;
-
-                /*
-                  The mheg may hold an external_control in the dtvkit,
-                  which upset the normal av process following, so stop it first,
-                  thus, mheg will not be valid since here to the next onTune.
-                */
-                mhegStop();
-
-                playerPlayTimeshiftRecording(true, true);
-            }
-            else {
+            } else {
                 Log.i(TAG, "player pause ");
-                if (playerPause())
-                {
+                if (playerPause()) {
                     playSpeed = 0;
                 }
             }
@@ -5715,30 +5712,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void setTimeshiftSeek(long timeMs) {
             Log.i(TAG, "setTimeShiftSeekTo:  " + timeMs);
-            if (timeshiftRecorderState == RecorderState.RECORDING && !timeshifting) /* Watching live tv while recording */ {
-                timeshifting = true;
-                boolean seekToBeginning = false;
-
-                if (timeMs == startPosition) {
-                    seekToBeginning = true;
+            if (timeshiftRecorderState == RecorderState.RECORDING) {
+                if (!mIsTimeshiftingPlayed) {
+                    playTimeshiftRecordingInSession(timeshiftRecorderState, false, timeMs != startPosition);
+                } else {
+                    //diff time may change within 1s, add extra 1s to prevent it from playing previous program when seeking to the beginning of current in timeshift mode
+                    long rawMsPosition = (timeMs - (originalStartPosition + PropSettingManager.getStreamTimeDiff()));
+                    long floorPosition = rawMsPosition % 1000;
+                    long position =  rawMsPosition / 1000 + (floorPosition > 0 ? 1 : 0) + 1;
+                    playerSeekTo(Math.max(0, position));
                 }
-                  /*
-                  The mheg may hold an external_control in the dtvkit,
-                  which upset the normal av process following, so stop it first,
-                  thus, mheg will not be valid since here to the next onTune.
-                */
-                mhegStop();
-                playerPlayTimeshiftRecording(false, !seekToBeginning);
-            } else if (timeshiftRecorderState == RecorderState.RECORDING && timeshifting) {
-                //diff time may change within 1s, add extra 1s to prevent it from playing previous program when seeking to the beginning of current in timeshift mode
-                long rawMsPosition = (timeMs - (originalStartPosition + PropSettingManager.getStreamTimeDiff()));
-                long floorPosition = rawMsPosition % 1000;
-                long position =  rawMsPosition / 1000 + (floorPosition > 0 ? 1 : 0) + 1;
-                playerSeekTo(position < 0 ? 0 : position);
             } else {
                 playerSeekTo(timeMs / 1000);
             }
-
         }
 
         private void setTimeShiftSetPlaybackParams(PlaybackParams params) {
@@ -5746,21 +5732,40 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             float speed = params.getSpeed();
             Log.i(TAG, "speed: " + speed);
             if (speed != playSpeed) {
-                if (timeshiftRecorderState == RecorderState.RECORDING && !timeshifting) {
-                    timeshifting = true;
-                    /*
-                      The mheg may hold an external_control in the dtvkit,
-                      which upset the normal av process following, so stop it first,
-                      thus, mheg will not be valid since here to the next onTune.
-                    */
-                    mhegStop();
-                    playerPlayTimeshiftRecording(false, true);
-                }
+                playTimeshiftRecordingInSession(timeshiftRecorderState, false, true);
 
                 if (playerSetSpeed(speed)) {
                     playSpeed = speed;
                 }
             }
+        }
+
+        // use this instead of playerPlayTimeshiftRecording directly
+        private boolean playTimeshiftRecordingInSession(RecorderState state,boolean paused, boolean current) {
+            boolean ret = false;
+            if (state == RecorderState.RECORDING && !mIsTimeshiftingPlayed) {
+                /*
+                  The mheg may hold an external_control in the dtvkit,
+                  which upset the normal av process following, so stop it first,
+                  thus, mheg will not be valid since here to the next onTune.
+                */
+                mhegStop();
+                ret = playerPlayTimeshiftRecording(paused, current);
+                mIsTimeshiftingPlayed = ret;
+            } else {
+                Log.e(TAG, "playTimeshiftRecordingInSession state:" + state
+                        + "mIsTimeshiftingPlayed:" + timeshiftRecorderState);
+            }
+            return ret;
+        }
+
+        // use this instead of playerStopTimeshiftRecording directly
+        private boolean stopTimeshiftRecordingInSession(boolean returnToLive) {
+            boolean ret = playerStopTimeshiftRecording(returnToLive);
+            if (ret) {
+                mIsTimeshiftingPlayed = false;
+            }
+            return ret;
         }
 
         private void tryStartTimeshifting() {
@@ -5780,27 +5785,30 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 }
                 playerSetTimeshiftBufferSize(getTimeshiftBufferSizeMins(), getTimeshiftBufferSizeMBs());
-                Log.i(TAG, "tryStartTimeshifting timeshiftAvailable: " + timeshiftAvailable + ", timeshiftRecorderState: " + timeshiftRecorderState);
-                if (timeshiftAvailable.isAvailable()) {
-                    if (timeshiftRecorderState == RecorderState.STOPPED) {
-                        if (playerStartTimeshiftRecording()) {
-                            Log.d(TAG, "tryStartTimeshifting OK");
-                            /*
-                              The onSignal callback may be triggerd before here,
-                              and changes the state to a further value.
-                              so check the state first, in order to prevent getting it reset.
-                            */
-                            if (timeshiftRecorderState != RecorderState.RECORDING) {
-                                timeshiftRecorderState = RecorderState.STARTING;
-                            }
-                        } else {
-                            Log.d(TAG, "tryStartTimeshifting fail");
-                            notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+                Log.i(TAG, "tryStartTimeshifting timeshiftAvailable: " + timeshiftAvailable
+                            + ", timeshiftRecorderState: " + timeshiftRecorderState);
+                if (!timeshiftAvailable.isAvailable()) {
+                    notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+                    return;
+                }
+
+                if (timeshiftRecorderState == RecorderState.STOPPED) {
+                    if (playerStartTimeshiftRecording()) {
+                        Log.i(TAG, "tryStartTimeshifting OK");
+                        /*
+                          The onSignal callback may be triggerd before here,
+                          and changes the state to a further value.
+                          so check the state first, in order to prevent getting it reset.
+                        */
+                        if (timeshiftRecorderState != RecorderState.RECORDING) {
+                            timeshiftRecorderState = RecorderState.STARTING;
                         }
+                    } else {
+                        Log.e(TAG, "tryStartTimeshifting fail");
+                        notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                     }
                 } else {
-                    Log.d(TAG, "tryStartTimeshifting not available");
-                    notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+                    Log.e(TAG, "Unsupport, should not come here!");
                 }
             } else {
                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
@@ -5811,8 +5819,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (getFeatureSupportTimeshifting()) {
                 Log.i(TAG, "tryStopTimeshifting timeshiftAvailable: " + timeshiftAvailable + ", timeshiftRecorderState = " + timeshiftRecorderState);
                 if (timeshiftAvailable.isAvailable()) {
-                    if ((timeshiftRecorderState == RecorderState.RECORDING)) {
-                        if (playerStopTimeshiftRecording(timeshifting)) {
+                    // timeshiftRecorderState maybe changed to STOPPED state due to dtvkit
+                    // internal reason (when usb unplug), not by user.
+                    if ((timeshiftRecorderState == RecorderState.RECORDING || mIsTimeshiftingPlayed)) {
+                        if (stopTimeshiftRecordingInSession(true)) {
                             Log.d(TAG, "tryStopTimeshifting OK");
                         } else {
                             Log.d(TAG, "tryStopTimeshifting fail");
@@ -5820,7 +5830,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                     }
                 } else {
-                    Log.d(TAG, "tryStopTimeshifting not available");
+                    Log.w(TAG, "tryStopTimeshifting not available");
                     notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                 }
             } else {
@@ -5892,29 +5902,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private int getTimeshiftBufferSizeMBs() {
             return PropSettingManager.getInt("vendor.tv.dtv.tf.mbs", timeshiftBufferSizeMBs);
-        }
-
-        public class MountEventReceiver extends BroadcastReceiver {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-                if (action.equals(Intent.ACTION_MEDIA_REMOVED) || action.equals(Intent.ACTION_MEDIA_EJECT)) {
-                    String mountPath = intent.getData().getPath();
-                    String playingPath = null;
-                    if (recordedProgram != null) {
-                        try {
-                            playingPath = recordedProgram.getInternalProviderData().get("record_file_path").toString();
-                        } catch (Exception e) {
-                        }
-                    }
-                    if (!TextUtils.isEmpty(playingPath) && TextUtils.equals(playingPath, mountPath)) {
-                        if (timeshiftRecorderState == RecorderState.STOPPED && timeshifting == false) {
-                            Log.d(TAG, "Pvr storage has been removed, need stop pvr playing.");
-                            playerStop();
-                        }
-                    }
-                }
-            }
         }
 
         private void sendBundleToAppByTif(String action, Bundle event) {
@@ -6534,7 +6521,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             DtvkitGlueClient.getInstance().request("Player.playTimeshiftRecording", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, "playerStopTimeshiftRecording = " + e.getMessage());
+            Log.e(TAG, "PlayerPlayTimeshiftRecording = " + e.getMessage());
             return false;
         }
     }
@@ -7920,18 +7907,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private String playerGetTimeshiftRecorderState(JSONObject playerTimeshiftRecorderStatus) {
-        String timeshiftRecorderState = "off";
+        String state = "off";
         if (playerTimeshiftRecorderStatus != null) {
             try {
                 if (playerTimeshiftRecorderStatus.has("timeshiftrecorderstate")) {
-                    timeshiftRecorderState = playerTimeshiftRecorderStatus.getString("timeshiftrecorderstate");
+                    state = playerTimeshiftRecorderStatus.getString("timeshiftrecorderstate");
                 }
             } catch (JSONException e) {
                 Log.e(TAG, "playerGetTimeshiftRecorderState = " + e.getMessage());
             }
         }
 
-        return timeshiftRecorderState;
+        return state;
     }
 
     private void startMheg(String dvbUri, boolean mhegSuspend) {
