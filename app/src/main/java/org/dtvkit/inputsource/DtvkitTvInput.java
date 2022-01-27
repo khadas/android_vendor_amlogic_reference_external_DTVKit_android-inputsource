@@ -4042,6 +4042,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (data != null) {
                     boolean status = data.getBoolean(PropSettingManager.VALUE_CONTROL_TIMESHIFT, false);
                     if (status) {
+                        int duration = data.getInt(PropSettingManager.VALUE_TIMESHIFT_DURATION, timeshiftBufferSizeMins);
+                        if (duration != timeshiftBufferSizeMins) {
+                            timeshiftBufferSizeMins = duration;
+                        }
                         sendMsgTryStartTimeshift(0);
                     } else {
                         sendMsgTryStopTimeshift(0);
@@ -5769,6 +5773,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         timeshiftAvailable.setNo();
                     }
                 }
+                playerSetTimeshiftBufferSize(getTimeshiftBufferSizeMins(), getTimeshiftBufferSizeMBs());
                 Log.i(TAG, "tryStartTimeshifting timeshiftAvailable: " + timeshiftAvailable + ", timeshiftRecorderState: " + timeshiftRecorderState);
                 if (timeshiftAvailable.isAvailable()) {
                     if (timeshiftRecorderState == RecorderState.STOPPED) {
