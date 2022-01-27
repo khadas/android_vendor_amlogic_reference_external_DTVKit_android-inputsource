@@ -258,6 +258,17 @@ public class HbbTvManager{
         Log.i(TAG,"setTuneChannelUri end");
     }
 
+     /**
+     * @ingroup hbbtvmanagerapi
+     * @brief  set Audio Descriptions
+     * @return none
+     */
+     public void setAudioDescriptions() {
+        Log.i(TAG,"setAudioDescriptions start");
+        mPreferencesManager.updateHbbTvMediaComponentsPreferences();
+        Log.i(TAG,"setAudioDescriptions end");
+    }
+
     public boolean checkIsBroadcastOwnResource() {
         Log.i(TAG,"checkIsBroadcastOwnResource start");
         boolean resourceOwnedByBroadcast = true;

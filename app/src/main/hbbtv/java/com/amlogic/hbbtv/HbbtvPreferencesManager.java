@@ -33,7 +33,7 @@ import org.droidlogic.dtvkit.DtvkitGlueClient;
 public class HbbtvPreferencesManager {
 
     private static final String TAG = "PreferencesManager";
-    private static final String PREF_DEFAULT_LANGUAGE = "eng";
+    private static final String PREF_DEFAULT_LANGUAGE = "GBR";
     private static final String PREF_DEFAULT_COUNTRY  = "GBR";
     private static final int INDEX_FOR_MAIN = 0;
 
@@ -234,6 +234,7 @@ public class HbbtvPreferencesManager {
             return;
         }
 
+        countryCode = countryCode.toUpperCase();
         Log.d(TAG,"countryCode :" + countryCode);
         mAmlHbbTvView.setPref("ooif.configuration.country_id", countryCode);
         return;

@@ -4028,6 +4028,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 setAdAssociate(mAudioADAutoStart);
                 mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0, 0);
                 mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_MIX_LEVEL, 0, mAudioADMixingLevel);
+               if (mHbbTvFeatherStatus) {
+                    mHbbTvManager.setAudioDescriptions();
+                }
             } else if (TextUtils.equals(DataMananer.ACTION_AD_MIXING_LEVEL, action)) {
                 mAudioADMixingLevel = data.getInt(DataMananer.PARA_VALUE1);
                 Log.d(TAG, "do private cmd: ACTION_AD_MIXING_LEVEL: "+ mAudioADMixingLevel);
