@@ -226,7 +226,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     //hbbtv
     private HbbTvManager mHbbTvManager = null;
-    private static final boolean mHbbTvFeatherStatus  = false;
+    private boolean mHbbTvFeatherStatus  = false;
 
     private static enum PlayerState {
         STOPPED, PLAYING
@@ -1069,6 +1069,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         initDtvkitTvInput();
         DtvkitTvInputSession session = new DtvkitTvInputSession(new WeakReference<>(this));
         addTunerSession(session);
+        mHbbTvFeatherStatus  = getFeatureSupportHbbTV();
         if (mHbbTvFeatherStatus) {
             mHbbTvManager = new HbbTvManager(this,session,inputId);
             mHbbTvManager.initBrowser();
@@ -8615,6 +8616,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private boolean getFeatureTimeshiftingPriorityHigh() {
         return PropSettingManager.getBoolean("vendor.tv.dtv.tf.priority_high", false);
+    }
+
+    private boolean getFeatureSupportHbbTV() {
+        boolean isSupport = PropSettingManager.getBoolean("vendor.tv.dtv.hbbtv.enable", false);
+        Log.d(TAG, "getFeatureSupportHbbTV: " + isSupport);
+        return isSupport;
     }
 
 /*
