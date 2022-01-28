@@ -4937,12 +4937,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                            if (UiSettingMode != 6) {//not afd
                                Log.i(TAG, "Not AFD mode!");
                            } else {
-                               if (getIsFixedTunnel() == 0) {
+                               if (getIsFixedTunnel()) {
+                                   Log.i(TAG, "playerSetVideoCrop when FixedTunnel ");
+                                   playerSetVideoCrop(INDEX_FOR_MAIN, voff0 + pq_overscan.vs, hoff0 + pq_overscan.hs, voff1 + pq_overscan.ve, hoff1 + pq_overscan.he);
+                               } else {
                                    Log.i(TAG, "AppVideoPosition crop:("+crop+")");
                                    SysContManager.writeSysFs("/sys/class/video/crop", crop);
-                               } else {
-                                   Log.i(TAG, "playerSetVideoCrop when FixedTunnel ");
-                                   playerSetVideoCrop(INDEX_FOR_MAIN, hoff0 + pq_overscan.hs, voff0 + pq_overscan.vs, hoff1 + pq_overscan.he, voff1 + pq_overscan.ve);
                                }
                            }
                        Log.d(TAG, "AppVideoPosition layoutSurface("+left+","+top+","+right+","+bottom+")(LTRB)");
@@ -5867,8 +5867,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             tryStartTimeshifting();
         }
 
-        private int getIsFixedTunnel() {
-            return PropSettingManager.getInt("vendor.tv.fixed_tunnel", 0);
+        private boolean getIsFixedTunnel() {
+            File userDir = new File("/sys/module/dvb_demux/");
+            if (userDir.exists() || (PropSettingManager.getInt("vendor.tv.fixed_tunnel", 0) == 1)) {
+                return true;
+            }
+            return false;
         }
 
         private int getTimeshiftBufferSizeMins() {
