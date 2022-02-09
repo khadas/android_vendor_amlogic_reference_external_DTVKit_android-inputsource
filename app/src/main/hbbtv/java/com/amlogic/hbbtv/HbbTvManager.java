@@ -120,7 +120,6 @@ public class HbbTvManager{
         //set references
         mPreferencesManager.setDeviceUniqueNumber(null);
         mPreferencesManager.setManufacturerSecretNumber(null);
-        mPreferencesManager.setConfigurationCountryid();
         mPreferencesManager.updateHbbTvMediaComponentsPreferences();
         //mAmlHbbTvView.loadUrlApplication("http://itv.mit-xperts.com/hbbtvtest");
         Log.d(TAG,"initializeHbbTvView end");

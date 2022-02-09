@@ -294,6 +294,7 @@ public class DtvkitDvbSettings extends Activity {
                     return;
                 }
                 mParameterMananer.setCountryCodeByIndex(position);
+                updatingHbbtvCountryId();
                 //updatingGuide();
                 needSyncChannels = true;
                 initLayout(true);
@@ -1071,6 +1072,18 @@ public class DtvkitDvbSettings extends Activity {
             } else if (repetition == WEEKLY) { //weekly
                 mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, alarmtime, AlarmManager.INTERVAL_DAY * 7, mAlarmIntent);
             }
+        }
+    }
+
+
+    private void updatingHbbtvCountryId() {
+        boolean mHbbTvFeatherStatus = PropSettingManager.getBoolean("vendor.tv.dtv.hbbtv.enable", false);
+        Log.d(TAG, "getFeatureSupportHbbTV: " + mHbbTvFeatherStatus);
+        if (mHbbTvFeatherStatus) {
+            Intent intent = new Intent();
+            intent.setAction("com.vewd.core.service.COUNTRY_ID_CHANGED");
+            intent.putExtra("CountryId",mParameterMananer.getCurrentCountryIso3Name());
+            sendBroadcast(intent);
         }
     }
 }
