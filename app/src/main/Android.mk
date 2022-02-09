@@ -36,6 +36,9 @@ else
 LOCAL_REQUIRED_MODULES := droidlogic.software.core droidlogic.dtvkit.software.core
 LOCAL_JAVA_LIBRARIES += droidlogic.software.core droidlogic.dtvkit.software.core
 LOCAL_USES_LIBRARIES := droidlogic.software.core droidlogic.dtvkit.software.core
+LOCAL_FULL_LIBS_MANIFEST_FILES := \
+  $(LOCAL_PATH)/AndroidManifest.xml \
+  $(LOCAL_PATH)/AndroidManifest-alarm-permissions.xml
 endif
 LOCAL_DEX_PREOPT := false
 LOCAL_VENDOR_MODULE := true
