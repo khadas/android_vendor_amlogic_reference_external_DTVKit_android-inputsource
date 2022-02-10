@@ -57,4 +57,8 @@ interface IDtvkitSetting {
     void setHbbTvTrackingStatus(boolean status);
 
     void clearHbbTvCookies();
+
+    void setHbbTvFeature(boolean status);
+
+    void setHbbTvServiceStatusForCurChannel(boolean status);
 }

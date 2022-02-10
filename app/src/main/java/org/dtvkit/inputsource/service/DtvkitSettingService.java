@@ -150,8 +150,18 @@ public class DtvkitSettingService extends Service {
         }
 
         @Override
+        public void setHbbTvFeature(boolean status) {
+            mHbbTvUISetting.setHbbTvFeature(status);
+        }
+
+        @Override
         public boolean getHbbTvServiceStatusForCurChannel() {
             return mHbbTvUISetting.getHbbTvServiceStatusForCurChannel();
+        }
+
+        @Override
+        public void setHbbTvServiceStatusForCurChannel(boolean status) {
+            mHbbTvUISetting.setHbbTvServiceStatusForCurChannel(status);
         }
 
         @Override
