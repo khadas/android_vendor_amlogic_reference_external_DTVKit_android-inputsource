@@ -7684,7 +7684,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         long ret = 0;
         try {
             JSONObject time = DtvkitGlueClient.getInstance()
-                .request("Dvb.GetDTVRealTime", new JSONArray());
+                .request("Dvb.GetDTVRealUTCTime", new JSONArray());
             if (time != null) {
                 ret = time.optLong("data");
             }
