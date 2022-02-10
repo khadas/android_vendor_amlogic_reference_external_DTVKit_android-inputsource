@@ -77,9 +77,10 @@ public class AmlTunerDelegate implements TunerDelegate {
     private boolean mVisiblility = false;
     private final BroadcastResourceManager mBroadcastResourceManager = BroadcastResourceManager.getInstance();
     private AmlHbbTvView mAmlHbbTvView;
-    private static boolean mBindCurChannel = false;
     private View mSubView = null;
     private boolean mSubViewInTop = false;
+    private boolean mOwnResourceByBr = true;
+    private HbbtvPreferencesManager mPreferencesManager;
 
      /**
     * @ingroup AmlTunerDelegateapi
@@ -102,7 +103,7 @@ public class AmlTunerDelegate implements TunerDelegate {
         DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
         mChannelListUpdate = false;
         DtvkitGlueClient.getInstance().setPidFilterListener(blistener);
-        mBindCurChannel = false;
+        mOwnResourceByBr = true;
         mSubViewInTop = false;
         Log.i(TAG, "new AmlTunerDelegate out");
     }
@@ -110,9 +111,9 @@ public class AmlTunerDelegate implements TunerDelegate {
     private void checkFirstEnterStatus() {
         Log.i(TAG, "checkFirstEnterStatus in");
         Log.d(TAG, "checkFirstEnterStatus mIsFirstEnter = " + mIsFirstEnter);
+        sendNotifyMsg(MSG.MSG_CHANNELLISTUPDATEFINISHED, 0, 0, null);
         if (mIsFirstEnter) {
             if (null != mTunedChannelUri) {
-                sendNotifyMsg(MSG.MSG_CHANNELLISTUPDATEFINISHED, 0, 0, null);
                 sendNotifyMsg(MSG.MSG_CHANNELCHANGED, 0, 0, null);
                 if (mTunerState == TunerStatus.TUNERSTATUS_LOCK) {
                     sendNotifyMsg(MSG.MSG_TUNERSTATECHANGED, TunerState.LOCKED, TunerError.NO_ERROR, null);
@@ -389,6 +390,12 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "switchChannelByOffset out");
     }
 
+    /**
+    * @ingroup AmlTunerDelegateapi
+    * @brief bind to current channel, for resource granted.
+    * @param none.
+    * @return none.
+    */
     public void tuneToCurrentChannel() {
         Log.i(TAG, "tuneToCurrentChannel in");
         //Uri curChannelUri = mSession.getCurTuneChannelUri();
@@ -402,8 +409,6 @@ public class AmlTunerDelegate implements TunerDelegate {
                     mPlayState = PlayState.PLAYSTATE_CONNECTING;
                     mSession.onTune(mTunedChannelUri, null);
                 }
-                //notifyChannelChanged();
-                //mBindCurChannel = false;
             } else {
                 Log.d(TAG, "tuneToCurrentChannel force request resource!");
                 forceRequestResource();
@@ -433,6 +438,13 @@ public class AmlTunerDelegate implements TunerDelegate {
         }
         Log.i(TAG, "forceRequestResource out ");
     }
+
+    /**
+    * @ingroup AmlTunerDelegateapi
+    * @brief set channel url.
+    * @param ChannelUri.
+    * @return none.
+    */
     public void setTuneChannelUri(Uri ChannelUri) {
         Log.i(TAG, "setTuneChannelUri in ");
         Log.d(TAG,"setTuneChannelUri  ChannelUri = " + ChannelUri);
@@ -1026,6 +1038,10 @@ public class AmlTunerDelegate implements TunerDelegate {
 
         //List<Channel> channels = AmlHbbTvTvContractUtils.getChannelList(null, INPUT_ID);
         final List<Uri> channelUris = AmlHbbTvTvContractUtils.getChannelUrisForInput(mContext.getContentResolver(), mInputId);
+        if (channelUris.size() == 0) {
+            Log.i(TAG, "notifyChannelListChanged out - channel list is empty");
+            return;
+        }
         final List<Channel> channels = channelUris.stream()
                                                .map(channelUri -> {return AmlHbbTvTvContractUtils.getChannelByDetailsInfo(
                                                            mContext.getContentResolver(), channelUri);
@@ -1076,7 +1092,6 @@ public class AmlTunerDelegate implements TunerDelegate {
     private void  notifyChannelChanged() {
         Log.i(TAG, "notifyChannelChanged in ");
          for (TunerDelegateClient client : mTunerDelegateClientList) {
-           // Uri curChannelUri = mSession.getCurTuneChannelUri();
             Log.d(TAG, "notifyChannelChanged mTunedChannelUri= " + mTunedChannelUri);
             if (null == mTunedChannelUri) {
                 client.onChannelChanged(null);
@@ -1486,6 +1501,7 @@ public class AmlTunerDelegate implements TunerDelegate {
             return null;
         }
     }
+
     private void checkTracksInfoUpdate() {
         Log.i(TAG, "checkTracksInfoUpdate in ");
         boolean updateTriggered = true;
@@ -1563,7 +1579,12 @@ public class AmlTunerDelegate implements TunerDelegate {
     }
 
 
-
+    /**
+    * @ingroup AmlTunerDelegateapi
+    * @brief for monitor channel list update msg.
+    * @param none.
+    * @return none.
+    */
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, final Intent intent) {
@@ -1601,6 +1622,47 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "stopMonitoringChannelListSync in ");
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(mReceiver);
         Log.i(TAG, "stopMonitoringChannelListSync out ");
+    }
+
+    /**
+    * @ingroup AmlTunerDelegateapi
+    * @brief set the broadcast resource flag.
+    * @param flag: true:broadcast resource; flase: broadband resource.
+    * @return none.
+    */
+    public void setResourceOwnerByBrFlag(boolean flag) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(flag);
+            DtvkitGlueClient.getInstance().request("Hbbtv.HBBSetResourceOwnedByBr", args);
+        } catch (Exception e) {
+            Log.e(TAG, "setResourceOwnedByBr Exception = " + e.getMessage());
+        }
+        mOwnResourceByBr = flag;
+        Log.i(TAG,"setResourceOwnedByBr flag = " + flag);
+    }
+
+    /**
+    * @ingroup AmlTunerDelegateapi
+    * @brief check current resource is broadcast resource.
+    * @param none
+    * @return true:broadcast resource; flase: broadband resource..
+    */
+    public boolean checkResourceOwnedIsBr(){
+        Log.i(TAG,"checkResourceOwnedIsBr mOwnResourceByBr = " + mOwnResourceByBr);
+        return mOwnResourceByBr;
+    }
+
+    public void setHbbtvPreferencesManager(HbbtvPreferencesManager hbbtvPreferencesManager) {
+        mPreferencesManager = hbbtvPreferencesManager;
+    }
+
+    private void syncMediaComponentsPreferences() {
+        Log.d(TAG, " syncMediaComponentsPreferences in");
+        if (mPreferencesManager != null) {
+            mPreferencesManager.updateHbbTvMediaComponentsPreferences();
+        }
+        Log.d(TAG, " syncMediaComponentsPreferences out");
     }
 
     private void initHandler() {
@@ -1668,6 +1730,10 @@ public class AmlTunerDelegate implements TunerDelegate {
                         setFullScreen();
                     }
                     break;
+                    case MSG.MSG_SUBTITLESTATUSCHANGED: {
+                        syncMediaComponentsPreferences();
+                    }
+                    break;
                     default:
                         break;
                 }
@@ -1698,7 +1764,6 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "setPlaystate need mPlayState = " + mPlayState);
     }
 
-
     private int getVideoUnavaliableReason(int data){
         int reason;
         switch (data) {
@@ -1726,6 +1791,23 @@ public class AmlTunerDelegate implements TunerDelegate {
         }
         Log.i(TAG, "getVideoUnavaliableReason  reason = " + reason + "input value = " + data);
         return reason;
+    }
+
+
+    /**
+    * @ingroup AmlTunerDelegateapi
+    * @brief play broadcast service when load new app.
+    * @param none
+    * @return
+    */
+    public void startAVByCheckResourceOwned() {
+        Log.i(TAG, "startAVByCheckResourceOwned in");
+        if (!checkResourceOwnedIsBr()) {
+            setResourceOwnerByBrFlag(true);
+            //tuneToCurrentChannel();
+            mSession.onTune(mTunedChannelUri, null);
+        }
+        Log.i(TAG, "startAVByCheckResourceOwned out");
     }
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
@@ -1771,6 +1853,8 @@ public class AmlTunerDelegate implements TunerDelegate {
                 sendNotifyMsg(MSG.MSG_TRACKSCHANGED, 0, 0, null);
             }else if (signal.equals("DvbUpdatedChannel")) {
                 mChannelListUpdate = true;
+            }else if (signal.equals("hbbNotifySubtitleStatusUpdated")) {
+                sendNotifyMsg(MSG.MSG_SUBTITLESTATUSCHANGED, 0, 0, null);
             }
         }
     };
@@ -1785,6 +1869,7 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "release in");
         stopMonitoringChannelListSync();
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
+        setResourceOwnerByBrFlag(true);
         Log.i(TAG, "release out");
 
     }
@@ -1800,6 +1885,7 @@ public class AmlTunerDelegate implements TunerDelegate {
         public final static int MSG_SELECTTRACK = 8;
         public final static int MSG_SELECTPRIVATETRACK = 9;
         public final static int MSG_CHANNELCHANGED_BEGIN = 10;
+        public final static int MSG_SUBTITLESTATUSCHANGED = 11;
     }
 
     private class PlayState  {
@@ -1828,18 +1914,18 @@ public class AmlTunerDelegate implements TunerDelegate {
         public final static int HBBTV_VIDEO_UNSUPPORTEDCODEC = 8;
         public final static int HBBTV_VIDEO_NODATA = 9;
         public final static int HBBTV_VIDEO_TUNING = 10;
-    };
+    }
 
     private class  AspectRatio {
         public final static int ASPECT_RATIO_4_3 = 0;
         public final static int ASPECT_RATIO_16_9 = 1;
         public final static int ASPECT_UNDEFINED = 255;
-    };
+    }
 
     private class  ChannelChangeQuietMode {
         public final static int MODE_NORMAL = 0;
         public final static int MODE_NORMAL_NO_UI_DISPLAY = 1;
         public final static int MODE_QUIET = 2;
-    };
+    }
 
 }

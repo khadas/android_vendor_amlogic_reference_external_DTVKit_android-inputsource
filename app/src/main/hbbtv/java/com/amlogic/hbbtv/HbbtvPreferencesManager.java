@@ -50,8 +50,18 @@ public class HbbtvPreferencesManager {
             JSONArray args = new JSONArray();
             result = DtvkitGlueClient.getInstance().request("Player.getSubtitleGlobalOnOff", args).getBoolean("data");
         } catch (Exception e) {
-            Log.e(TAG, "getSubtitlesEnabled = " + e.getMessage());
+            Log.e(TAG, "getSubtitlesEnabled-getSubtitleGlobalOnOff = " + e.getMessage());
             return false;
+        }
+        Log.d(TAG,"getSubtitlesEnabled-getSubtitleGlobalOnOff:" + result);
+        if (result) {
+            try {
+                JSONArray args = new JSONArray();
+                result = DtvkitGlueClient.getInstance().request("Player.getSubtitlesOn", args).getBoolean("data");
+            } catch (Exception e) {
+                Log.e(TAG, "getSubtitlesEnabled-getSubtitlesOn = " + e.getMessage());
+                return false;
+            }
         }
         Log.d(TAG,"getSubtitlesEnabled :" + result);
         return result;

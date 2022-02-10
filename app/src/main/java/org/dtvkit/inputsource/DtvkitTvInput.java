@@ -1188,7 +1188,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 this.addView(mCCSubView);
             }
             if (mHbbTvFeatherStatus) {
-                this.addView(mHbbTvManager.getHbbTvView());
+                if (mHbbTvManager.getHbbTvView() != null) {
+                     this.addView(mHbbTvManager.getHbbTvView());
+                }
             }
 
             initRelativeLayout();
@@ -3622,7 +3624,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public boolean onSelectTrack(int type, String trackId) {
             Log.i(TAG, "onSelectTrack " + type + ", " + trackId + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             boolean result = false;
-            if (mHandlerThreadHandle != null) {
+            boolean resourceOwnedByBr = true;
+            if (mHbbTvFeatherStatus) {
+                resourceOwnedByBr = mHbbTvManager.checkIsBroadcastOwnResource();
+            }
+            if (mHandlerThreadHandle != null && resourceOwnedByBr) {
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_SELECT_TRACK, type, 0, trackId);
                 result = mHandlerThreadHandle.sendMessage(mess);
                 Log.d(TAG, "onSelectTrack sendMessage result " + result);

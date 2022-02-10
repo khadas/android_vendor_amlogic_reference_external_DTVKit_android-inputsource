@@ -38,7 +38,6 @@ public class HbbTvManager{
     private Context mContext;
     private String mInuputId;
     private Uri mTuneChannelUri = null;
-    private boolean mOwnResourceByBr = true;
     private HbbTvUISetting mHbbTvUISetting;
     private final BroadcastResourceManager mBroadcastResourceManager =
             BroadcastResourceManager.getInstance();
@@ -80,7 +79,9 @@ public class HbbTvManager{
     public void setSubtitleView(View view) {
         Log.i(TAG,"setSubtitleView start");
         Log.i(TAG,"setSubtitleView end");
-        mAmlTunerDelegate.setSubtitleView(view);
+        if (null != mAmlTunerDelegate) {
+            mAmlTunerDelegate.setSubtitleView(view);
+        }
     }
 
    /**
@@ -103,7 +104,7 @@ public class HbbTvManager{
      */
     private void initializeHbbTvView() {
         Log.d(TAG,"initializeHbbTvView start");
-        mAmlHbbTvClient = new AmlHbbTvClient(mAmlHbbTvView);
+        mAmlHbbTvClient = new AmlHbbTvClient(mAmlHbbTvView, mAmlTunerDelegate);
         mAmlChromeClient = new AmlChromeClient();
         mAmlViewClient = new AmlViewClient();
         mAmlHbbTvView.setFocusable(true);
@@ -121,6 +122,7 @@ public class HbbTvManager{
         mPreferencesManager.setDeviceUniqueNumber(null);
         mPreferencesManager.setManufacturerSecretNumber(null);
         mPreferencesManager.updateHbbTvMediaComponentsPreferences();
+        mAmlTunerDelegate.setHbbtvPreferencesManager(mPreferencesManager);
         //mAmlHbbTvView.loadUrlApplication("http://itv.mit-xperts.com/hbbtvtest");
         Log.d(TAG,"initializeHbbTvView end");
     }
@@ -132,6 +134,10 @@ public class HbbTvManager{
     */
     public void onDestroy() {
         Log.i(TAG,"onDestroy start");
+        if (mPreferencesManager != null) {
+            mAmlTunerDelegate.setHbbtvPreferencesManager(null);
+            mPreferencesManager = null;
+        }
         if (mAmlHbbTvView != null) {
             if (mAmlHbbTvView.isInitialized()) {
                 Log.d(TAG,"onDestroy  destroying");
@@ -219,14 +225,7 @@ public class HbbTvManager{
      */
     public boolean handleKeyDown(int keyCode, KeyEvent event) {
         Log.d(TAG,"handleKeyDown keyCode = " + keyCode);
-
-         if (KeyEventUtils.isMediaKey(keyCode) || KeyEventUtils.isColourKey(keyCode)
-             || KeyEventUtils.isBackKey(keyCode)) {
-            return mAmlHbbTvView.dispatchKeyEvent(event);
-        } else {
-            Log.d(TAG,"The key down don't handle hbbtv key! ");
-            return false;
-        }
+        return mAmlHbbTvView.dispatchKeyEvent(event);
     }
 
     /**
@@ -236,13 +235,7 @@ public class HbbTvManager{
      */
     public boolean handleKeyUp(int keyCode, KeyEvent event) {
         Log.d(TAG,"handleKeyUp keyCode = " + keyCode);
-        if (KeyEventUtils.isMediaKey(keyCode) || KeyEventUtils.isColourKey(keyCode)
-         || KeyEventUtils.isBackKey(keyCode)) {
-            return mAmlHbbTvView.dispatchKeyEvent(event);
-        } else {
-            Log.d(TAG,"The key up don't handle hbbtv key! ");
-            return false;
-        }
+        return mAmlHbbTvView.dispatchKeyEvent(event);
     }
 
     /**
@@ -253,7 +246,9 @@ public class HbbTvManager{
      public void setTuneChannelUri(Uri channelUri) {
         Log.i(TAG,"setTuneChannelUri start");
         Log.d(TAG, "setTuneChannelUri channelUri =  " + channelUri);
-        mAmlTunerDelegate.setTuneChannelUri(channelUri);
+        if (mAmlTunerDelegate != null) {
+            mAmlTunerDelegate.setTuneChannelUri(channelUri);
+        }
         Log.i(TAG,"setTuneChannelUri end");
     }
 
@@ -271,7 +266,10 @@ public class HbbTvManager{
     public boolean checkIsBroadcastOwnResource() {
         Log.i(TAG,"checkIsBroadcastOwnResource start");
         boolean resourceOwnedByBroadcast = true;
-        boolean hbbtvRunning = mAmlHbbTvView.isApplicationRunning();
+        boolean hbbtvRunning = false;
+        if (mAmlHbbTvView != null) {
+            hbbtvRunning = mAmlHbbTvView.isApplicationRunning();
+        }
         if (hbbtvRunning && !isResourceOwnedByBr()) {
             resourceOwnedByBroadcast = false;
         } else {
@@ -293,13 +291,18 @@ public class HbbTvManager{
     }
 
     private boolean isResourceOwnedByBr() {
-        Log.i(TAG,"IsResourceOwnedByBr mOwnResourceByBr = " + mOwnResourceByBr);
-        return mOwnResourceByBr;
+        boolean ret = true;
+        if (mAmlTunerDelegate != null) {
+            ret = mAmlTunerDelegate.checkResourceOwnedIsBr();
+        }
+        return ret;
     }
 
     private void setResourceOwnedByBr(boolean flag) {
-        mOwnResourceByBr = flag;
-        Log.i(TAG,"setResourceOwnedByBr mOwnResourceByBr = " + mOwnResourceByBr);
+        if (mAmlTunerDelegate != null) {
+            mAmlTunerDelegate.setResourceOwnerByBrFlag(flag);
+        }
+        Log.i(TAG,"setResourceOwnedByBr flag = " + flag);
     }
 
     public boolean getHbbTvFeature() {

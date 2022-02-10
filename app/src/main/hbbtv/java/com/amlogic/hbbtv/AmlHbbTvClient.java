@@ -35,6 +35,8 @@ public class AmlHbbTvClient implements HbbTvClient {
     private String mUrl = null;
     private HbbTvApplication[] mApplications;
     private static final int INDEX_FOR_MAIN = 0;
+    private int mCouneter = 0;
+    private AmlTunerDelegate mAmlTunerDelegate;
 
     /**
      * @ingroup amlhbbtvclientapi
@@ -42,7 +44,7 @@ public class AmlHbbTvClient implements HbbTvClient {
      * @param amlHbbTvView  The instance of AmlHbbTvView
      * @return AmlHbbTvClient  the instance of AmlHbbTvClient
      */
-    public AmlHbbTvClient(AmlHbbTvView amlHbbTvView) {
+    public AmlHbbTvClient(AmlHbbTvView amlHbbTvView, AmlTunerDelegate amlTunerDelegate) {
         Log.i(TAG,"AmlHbbTvClient instance create start");
 
         if (DEBUG) {
@@ -50,6 +52,7 @@ public class AmlHbbTvClient implements HbbTvClient {
         }
 
         mAmlHbbTvView = amlHbbTvView;
+        mAmlTunerDelegate = amlTunerDelegate;
         Log.i(TAG,"AmlHbbTvClient  instance create end");
     }
 
@@ -396,6 +399,8 @@ public class AmlHbbTvClient implements HbbTvClient {
                 + StringUtils.truncateUrlForLogging(appUrl) + ", isBroadcastRelated="
                 + isBroadcastRelated + ", willLoadNewApp=" + willLoadNewApp);
         }
+        mAmlTunerDelegate.startAVByCheckResourceOwned();
+        mAmlTunerDelegate.setResourceOwnerByBrFlag(true);
 
         Log.i(TAG,"onApplicationStopped  end");
     }
@@ -418,6 +423,33 @@ public class AmlHbbTvClient implements HbbTvClient {
             Log.d(TAG,"onApplicationVisibilityChanged​: appId=" + appId + ", orgId=" + orgId + ", appUrl="
                 + StringUtils.truncateUrlForLogging(appUrl) + ", isBroadcastRelated="
                 + isBroadcastRelated + ", visible=" + visible);
+        }
+
+        if (visible) {
+            mCouneter++;
+        } else {
+            mCouneter--;
+        }
+
+        if (mCouneter == 0) {
+            Log.d(TAG,"hbbtv view invisiable");
+            if (mAmlHbbTvView.getFocusable()!= View.NOT_FOCUSABLE) {
+                mAmlHbbTvView.setFocusable(false);
+            }
+            if (mAmlHbbTvView.getVisibility() != View.INVISIBLE)  {
+                mAmlHbbTvView.setVisibility(View.INVISIBLE);
+            }
+
+        }
+
+        if (mCouneter > 0) {
+            Log.d(TAG,"hbbtv view visiable");
+            if (mAmlHbbTvView.getFocusable() != View.FOCUSABLE) {
+                mAmlHbbTvView.setFocusable(true);
+            }
+            if (mAmlHbbTvView.getVisibility() != View.VISIBLE)  {
+                mAmlHbbTvView.setVisibility(View.VISIBLE);
+            }
         }
 
         Log.i(TAG,"onApplicationVisibilityChanged​  end");
