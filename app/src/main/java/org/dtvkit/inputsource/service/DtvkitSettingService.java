@@ -15,6 +15,7 @@ import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.settings.SysSettingManager;
+import com.amlogic.hbbtv.HbbTvUISetting;
 
 import java.io.File;
 import java.util.List;
@@ -22,11 +23,13 @@ import java.util.List;
 public class DtvkitSettingService extends Service {
     private static final String TAG = "DtvkitSettingService";
     protected ParameterMananer mParameterManager;
+    protected HbbTvUISetting mHbbTvUISetting;
 
     @Override
     public void onCreate() {
         super.onCreate();
         mParameterManager = new ParameterMananer(this, DtvkitGlueClient.getInstance());
+        mHbbTvUISetting   = new HbbTvUISetting();
     }
 
     @Override
@@ -139,6 +142,51 @@ public class DtvkitSettingService extends Service {
         @Override
         public void setCustomParameter(String key, String defaultJsonValue) throws RemoteException {
             mParameterManager.setCustomParameter(key, defaultJsonValue);
+        }
+
+        @Override
+        public boolean getHbbTvFeature() {
+            return mHbbTvUISetting.getHbbTvFeature();
+        }
+
+        @Override
+        public boolean getHbbTvServiceStatusForCurChannel() {
+            return mHbbTvUISetting.getHbbTvServiceStatusForCurChannel();
+        }
+
+        @Override
+        public boolean getHbbTvDistinctiveIdentifierStatus() {
+            return mHbbTvUISetting.getHbbTvDistinctiveIdentifierStatus();
+        }
+
+        @Override
+        public void setHbbTvDistinctiveIdentifierStatus(boolean status) {
+            mHbbTvUISetting.setHbbTvDistinctiveIdentifierStatus(status);
+        }
+
+        @Override
+        public boolean getHbbtvCookiesStatus() {
+            return mHbbTvUISetting.getHbbtvCookiesStatus();
+        }
+
+        @Override
+        public void setHbbTvCookiesStatus(boolean status) {
+            mHbbTvUISetting.setHbbTvCookiesStatus(status);
+        }
+
+        @Override
+        public boolean getHbbTvTrackingStatus() {
+            return mHbbTvUISetting.getHbbTvTrackingStatus();
+        }
+
+        @Override
+        public void setHbbTvTrackingStatus(boolean status) {
+            mHbbTvUISetting.setHbbTvTrackingStatus(status);
+        }
+
+        @Override
+        public void clearHbbTvCookies() {
+            mHbbTvUISetting.clearHbbTvCookies();
         }
     }
 

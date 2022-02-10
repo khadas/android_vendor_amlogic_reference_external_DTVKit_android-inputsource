@@ -39,4 +39,22 @@ interface IDtvkitSetting {
     void setCustomParameter(String key, String newJsonValue);
 
     String getCustomParameter(String key, String defaultJsonValue);
+
+    boolean getHbbTvFeature();
+
+    boolean getHbbTvServiceStatusForCurChannel();
+
+    boolean getHbbTvDistinctiveIdentifierStatus();
+
+    void setHbbTvDistinctiveIdentifierStatus(boolean status);
+
+    boolean getHbbtvCookiesStatus();
+
+    void setHbbTvCookiesStatus(boolean status);
+
+    boolean getHbbTvTrackingStatus();
+
+    void setHbbTvTrackingStatus(boolean status);
+
+    void clearHbbTvCookies();
 }
