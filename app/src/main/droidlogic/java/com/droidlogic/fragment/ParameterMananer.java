@@ -30,6 +30,7 @@ import com.droidlogic.dtvkit.inputsource.TargetRegionManager;
 
 import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.settings.ConstantManager;
+import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 
 public class ParameterMananer {
 
@@ -139,6 +140,7 @@ public class ParameterMananer {
     public static final String KEY_RESET_DEFAULT_AUDIO_STREAM = "key_reset_default_audio_stream";
     public static final String KEY_SET_CHANNEL_BLOCKED = "key_set_channel_blocked";
     public static final String KEY_SET_CHANNEL_UNBLOCKED = "key_set_channel_unblocked";
+    public static final String KEY_SET_DVB_SOURCE = "key_set_dvb_source";
     public static final String KEY_SET_GET_SPOKEN_SUBTITLE_ON = "key_set_get_set_spoken_subtitle_on";
     public static final String KEY_GET_CURRENT_COUNTRY_NAME = "key_get_country_name";
 
@@ -2243,6 +2245,10 @@ public class ParameterMananer {
                 break;
             case KEY_SET_GET_SPOKEN_SUBTITLE_ON:
                 playersetSpokenSubtitleOn(newJsonValues.equals("on") ? true : false);
+                break;
+            case KEY_SET_DVB_SOURCE:
+                setCurrentDvbSource(dvbSourceToInt(newJsonValues));
+                break;
             default:
                 break;
         }
@@ -2699,6 +2705,83 @@ public class ParameterMananer {
             DtvkitGlueClient.getInstance().request("Dvb.SetPinCodeToCam", args);
         } catch (Exception e) {
         }
+    }
+
+    private void setCurrentDvbSource(int source) {
+        JSONArray array = new JSONArray();
+        try {
+            array.put(source);
+            DtvkitGlueClient.getInstance().request("Dvb.SetDvbSource", array);
+            saveStringParameters(ParameterMananer.TV_KEY_DTVKIT_SYSTEM,
+                    dvbSourceToString(source));
+            EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(source));
+        } catch (Exception e) {
+        }
+    }
+
+    private String dvbSourceToChannelTypeString(int source) {
+        String result = "TYPE_DVB_T";
+
+        switch (source) {
+            case ParameterMananer.SIGNAL_COFDM:
+                result = "TYPE_DVB_T";
+                break;
+            case ParameterMananer.SIGNAL_QAM:
+                result = "TYPE_DVB_C";
+                break;
+            case ParameterMananer.SIGNAL_QPSK:
+                result = "TYPE_DVB_S";
+                break;
+            case ParameterMananer.SIGNAL_ISDBT:
+                result = "TYPE_ISDB_T";
+                break;
+            default:
+                break;
+        }
+        return result;
+    }
+
+    private String dvbSourceToString(int source) {
+        String result = "DVB-T";
+
+        switch (source) {
+            case ParameterMananer.SIGNAL_COFDM:
+                result = "DVB-T";
+                break;
+            case ParameterMananer.SIGNAL_QAM:
+                result = "DVB-C";
+                break;
+            case ParameterMananer.SIGNAL_QPSK:
+                result = "DVB-S";
+                break;
+            case ParameterMananer.SIGNAL_ISDBT:
+                result = "ISDB-T";
+                break;
+            default:
+                break;
+        }
+        return result;
+    }
+
+    private int dvbSourceToInt(String sourceName) {
+        int source = 0;
+        switch (sourceName) {
+            case "TYPE_DVB_C":
+                source = ParameterMananer.SIGNAL_QAM;
+                break;
+            case "TYPE_DVB_T":
+            case "TYPE_DVB_T2":
+                source = ParameterMananer.SIGNAL_COFDM;
+                break;
+            case "TYPE_DVB_S":
+            case "TYPE_DVB_S2":
+                source = ParameterMananer.SIGNAL_QPSK;
+                break;
+            case "ISDB-T":
+                source = ParameterMananer.SIGNAL_ISDBT;
+                break;
+        }
+        return source;
     }
 
 }
