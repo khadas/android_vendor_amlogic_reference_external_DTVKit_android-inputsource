@@ -107,9 +107,9 @@ public class HbbTvManager{
         mAmlHbbTvClient = new AmlHbbTvClient(mAmlHbbTvView, mAmlTunerDelegate);
         mAmlChromeClient = new AmlChromeClient();
         mAmlViewClient = new AmlViewClient();
-        mAmlHbbTvView.setFocusable(true);
+        mAmlHbbTvView.setFocusable(false);
         mAmlHbbTvView.setFocusableInTouchMode(false);
-        mAmlHbbTvView.setVisibility(View.VISIBLE);
+        mAmlHbbTvView.setVisibility(View.INVISIBLE);
         mAmlHbbTvView.setViewClient(mAmlViewClient);
         mAmlHbbTvView.setTunerDelegate(mAmlTunerDelegate);
         mAmlHbbTvView.setChromeClient(mAmlChromeClient);
