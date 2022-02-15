@@ -401,6 +401,7 @@ public class AmlHbbTvClient implements HbbTvClient {
         }
         mAmlTunerDelegate.startAVByCheckResourceOwned();
         mAmlTunerDelegate.setResourceOwnerByBrFlag(true);
+        mAmlTunerDelegate.setFullScreen();
 
         Log.i(TAG,"onApplicationStopped  end");
     }

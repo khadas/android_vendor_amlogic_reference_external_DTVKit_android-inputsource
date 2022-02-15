@@ -14,6 +14,9 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.media.tv.TvInputService.Session;
+import android.media.tv.TvInputService;
+
 import com.vewd.core.sdk.TunerDelegate;
 import com.vewd.core.sdk.TunerDelegateClient;
 import com.vewd.core.shared.Channel;
@@ -30,8 +33,9 @@ import java.util.Map;
 import java.util.HashMap;
 import android.util.ArraySet;
 import com.amlogic.hbbtv.utils.AmlHbbTvTvContractUtils;
-import com.droidlogic.dtvkit.inputsource.DtvkitTvInput;
-import com.droidlogic.dtvkit.inputsource.DtvkitTvInput.DtvkitTvInputSession;
+//import com.droidlogic.dtvkit.inputsource.DtvkitTvInput;
+//import com.droidlogic.dtvkit.inputsource.DtvkitTvInput.DtvkitTvInputSession;
+
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.settings.ConstantManager;
@@ -60,7 +64,7 @@ public class AmlTunerDelegate implements TunerDelegate {
 
     //private Uri mCurrentChannelUri;
     private Context mContext;
-    private DtvkitTvInputSession mSession = null;
+    private TvInputService.Session mSession = null;
     private Handler mThreadHandler = null;
     private String mInputId = null;
     private List<TvTrackInfo> mAllTracksInfo = null;
@@ -89,7 +93,7 @@ public class AmlTunerDelegate implements TunerDelegate {
     * @param session - DtvkitTvInputSession.
     * @param inputId - The ID of the pass-through input to build a channels URI for.
     */
-    public AmlTunerDelegate(Context context,DtvkitTvInput.DtvkitTvInputSession session,
+    public AmlTunerDelegate(Context context,TvInputService.Session session,
                                     String inputId, AmlHbbTvView amlHbbTvView ){
         Log.i(TAG, "new AmlTunerDelegate in");
         mContext = context;
@@ -199,7 +203,7 @@ public class AmlTunerDelegate implements TunerDelegate {
 
     }
 
-    private void setFullScreen() {
+    public void setFullScreen() {
         Log.i(TAG, "setFullScreen in");
         try {
             JSONArray args = new JSONArray();
@@ -1001,15 +1005,11 @@ public class AmlTunerDelegate implements TunerDelegate {
     }
 
     private void notifyPidFilterData​(ByteBuffer pidFilterData){
-        //Log.i(TAG, "notifyPidFilterData​ in ");
-
-         for (TunerDelegateClient client : mTunerDelegateClientList) {
-            client.onPidFilterData​(pidFilterData);
+         if (mTunerDelegateClientList.size()>0) {
+             for (TunerDelegateClient client : mTunerDelegateClientList) {
+                client.onPidFilterData​(pidFilterData);
+             }
          }
-        //printPidFilterData(pidFilterData);
-
-        //Log.d(TAG, "notify notifyPidFilterData​ ");
-        ///Log.i(TAG, "notifyPidFilterData​ out ");
     }
 
     private void printPidFilterData(ByteBuffer data){
@@ -1126,12 +1126,6 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "notifyTracksChanged in ");
         synchronized (mTrackLock) {
             if (mAllTracksInfo != null && mAllTracksInfo.size() > 0) {
-                if (null != mSelectTrackInfo) {
-                    for (int i = 0; i<3; i++) {
-                        Log.i(TAG, "component type:%d (0-audio/1-video/2-subtitle)" + i + ", selectTrackid  = " + mSelectTrackInfo.get(i));
-                    }
-
-                }
                 for (TunerDelegateClient client : mTunerDelegateClientList) {
                     client.onTracksChanged(mAllTracksInfo, mSelectTrackInfo);
                     Log.d(TAG, "notify onTracksChanged tracks.size= " + mAllTracksInfo.size());
@@ -1725,11 +1719,6 @@ public class AmlTunerDelegate implements TunerDelegate {
                         }
                     }
                     break;
-                    case MSG.MSG_CHANNELCHANGED_BEGIN: {
-                        Log.d(TAG, " MSG_CHANNELCHANGED_BEGIN need full screen");
-                        setFullScreen();
-                    }
-                    break;
                     case MSG.MSG_SUBTITLESTATUSCHANGED: {
                         syncMediaComponentsPreferences();
                     }
@@ -1819,7 +1808,6 @@ public class AmlTunerDelegate implements TunerDelegate {
                 if (getPlaystate() != PlayState.PLAYSTATE_CONNECTING) {
                     setPlaystate(PlayState.PLAYSTATE_CONNECTING);
                 }
-                sendNotifyMsg(MSG.MSG_CHANNELCHANGED_BEGIN, 0, 0, null);
             } else if (signal.equals("hbbNotifyChannelchangedSuccess")) {
                     sendNotifyMsg(MSG.MSG_CHANNELCHANGED, 0, 0, null);
                     setPlaystate(PlayState.PLAYSTATE_CONNECTING);
@@ -1869,7 +1857,10 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "release in");
         stopMonitoringChannelListSync();
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
+        DtvkitGlueClient.getInstance().setPidFilterListener(null);
         setResourceOwnerByBrFlag(true);
+        setTuneChannelUri(null);
+        sendNotifyMsg(MSG.MSG_CHANNELCHANGED, 0, 0, null);
         Log.i(TAG, "release out");
 
     }

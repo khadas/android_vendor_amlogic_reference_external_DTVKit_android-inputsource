@@ -7,6 +7,10 @@ import android.content.Context;
 import android.view.KeyEvent;
 import android.net.Uri;
 
+import java.util.ArrayList;
+import java.util.List;
+
+
 import com.vewd.core.sdk.HbbTvView;
 import com.vewd.core.sdk.Browser;
 import com.vewd.core.sdk.BrowserClient;
@@ -19,8 +23,13 @@ import com.amlogic.hbbtv.utils.UserAgentUtils;
 import com.amlogic.hbbtv.utils.KeyEventUtils;
 import com.amlogic.hbbtv.utils.BroadcastResourceManager;
 
-import com.droidlogic.dtvkit.inputsource.DtvkitTvInput;
-import com.droidlogic.dtvkit.inputsource.DtvkitTvInput.DtvkitTvInputSession;
+//import com.droidlogic.dtvkit.inputsource.DtvkitTvInput;
+//import com.droidlogic.dtvkit.inputsource.DtvkitTvInput.DtvkitTvInputSession;
+import android.media.tv.TvInputService.Session;
+import android.media.tv.TvInputService;
+
+
+
 
 /**
  * @ingroup hbbtvclientapi
@@ -29,7 +38,8 @@ import com.droidlogic.dtvkit.inputsource.DtvkitTvInput.DtvkitTvInputSession;
 public class HbbTvManager{
     private static final String TAG = "HbbTvManager";
     private AmlHbbTvView mAmlHbbTvView;
-    private DtvkitTvInput.DtvkitTvInputSession mSession;
+    //private DtvkitTvInput.DtvkitTvInputSession mSession;
+    private TvInputService.Session mSession;
     private HbbtvPreferencesManager mPreferencesManager;
     private AmlTunerDelegate mAmlTunerDelegate;
     private AmlViewClient mAmlViewClient;
@@ -38,9 +48,12 @@ public class HbbTvManager{
     private Context mContext;
     private String mInuputId;
     private Uri mTuneChannelUri = null;
-    private HbbTvUISetting mHbbTvUISetting;
+    //private HbbTvUISetting mHbbTvUISetting;
     private final BroadcastResourceManager mBroadcastResourceManager =
             BroadcastResourceManager.getInstance();
+    //private List<TvInputService.Session> sessionList = new ArrayList<>();
+    private static HbbTvManager mInstance;
+    private boolean mBroadcastResourceRelease = false;
 
    /**
     * @ingroup hbbtvmanagerapi
@@ -50,14 +63,30 @@ public class HbbTvManager{
     * @inputId  The TV Input ID
     * @HbbTvManager  The instance of HbbTvManager
     */
-    public HbbTvManager(Context context,DtvkitTvInput.DtvkitTvInputSession session,String inputId) {
-        mContext = context;
-        mSession = session;
+    private HbbTvManager() {
+    }
+
+    public static HbbTvManager getInstance() {
+        if (mInstance == null) {
+            synchronized (HbbTvManager.class) {
+                if (mInstance == null) {
+                    return new HbbTvManager();
+                }
+            }
+        }
+        return mInstance;
+    }
+
+    public void setInputId(String inputId) {
         mInuputId = inputId;
-        mAmlHbbTvView = new AmlHbbTvView(mContext);
-        mAmlTunerDelegate = new AmlTunerDelegate(mContext,mSession,mInuputId,mAmlHbbTvView);
-        mPreferencesManager = new HbbtvPreferencesManager(mAmlHbbTvView);
-        mHbbTvUISetting = new HbbTvUISetting();
+    }
+
+    public void setContext(Context context) {
+        mContext = context;
+    }
+
+    public void setSession(TvInputService.Session      session) {
+        mSession = session;
     }
 
    /**
@@ -92,9 +121,22 @@ public class HbbTvManager{
     private void onBrowserInitialized() {
         Log.d(TAG,"onBrowserInitialized start");
         mBroadcastResourceManager.register(mBroadcastResourceClient);
+        mBroadcastResourceRelease = true;
         mBroadcastResourceManager.setActive(mBroadcastResourceClient);
         initializeHbbTvView();
         Log.d(TAG,"onBrowserInitialized end");
+    }
+
+    public void initHbbTvResource() {
+        Log.d(TAG,"initHbbTvResource start");
+        if (mContext != null) {
+            mAmlHbbTvView = new AmlHbbTvView(mContext);
+        }
+
+        if (mSession != null) {
+            mAmlTunerDelegate = new AmlTunerDelegate(mContext,mSession,mInuputId,mAmlHbbTvView);
+        }
+        Log.d(TAG,"initHbbTvResource end");
     }
 
     /**
@@ -104,6 +146,8 @@ public class HbbTvManager{
      */
     private void initializeHbbTvView() {
         Log.d(TAG,"initializeHbbTvView start");
+
+        mPreferencesManager = new HbbtvPreferencesManager(mAmlHbbTvView);
         mAmlHbbTvClient = new AmlHbbTvClient(mAmlHbbTvView, mAmlTunerDelegate);
         mAmlChromeClient = new AmlChromeClient();
         mAmlViewClient = new AmlViewClient();
@@ -132,29 +176,37 @@ public class HbbTvManager{
     * @brief   when the session relase,the hbbtv resource need to release
     * @return none
     */
-    public void onDestroy() {
-        Log.i(TAG,"onDestroy start");
+    public void releaseHbbTvResource() {
+        Log.i(TAG,"releaseHbbTvResource start");
         if (mPreferencesManager != null) {
             mAmlTunerDelegate.setHbbtvPreferencesManager(null);
             mPreferencesManager = null;
         }
-        if (mAmlHbbTvView != null) {
-            if (mAmlHbbTvView.isInitialized()) {
-                Log.d(TAG,"onDestroy  destroying");
-                mAmlHbbTvView.dispose();
-            } else {
-                Log.d(TAG,"mAmlHbbTvView  not init");
-            }
-            mAmlHbbTvView = null;
-        }
+
         if (mAmlTunerDelegate != null) {
             mAmlTunerDelegate.release();
             mAmlTunerDelegate = null;
         }
-        if (mBroadcastResourceManager != null) {
+        if (mBroadcastResourceManager != null && mBroadcastResourceRelease == true) {
             mBroadcastResourceManager.unregister(mBroadcastResourceClient);
+            mBroadcastResourceRelease = false;
+            Log.d(TAG,"unregister mBroadcastResourceClient");
         }
-        Log.i(TAG,"onDestroy end");
+
+        if (mSession != null) {
+            mSession = null;
+        }
+
+        if (mAmlHbbTvView != null) {
+            if (mAmlHbbTvView.isInitialized()) {
+                Log.d(TAG,"the hbbtv view dispose");
+                mAmlHbbTvView.dispose();
+            } else {
+                Log.d(TAG,"mAmlHbbTvView  not init");
+            }
+        }
+
+        Log.i(TAG,"releaseHbbTvResource end");
     }
 
     private final BroadcastResourceClient mBroadcastResourceClient = new BroadcastResourceClient() {
@@ -305,51 +357,6 @@ public class HbbTvManager{
         Log.i(TAG,"setResourceOwnedByBr flag = " + flag);
     }
 
-    public boolean getHbbTvFeature() {
-       return mHbbTvUISetting.getHbbTvFeature();
-    }
-
-    public void setHbbTvFeature(boolean status) {
-        mHbbTvUISetting.setHbbTvFeature(status);
-    }
-
-    public boolean getHbbTvServiceStatusForCurChannel() {
-        return mHbbTvUISetting.getHbbTvServiceStatusForCurChannel();
-    }
-
-
-    public void setHbbTvServiceStatusForCurChannel(boolean status) {
-        mHbbTvUISetting.setHbbTvServiceStatusForCurChannel(status);
-    }
-
-     public boolean getHbbTvTrackingStatus() {
-        return mHbbTvUISetting.getHbbTvTrackingStatus();
-     }
-
-
-    public void setHbbTvTrackingStatus(boolean status) {
-        mHbbTvUISetting.setHbbTvTrackingStatus(status);
-    }
-
-    public boolean getHbbtvCookiesStatus() {
-        return mHbbTvUISetting.getHbbtvCookiesStatus();
-    }
-
-    public void setHbbTvCookiesStatus(boolean status) {
-        mHbbTvUISetting.setHbbTvCookiesStatus(status);
-    }
-
-    public void clearHbbTvCookies() {
-        mHbbTvUISetting.clearHbbTvCookies();
-    }
-
-    public boolean getHbbTvDistinctiveIdentifierStatus() {
-        return mHbbTvUISetting.getHbbTvDistinctiveIdentifierStatus();
-    }
-
-    public void setHbbTvDistinctiveIdentifierStatus(boolean status) {
-        mHbbTvUISetting.setHbbTvDistinctiveIdentifierStatus(status);
-    }
 }
 
 

@@ -225,7 +225,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
 
     //hbbtv
-    private HbbTvManager mHbbTvManager = null;
+    private static HbbTvManager mHbbTvManager = null;
     private boolean mHbbTvFeatherStatus  = false;
 
     private static enum PlayerState {
@@ -1069,7 +1069,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         addTunerSession(session);
         mHbbTvFeatherStatus  = getFeatureSupportHbbTV();
         if (mHbbTvFeatherStatus) {
-            mHbbTvManager = new HbbTvManager(this,session,inputId);
+            mHbbTvManager = HbbTvManager.getInstance();
+            //mHbbTvManager.releaseHbbTvResource();
+            mHbbTvManager.setSession(session);
+            mHbbTvManager.setInputId(inputId);
+            mHbbTvManager.setContext(this);
+            mHbbTvManager.initHbbTvResource();
             mHbbTvManager.initBrowser();
         }
         //mSystemControlManager.SetDtvKitSourceEnable(1);
@@ -1150,6 +1155,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private TextView mCasOsm;
         private int w;
         private int h;
+        private View mHbbTvView;
 
         private boolean mhegTookKey = false;
         private KeyEvent lastMhegKey = null;
@@ -1186,8 +1192,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 this.addView(mCCSubView);
             }
             if (mHbbTvFeatherStatus) {
-                if (mHbbTvManager.getHbbTvView() != null) {
-                     this.addView(mHbbTvManager.getHbbTvView());
+                mHbbTvView = mHbbTvManager.getHbbTvView();
+                if (mHbbTvView != null) {
+                    this.addView(mHbbTvView);
                 }
             }
 
@@ -1228,8 +1235,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mCasOsm = null;
             }
             if (mHbbTvFeatherStatus) {
-                 removeView(mHbbTvManager.getHbbTvView());
-                 mHbbTvManager.onDestroy();
+                removeView(mHbbTvView);
+                mHbbTvView = null;
+
             }
 
         }
@@ -3437,6 +3445,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //creat ciMenuView,so we need destory and
             //unregist handle.
             releaseSignalHandler();
+            if (mHbbTvFeatherStatus) {
+                 mHbbTvManager.releaseHbbTvResource();
+            }
             //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
             //all case use message to release related resource as semaphare has been applied
             if (mMainHandle != null) {
