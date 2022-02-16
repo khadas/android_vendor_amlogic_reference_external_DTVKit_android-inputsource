@@ -3204,7 +3204,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected boolean onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
             Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + ", index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
 
-            if (ContentUris.parseId(channelUri) == -1 && getFirstChannel() == null) {
+            Channel firtDbValidChannel = getFirstChannel();
+            if (firtDbValidChannel == null) {
+                //if no channel,stop play
                 mhegStop();
                 playerStop();
                 playerSetServiceMute(true);
@@ -3219,7 +3221,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             mPreviousTunedChannel = mTunedChannel;
             Channel targetChannel = getChannel(channelUri);
-            mTunedChannel = (targetChannel != null) ? targetChannel : getFirstChannel();
+            mTunedChannel = (targetChannel != null) ? targetChannel : firtDbValidChannel;
             if (mHbbTvFeatherStatus) {
                 mHbbTvManager.setTuneChannelUri(channelUri);
             }
