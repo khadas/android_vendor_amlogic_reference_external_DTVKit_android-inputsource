@@ -1,19 +1,19 @@
 package org.droidlogic.dtvkit;
 
-import android.os.IBinder;
+import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.RemoteException;
+import android.os.SystemProperties;
 import android.util.Log;
-import android.os.HwBinder;
 import android.util.Pair;
+import android.view.Surface;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import android.view.Surface;
-import android.view.SurfaceHolder;
 
 import java.nio.ByteBuffer;
-import java.util.NoSuchElementException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -26,6 +26,8 @@ public class DtvkitGlueClient {
     public static final int DIRECT_BUFFER_SIZE = 188;
     private static final int REQUEST_MESSAGE_TIMEOUT_SHORT_MILLIS = 1000;
     private static final int REQUEST_MESSAGE_TIMEOUT_LONG_MILLIS = 3000;
+    private static final int REQUEST_MESSAGE_BOMB_MILLIS = 15000;
+    private Handler mMainHandler = null;
 
     private static DtvkitGlueClient mSingleton = null;
     private ArrayList<Pair<Integer, SignalHandler>> mHandlers = new ArrayList<>();
@@ -241,6 +243,12 @@ public class DtvkitGlueClient {
         // Singleton
         mDirectBuffer = ByteBuffer.allocateDirect(DIRECT_BUFFER_SIZE);
         nativeconnectdtvkit(this, mDirectBuffer);
+        int debuggable = SystemProperties.getInt("ro.debuggable", 0);
+        if (debuggable == 1) {
+            HandlerThread thread = new HandlerThread("GlueClientThread");
+            thread.start();
+            mMainHandler = new Handler(thread.getLooper());
+        }
     }
 
     public synchronized static DtvkitGlueClient getInstance() {
@@ -293,16 +301,16 @@ public class DtvkitGlueClient {
     }
 
     public JSONObject request(String resource, JSONArray arguments) throws Exception {
-        //mSingleton.connectIfUnconnected();
+        final String reason = resource + " : " + arguments;
         try {
             long startTime = System.nanoTime();
             JSONObject object = new JSONObject(nativerequest(resource, arguments.toString()));
             long durationMs = (System.nanoTime() - startTime) / (1000 * 1000);
             if (durationMs > REQUEST_MESSAGE_TIMEOUT_LONG_MILLIS) {
-                Log.e(TAG, "[critical]request (" + resource + " : " + arguments + ") took too long time (duration="
+                Log.e(TAG, "[critical]request (" + reason + ") took too long time (duration="
                     + durationMs + "ms)");
             } else if (durationMs > REQUEST_MESSAGE_TIMEOUT_SHORT_MILLIS) {
-                Log.w(TAG, "[warning]request (" + resource + " : " + arguments + ") took a long time (duration="
+                Log.w(TAG, "[warning]request (" + reason + ") took a long time (duration="
                     + durationMs + "ms)");
             }
             if (object.getBoolean("accepted")) {
@@ -312,6 +320,10 @@ public class DtvkitGlueClient {
             }
         } catch (JSONException | RemoteException e) {
             throw new Exception(e.getMessage());
+        } finally {
+            if (mMainHandler != null) {
+                mMainHandler.removeCallbacksAndMessages(null);
+            }
         }
     }
 

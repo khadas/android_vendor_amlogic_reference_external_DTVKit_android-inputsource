@@ -441,7 +441,7 @@ public class DtvkitBackGroundSearch {
                 mBgCallback.onMessageCallback(mess);
                 Log.i(TAG, "stopMonitoringSync onMessageCallback " + mess.toString());
             } catch (Exception e) {
-                Log.i(TAG, "stopMonitoringSync Exception " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }

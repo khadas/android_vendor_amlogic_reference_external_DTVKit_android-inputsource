@@ -12,6 +12,7 @@ LOCAL_RESOURCE_DIR := frameworks/support/leanback/src/main/res \
    $(LOCAL_PATH)/hbbtv/res
 
 LOCAL_STATIC_JAVA_LIBRARIES += \
+   androidx.annotation_annotation \
    guava \
    companionlibrary \
    android-support-v17-leanback \
