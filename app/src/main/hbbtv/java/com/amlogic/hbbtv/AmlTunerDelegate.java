@@ -193,10 +193,6 @@ public class AmlTunerDelegate implements TunerDelegate {
         } else {
             Log.d(TAG, "videoBroadcastObjectReleased  BR is not running need tuneToCurrentChannel");
             tuneToCurrentChannel();
-
-        }
-        if (mSubViewInTop) {
-            manageOverlayView(TvTrackInfo.TYPE_SUBTITLE, null);
         }
         setFullScreen();
         //setVisibility​(false);
@@ -516,13 +512,7 @@ public class AmlTunerDelegate implements TunerDelegate {
             Log.d(TAG, "selectTrack - private track  type = " + type + "pid = " + pid + ", encoding = " +  encoding);
             sendNotifyMsg(MSG.MSG_SELECTPRIVATETRACK, type, pid, encoding);
         } else {
-            if (type == TvTrackInfo.TYPE_VIDEO ||
-                ((type == TvTrackInfo.TYPE_AUDIO) && (trackId == null))) {
-                sendNotifyMsg(MSG.MSG_SELECTTRACK, type, 0, destTrackId);
-            } else {
-                mSession.onSelectTrack(type, destTrackId);
-                manageOverlayView(type, trackId);
-            }
+            playerSelectTrackById(type, destTrackId);
         }
         notifyTrackSelected(type, trackId);
         updateSelectTrackInfo(type, trackId);
@@ -590,20 +580,51 @@ public class AmlTunerDelegate implements TunerDelegate {
         return tmpTrackInfo;
     }
 
+    private boolean playerSelectTrackById(int type, String trackId) {
+        Log.i(TAG, "playerSelectTrackById in");
+        boolean ret = true;
+        if (type == TvTrackInfo.TYPE_VIDEO) {
+            ret = playerSelectVideoTrackById(trackId);
+        } else if ((type == TvTrackInfo.TYPE_AUDIO) && (trackId == null)) {
+            ret = playerSelectAudioTrackById(trackId);
+        } else if ((type == TvTrackInfo.TYPE_SUBTITLE) && (trackId == null)) {
+            ret = playerSelectSubtitleTrackById(trackId);
+        }
+        Log.i(TAG, "playerSelectTrackById out");
+        return ret;
+    }
+
+    private boolean playerSelectSubtitleTrackById(String trackId) {
+        Log.i(TAG, "playerSelectSubtitleTrackById in");
+        Log.d(TAG, "playerSelectSubtitleTrackById trackId = " + trackId);
+        if (trackId != null) {
+            mSession.onSelectTrack(TvTrackInfo.TYPE_SUBTITLE, trackId);
+        } else {
+            try {
+                JSONArray args = new JSONArray();
+                DtvkitGlueClient.getInstance().request("Hbbtv.HBBUnselectSubtitleTrack", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerSelectSubtitleTrackById = " + e.getMessage());
+                return false;
+            }
+        }
+        Log.i(TAG, "playerSelectSubtitleTrackById out");
+        return true;
+    }
+
     private boolean playerSelectAudioTrackById(String trackId) {
         Log.i(TAG, "playerSelectAudioTrackById in");
         Log.d(TAG, "playerSelectAudioTrackById trackId = " + trackId);
-
-        try {
-            JSONArray args = new JSONArray();
-            if (null == trackId) {
+        if (trackId != null) {
+            mSession.onSelectTrack(TvTrackInfo.TYPE_AUDIO, trackId);
+        } else {
+            try {
+                JSONArray args = new JSONArray();
                 DtvkitGlueClient.getInstance().request("Hbbtv.HBBUnselectAudioTrack", args);
-            } else {
-                Log.d(TAG, "playerSelectAudioTrackById don't need handle trackId = " + trackId);
+            } catch (Exception e) {
+                Log.e(TAG, "playerSelectAudioTrackById = " + e.getMessage());
+                return false;
             }
-        } catch (Exception e) {
-            Log.e(TAG, "playerSelectAudioTrackById = " + e.getMessage());
-            return false;
         }
         Log.i(TAG, "playerSelectAudioTrackById out");
         return true;
@@ -1725,11 +1746,7 @@ public class AmlTunerDelegate implements TunerDelegate {
                         if (null != msg.obj) {
                             trackId = (String)msg.obj;
                         }
-                        if (TvTrackInfo.TYPE_AUDIO == msg.arg1) {
-                            playerSelectAudioTrackById(trackId);
-                        } else {
-                            playerSelectVideoTrackById(trackId);
-                        }
+                        playerSelectTrackById(msg.arg1, trackId);
                     }
                     break;
                     case MSG.MSG_SELECTPRIVATETRACK: {
