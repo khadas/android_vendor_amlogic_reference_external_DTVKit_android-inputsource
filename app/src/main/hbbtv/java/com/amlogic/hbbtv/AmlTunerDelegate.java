@@ -63,6 +63,7 @@ public class AmlTunerDelegate implements TunerDelegate {
     private static final String TAG = "AmlTunerDelegate";
 
     //private Uri mCurrentChannelUri;
+    private final static int INVALID_PID = 131071;//0X1FFF
     private Context mContext;
     private TvInputService.Session mSession = null;
     private Handler mThreadHandler = null;
@@ -934,7 +935,7 @@ public class AmlTunerDelegate implements TunerDelegate {
 
     /**
     * @ingroup AmlTunerDelegateapi
-    * @brief Called by the browser to request a filter for the given PID to be started.
+    * @brief Called by the browser to stop a filter for the given PID to be started.
     * It will only be called if supportsPidFilters() returns true.
     * @param pid - PID of the table for which filter should be stopped.
     * @return none.
@@ -946,12 +947,32 @@ public class AmlTunerDelegate implements TunerDelegate {
         try {
              JSONArray args = new JSONArray();
              args.put(pid);
+             args.put(false);
              DtvkitGlueClient.getInstance().request("Hbbtv.HBBStopPidFilter", args);
             } catch (Exception e) {
                 Log.e(TAG, "stopPidFilter = " + e.getMessage());
             }
        // Log.i(TAG, "stopPidFilter out ");
     }
+
+     /**
+    * @ingroup AmlTunerDelegateapi
+    * @brief Called by the delegate to stop all filters request from start.
+    * @return none.
+    */
+    public void stopAllPidFilter() {
+        //Log.i(TAG, "stopAllPidFilter in ");
+        try {
+             JSONArray args = new JSONArray();
+             args.put(INVALID_PID);
+             args.put(true);
+             DtvkitGlueClient.getInstance().request("Hbbtv.HBBStopPidFilter", args);
+            } catch (Exception e) {
+                Log.e(TAG, "stopAllPidFilter = " + e.getMessage());
+            }
+       // Log.i(TAG, "stopAllPidFilter out ");
+    }
+
 
     /**
     * @ingroup AmlTunerDelegateapi
@@ -1861,6 +1882,7 @@ public class AmlTunerDelegate implements TunerDelegate {
         setResourceOwnerByBrFlag(true);
         setTuneChannelUri(null);
         sendNotifyMsg(MSG.MSG_CHANNELCHANGED, 0, 0, null);
+        stopAllPidFilter();
         Log.i(TAG, "release out");
 
     }
