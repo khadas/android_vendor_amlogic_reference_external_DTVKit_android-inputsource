@@ -1761,6 +1761,10 @@ public class AmlTunerDelegate implements TunerDelegate {
                         syncMediaComponentsPreferences();
                     }
                     break;
+                    case MSG.MSG_AUDIOLANGCHANGED: {
+                        syncMediaComponentsPreferences();
+                    }
+                    break;
                     default:
                         break;
                 }
@@ -1881,6 +1885,8 @@ public class AmlTunerDelegate implements TunerDelegate {
                 mChannelListUpdate = true;
             }else if (signal.equals("hbbNotifySubtitleStatusUpdated")) {
                 sendNotifyMsg(MSG.MSG_SUBTITLESTATUSCHANGED, 0, 0, null);
+            }else if (signal.equals("hbbNotifyAudioLangUpdated")) {
+                sendNotifyMsg(MSG.MSG_AUDIOLANGCHANGED, 0, 0, null);
             }
         }
     };
@@ -1916,6 +1922,7 @@ public class AmlTunerDelegate implements TunerDelegate {
         public final static int MSG_SELECTPRIVATETRACK = 9;
         public final static int MSG_CHANNELCHANGED_BEGIN = 10;
         public final static int MSG_SUBTITLESTATUSCHANGED = 11;
+        public final static int MSG_AUDIOLANGCHANGED = 12;
     }
 
     private class PlayState  {
