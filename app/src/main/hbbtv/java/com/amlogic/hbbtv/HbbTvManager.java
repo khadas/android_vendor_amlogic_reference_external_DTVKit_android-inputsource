@@ -6,6 +6,10 @@ import android.view.View;
 import android.content.Context;
 import android.view.KeyEvent;
 import android.net.Uri;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +58,7 @@ public class HbbTvManager{
     //private List<TvInputService.Session> sessionList = new ArrayList<>();
     private static HbbTvManager mInstance;
     private boolean mBroadcastResourceRelease = false;
+    private NetworkChangeBroadcast mNetworkChangeBroadcast;
 
    /**
     * @ingroup hbbtvmanagerapi
@@ -70,7 +75,7 @@ public class HbbTvManager{
         if (mInstance == null) {
             synchronized (HbbTvManager.class) {
                 if (mInstance == null) {
-                    return new HbbTvManager();
+                    mInstance = new HbbTvManager();
                 }
             }
         }
@@ -161,6 +166,9 @@ public class HbbTvManager{
         mAmlHbbTvView.setUserAgentSuffix(UserAgentUtils.getVendorUserAgentSuffix());
         mAmlHbbTvView.init();
         mAmlHbbTvView.requestFocus();
+        mNetworkChangeBroadcast = new NetworkChangeBroadcast();
+        mNetworkChangeBroadcast.setHbbTvView(mAmlHbbTvView);
+        regeisterNetWorkBroadcastReceiver();
 
         //set references
         mPreferencesManager.setDeviceUniqueNumber(null);
@@ -171,6 +179,7 @@ public class HbbTvManager{
         Log.d(TAG,"initializeHbbTvView end");
     }
 
+
    /**
     * @ingroup hbbtvmanagerapi
     * @brief   when the session relase,the hbbtv resource need to release
@@ -178,6 +187,10 @@ public class HbbTvManager{
     */
     public void releaseHbbTvResource() {
         Log.i(TAG,"releaseHbbTvResource start");
+        if (mNetworkChangeBroadcast != null) {
+            unRegeisterNetWorkBroadcastReceiver();
+            mNetworkChangeBroadcast = null;
+        }
         if (mPreferencesManager != null) {
             mAmlTunerDelegate.setHbbtvPreferencesManager(null);
             mPreferencesManager = null;
@@ -319,7 +332,7 @@ public class HbbTvManager{
         Log.i(TAG,"checkIsBroadcastOwnResource start");
         boolean resourceOwnedByBroadcast = true;
         boolean hbbtvRunning = false;
-        if (mAmlHbbTvView != null) {
+        if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
             hbbtvRunning = mAmlHbbTvView.isApplicationRunning();
         }
         if (hbbtvRunning && !isResourceOwnedByBr()) {
@@ -357,6 +370,32 @@ public class HbbTvManager{
         Log.i(TAG,"setResourceOwnedByBr flag = " + flag);
     }
 
+    private void regeisterNetWorkBroadcastReceiver() {
+           IntentFilter intentFilter = new IntentFilter();
+           intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+           mContext.registerReceiver(mNetworkChangeBroadcast, intentFilter);
+       }
+
+    private void unRegeisterNetWorkBroadcastReceiver() {
+           mContext.unregisterReceiver(mNetworkChangeBroadcast);
+     }
+
+    public void setHbbTvApplication(boolean status) {
+        Log.d(TAG,"the hbbtv feather status  = " + status);
+        boolean appStatus = status;
+        if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
+            if (appStatus && !mAmlHbbTvView.isApplicationRunning()) {
+                Log.d(TAG,"start the applicaition");
+                mAmlHbbTvView.terminateApplicationAndLaunchAutostart();
+            }
+
+            if (!appStatus && mAmlHbbTvView.isApplicationRunning()) {
+                Log.d(TAG,"terminate the applicaition");
+                mAmlHbbTvView.terminateApplication();
+            }
+        }
+
+    }
 }
 
 

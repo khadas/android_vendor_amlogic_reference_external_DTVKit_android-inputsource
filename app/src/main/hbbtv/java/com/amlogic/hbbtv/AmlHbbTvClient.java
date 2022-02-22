@@ -125,18 +125,32 @@ public class AmlHbbTvClient implements HbbTvClient {
                 + isBroadcastRelated + ", autostartLaunching=" + autostartLaunching);
         }
 
-       /* if (!isInBacKList(appUrl)) {
+        if (getHbbTvFeature()) {
             callback.allow();
-            Log.d(TAG,"onAitAppLoadRequest​  url allow not in blacklist");
+            Log.d(TAG,"onAitAppLoadRequest​  url allow to load");
         } else {
             callback.deny(AitAppLoadRequestCallback.REASON_APP_URL);
-            Log.d(TAG,"onAitAppLoadRequest​  url deny in blacklist");
-        }*/
-
-        callback.allow();
+            Log.d(TAG,"onAitAppLoadRequest​  url deny to load");
+        }
 
         Log.i(TAG,"onAitAppLoadRequest​  end");
    }
+
+   private boolean getHbbTvFeature() {
+        Log.i(TAG,"getHbbTvFeature start");
+        boolean hasHbbTvFeather = false;
+        try {
+            JSONArray args = new JSONArray();
+            boolean result = DtvkitGlueClient.getInstance().request("Hbbtv.HBBGetHbbtvFeature", args).getBoolean("data");
+            Log.d(TAG,"the result = " + result );
+            hasHbbTvFeather = result;
+
+        } catch (Exception e) {
+            Log.e(TAG, "hasHbbTvFeather = " + e.getMessage());
+        }
+        Log.i(TAG,"getHbbTvFeature end");
+        return hasHbbTvFeather;
+    }
 
    private boolean isInBacKList(String url) {
         boolean isUrlInBlackList=false;
