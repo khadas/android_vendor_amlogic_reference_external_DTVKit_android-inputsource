@@ -2996,9 +2996,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 //all case use message to release related resource as semaphare has been applied
                 if (surface == null) {
                     if (!mIsPip) {
-                        sendSetSurfaceMessage(null, mConfigs[1]);
+                        //sendSetSurfaceMessage(null, mConfigs[1]);
+                        doSetSurfaceForPip(null, mConfigs[1]);
                     } else {
-                        sendSetSurfaceMessage(null, mPipConfigs[0]);
+                        //sendSetSurfaceMessage(null, mPipConfigs[0]);
+                        doSetSurfaceForPip(null, mPipConfigs[0]);
                     }
                     doRelease(false, false);
                 }
@@ -3037,6 +3039,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     mHardware.setSurface(surface, config);
                 }
+            }
+        }
+
+        private void doSetSurfaceForPip(Surface surface, TvStreamConfig config) {
+            Log.i(TAG, "doSetSurface index = " + mCurrentDtvkitTvInputSessionIndex);
+            Log.i(TAG, "doSetSurface surface = " + surface + ", config = " + config);
+            boolean isPipConfig = false;
+            if (config != null) {
+                //pip stream config has been set to 3
+                isPipConfig = config.getStreamId() == 3;
+            }
+            if (isPipConfig) {
+                mPipHardware.setSurface(surface, config);
+            } else {
+                if (surface == null) {
+                    mAudioSystemCmdManager.updateAudioPortGain(-1);
+                }
+                mHardware.setSurface(surface, config);
             }
         }
 
