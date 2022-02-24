@@ -1,16 +1,63 @@
- package com.amlogic.hbbtv;
+package com.amlogic.hbbtv;
 
- import org.json.JSONArray;
- import org.json.JSONException;
- import org.json.JSONObject;
- import org.droidlogic.dtvkit.DtvkitGlueClient;
- import android.util.Log;
- import com.vewd.core.sdk.CookieManager;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
+import android.util.Log;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Message;
+import com.vewd.core.sdk.CookieManager;
 
 
- public class HbbTvUISetting {
+public class HbbTvUISetting {
 
     public static final String TAG = "HbbTvUISetting";
+    private Handler mThreadHandler = null;
+
+    public HbbTvUISetting() {
+        initHandler();
+    }
+
+    private void initHandler() {
+        Log.i(TAG, "initHandler in ");
+        mThreadHandler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                Log.d(TAG, "mThreadHandler handleMessage " + msg.what + " start");
+                switch (msg.what) {
+                    case MSG.MSG_HANDLE_HBBTV_ON_OFF: {
+                        boolean hbbtvFeatherStatus = msg.arg1 ==1 ? true : false;
+                        handleHbbtvFeather(hbbtvFeatherStatus);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+                Log.d(TAG, "mThreadHandler handleMessage " + msg.what + " over");
+            }
+        };
+    }
+
+    private void sendMessage(int what, int arg1,int arg2) {
+        if (mThreadHandler != null) {
+            mThreadHandler.removeMessages(what);
+            Message mess = mThreadHandler.obtainMessage(what, arg1,arg2);
+            boolean status = mThreadHandler.sendMessageDelayed(mess, 0);
+            Log.d(TAG, "sendMessage status:" + status + ", msg.what = " + what);
+        } else {
+            Log.d(TAG, "sendMessage fail: msg.what = " + what);
+        }
+    }
+
+    public void handleHbbtvFeather(boolean status) {
+        Log.i(TAG,"handleHbbtvFeather start");
+        Log.d(TAG,"handleHbbtvFeather status = " + status);
+        HbbTvManager hbbTvManager = HbbTvManager.getInstance();
+        hbbTvManager.setHbbTvApplication(status);
+        Log.i(TAG,"handleHbbtvFeather end");
+    }
 
    /**
     * @ingroup hbbtvuisetting
@@ -49,8 +96,11 @@
             if (setHbbtvFeatrue) {
                 Log.d(TAG, "set hbbtv feature sucess");
             }
-            HbbTvManager mHbbTvManager = HbbTvManager.getInstance();
-            mHbbTvManager.setHbbTvApplication(status);
+            if (status) {
+                sendMessage(MSG.MSG_HANDLE_HBBTV_ON_OFF,1,0);
+            } else {
+                sendMessage(MSG.MSG_HANDLE_HBBTV_ON_OFF,0,0);
+            }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
@@ -245,6 +295,9 @@
         Log.i(TAG,"setHbbTvDistinctiveIdentifierStatus end");
     }
 
+    private class MSG  {
+        public final static int MSG_HANDLE_HBBTV_ON_OFF = 1;
+    }
 
 
 }
