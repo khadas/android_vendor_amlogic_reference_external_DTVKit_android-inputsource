@@ -6174,6 +6174,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private String getProgramInternalDvbUri(Program program) {
+        if (program == null)
+            return "dvb://current";
         try {
             String uri = program.getInternalProviderData().get("dvbUri").toString();
             return uri;
