@@ -3,6 +3,7 @@ package com.amlogic.hbbtv;
 import android.util.Log;
 import android.content.Context;
 import android.view.KeyEvent;
+import android.widget.Toast;
 
 import com.amlogic.hbbtv.utils.StringUtils;
 import com.amlogic.hbbtv.utils.KeyEventUtils;
@@ -14,6 +15,8 @@ import com.vewd.core.shared.ContextHandle;
 import com.vewd.core.shared.KeyDescription;
 import com.vewd.core.shared.HandsetCapabilities;
 import com.vewd.core.sdk.HbbTvApplicationInfo;
+import com.droidlogic.dtvkit.inputsource.R;
+
 
 
 import java.util.Arrays;
@@ -28,6 +31,7 @@ public class AmlHbbTvView extends HbbTvView {
     private boolean mIsApplicationStarted = false;
     private static final boolean DEBUG = true;
     private int mkeySet = 0;
+    private Context mContext = null;
 
     /**
      * @ingroup amlhbbtvviewapi
@@ -37,6 +41,7 @@ public class AmlHbbTvView extends HbbTvView {
      */
     public AmlHbbTvView(Context context) {
         super(context);
+        mContext = context;
         Log.i(TAG, "AmlHbbTvView instance create start");
         Log.i(TAG, "AmlHbbTvView instance create end");
     }
@@ -65,7 +70,7 @@ public class AmlHbbTvView extends HbbTvView {
     public void setKeySet(int keySet) {
         Log.i(TAG, "setKeySet start");
         if (DEBUG) {
-            Log.d(TAG, "setKeySet  the keySey = " + keySet);
+            Log.d(TAG, "setKeySet  the keySet = " + keySet);
         }
 
         mkeySet = keySet;
@@ -297,10 +302,36 @@ public class AmlHbbTvView extends HbbTvView {
                 Log.d(TAG,"dispatchKeyEvent : the application has been not stared," +
                     "mIsApplicationStarted = " + mIsApplicationStarted +",or the hbbtv view don't handle this key");
             }
+            if (keyCode == KeyEvent.KEYCODE_MEDIA_RECORD) {
+                return isConsumeRecordKey();
+            }
             Log.i(TAG, "dispatchKeyEvent end");
             return false;
         }
 
+   }
+
+    private boolean isConsumeRecordKey() {
+        Log.d(TAG,"isConsumeRecordKey start");
+        HbbTvManager hbbTvManager = HbbTvManager.getInstance();
+        boolean isHandleRecordKey = false;
+        boolean isBroadcastOwnResource = hbbTvManager.checkIsBroadcastOwnResource();
+        boolean isAppRunning = isApplicationRunning();
+        Log.d(TAG,"the source is own broadcast = " + isBroadcastOwnResource + "the app status = " + isAppRunning);
+        if (isBroadcastOwnResource) {
+            if (isAppRunning) {
+                terminateApplication();
+                isHandleRecordKey =  false;
+            }
+        } else {
+            if (isAppRunning) {
+                Toast.makeText(mContext,
+                    R.string.hbbtv_not_support_pvr, Toast.LENGTH_SHORT).show();
+                isHandleRecordKey = true;
+            }
+        }
+        Log.d(TAG,"isConsumeRecordKey end");
+        return isHandleRecordKey;
    }
 
     /**

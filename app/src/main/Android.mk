@@ -8,7 +8,8 @@ LOCAL_AAPT_FLAGS := --auto-add-overlay \
 
 LOCAL_RESOURCE_DIR := frameworks/support/leanback/src/main/res \
    $(LOCAL_PATH)/res \
-   $(LOCAL_PATH)/droidlogic/res
+   $(LOCAL_PATH)/droidlogic/res \
+   $(LOCAL_PATH)/hbbtv/res
 
 LOCAL_STATIC_JAVA_LIBRARIES += \
    guava \

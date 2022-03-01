@@ -8,12 +8,9 @@ import android.content.Intent;
 import android.util.Log;
 
 
+
 public class NetworkChangeBroadcast extends BroadcastReceiver {
     private static final String TAG = "NetworkChangeBroadcast";
-    private AmlHbbTvView mAmlHbbTvView;
-    public void setHbbTvView (AmlHbbTvView amlHbbTvView){
-        mAmlHbbTvView = amlHbbTvView;
-    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -27,21 +24,13 @@ public class NetworkChangeBroadcast extends BroadcastReceiver {
                if (netWorkInfo != null) {
                     if (netWorkInfo.isAvailable()) {
                         Log.d(TAG,"network connected");
-                        if (mAmlHbbTvView != null) {
-                            if (mAmlHbbTvView.isInitialized() && !mAmlHbbTvView.isApplicationRunning()) {
-                                 mAmlHbbTvView.terminateApplicationAndLaunchAutostart();
-                            }
-                        }
+                        HbbTvManager.getInstance().reloadApplicaition();
                     }
 
                } else {
                     Log.d(TAG, "network disconnected");
-                    if (mAmlHbbTvView != null) {
-                        if (mAmlHbbTvView.isInitialized() && mAmlHbbTvView.isApplicationRunning()) {
-                            mAmlHbbTvView.terminateApplication();
-                        }
-                     }
-               }
+                    HbbTvManager.getInstance().terminateHbbTvApplicaitonWithoutNetwork();
+                }
             }
         }
     }

@@ -585,9 +585,9 @@ public class AmlTunerDelegate implements TunerDelegate {
         boolean ret = true;
         if (type == TvTrackInfo.TYPE_VIDEO) {
             ret = playerSelectVideoTrackById(trackId);
-        } else if ((type == TvTrackInfo.TYPE_AUDIO) && (trackId == null)) {
+        } else if (type == TvTrackInfo.TYPE_AUDIO) {
             ret = playerSelectAudioTrackById(trackId);
-        } else if ((type == TvTrackInfo.TYPE_SUBTITLE) && (trackId == null)) {
+        } else if (type == TvTrackInfo.TYPE_SUBTITLE) {
             ret = playerSelectSubtitleTrackById(trackId);
         }
         Log.i(TAG, "playerSelectTrackById out");
@@ -1747,24 +1747,35 @@ public class AmlTunerDelegate implements TunerDelegate {
                             trackId = (String)msg.obj;
                         }
                         playerSelectTrackById(msg.arg1, trackId);
+                        break;
                     }
-                    break;
+
                     case MSG.MSG_SELECTPRIVATETRACK: {
                         String encoding = null;
                         if (null != msg.obj) {
                             encoding = (String)msg.obj;
                             playerPrivateTrack(msg.arg1, msg.arg2, encoding);
                         }
+                        break;
                     }
-                    break;
                     case MSG.MSG_SUBTITLESTATUSCHANGED: {
                         syncMediaComponentsPreferences();
+                        break;
                     }
-                    break;
+
                     case MSG.MSG_AUDIOLANGCHANGED: {
                         syncMediaComponentsPreferences();
+                        break;
                     }
-                    break;
+
+                    case MSG.MSG_WEAK_SIGANL: {
+                         HbbTvManager.getInstance().terminateHbbTvApplicaitonWithoutSignal();
+                         break;
+                    }
+                    case MSG.MSG_START_AV: {
+                        HbbTvManager.getInstance().reloadApplicaition();
+                        break;
+                    }
                     default:
                         break;
                 }
@@ -1846,47 +1857,71 @@ public class AmlTunerDelegate implements TunerDelegate {
         @Override
         public void onSignal(String signal, JSONObject data) {
             Log.i(TAG, "onSignal: " + signal + " : " + data.toString() );
-            if (signal.equals("hbbNotifyChannelChangedBegin")) {
-                if (getPlaystate() != PlayState.PLAYSTATE_CONNECTING) {
-                    setPlaystate(PlayState.PLAYSTATE_CONNECTING);
-                }
-            } else if (signal.equals("hbbNotifyChannelchangedSuccess")) {
+            switch (signal) {
+                case "hbbNotifyChannelChangedBegin":
+                    if (getPlaystate() != PlayState.PLAYSTATE_CONNECTING) {
+                        setPlaystate(PlayState.PLAYSTATE_CONNECTING);
+                    }
+                    break;
+                case "hbbNotifyChannelchangedSuccess":
                     sendNotifyMsg(MSG.MSG_CHANNELCHANGED, 0, 0, null);
                     setPlaystate(PlayState.PLAYSTATE_CONNECTING);
-            } else if (signal.equals("hbbNotifyVideoUnavalible")) {
-                int reason = 0;
-                try {
-                    reason = data.getInt("reason");
-                } catch (JSONException ignore) {
-                }
-                sendNotifyMsg(MSG.MSG_VIDEOUNAVALIABLE, getVideoUnavaliableReason(reason), 0, null);
-                setPlaystate(PlayState.PLAYSTATE_CONNECTING);
-            } else if (signal.equals("hbbNotifyVideoAvalible")) {
-                setPlaystate(PlayState.PLAYSTATE_PLAYING);
-                sendNotifyMsg(MSG.MSG_VIDEOAVALIABLE, 0, 0, null);
-            } else if (signal.equals("hbbNotifyTunerStatechanged")) {
-                int tunerstate = 0;
-                int tunererror = 0;
-                try {
-                    tunerstate = data.getInt("tunerState");
-                    tunererror = data.getInt("reason");
-                } catch (JSONException ignore) {
-                }
-                if (TunerStatus.TUNERSTATUS_LOCK == tunerstate) {
-                    sendNotifyMsg(MSG.MSG_TUNERSTATECHANGED, TunerState.LOCKED, TunerError.NO_ERROR, null);
-                } else if (TunerStatus.TUNERSTATUS_UNLOCK == tunerstate) {
-                    sendNotifyMsg(MSG.MSG_TUNERSTATECHANGED, TunerState.UNLOCKED, TunerError.UNKNOWN_ERROR, null);
-                }
-            }
-            else if (signal.equals("DvbUpdatedChannelData")) {
-                Log.i(TAG, "DvbUpdatedChannelData need update tracklist");
-                sendNotifyMsg(MSG.MSG_TRACKSCHANGED, 0, 0, null);
-            }else if (signal.equals("DvbUpdatedChannel")) {
-                mChannelListUpdate = true;
-            }else if (signal.equals("hbbNotifySubtitleStatusUpdated")) {
-                sendNotifyMsg(MSG.MSG_SUBTITLESTATUSCHANGED, 0, 0, null);
-            }else if (signal.equals("hbbNotifyAudioLangUpdated")) {
-                sendNotifyMsg(MSG.MSG_AUDIOLANGCHANGED, 0, 0, null);
+                    break;
+                case "hbbNotifyVideoUnavalible":
+                    int reason = 0;
+                    try {
+                        reason = data.getInt("reason");
+                    } catch (JSONException ignore) {
+                    }
+                    sendNotifyMsg(MSG.MSG_VIDEOUNAVALIABLE, getVideoUnavaliableReason(reason), 0, null);
+                    setPlaystate(PlayState.PLAYSTATE_CONNECTING);
+                    break;
+                case "hbbNotifyVideoAvalible":
+                    setPlaystate(PlayState.PLAYSTATE_PLAYING);
+                    sendNotifyMsg(MSG.MSG_VIDEOAVALIABLE, 0, 0, null);
+                    break;
+                case "hbbNotifyTunerStatechanged":
+                    int tunerstate = 0;
+                    int tunererror = 0;
+                    try {
+                        tunerstate = data.getInt("tunerState");
+                        tunererror = data.getInt("reason");
+                    } catch (JSONException ignore) {
+                    }
+                    if (TunerStatus.TUNERSTATUS_LOCK == tunerstate) {
+                        sendNotifyMsg(MSG.MSG_TUNERSTATECHANGED, TunerState.LOCKED, TunerError.NO_ERROR, null);
+                    } else if (TunerStatus.TUNERSTATUS_UNLOCK == tunerstate) {
+                        sendNotifyMsg(MSG.MSG_TUNERSTATECHANGED, TunerState.UNLOCKED, TunerError.UNKNOWN_ERROR, null);
+                    }
+                    break;
+                case "DvbUpdatedChannelData":
+                    sendNotifyMsg(MSG.MSG_TRACKSCHANGED, 0, 0, null);
+                    break;
+                case "DvbUpdatedChannel":
+                    mChannelListUpdate = true;
+                    break;
+                case "hbbNotifySubtitleStatusUpdated":
+                    sendNotifyMsg(MSG.MSG_SUBTITLESTATUSCHANGED, 0, 0, null);
+                    break;
+                case "hbbNotifyAudioLangUpdated":
+                    sendNotifyMsg(MSG.MSG_AUDIOLANGCHANGED, 0, 0, null);
+                    break;
+                case "PlayerStatusChanged":
+                    String state = null;
+                     try {
+                           state = data.getString("state");
+                         } catch (JSONException ignore) {
+                         }
+
+                    if (state.equals("badsignal")) {
+                        sendNotifyMsg(MSG.MSG_WEAK_SIGANL, 0, 0, null);
+                    }
+                    if (state.equals("playing")) {
+                        sendNotifyMsg(MSG.MSG_START_AV, 0, 0, null);
+                    }
+                    break;
+                default:
+                    break;
             }
         }
     };
@@ -1923,6 +1958,8 @@ public class AmlTunerDelegate implements TunerDelegate {
         public final static int MSG_CHANNELCHANGED_BEGIN = 10;
         public final static int MSG_SUBTITLESTATUSCHANGED = 11;
         public final static int MSG_AUDIOLANGCHANGED = 12;
+        public final static int MSG_WEAK_SIGANL = 13;
+        public final static int MSG_START_AV = 14;
     }
 
     private class PlayState  {

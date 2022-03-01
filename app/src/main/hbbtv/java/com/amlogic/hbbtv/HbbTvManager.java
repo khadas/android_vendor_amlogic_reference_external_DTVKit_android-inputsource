@@ -21,6 +21,8 @@ import com.vewd.core.sdk.BrowserClient;
 import com.vewd.core.sdk.BroadcastResourceClient;
 import com.vewd.core.sdk.BroadcastResourceReleaseRequest;
 import com.vewd.core.shared.MediaComponentsPreferences;
+import com.vewd.core.sdk.HbbTvApplicationInfo;
+
 
 import com.amlogic.hbbtv.utils.StringUtils;
 import com.amlogic.hbbtv.utils.UserAgentUtils;
@@ -52,10 +54,8 @@ public class HbbTvManager{
     private Context mContext;
     private String mInuputId;
     private Uri mTuneChannelUri = null;
-    //private HbbTvUISetting mHbbTvUISetting;
     private final BroadcastResourceManager mBroadcastResourceManager =
             BroadcastResourceManager.getInstance();
-    //private List<TvInputService.Session> sessionList = new ArrayList<>();
     private static HbbTvManager mInstance;
     private boolean mBroadcastResourceRelease = false;
     private NetworkChangeBroadcast mNetworkChangeBroadcast;
@@ -167,7 +167,6 @@ public class HbbTvManager{
         mAmlHbbTvView.init();
         mAmlHbbTvView.requestFocus();
         mNetworkChangeBroadcast = new NetworkChangeBroadcast();
-        mNetworkChangeBroadcast.setHbbTvView(mAmlHbbTvView);
         regeisterNetWorkBroadcastReceiver();
 
         //set references
@@ -346,15 +345,6 @@ public class HbbTvManager{
         return resourceOwnedByBroadcast;
     }
 
-    public boolean isApplicationRunning() {
-        if (mAmlHbbTvView.isInitialized()) {
-            Log.d(TAG,"isApplicationRunning");
-            return mAmlHbbTvView.isApplicationRunning();
-        } else {
-            return false;
-        }
-    }
-
     private boolean isResourceOwnedByBr() {
         boolean ret = true;
         if (mAmlTunerDelegate != null) {
@@ -383,18 +373,76 @@ public class HbbTvManager{
     public void setHbbTvApplication(boolean status) {
         Log.d(TAG,"the hbbtv feather status  = " + status);
         boolean appStatus = status;
-        if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
-            if (appStatus && !mAmlHbbTvView.isApplicationRunning()) {
-                Log.d(TAG,"start the applicaition");
-                mAmlHbbTvView.terminateApplicationAndLaunchAutostart();
-            }
+        if (status) {
+            reloadApplicaition();
+        } else {
+            terminateHbbTvApplicaiton();
+        }
 
-            if (!appStatus && mAmlHbbTvView.isApplicationRunning()) {
-                Log.d(TAG,"terminate the applicaition");
+    }
+
+    public void reloadApplicaition() {
+        Log.i(TAG,"reloadApplicaition start");
+        if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
+            if (!mAmlHbbTvView.isApplicationRunning()) {
+                 mAmlHbbTvView.terminateApplicationAndLaunchAutostart();
+            }
+        }
+        Log.i(TAG,"reloadApplicaition end ");
+    }
+
+    public void terminateHbbTvApplicaitonWithoutNetwork() {
+        Log.i(TAG,"terminateHbbTvApplicaitonWithoutNetwork start");
+        if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
+            if (mAmlHbbTvView.isApplicationRunning() && checkIsBroadcastOwnResource()) {
+                if (!isDmsccURL() && !mAmlHbbTvView.isBroadcastIndependentApplicationRunning()) {
+                    mAmlHbbTvView.terminateApplication();
+                }
+            }
+        }
+        Log.i(TAG,"terminateHbbTvApplicaitonWithoutNetwork end");
+    }
+
+    public void terminateHbbTvApplicaitonWithoutSignal() {
+            Log.i(TAG,"terminateHbbTvApplicaitonWithoutSignal start");
+            if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
+                if (mAmlHbbTvView.isApplicationRunning() && checkIsBroadcastOwnResource()) {
+                    if (!mAmlHbbTvView.isBroadcastIndependentApplicationRunning()) {
+                         mAmlHbbTvView.terminateApplication();
+                    }
+                }
+            }
+            Log.i(TAG,"terminateHbbTvApplicaitonWithoutSignal end");
+        }
+
+
+
+    public void terminateHbbTvApplicaiton() {
+        Log.i(TAG,"terminateHbbTvApplicaiton start");
+        if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
+            if (mAmlHbbTvView.isApplicationRunning()) {
                 mAmlHbbTvView.terminateApplication();
             }
         }
+        Log.i(TAG,"terminateHbbTvApplicaiton end");
+    }
 
+
+    private boolean isDmsccURL () {
+        Log.i(TAG,"isDmsccURL start");
+        boolean result = false;
+        HbbTvApplicationInfo appInfo = mAmlHbbTvView.getMainApplicationInfo();
+        String url = appInfo.getUrl();
+        Log.d(TAG,"the url = " + url);
+        String str = url.substring(0,3);
+        if (str.equals("dvb")) {
+            result = true;
+        } else {
+            result =false;
+        }
+        Log.d(TAG,"isDmsccURL result = " + result);
+        Log.i(TAG,"isDmsccURL end");
+        return result;
     }
 }
 
