@@ -31,6 +31,7 @@ public class PropSettingManager {
     public static final String ACTON_CONTROL_TIMESHIFT = "action_control_timeshift";
     public static final String VALUE_CONTROL_TIMESHIFT = "value_control_timeshift";
     public static final String VALUE_TIMESHIFT_DURATION = "value_timeshift_duration";
+    public static final String VALUE_TIMESHIFT_START_MODE = "value_timeshift_startmode";
     //ci simulate test define
     public static final String CI_PROFILE_ADD_TEST = "vendor.sys.tv.add.profile";
     public static final String CI_PROFILE_TEST = "vendor.sys.tv.test.profile";

@@ -2857,6 +2857,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private AvailableState timeshiftAvailable = new AvailableState();
         private int timeshiftBufferSizeMins = 60;
         private int timeshiftBufferSizeMBs = 0;
+        private int timeshiftStartMode = 1; // auto or pause
         DtvkitOverlayView mView = null;
         private long mCurrentDtvkitTvInputSessionIndex = 0;
         protected HandlerThread mLivingHandlerThread = null;
@@ -3301,7 +3302,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 boolean ret = true;
                 if (timeshiftRecorderState != RecorderState.STOPPED) {
                     Log.i(TAG, "reset timeshiftState to STOPPED.");
-                    ret = stopTimeshiftRecordingInSession(true);
+                    ret = stopTimeshiftRecordingInSession(timeshiftStartMode == 1);
                     if (ret) {
                         timeshiftRecorderState = RecorderState.STOPPED;
                     }
@@ -4081,6 +4082,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         if (duration != timeshiftBufferSizeMins) {
                             timeshiftBufferSizeMins = duration;
                         }
+                        timeshiftStartMode = data.getInt(
+                            PropSettingManager.VALUE_TIMESHIFT_START_MODE, 1);
+                        Log.d(TAG, "VALUE_TIMESHIFT_START_MODE:"+ timeshiftStartMode);
                         sendMsgTryStartTimeshift(0);
                     } else {
                         sendMsgTryStopTimeshift(0);
