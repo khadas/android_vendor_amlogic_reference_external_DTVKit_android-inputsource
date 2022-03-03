@@ -2784,6 +2784,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
                     switch (state) {
                         case "ok":
+                            mTuned = true;
+                            if (path != mPath)
+                                return;
                             if (!tunedNotified)
                                 notifyTuned(mChannel);
                         break;
