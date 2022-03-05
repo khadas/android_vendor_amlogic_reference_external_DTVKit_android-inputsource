@@ -32,6 +32,10 @@ public class HbbTvUISetting {
                         handleHbbtvFeather(hbbtvFeatherStatus);
                         break;
                     }
+                    case MSG.MSG_HANDLE_HBBTV_CLEAR_COOKIE: {
+                        handleClearHbbTvCookies();
+                        break;
+                    }
                     default:
                         break;
                 }
@@ -58,6 +62,19 @@ public class HbbTvUISetting {
         hbbTvManager.setHbbTvApplication(status);
         Log.i(TAG,"handleHbbtvFeather end");
     }
+
+    private void handleClearHbbTvCookies() {
+       Log.i(TAG,"clearHbbTvCookies start");
+       HbbTvManager hbbTvManager = HbbTvManager.getInstance();
+       AmlHbbTvView amlHbbtvView = hbbTvManager.getHbbTvView();
+       if (amlHbbtvView != null && amlHbbtvView.isInitialized()) {
+           Log.d(TAG,"clear cookies");
+           CookieManager cookieManager = amlHbbtvView.getCookieManager();
+           cookieManager.removeAllCookies(null);
+       }
+       Log.i(TAG,"clearHbbTvCookies end");
+   }
+
 
    /**
     * @ingroup hbbtvuisetting
@@ -241,15 +258,7 @@ public class HbbTvUISetting {
     * @return none
     */
     public void clearHbbTvCookies() {
-        Log.i(TAG,"clearHbbTvCookies start");
-        HbbTvManager hbbTvManager = HbbTvManager.getInstance();
-        AmlHbbTvView amlHbbtvView = hbbTvManager.getHbbTvView();
-        if (amlHbbtvView != null && amlHbbtvView.isInitialized()) {
-            Log.d(TAG,"clear cookies");
-            CookieManager cookieManager = amlHbbtvView.getCookieManager();
-            cookieManager.removeAllCookies(null);
-        }
-        Log.i(TAG,"clearHbbTvCookies end");
+        sendMessage(MSG.MSG_HANDLE_HBBTV_CLEAR_COOKIE, 0, 0);
     }
 
 
@@ -297,6 +306,7 @@ public class HbbTvUISetting {
 
     private class MSG  {
         public final static int MSG_HANDLE_HBBTV_ON_OFF = 1;
+        public final static int MSG_HANDLE_HBBTV_CLEAR_COOKIE = 2;
     }
 
 
