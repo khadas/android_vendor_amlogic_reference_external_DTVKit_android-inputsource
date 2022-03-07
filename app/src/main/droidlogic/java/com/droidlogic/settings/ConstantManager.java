@@ -107,6 +107,8 @@ public class ConstantManager {
     public static final String VALUE_CI_PLUS_COMMAND_IGNORE_INPUT = "ignore_input";
     public static final String VALUE_CI_PLUS_COMMAND_RECEIVE_INPUT = "receive_input";
     public static final String VALUE_CI_PLUS_COMMAND_PVRPLAYBACK_STATUS = "PvrPlaybackStatus";
+    public static final String VALUE_CI_PLUS_COMMAND_TRICK_LIMIT = "trick_limit";
+    public static final String VALUE_CI_PLUS_COMMAND_DO_PVR_LIMITED = "DoPVRLimited";
     public static final String VALUE_CI_PLUS_SEARCH_MODULE = "search_module";
     public static final String VALUE_CI_PLUS_CHANNEL = "host_control_channel";
     public static final String VALUE_CI_PLUS_TUNE_TYPE = "tune_type";
