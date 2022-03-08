@@ -40,47 +40,48 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         Log.i(TAG, "Get channels for epg sync, current: " + syncCurrent);
 
         try {
+            JSONArray services = null;
             JSONArray param = new JSONArray();
             param.put(false);
+            if (!syncCurrent)
+                param.put("all");//signal_type all
+            else
+                param.put("cur");
+            param.put("all");//tv/radio all
             JSONObject serviceNumberObj = DtvkitGlueClient.getInstance().request("Dvb.getNumberOfServices", param);
             int channelNumber = serviceNumberObj.optInt("data", 0);
             Log.i(TAG, "Total " + channelNumber + " channels to sync");
             if (channelNumber <= 0) {
                 return channels;
             }
-            if (syncCurrent) {
-                if (TextUtils.isEmpty(getChannelTypeFilter())) {
-                    setChannelTypeFilter(dvbSourceToChannelTypeString(getCurrentDvbSource()));
-                }
+            if (syncCurrent && TextUtils.isEmpty(getChannelTypeFilter())) {
+                setChannelTypeFilter(dvbSourceToChannelTypeString(getCurrentDvbSource()));
             }
-            JSONArray services = null;
             int index = 0;
             int remainChannels = channelNumber;
             int maxTransChannelsSize = 512;
-            if (!syncCurrent) {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getFullListOfServices", new JSONArray());
+            if ((channelNumber <= maxTransChannelsSize) && syncCurrent) {
+                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServices", new JSONArray());
                 services = obj.getJSONArray("data");
             } else {
-                if (channelNumber <= maxTransChannelsSize) {
-                    JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServices", new JSONArray());
-                    services = obj.getJSONArray("data");
-                } else {
-                    services = new JSONArray();
-                    while (remainChannels > 0) {
-                        JSONArray param1 = new JSONArray();
+                services = new JSONArray();
+                while (remainChannels > 0) {
+                    JSONArray param1 = new JSONArray();
+                    if (syncCurrent == true)
                         param1.put("cur");
-                        param1.put("all");
-                        param1.put(index);
-                        param1.put(maxTransChannelsSize);
-                        JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServicesByIndex", param1);
-                        JSONArray tmpServices = obj.getJSONArray("data");
-                        remainChannels = remainChannels - tmpServices.length();
-                        index = index + tmpServices.length();
-                        for (int i=0;i<tmpServices.length();i++) {
-                            services.put(tmpServices.get(i));
-                        }
-                        Log.i(TAG, "Get " + tmpServices.length() + " channels and cached");
+                    else
+                        param1.put("all");//signal_type current or all
+                    param1.put("all");//tv_radio type
+                    param1.put(index);
+                    param1.put(maxTransChannelsSize);
+                    JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServicesByIndex", param1);
+                    JSONArray tmpServices = obj.getJSONArray("data");
+                    remainChannels = remainChannels - tmpServices.length();
+                    index = index + tmpServices.length();
+                    for (int i=0;i<tmpServices.length();i++) {
+                        services.put(tmpServices.get(i));
                     }
+                    Log.i(TAG, "Get " + tmpServices.length() + " channels and cached");
                 }
             }
 

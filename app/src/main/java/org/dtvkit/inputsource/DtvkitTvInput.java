@@ -213,6 +213,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     protected boolean mSubFlagTtxPage = false;
     /*teletext region id*/
     private int mRegionId = 0;
+    private String mDynamicDbSyncTag = "";
 
     volatile private boolean mDvbNetworkChangeSearchStatus = false;
     private Channel mMainDvbChannel = null;
@@ -520,7 +521,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 sendEmptyMessageToInputThreadHandler(MSG_STOP_MONITOR_SYNCING);
                 DtvkitTvInputSession mainSession = getMainTunerSession();
                 if (mainSession != null) {
-                    mainSession.sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
+                    Bundle bundle = new Bundle();
+                    if ("CiplusUpdateService".equals(mDynamicDbSyncTag)) {
+                        bundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED);
+                        mainSession.sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, bundle);
+                    } else {
+                        mainSession.sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
+                    }
+                    mDynamicDbSyncTag = "";
                 }
             }
         }
@@ -726,11 +734,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private void updateDtvkitDatabase() {
         Log.i(TAG, "update Dtvkit Database start");
-        ComponentName sync = new ComponentName(this, DtvkitEpgSync.class);
         checkAndUpdateLcn();
-        int dvbSource = getCurrentDvbSource();
-        EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
-        EpgSyncJobService.requestImmediateSync(this, mInputId, true, sync);
+        EpgSyncJobService.cancelAllSyncRequests(this);
+        ComponentName sync = new ComponentName(this, DtvkitEpgSync.class);
+        Bundle parameters = new Bundle();
+        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
+        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
+        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, mInputId, false,sync, parameters);
     }
 
     private boolean sendMessageToInputThreadHandler(int what, int arg1, int arg2, Object obj, int delay) {
@@ -4597,14 +4607,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 {
                     //update CiOpSearchRequest search result
                     Log.i(TAG, "CiplusUpdateService");
+                    EpgSyncJobService.cancelAllSyncRequests(outService.get());
                     ComponentName sync = new ComponentName(outService.get(), DtvkitEpgSync.class);
-                    int dvbSource = getCurrentDvbSource();
-                    EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
-                    EpgSyncJobService.requestImmediateSync(outService.get(), mInputId, false, false, sync);
-                    //notify update result after 3s
-                    if (mHandlerThreadHandle != null) {
-                        mHandlerThreadHandle.removeMessages(MSG_CI_UPDATE_PROFILE_OVER);
-                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CI_UPDATE_PROFILE_OVER, MSG_CI_UPDATE_PROFILE_OVER_DELAY);
+                    Bundle parameters = new Bundle();
+                    parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
+                    parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
+                    EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(outService.get(), mInputId, false,sync, parameters);
+                    if (TextUtils.isEmpty(mDynamicDbSyncTag)) {
+                        mDynamicDbSyncTag = signal;
+                        sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);
+                    } else {
+                        //notify update result after 3s
+                        if (mHandlerThreadHandle != null) {
+                            mHandlerThreadHandle.removeMessages(MSG_CI_UPDATE_PROFILE_OVER);
+                            mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CI_UPDATE_PROFILE_OVER, MSG_CI_UPDATE_PROFILE_OVER_DELAY);
+                        }
                     }
                 }
                 else if (signal.equals("CiTuneServiceInfo"))
@@ -5948,7 +5965,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (nextChannel != null && nextChannel.getType().contains(signalType)) {
                         String profileName =
                             TvContractUtils.getStringFromChannelInternalProviderData(nextChannel, Channel.KEY_CHANNEL_PROFILE, null);
-                        boolean isOpchannel = !TextUtils.isEmpty(profileName);
+                        String profileversion =
+                            TvContractUtils.getStringFromChannelInternalProviderData(nextChannel, Channel.KEY_CHANNEL_CI_PROFILE_VERSION, null);
+                        boolean isOpchannel = !TextUtils.isEmpty(profileName) && ("v1".equalsIgnoreCase(profileversion));
                         if (isOpchannel == isOpEnv) {
                             channel = nextChannel;
                             break;
