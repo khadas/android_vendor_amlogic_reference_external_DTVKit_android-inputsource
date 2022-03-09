@@ -2673,10 +2673,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private boolean mBlocked = false;
         private int mSignalStrength = 0;
         private int mSignalQuality = 0;
-        private int m_surface_left = 0;
-        private int m_surface_right = 0;
-        private int m_surface_top = 0;
-        private int m_surface_bottom = 0;
         private boolean mTeleTextMixNormal = true;
         private int dvrSubtitleFlag = 0;
 
@@ -4805,64 +4801,58 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 else if (signal.equals("AppVideoPosition"))
                 {
                    Log.i(TAG, "AppVideoPosition");
-                   SystemControlManager SysContManager = SystemControlManager.getInstance();
-                   int UiSettingMode = SysContManager.GetDisplayMode(SystemControlManager.SourceInput.XXXX.toInt());
-                   int left,top,right,bottom;
-                   left = 0;
-                   top = 0;
-                   right = 1920;
-                   bottom = 1080;
-                   int voff0, hoff0, voff1, hoff1;
-                   voff0 = 0;
-                   hoff0 = 0;
-                   voff1 = 0;
-                   hoff1 = 0;
-                   try {
-                      left = data.getInt("left");
-                      top = data.getInt("top");
-                      right = data.getInt("right");
-                      bottom = data.getInt("bottom");
-                      voff0 = data.getInt("crop-voff0");
-                      hoff0 = data.getInt("crop-hoff0");
-                      voff1 = data.getInt("crop-voff1");
-                      hoff1 = data.getInt("crop-hoff1");
-                   } catch (JSONException e) {
-                      Log.e(TAG, e.getMessage());
-                   }
-                   if (mHandlerThreadHandle != null) {
-                       mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
-                   }
-                   //add for pip setting
-                   if (!mIsPip/*mIsMain*/) {
-                       tvin_cutwin_t pq_overscan = SysContManager.GetOverscanParams(SystemControlManager.Display_Mode.DISPLAY_MODE_169);
-                       String crop = new StringBuilder()
-                           .append(voff0 + pq_overscan.vs).append(" ")
-                           .append(hoff0 + pq_overscan.hs).append(" ")
-                           .append(voff1 + pq_overscan.ve).append(" ")
-                           .append(hoff1 + pq_overscan.he).toString();
+                   if (getIsFixedTunnel()) {
+                       SystemControlManager SysContManager = SystemControlManager.getInstance();
+                       int UiSettingMode = SysContManager.GetDisplayMode(SystemControlManager.SourceInput.DTV.toInt());
+                       int left,top,right,bottom;
+                       left = 0;
+                       top = 0;
+                       right = 1920;
+                       bottom = 1080;
+                       int voff0, hoff0, voff1, hoff1;
+                       voff0 = 0;
+                       hoff0 = 0;
+                       voff1 = 0;
+                       hoff1 = 0;
+                       try {
+                          left = data.getInt("left");
+                          top = data.getInt("top");
+                          right = data.getInt("right");
+                          bottom = data.getInt("bottom");
+                          voff0 = data.getInt("crop-voff0");
+                          hoff0 = data.getInt("crop-hoff0");
+                          voff1 = data.getInt("crop-voff1");
+                          hoff1 = data.getInt("crop-hoff1");
+                       } catch (JSONException e) {
+                          Log.e(TAG, e.getMessage());
+                       }
+                       if (mHandlerThreadHandle != null) {
+                           mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
+                       }
+                       //add for pip setting
+                       if (!mIsPip) {
+                           tvin_cutwin_t pq_overscan = SysContManager.GetOverscanParams(SystemControlManager.Display_Mode.DISPLAY_MODE_169);
+                           String crop = new StringBuilder()
+                               .append(voff0 + pq_overscan.vs).append(" ")
+                               .append(hoff0 + pq_overscan.hs).append(" ")
+                               .append(voff1 + pq_overscan.ve).append(" ")
+                               .append(hoff1 + pq_overscan.he).toString();
 
-                           if (UiSettingMode != 6) {//not afd
-                               Log.i(TAG, "Not AFD mode!");
-                           } else {
-                               if (getIsFixedTunnel()) {
-                                   Log.i(TAG, "playerSetVideoCrop when FixedTunnel ");
-                                   playerSetVideoCrop(INDEX_FOR_MAIN, voff0 + pq_overscan.vs, hoff0 + pq_overscan.hs, voff1 + pq_overscan.ve, hoff1 + pq_overscan.he);
+                               if (UiSettingMode != 6) {//not afd
+                                   Log.i(TAG, "Not AFD mode!");
                                } else {
-                                   Log.i(TAG, "AppVideoPosition crop:("+crop+")");
-                                   SysContManager.writeSysFs("/sys/class/video/crop", crop);
+                                   if (getIsFixedTunnel()) {
+                                       Log.i(TAG, "playerSetVideoCrop when FixedTunnel ");
+                                       playerSetVideoCrop(INDEX_FOR_MAIN, voff0 + pq_overscan.vs, hoff0 + pq_overscan.hs, voff1 + pq_overscan.ve, hoff1 + pq_overscan.he);
+                                   } else {
+                                       Log.i(TAG, "AppVideoPosition crop:("+crop+")");
+                                       SysContManager.writeSysFs("/sys/class/video/crop", crop);
+                                   }
                                }
-                           }
-                       Log.d(TAG, "AppVideoPosition layoutSurface("+left+","+top+","+right+","+bottom+")(LTRB)");
-                       layoutSurface(left,top,right,bottom);
-                       m_surface_left = left;
-                       m_surface_right = right;
-                       m_surface_top = top;
-                       m_surface_bottom = bottom;
-                       //if (mHandlerThreadHandle != null) {
-                       //   mHandlerThreadHandle.removeMessages(MSG_ENABLE_VIDEO);
-                       //   mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_ENABLE_VIDEO, 40);
-                       //}
-                   }
+                               Log.d(TAG, "AppVideoPosition layoutSurface("+left+","+top+","+right+","+bottom+")(LTRB)");
+                               layoutSurface(left,top,right,bottom);
+                       }
+                    }
                 }
                 else if (signal.equals("ServiceRetuned"))
                 {
