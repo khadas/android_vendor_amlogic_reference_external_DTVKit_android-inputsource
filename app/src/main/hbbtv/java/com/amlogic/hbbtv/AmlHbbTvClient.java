@@ -417,7 +417,7 @@ public class AmlHbbTvClient implements HbbTvClient {
         mAmlTunerDelegate.setResourceOwnerByBrFlag(true);
         mAmlTunerDelegate.setFullScreen();
         mAmlHbbTvView.setKeySet(0);
-
+        mAmlTunerDelegate.setSubtitleSwichFlagByHbbtv(false);
         Log.i(TAG,"onApplicationStopped  end");
     }
 
@@ -748,6 +748,7 @@ public class AmlHbbTvClient implements HbbTvClient {
                 + ", orgId=" + orgId + ", appUrl="+ StringUtils.truncateUrlForLogging(appUrl)
                 + ", isBroadcastRelated="+ isBroadcastRelated);
         }
+        mAmlTunerDelegate.setSubtitleSwichFlagByHbbtv(false);
 
         Log.i(TAG,"onVideoBroadcastActivated​  end");
     }

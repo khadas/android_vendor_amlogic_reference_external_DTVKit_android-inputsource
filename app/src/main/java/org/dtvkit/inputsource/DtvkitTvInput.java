@@ -1178,26 +1178,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             nativeOverlayView = new NativeOverlayView(getContext());
             ciOverlayView = new CiMenuView(getContext());
             mSubServerView = new SubtitleServerView(getContext(), mainHandler);
-            if (mHbbTvFeatherStatus) {
-                mHbbTvManager.setSubtitleView(mSubServerView);
-            }
-
             if (enableCC) {
                 mCCSubView     = new CCSubtitleView(getContext());
             }
             mCasOsm = new TextView(getContext());
-            this.addView(mSubServerView);
-            this.addView(nativeOverlayView);
-            if (enableCC) {
-                this.addView(mCCSubView);
-            }
             if (mHbbTvFeatherStatus) {
                 mHbbTvView = mHbbTvManager.getHbbTvView();
                 if (mHbbTvView != null) {
                     this.addView(mHbbTvView);
                 }
             }
-
+            this.addView(mSubServerView);
+            this.addView(nativeOverlayView);
+            if (enableCC) {
+                this.addView(mCCSubView);
+            }
             initRelativeLayout();
             this.addView(mCasOsm);
             mCasOsm.setVisibility(View.GONE);
@@ -1420,6 +1415,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             h = height;
             nativeOverlayView.setSize(width, height);
             mSubServerView.setSize(width, height);
+        }
+
+        public void setSize(int x, int y, int width, int height) {
+            Log.i(TAG, "setSize for hbbtv in");
+            nativeOverlayView.setSize(x, y, width, height);
+            mSubServerView.setSize(x, y, width, height);
+            Log.i(TAG, "setSize for hbbtv out");
         }
 
         public void showCCSubtitle(String json) {
@@ -3130,6 +3132,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public void onSurfaceChanged(int format, int width, int height) {
             Log.i(TAG, "onSurfaceChanged " + format + ", " + width + ", " + height + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             //playerSetRectangle(0, 0, width, height);
+            if (mHbbTvManager != null) {
+                mHbbTvManager.setScreenSize(width, height);
+            }
         }
 
         public View onCreateOverlayView() {
@@ -4952,6 +4957,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     } else {
                         Log.d(TAG, "on signal MhegAppStarted null mTunedChannel");
                     }
+                }
+                else if (signal.equals("hbbNotifyWindowSizeChanged")) {
+                    try {
+                        int x = data.getInt("x");
+                        int y = data.getInt("y");
+                        int width = data.getInt("width");
+                        int height = data.getInt("height");
+                        Log.d(TAG, "hbbNotifyWindowSizeChanged x= " + x + ", y = " + y + ",  width = " + width + ", height = " + height );
+                        if (mView != null) {
+                            mView.setSize(x, y, width, height);
+                        }
+                    } catch (JSONException e) {
+                      Log.e(TAG, e.getMessage());
+                   }
                 }
                 else if (signal.equals("AppVideoPosition"))
                 {

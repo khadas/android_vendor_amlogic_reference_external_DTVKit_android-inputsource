@@ -82,11 +82,10 @@ public class AmlTunerDelegate implements TunerDelegate {
     private boolean mVisiblility = false;
     private final BroadcastResourceManager mBroadcastResourceManager = BroadcastResourceManager.getInstance();
     private AmlHbbTvView mAmlHbbTvView;
-    private View mSubView = null;
-    private boolean mSubViewInTop = false;
     private boolean mOwnResourceByBr = true;
     private HbbtvPreferencesManager mPreferencesManager;
-
+    private int mScreenSize_width = 0;
+    private int mScreensize_heigh = 0;
      /**
     * @ingroup AmlTunerDelegateapi
     * @brief Called by HbbTvManager when the browser is started. construct AmlTunerDelegate.
@@ -109,7 +108,6 @@ public class AmlTunerDelegate implements TunerDelegate {
         mChannelListUpdate = false;
         DtvkitGlueClient.getInstance().setPidFilterListener(blistener);
         mOwnResourceByBr = true;
-        mSubViewInTop = false;
         Log.i(TAG, "new AmlTunerDelegate out");
     }
 
@@ -200,19 +198,54 @@ public class AmlTunerDelegate implements TunerDelegate {
 
     }
 
+    public void setScreenSizeForHbbtv(int width, int height) {
+        Log.i(TAG, "setScreenSizeForHbbtv in");
+        mScreenSize_width = width;
+        mScreensize_heigh = height;
+        Log.d(TAG, "setScreenSizeForHbbtv mScreenSize_width = " + mScreenSize_width + ", mScreensize_heigh = " + mScreensize_heigh);
+        Log.i(TAG, "setScreenSizeForHbbtv out");
+    }
+
     public void setFullScreen() {
         Log.i(TAG, "setFullScreen in");
+        int width = mScreenSize_width;
+        int height = mScreensize_heigh;
+        if (width == 0 || height == 0) {
+            try {
+                JSONArray args_input = new JSONArray();
+                JSONObject screenSize;
+                screenSize = DtvkitGlueClient.getInstance().request("Hbbtv.HBBGetScreenSize", args_input);
+                if (screenSize != null) {
+                    screenSize = (JSONObject)screenSize.get("data");
+                    if (screenSize != null) {
+                        width = screenSize.getInt("width");
+                        height = screenSize.getInt("height");
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "setFullScreen - HBBGetScreenSize= " + e.getMessage());
+                return;
+            }
+        }
+
+        if (width == 0 || height == 0) {
+            Log.i(TAG, "setFullScreen out - width & height invalid");
+            return;
+        }
+        Log.d(TAG, "setFullScreen mScreenSize_width = " + mScreenSize_width + ", mScreensize_heigh = " + mScreensize_heigh);
+        Log.d(TAG, "setFullScreen width = " + width + ", height = " + height);
         try {
             JSONArray args = new JSONArray();
             args.put(INDEX_FOR_MAIN);
             args.put(0);
             args.put(0);
-            args.put(1920);
-            args.put(1080);
+            args.put(width);
+            args.put(height);
             DtvkitGlueClient.getInstance().request("Player.setRectangle", args);
         } catch (Exception e) {
             Log.e(TAG, "setFullScreen = " + e.getMessage());
         }
+        setVideoSizeChanged(0, 0, width, height);
         Log.i(TAG, "setFullScreen out");
     }
 
@@ -453,38 +486,6 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "setTuneChannelUri out ");
     }
 
-    public View getSubtitleView() {
-        Log.i(TAG,"getSubtitleView in");
-        Log.i(TAG,"getSubtitleView out");
-        return mSubView;
-    }
-    public void setSubtitleView(View inputView) {
-        Log.i(TAG,"setSubtitleView in");
-        mSubView = inputView;
-        Log.i(TAG,"setSubtitleView out");
-    }
-
-    private void manageOverlayView(int type, String trackId) {
-        Log.i(TAG,"manageOverlayView in");
-        if ((type == TvTrackInfo.TYPE_SUBTITLE) && (trackId != null)) {
-            if (mSubView != null) {
-                Log.d(TAG, "manageOverlayView put subtitle view on top");
-                mSubView.setZ(100.0f);
-                mAmlHbbTvView.setZ(0.f);
-                mSubViewInTop = true;
-            }
-        } else if ((type == TvTrackInfo.TYPE_SUBTITLE) && (trackId == null)) {
-            Log.d(TAG, "manageOverlayView put hbbtv view on top");
-            if (mSubView != null) {
-                mAmlHbbTvView.setZ(100.0f);
-                mSubView.setZ(0.f);
-                mSubViewInTop = false;
-            }
-        }
-        Log.d(TAG, "manageOverlayView mSubViewInTop = " + mSubViewInTop);
-        Log.i(TAG,"manageOverlayView out");
-    }
-
     /**
     * @ingroup AmlTunerDelegateapi
     * @brief Called by the browser when the running application requests that the given TV track is selected
@@ -598,16 +599,11 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "playerSelectSubtitleTrackById in");
         Log.d(TAG, "playerSelectSubtitleTrackById trackId = " + trackId);
         if (trackId != null) {
-            mSession.onSelectTrack(TvTrackInfo.TYPE_SUBTITLE, trackId);
+            setSubtitleSwichFlagByHbbtv(false);
         } else {
-            try {
-                JSONArray args = new JSONArray();
-                DtvkitGlueClient.getInstance().request("Hbbtv.HBBUnselectSubtitleTrack", args);
-            } catch (Exception e) {
-                Log.e(TAG, "playerSelectSubtitleTrackById = " + e.getMessage());
-                return false;
-            }
+            setSubtitleSwichFlagByHbbtv(true);//means off by HBBTV test
         }
+        mSession.onSelectTrack(TvTrackInfo.TYPE_SUBTITLE, trackId);
         Log.i(TAG, "playerSelectSubtitleTrackById out");
         return true;
     }
@@ -883,7 +879,24 @@ public class AmlTunerDelegate implements TunerDelegate {
         } catch (Exception e) {
             Log.e(TAG, "setVideoWindow = " + e.getMessage());
         }
+        setVideoSizeChanged(x, y, width, height);
         Log.i(TAG, "setVideoWindow out" );
+    }
+
+    private void setVideoSizeChanged (int x, int y, int width, int height) {
+        Log.i(TAG, "setVideoSizeChanged in" );
+        try {
+               JSONArray args = new JSONArray();
+               args.put(x);
+               args.put(y);
+               args.put(width);
+               args.put(height);
+               DtvkitGlueClient.getInstance().request("Hbbtv.HBBSetWindowSizeChanged", args);
+           } catch (Exception e) {
+               Log.e(TAG, "setVideoSizeChanged = " + e.getMessage());
+           }
+           Log.i(TAG, "setVideoSizeChanged out" );
+
     }
 
     /**
@@ -1699,6 +1712,14 @@ public class AmlTunerDelegate implements TunerDelegate {
             mPreferencesManager.updateHbbTvMediaComponentsPreferences();
         }
         Log.d(TAG, " syncMediaComponentsPreferences out");
+    }
+
+    public void setSubtitleSwichFlagByHbbtv(boolean flag) {
+        Log.i(TAG, " syncMediaComponentsPreferences in");
+        if (mPreferencesManager != null) {
+            mPreferencesManager.setSubtitleSwichFlagByHbbtv(flag);
+        }
+        Log.i(TAG, " syncMediaComponentsPreferences out");
     }
 
     private void initHandler() {

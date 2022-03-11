@@ -36,8 +36,8 @@ public class HbbtvPreferencesManager {
     private static final String PREF_DEFAULT_LANGUAGE = "GBR";
     private static final String PREF_DEFAULT_COUNTRY  = "GBR";
     private static final int INDEX_FOR_MAIN = 0;
-
-
+    private boolean mSwitchSubtitleByHbbtv = false;
+    private boolean mSubtitleEnable = true;
     public HbbtvPreferencesManager(AmlHbbTvView amlHbbTvView) {
         Log.d(TAG,"Init PreferencesManager");
         mAmlHbbTvView = amlHbbTvView;
@@ -167,11 +167,27 @@ public class HbbtvPreferencesManager {
         preferredSubtitlesLanguages = getSubtitlesLanguages();
         enableAudioDescriptions = getAudioDescriptionsEnabled();
         enableSubtitles = getSubtitlesEnabled();
+        if (mSwitchSubtitleByHbbtv && mSubtitleEnable && !enableSubtitles) {
+            enableSubtitles = mSubtitleEnable;
+            Log.d(TAG,"updateHbbTvMediaComponentsPreferences enableSubtitles: " + enableSubtitles);
+        }
 
         MediaComponentsPreferences prefs = buildMediaComponentsPreferences(
                 preferredSubtitlesLanguages, preferredAudioLanguages, enableSubtitles,
                 enableNormalAudio, enableAudioDescriptions, timeShiftSynchronized);
         setMediaComponentsPreferences(prefs);
+    }
+
+    public void setSubtitleSwichFlagByHbbtv(boolean switchFlag) {
+        Log.d(TAG,"setSubtitleSwichFlagByHbbtv in");
+        boolean oriflag = mSwitchSubtitleByHbbtv;
+        mSwitchSubtitleByHbbtv = switchFlag;
+        mSubtitleEnable = getSubtitlesEnabled();
+        if (oriflag && !switchFlag) {
+            updateHbbTvMediaComponentsPreferences();
+        }
+        Log.d(TAG,"setSubtitleSwichFlagByHbbtv switchFlag:" + switchFlag + ", mSubtitleEnable:" + mSubtitleEnable);
+        Log.d(TAG,"setSubtitleSwichFlagByHbbtv out");
     }
 
 

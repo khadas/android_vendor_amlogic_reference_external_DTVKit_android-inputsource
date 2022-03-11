@@ -34,9 +34,6 @@ import com.amlogic.hbbtv.utils.BroadcastResourceManager;
 import android.media.tv.TvInputService.Session;
 import android.media.tv.TvInputService;
 
-
-
-
 /**
  * @ingroup hbbtvclientapi
  * @defgroup hbbtvmanagerapi HbbTV-Manager-API
@@ -94,6 +91,12 @@ public class HbbTvManager{
         mSession = session;
     }
 
+    public void setScreenSize(int width, int height) {
+        if (null != mAmlTunerDelegate) {
+            mAmlTunerDelegate.setScreenSizeForHbbtv(width, height);
+        }
+    }
+
    /**
     * @ingroup hbbtvmanagerapi
     * @brief   get the instance of AmlHbbTvView
@@ -103,19 +106,6 @@ public class HbbTvManager{
         Log.i(TAG,"getHbbTvView start");
         Log.i(TAG,"getHbbTvView end");
         return mAmlHbbTvView;
-    }
-
-    /**
-     * @ingroup hbbtvmanagerapi
-     * @brief   set the sutitle view to hbbtv in order to handle which display on top
-     * @return  none
-     */
-    public void setSubtitleView(View view) {
-        Log.i(TAG,"setSubtitleView start");
-        Log.i(TAG,"setSubtitleView end");
-        if (null != mAmlTunerDelegate) {
-            mAmlTunerDelegate.setSubtitleView(view);
-        }
     }
 
    /**
@@ -164,6 +154,7 @@ public class HbbTvManager{
         mAmlHbbTvView.setChromeClient(mAmlChromeClient);
         mAmlHbbTvView.setHbbTvClient(mAmlHbbTvClient);
         mAmlHbbTvView.setUserAgentSuffix(UserAgentUtils.getVendorUserAgentSuffix());
+        mAmlHbbTvView.setZOrderOnTop(true);
         mAmlHbbTvView.init();
         mAmlHbbTvView.requestFocus();
         mNetworkChangeBroadcast = new NetworkChangeBroadcast();
