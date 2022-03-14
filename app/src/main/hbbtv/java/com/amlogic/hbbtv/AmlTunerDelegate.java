@@ -1860,12 +1860,16 @@ public class AmlTunerDelegate implements TunerDelegate {
             switch (signal) {
                 case "hbbNotifyChannelChangedBegin":
                     if (getPlaystate() != PlayState.PLAYSTATE_CONNECTING) {
-                        setPlaystate(PlayState.PLAYSTATE_CONNECTING);
+                        if (checkResourceOwnedIsBr()) {
+                            setPlaystate(PlayState.PLAYSTATE_CONNECTING);
+                        }
                     }
                     break;
                 case "hbbNotifyChannelchangedSuccess":
                     sendNotifyMsg(MSG.MSG_CHANNELCHANGED, 0, 0, null);
-                    setPlaystate(PlayState.PLAYSTATE_CONNECTING);
+                    if (checkResourceOwnedIsBr()) {
+                        setPlaystate(PlayState.PLAYSTATE_CONNECTING);
+                    }
                     break;
                 case "hbbNotifyVideoUnavalible":
                     int reason = 0;
@@ -1874,11 +1878,15 @@ public class AmlTunerDelegate implements TunerDelegate {
                     } catch (JSONException ignore) {
                     }
                     sendNotifyMsg(MSG.MSG_VIDEOUNAVALIABLE, getVideoUnavaliableReason(reason), 0, null);
-                    setPlaystate(PlayState.PLAYSTATE_CONNECTING);
+                    if (checkResourceOwnedIsBr()) {
+                        setPlaystate(PlayState.PLAYSTATE_CONNECTING);
+                    }
                     break;
                 case "hbbNotifyVideoAvalible":
-                    setPlaystate(PlayState.PLAYSTATE_PLAYING);
-                    sendNotifyMsg(MSG.MSG_VIDEOAVALIABLE, 0, 0, null);
+                    if (checkResourceOwnedIsBr()) {
+                        setPlaystate(PlayState.PLAYSTATE_PLAYING);
+                        sendNotifyMsg(MSG.MSG_VIDEOAVALIABLE, 0, 0, null);
+                    }
                     break;
                 case "hbbNotifyTunerStatechanged":
                     int tunerstate = 0;
