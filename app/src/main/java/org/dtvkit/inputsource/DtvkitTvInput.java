@@ -4062,18 +4062,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mAudioADAutoStart = data.getInt(DataMananer.PARA_ENABLE) == 1;
                 Log.d(TAG, "do private cmd: ACTION_DTV_ENABLE_AUDIO_AD: "+ mAudioADAutoStart);
                 setAdAssociate(mAudioADAutoStart);
-                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0, 0);
-                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_MIX_LEVEL, 0, mAudioADMixingLevel);
+                playerSetADMixLevel(INDEX_FOR_MAIN, mAudioADMixingLevel);
                if (mHbbTvFeatherStatus) {
                     mHbbTvManager.setAudioDescriptions();
                 }
             } else if (TextUtils.equals(DataMananer.ACTION_AD_MIXING_LEVEL, action)) {
                 mAudioADMixingLevel = data.getInt(DataMananer.PARA_VALUE1);
                 Log.d(TAG, "do private cmd: ACTION_AD_MIXING_LEVEL: "+ mAudioADMixingLevel);
-                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_MIX_LEVEL, 0, mAudioADMixingLevel);
+                playerSetADMixLevel(INDEX_FOR_MAIN, mAudioADMixingLevel);
             } else if (TextUtils.equals(DataMananer.ACTION_AD_VOLUME_LEVEL, action)) {
                 mAudioADVolume = data.getInt(DataMananer.PARA_VALUE1);
-                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SET_VOLUME, mAudioADVolume, 0);
+                playerSetADVolume(INDEX_FOR_MAIN, mAudioADVolume);
             } else if (TextUtils.equals(PropSettingManager.ACTON_CONTROL_TIMESHIFT, action)) {
                 if (data != null) {
                     boolean status = data.getBoolean(PropSettingManager.VALUE_CONTROL_TIMESHIFT, false);
@@ -5423,8 +5422,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             boolean adOn = playergetAudioDescriptionOn();
             Log.d(TAG, "playerInitAssociateDualSupport mAudioADAutoStart = " + mAudioADAutoStart + ", mAudioADMixingLevel = " + mAudioADMixingLevel + ", mAudioADVolume = " + mAudioADVolume);
             if (mAudioADAutoStart) {
-                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_MIX_LEVEL, 0, mAudioADMixingLevel);
-                mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SET_VOLUME, mAudioADVolume, 0);
+                playerSetADMixLevel(INDEX_FOR_MAIN, mAudioADMixingLevel);
+                playerSetADVolume(INDEX_FOR_MAIN, mAudioADVolume);
             }
             result = true;
             return result;
@@ -5433,7 +5432,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private boolean playerResetAssociateDualSupport() {
             boolean result = false;
             setAdAssociate(false);
-            mAudioSystemCmdManager.handleAdtvAudioEvent(AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_MIX_LEVEL, 0, mAudioADMixingLevel);
+            playerSetADMixLevel(INDEX_FOR_MAIN, mAudioADMixingLevel);
             result = true;
             return result;
         }
@@ -6226,6 +6225,32 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             DtvkitGlueClient.getInstance().request("Player.setVolume", args);
         } catch (Exception e) {
             Log.e(TAG, "playerSetVolume = " + e.getMessage());
+        }
+    }
+
+    private void playerSetADMixLevel (int index, int level) {
+        synchronized (mLock) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                args.put(level);
+                DtvkitGlueClient.getInstance().request("Player.setADMixLevel", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerSetADMixLevel = " + e.getMessage());
+            }
+        }
+    }
+
+    private void playerSetADVolume (int index, int volume) {
+        synchronized (mLock) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                args.put(volume);
+                DtvkitGlueClient.getInstance().request("Player.setADVolume", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerSetADVolume = " + e.getMessage());
+            }
         }
     }
 
