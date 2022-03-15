@@ -444,6 +444,17 @@ public class HbbTvManager{
         Log.i(TAG,"isDmsccURL end");
         return result;
     }
+
+    public boolean isHbbTvApplicationRunning() {
+        Log.i(TAG,"isHbbTvApplicationRunning start");
+        boolean isHbbTvRunning = false;
+        if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
+            isHbbTvRunning =  mAmlHbbTvView.isApplicationRunning();
+            Log.d(TAG,"The HbbTv application status isHbbTvRunning = " + isHbbTvRunning);
+        }
+        Log.i(TAG,"isHbbTvApplicationRunning end");
+        return isHbbTvRunning;
+    }
 }
 
 
