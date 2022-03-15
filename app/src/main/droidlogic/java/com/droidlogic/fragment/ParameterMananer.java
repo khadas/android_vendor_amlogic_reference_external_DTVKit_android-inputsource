@@ -143,6 +143,10 @@ public class ParameterMananer {
     public static final String KEY_SET_DVB_SOURCE = "key_set_dvb_source";
     public static final String KEY_SET_GET_SPOKEN_SUBTITLE_ON = "key_set_get_set_spoken_subtitle_on";
     public static final String KEY_GET_CURRENT_COUNTRY_NAME = "key_get_country_name";
+    public static final String KEY_SET_PIN_CODE_TO_CAM = "key_set_pin_code_to_cam";
+    public static final String KEY_REMOVE_OPERATOR_PROFILE_BYCAMID = "key_remove_operator_profile_byCamid";
+    public static final String KEY_LINK_BARKER_CHANNEL = "key_link_baker_channel";
+    public static final String KEY_LEAVE_BARKER_CHANNEL = "key_leave_baker_channel";
 
     //default value that is save by index
     public static final int KEY_SATALLITE_DEFAULT_VALUE_INDEX = 0;
@@ -2238,7 +2242,6 @@ public class ParameterMananer {
         if (TextUtils.isEmpty(key)) {
             return;
         }
-
         switch (key) {
             case KEY_RESET_DEFAULT_AUDIO_STREAM:
                 resetToDefaultAudioStream();
@@ -2248,6 +2251,18 @@ public class ParameterMananer {
                 break;
             case KEY_SET_DVB_SOURCE:
                 setCurrentDvbSource(dvbSourceToInt(newJsonValues));
+                break;
+            case KEY_SET_PIN_CODE_TO_CAM:
+                setPinCodeToCam(newJsonValues);
+                break;
+            case KEY_REMOVE_OPERATOR_PROFILE_BYCAMID:
+                removeOperatorProfileByCamid(newJsonValues);
+                break;
+            case KEY_LINK_BARKER_CHANNEL:
+                linkBarkerChannel();
+                break;
+            case KEY_LEAVE_BARKER_CHANNEL:
+                leaveBarkerChannel();
                 break;
             default:
                 break;
@@ -2698,11 +2713,35 @@ public class ParameterMananer {
     }
 
     public void setPinCodeToCam(String pinCode) {
-        boolean result = false;
         try {
             JSONArray args = new JSONArray();
             args.put(pinCode);
             DtvkitGlueClient.getInstance().request("Dvb.SetPinCodeToCam", args);
+        } catch (Exception e) {
+        }
+    }
+
+    public void removeOperatorProfileByCamid(String cicamId) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(cicamId);
+            DtvkitGlueClient.getInstance().request("Dvb.RemoveOperatorProfileByCamid", args);
+        } catch (Exception e) {
+        }
+    }
+
+    public void linkBarkerChannel() {
+        try {
+            JSONArray args = new JSONArray();
+            DtvkitGlueClient.getInstance().request("Dvb.LinkBarkerChannel", args);
+        } catch (Exception e) {
+        }
+    }
+
+    public void leaveBarkerChannel() {
+        try {
+            JSONArray args = new JSONArray();
+            DtvkitGlueClient.getInstance().request("Dvb.LeaveBarkerChannel", args);
         } catch (Exception e) {
         }
     }
