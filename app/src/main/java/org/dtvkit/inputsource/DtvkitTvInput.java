@@ -1708,10 +1708,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         .build());
         }
 
+        int inValidNumber = 0;
         for (int i = 0; i < recordings.length(); i++) {
             try {
                 if (Long.valueOf(recordings.getJSONObject(i).getString("length")) == 0) {
                     Log.e(TAG, "skip invalid length," + recordings.getJSONObject(i).getString("uri"));
+                    inValidNumber++;
                     continue;
                 }
                 String title = recordings.getJSONObject(i).getString("service");
@@ -1738,6 +1740,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } catch (JSONException e) {
                 Log.e(TAG, e.getMessage());
             }
+        }
+        if (recordings.length() - inValidNumber == recordingsInDB.size()
+            || recordings.length() == inValidNumber) {
+            Log.w(TAG, "Ignore this update, reason("
+                + " recording size from dtvkit:" + recordings.length()
+                + ", recording size in databases:" + recordingsInDB.size()
+                + ", inValidNumber:" + inValidNumber);
+            return;
         }
 
         int from = 0;
