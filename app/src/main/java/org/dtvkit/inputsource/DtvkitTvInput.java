@@ -5787,7 +5787,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     //diff time may change within 1s, add extra 1s to prevent it from playing previous program when seeking to the beginning of current in timeshift mode
                     long rawMsPosition = (timeMs - (originalStartPosition + PropSettingManager.getStreamTimeDiff()));
                     long floorPosition = rawMsPosition % 1000;
-                    long position =  rawMsPosition / 1000 + (floorPosition > 0 ? 1 : 0) + 1;
+                    long position =  rawMsPosition / 1000 + (floorPosition > 0 ? 1 : 0);
                     playerSeekTo(Math.max(0, position));
                 }
             } else {
