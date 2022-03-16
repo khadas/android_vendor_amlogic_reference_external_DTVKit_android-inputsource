@@ -56,6 +56,7 @@ static jmethodID notifyMixVideoEventCallback;
 
 sp<amlogic::SubtitleServerClient> mSubContext;
 static jboolean g_bSubStatus = false;
+static int subtitle_ca_flag = 0;
 
 #define DTVKIT_SUBTITLE_ADD_OFFSET 4
 #define SUBTITLE_DEMUX_SOURCE 4
@@ -561,6 +562,7 @@ static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int m
     if (demuxId != 0) {
         iotType = (demuxId << 16 | iotType);
     }
+    mSubContext->setSecureLevel(subtitle_ca_flag);
     if (mSubContext->open("", iotType))
     {
         if ((type == SUBTITLE_SUB_TYPE_TTX)) {
@@ -574,6 +576,7 @@ static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int m
             }
         }
     }
+    subtitle_ca_flag = 0;
 
 }
 
@@ -630,7 +633,10 @@ static void subtitleTune(int type, int param1, int param2, int param3)
    ALOGD("SubtitleServiceCtl: subtitleTune(type:%d, params:%d,%d,%d)", type, param1, param2, param3);
    if (mSubContext != nullptr)
    {
-      mSubContext->setPipId(type + 1, param1);
+      if (type == 2)
+         subtitle_ca_flag = param1;
+      else
+         mSubContext->setPipId(type + 1, param1);
    }
 }
 
