@@ -9,12 +9,6 @@ import android.net.Uri;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 
-
-
-import java.util.ArrayList;
-import java.util.List;
-
-
 import com.vewd.core.sdk.HbbTvView;
 import com.vewd.core.sdk.Browser;
 import com.vewd.core.sdk.BrowserClient;
@@ -23,14 +17,11 @@ import com.vewd.core.sdk.BroadcastResourceReleaseRequest;
 import com.vewd.core.shared.MediaComponentsPreferences;
 import com.vewd.core.sdk.HbbTvApplicationInfo;
 
-
 import com.amlogic.hbbtv.utils.StringUtils;
 import com.amlogic.hbbtv.utils.UserAgentUtils;
 import com.amlogic.hbbtv.utils.KeyEventUtils;
 import com.amlogic.hbbtv.utils.BroadcastResourceManager;
 
-//import com.droidlogic.dtvkit.inputsource.DtvkitTvInput;
-//import com.droidlogic.dtvkit.inputsource.DtvkitTvInput.DtvkitTvInputSession;
 import android.media.tv.TvInputService.Session;
 import android.media.tv.TvInputService;
 
@@ -79,22 +70,12 @@ public class HbbTvManager{
         return mInstance;
     }
 
-    public void setInputId(String inputId) {
-        mInuputId = inputId;
-    }
-
-    public void setContext(Context context) {
+    public void setHbbTvManagerParams(TvInputService.Session              session,String inputId,Context context) {
+        Log.d(TAG,"setHbbTvManagerParams start");
         mContext = context;
-    }
-
-    public void setSession(TvInputService.Session      session) {
+        mInuputId = inputId;
         mSession = session;
-    }
-
-    public void setScreenSize(int width, int height) {
-        if (null != mAmlTunerDelegate) {
-            mAmlTunerDelegate.setScreenSizeForHbbtv(width, height);
-        }
+        Log.d(TAG,"setHbbTvManagerParams end");
     }
 
    /**

@@ -120,9 +120,9 @@ public class AmlTunerDelegate implements TunerDelegate {
                 sendNotifyMsg(MSG.MSG_CHANNELCHANGED, 0, 0, null);
                 if (mTunerState == TunerStatus.TUNERSTATUS_LOCK) {
                     sendNotifyMsg(MSG.MSG_TUNERSTATECHANGED, TunerState.LOCKED, TunerError.NO_ERROR, null);
-                    if (mPlayState == PlayState.PLAYSTATE_PLAYING) {
-                        sendNotifyMsg(MSG.MSG_VIDEOAVALIABLE, 0, 0, null);
-                    }
+                }
+                if (mPlayState == PlayState.PLAYSTATE_PLAYING) {
+                    sendNotifyMsg(MSG.MSG_VIDEOAVALIABLE, 1, 0, null);
                 }
             }
         }
@@ -1551,7 +1551,7 @@ public class AmlTunerDelegate implements TunerDelegate {
         }
     }
 
-    private void checkTracksInfoUpdate() {
+    private void checkTracksInfoUpdate(boolean forceUpdate) {
         Log.i(TAG, "checkTracksInfoUpdate in ");
         boolean updateTriggered = true;
         List<TvTrackInfo> tracks = getAllTracksInfo(updateTriggered);
@@ -1570,7 +1570,7 @@ public class AmlTunerDelegate implements TunerDelegate {
                     Log.d(TAG, "checkTrackinfoUpdate sync to mAllTracksInfo");
             }
         }
-        if (bUpdate) {
+        if (bUpdate || forceUpdate) {
             Log.d(TAG, "checkTracksInfoUpdate - notifyTracksChanged");
             notifyTracksChanged();
         }
@@ -1738,7 +1738,7 @@ public class AmlTunerDelegate implements TunerDelegate {
                         break;
                     }
                     case MSG.MSG_TRACKSCHANGED: {
-                        checkTracksInfoUpdate();
+                        checkTracksInfoUpdate(false);
                         break;
                     }
                     case MSG.MSG_TUNERSTATECHANGED: {
@@ -1747,7 +1747,7 @@ public class AmlTunerDelegate implements TunerDelegate {
                     }
                     case MSG.MSG_VIDEOAVALIABLE: {
                         notifyVideoAvailable();
-                        checkTracksInfoUpdate();
+                        checkTracksInfoUpdate(msg.arg1>0 ? true:false);
                         break;
                     }
                     case MSG.MSG_VIDEOUNAVALIABLE: {
@@ -1812,10 +1812,15 @@ public class AmlTunerDelegate implements TunerDelegate {
     }
 
     private int getTunerStatus(){
-        Log.i(TAG, "getTunerStatus need implentment ");
-        return TunerStatus.TUNERSTATUS_LOCK;
-        //STB_DPGetTuneStatus
+        Log.d(TAG, "getTunerStatus mTunerState = " + mTunerState);
+        return mTunerState ;
     }
+
+    private void setTunerStatus(int state){
+        mTunerState = state;
+        Log.d(TAG, "setTunerStatus mTunerState = " + mTunerState);
+    }
+
 
     private int getPlaystate(){
         Log.i(TAG, "getPlaystate need mPlayState = " + mPlayState);
@@ -1918,8 +1923,10 @@ public class AmlTunerDelegate implements TunerDelegate {
                     } catch (JSONException ignore) {
                     }
                     if (TunerStatus.TUNERSTATUS_LOCK == tunerstate) {
+                        setTunerStatus(TunerStatus.TUNERSTATUS_LOCK);
                         sendNotifyMsg(MSG.MSG_TUNERSTATECHANGED, TunerState.LOCKED, TunerError.NO_ERROR, null);
                     } else if (TunerStatus.TUNERSTATUS_UNLOCK == tunerstate) {
+                        setTunerStatus(TunerStatus.TUNERSTATUS_UNLOCK);
                         sendNotifyMsg(MSG.MSG_TUNERSTATECHANGED, TunerState.UNLOCKED, TunerError.UNKNOWN_ERROR, null);
                     }
                     break;

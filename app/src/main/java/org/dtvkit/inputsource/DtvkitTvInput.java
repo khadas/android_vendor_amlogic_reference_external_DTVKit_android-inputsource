@@ -72,6 +72,7 @@ import android.support.annotation.RequiresApi;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.util.LongSparseArray;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.Surface;
 import android.view.View;
@@ -228,6 +229,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     //hbbtv
     private static HbbTvManager mHbbTvManager = null;
     private boolean mHbbTvFeatherStatus  = false;
+    private DisplayMetrics mDisplayMetrics = new DisplayMetrics();
 
     private static enum PlayerState {
         STOPPED, PLAYING
@@ -610,6 +612,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         sendEmptyMessageToInputThreadHandler(MSG_START_CA_SETTINGS_SERVICE);
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY);
+
+        WindowManager windowManager = (WindowManager)getSystemService(Context.WINDOW_SERVICE);
+        windowManager.getDefaultDisplay().getMetrics(mDisplayMetrics);
     }
 
     //input work handler define
@@ -1068,17 +1073,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         initDtvkitTvInput();
         DtvkitTvInputSession session = new DtvkitTvInputSession(new WeakReference<>(this));
         addTunerSession(session);
-        mHbbTvFeatherStatus  = getFeatureSupportHbbTV();
-        if (mHbbTvFeatherStatus) {
-            mHbbTvManager = HbbTvManager.getInstance();
-            //mHbbTvManager.releaseHbbTvResource();
-            mHbbTvManager.setSession(session);
-            mHbbTvManager.setInputId(inputId);
-            mHbbTvManager.setContext(this);
-            mHbbTvManager.initHbbTvResource();
-            mHbbTvManager.initBrowser();
-        }
-        //mSystemControlManager.SetDtvKitSourceEnable(1);
         return session;
     }
 
@@ -1156,7 +1150,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private TextView mCasOsm;
         private int w;
         private int h;
-        private View mHbbTvView;
+        private FrameLayout mHbbTvFrameLayout = null;
 
         private boolean mhegTookKey = false;
         private KeyEvent lastMhegKey = null;
@@ -1183,12 +1177,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mCCSubView     = new CCSubtitleView(getContext());
             }
             mCasOsm = new TextView(getContext());
-            if (mHbbTvFeatherStatus) {
-                mHbbTvView = mHbbTvManager.getHbbTvView();
-                if (mHbbTvView != null) {
-                    this.addView(mHbbTvView);
-                }
-            }
+            mHbbTvFrameLayout = new FrameLayout(getContext());
+            addView(mHbbTvFrameLayout);
             this.addView(mSubServerView);
             this.addView(nativeOverlayView);
             if (enableCC) {
@@ -1230,12 +1220,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 removeView(mCasOsm);
                 mCasOsm = null;
             }
-            if (mHbbTvFeatherStatus) {
-                removeView(mHbbTvView);
-                mHbbTvView = null;
-
-            }
-
+            removeView(mHbbTvFrameLayout);
         }
 
         public void hideOverLay() {
@@ -1384,6 +1369,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
+        public void addHbbTvView(View view) {
+            mHbbTvFrameLayout.addView(view);
+        }
+
         public void showTuningImage(Drawable drawable) {
             if (mTuningImage != null && mRelativeLayout != null) {
                 Log.d(TAG, "showTuningImage");
@@ -1522,7 +1511,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 clearCasView();
                 result = true;
             }
-            else if (mHbbTvFeatherStatus && mHbbTvManager.handleKeyDown(keyCode,event)) {
+            else if (mHbbTvFeatherStatus && mHbbTvManager != null && mHbbTvManager.handleKeyDown(keyCode,event)) {
                 result = true;
                 mhegTookKey = false;
                 Log.d(TAG,"hbbtv manager the handle key down result = " + result);
@@ -1539,7 +1528,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             if (ciOverlayView.handleKeyUp(keyCode, event) || mhegTookKey) {
                 result = true;
-            } else if (mHbbTvFeatherStatus && mHbbTvManager.handleKeyUp(keyCode,event)) {
+            } else if (mHbbTvFeatherStatus && mHbbTvManager != null && mHbbTvManager.handleKeyUp(keyCode,event)) {
                 result = true;
                 Log.d(TAG,"hbbtv manager the handle key up result = " + result);
             } else {
@@ -2947,9 +2936,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public void onSurfaceChanged(int format, int width, int height) {
             Log.i(TAG, "onSurfaceChanged " + format + ", " + width + ", " + height + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             //playerSetRectangle(0, 0, width, height);
-            if (mHbbTvManager != null) {
-                mHbbTvManager.setScreenSize(width, height);
-            }
         }
 
         public View onCreateOverlayView() {
@@ -3025,6 +3011,31 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return true;
         }
 
+        private void createHbbTvManager() {
+            Log.i(TAG,"createHbbTvManager start");
+            mHbbTvFeatherStatus = getFeatureSupportHbbTV();
+            if (mHbbTvFeatherStatus && !mTuned) {
+                Log.d(TAG,"createHbbTvManager mDisplayMetrics.widthPixels = " + mDisplayMetrics.widthPixels
+                        + " mDisplayMetrics.heightPixels = " + mDisplayMetrics.heightPixels);
+                Log.d(TAG,"createHbbTvManager mWinWidth = " + mWinWidth + " mWinHeight = " + mWinHeight);
+                if (mDisplayMetrics.widthPixels == mWinWidth
+                        && mDisplayMetrics.heightPixels == mWinHeight) {
+                    mHbbTvManager = HbbTvManager.getInstance();
+                    mHbbTvManager.setHbbTvManagerParams(this,mInputId,outService.get().getApplicationContext());
+                    runOnMainThread(() -> {
+                        mHbbTvManager.initHbbTvResource();
+                        mHbbTvManager.initBrowser();
+                        if (mView != null) {
+                            mView.addHbbTvView(mHbbTvManager.getHbbTvView());
+                        }
+                   });
+                }
+            } else {
+                Log.d(TAG,"createHbbTvManager  the full screen mWinWidth = " + mWinWidth + " mWinHeight" + mWinHeight);
+            }
+           Log.i(TAG,"createHbbTvManager end");
+        }
+
         protected boolean onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
             Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + ", index = " + mCurrentDtvkitTvInputSessionIndex + ", mIsPip = " + mIsPip);
 
@@ -3046,9 +3057,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mPreviousTunedChannel = mTunedChannel;
             Channel targetChannel = getChannel(channelUri);
             mTunedChannel = (targetChannel != null) ? targetChannel : firtDbValidChannel;
-            if (mHbbTvFeatherStatus) {
-                mHbbTvManager.setTuneChannelUri(channelUri);
-            }
             if (mTunedChannel == null) {
                 Log.e(TAG, "onTuneByHandlerThreadHandle no channel tune to:" + channelUri);
                 return false;
@@ -3102,7 +3110,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "onTuneByHandlerThreadHandle tryAcquire Exception = " + e.getMessage());
                 return false;
             }
-
+            createHbbTvManager();
+            runOnMainThread(() -> {
+               if (mHbbTvFeatherStatus && mHbbTvManager != null) {
+                   mHbbTvManager.setTuneChannelUri(channelUri);
+               }
+           });
             mTuned = true;
             boolean supportFullPipFccArchitecture = getFeatureSupportFullPipFccArchitecture();
             if (!mIsPip) {
@@ -3263,7 +3276,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else {
                 DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
                 mTunedChannel = null;
-                if (mHbbTvFeatherStatus) {
+                if (mHbbTvFeatherStatus && mHbbTvManager != null) {
                     mHbbTvManager.setTuneChannelUri(null);
                 }
 
@@ -3291,8 +3304,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             //creat ciMenuView,so we need destory and
             //unregist handle.
             releaseSignalHandler();
-            if (mHbbTvFeatherStatus) {
-                 mHbbTvManager.releaseHbbTvResource();
+            if (mHbbTvFeatherStatus && mHbbTvManager != null) {
+                Log.d(TAG,"release the hbbtv resource");
+                mHbbTvManager.releaseHbbTvResource();
+                mHbbTvManager = null;
             }
             //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
             //all case use message to release related resource as semaphare has been applied
@@ -3475,7 +3490,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.i(TAG, "onSelectTrack " + type + ", " + trackId + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             boolean result = false;
             boolean resourceOwnedByBr = true;
-            if (mHbbTvFeatherStatus) {
+            if (mHbbTvFeatherStatus && mHbbTvManager != null) {
                 resourceOwnedByBr = mHbbTvManager.checkIsBroadcastOwnResource();
             }
             if (mHandlerThreadHandle != null && resourceOwnedByBr) {
@@ -3883,7 +3898,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "do private cmd: ACTION_DTV_ENABLE_AUDIO_AD: "+ mAudioADAutoStart);
                 setAdAssociate(mAudioADAutoStart);
                 playerSetADMixLevel(INDEX_FOR_MAIN, mAudioADMixingLevel);
-               if (mHbbTvFeatherStatus) {
+               if (mHbbTvFeatherStatus && mHbbTvManager != null) {
                     mHbbTvManager.setAudioDescriptions();
                 }
             } else if (TextUtils.equals(DataMananer.ACTION_AD_MIXING_LEVEL, action)) {
