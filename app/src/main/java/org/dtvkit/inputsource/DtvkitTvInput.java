@@ -3085,6 +3085,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 playerSetServiceMute(true, Boolean.compare(mIsPip, false));
                 onFinish(false, false);
                 Log.e(TAG, "error:no channel.");
+                if (mMainHandle != null) {
+                    mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                    Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                    msg.arg1 = 1;
+                    mMainHandle.sendMessageDelayed(msg, 100);
+                }
                 return;
             }
 

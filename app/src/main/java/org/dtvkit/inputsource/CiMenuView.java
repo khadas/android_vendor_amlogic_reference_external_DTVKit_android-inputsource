@@ -3,6 +3,7 @@ package com.droidlogic.dtvkit.inputsource;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
 import android.text.InputFilter;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
@@ -90,6 +91,42 @@ public class CiMenuView extends LinearLayout {
                                     menuCloseHandler("Ci Module removed", EXIT_TO_QUIT);
                                     setMenuVisible();
                                     break;
+                                case ConstantManager.VALUE_CI_MENU_MMI_SCREEN_REQUEST:
+                                    //am broadcast -a ci_menu_info --es command "ci_menu_mmi_screen_request"
+                                    Log.i(TAG, "TEST_CASE Ci Menu: command = " + command);
+                                    clearPreviousMenu();
+                                    signalTriggered = true;
+                                    JSONObject jsonObject = new JSONObject();
+                                    jsonObject.put("bottomLine","Press OK or Exit to quit");
+                                    jsonObject.put("list_num",3);
+                                    jsonObject.put("subTitle", "Generic Status Reporting");
+                                    jsonObject.put("title", "Application Master");
+                                    JSONArray itemList = new JSONArray();
+                                    itemList.put("Authentication success");
+                                    itemList.put("SAC establishment success");
+                                    itemList.put("SAC establishment success");
+                                    jsonObject.put("itemList",itemList);
+                                    Log.i(TAG,"jsonObject : " + jsonObject.toString());
+                                    new CiMmiRequestMenu("CIPLUS_MMI_SCREEN_REQUEST", jsonObject);
+                                    break;
+                                case ConstantManager.VALUE_CI_MENU_MMI_ENQ_REQUEST:
+                                    //am broadcast -a ci_menu_info --es command "ci_menu_mmi_enq_request"
+                                    Log.i(TAG, "TEST_CASE Ci Menu: command = " + command);
+                                    clearPreviousMenu();
+                                    signalTriggered = true;
+                                    JSONObject object = new JSONObject();
+                                    object.put("text", "Enter CA PIN code");
+                                    object.put("textLength",4);
+                                    object.put("isBlind",true);
+                                    Log.i(TAG,"jsonObject : " + object.toString());
+                                    new CiMmiRequestMenu("CIPLUS_MMI_ENQ_REQUEST", object);
+                                    break;
+                                case ConstantManager.VALUE_CIPLUS_MMI_CLOSE:
+                                    //am broadcast -a ci_menu_info --es command "ci_menu_mmi_close"
+                                    if (isMenuVisible) {
+                                        exitCiMenu();
+                                    }
+                                    break;
                                 default:
                                     break;
                             }
@@ -147,6 +184,22 @@ public class CiMenuView extends LinearLayout {
                 menuCloseHandler("Ci Module removed", EXIT_TO_QUIT);
                 setMenuVisible();
             }
+            else if (signal.equals("CIPLUS_MMI_SCREEN_REQUEST")) {
+                clearPreviousMenu();
+                Log.i(TAG, "Ci Menu: OnSignal " + signal);
+                signalTriggered = true;
+                new CiMmiRequestMenu(signal, data);
+            }
+            else if (signal.equals("CIPLUS_MMI_ENQ_REQUEST")) {
+                Log.i(TAG, "Ci Menu: OnSignal " + signal);
+                clearPreviousMenu();
+                signalTriggered = true;
+                new CiMmiRequestMenu(signal, data);
+            } else if (signal.equals("CIPLUS_MMI_CLOSE")) {
+                if (isMenuVisible) {
+                    exitCiMenu();
+                }
+            }
         }
     };
 
@@ -174,6 +227,174 @@ public class CiMenuView extends LinearLayout {
 
         public int getItemNum() {
             return itemNum;
+        }
+    }
+
+    private class CiMmiRequestMenu {
+        public CiMmiRequestMenu(String CiMenuType, JSONObject data) {
+            setMenuVisible();
+            if ("CIPLUS_MMI_SCREEN_REQUEST".equals(CiMenuType)) {
+                initScreenRequestView(data);
+            } else if ("CIPLUS_MMI_ENQ_REQUEST".equals(CiMenuType)) {
+                initEnqRequestView(data);
+            }
+        }
+        private void initScreenRequestView(JSONObject object) {
+            JSONArray data = null;
+            String bottomLine = "";
+            int listNum = 0;
+            String subTitle = "";
+            String title = "";
+            try {
+                bottomLine = object.getString("bottomLine");
+                listNum = object.getInt("list_num");
+                subTitle = object.getString("subTitle");
+                title = object.getString("title");
+                data = object.optJSONArray("itemList");
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+            } finally {
+                if (data == null) {
+                    data = new JSONArray();
+                }
+            }
+            if (!TextUtils.isEmpty(title)) {
+                setMenuTitleText(title);
+            }
+            if (!TextUtils.isEmpty(bottomLine)) {
+                setMenuFooterText(bottomLine);
+            }
+            ArrayList<MenuItem> menuItems = new ArrayList<MenuItem>();
+            for (int i = 0 ; i < data.length() ; i ++) {
+                try {
+                    String itemText;
+                    itemText = (String) data.get(i);
+                    Log.i(TAG,"itemText : " + itemText);
+                    menuItems.add(new MenuItem(i + 1, itemText));
+                } catch (Exception e) {
+                    Log.e(TAG, e.getMessage());
+                }
+            }
+
+            for (int i = 0; i < menuItems.size(); i++) {
+                setUpAndPrintMenuItem(menuItems.get(i).getItemNum(), menuItems.get(i).getItemText());
+            }
+
+            /* Set focus on the first menu item */
+            setMenuFocus(1, true);
+        }
+
+        private void initEnqRequestView(JSONObject object) {
+            String title = "";
+            int textLength = 0;
+            boolean isBlind = false;
+            try{
+                title = object.getString("text") ;
+                textLength = object.getInt("textLength");
+                isBlind = object.getBoolean("isBlind");
+            } catch (Exception e) {
+                Log.i(TAG, e.getMessage());
+            }
+            setMenuTitleText("");
+            setMenuFooterText(" ");
+            createEnquiryMenu(title, textLength, isBlind);
+        }
+
+        private void setUpAndPrintMenuItem(final int buttonNum, final String itemText) {
+            final LayoutInflater inflater = LayoutInflater.from(mContext);
+            final Button button = (Button)inflater.inflate(R.layout.mmibutton, null);
+            final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    button.setLayoutParams(new LinearLayout.LayoutParams(findViewById(R.id.textViewMenuTitle).getWidth(), 40));
+                    button.setText(itemText);
+                    button.setId(buttonNum);
+
+                    button.setFocusable(true);
+                    button.setFocusableInTouchMode(true);
+
+                    linearLayout.addView(button);
+
+                    button.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            selectMenuOption(button.getId());
+                            Log.i(TAG, "Clicking button " + Integer.toString(button.getId()));
+                        }
+                    });
+
+                    button.setOnKeyListener(new View.OnKeyListener() {
+                        @Override
+                        public boolean onKey(View v, int keyCode, KeyEvent event) {
+                            /* Return to previous level */
+                            if (keyCode == KeyEvent.KEYCODE_CLEAR) {
+                                selectMenuOption(RETURN_BUTTON_NUM);
+                            }
+                            return false;
+                        }
+                    });
+                }
+            });
+        }
+
+        private void selectMenuOption(final int optionId) {
+            JSONArray args = new JSONArray();
+            args.put(optionId);
+
+            try {
+                JSONObject obj = DtvkitGlueClient.getInstance().request("CIPlus.setMenuAnswer", args);
+            } catch (Exception ignore) {
+                Log.e(TAG, ignore.getMessage());
+            }
+        }
+
+        private void createEnquiryMenu(final String text, final int maxLength, final boolean hide) {
+            final LayoutInflater inflater = LayoutInflater.from(mContext);
+
+            final LinearLayout parentLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+            final LinearLayout enquiryLayout = (LinearLayout)inflater.inflate(R.layout.enquiryform, null);
+
+            final TextView enquiryTextView = (TextView)(enquiryLayout.findViewById(R.id.textViewEnquiryName));
+            final EditText enquiryEditText = (EditText)(enquiryLayout.findViewById(R.id.editTextEnquiry));
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    enquiryLayout.setId(0);
+                    enquiryTextView.setText(text);
+                    enquiryEditText.requestFocus();
+
+                    enquiryEditText.setFilters(new InputFilter[] {
+                            new InputFilter.LengthFilter(maxLength)
+                    });
+
+                    if (hide) {
+                        enquiryEditText.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                    }
+
+                    parentLayout.addView(enquiryLayout);
+
+                    enquiryEditText.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            sendEnquiryResponse(enquiryEditText.getText().toString() );
+                        }
+                    });
+                }
+            });
+        }
+
+        private void sendEnquiryResponse(final String response) {
+            JSONArray args = new JSONArray();
+            args.put(response);
+            args.put("data");
+            try {
+                JSONObject obj = DtvkitGlueClient.getInstance().request("CIPlus.setEnqAnswer", args);
+            } catch (Exception ignore) {
+                Log.e(TAG, ignore.getMessage());
+            }
         }
     }
 
@@ -607,7 +828,8 @@ public class CiMenuView extends LinearLayout {
     private boolean enterCiMenu() {
         boolean result = false;
         try {
-            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.enterCiMenu", new JSONArray());
+//            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.enterCiMenu", new JSONArray());
+            JSONObject obj = DtvkitGlueClient.getInstance().request("CIPlus.enterMMI", new JSONArray());
             result =  obj.getBoolean("data");
 
         } catch (Exception ignore) {
@@ -637,7 +859,8 @@ public class CiMenuView extends LinearLayout {
 
     private void exitCiMenu() {
         try {
-            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.exitCiMenu", new JSONArray());
+            //JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.exitCiMenu", new JSONArray());
+            JSONObject obj = DtvkitGlueClient.getInstance().request("CIPlus.closeMMI", new JSONArray());
         } catch (Exception ignore) {
             Log.e(TAG, ignore.getMessage());
         }
