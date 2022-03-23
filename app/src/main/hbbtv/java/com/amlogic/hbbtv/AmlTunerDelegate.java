@@ -86,6 +86,7 @@ public class AmlTunerDelegate implements TunerDelegate {
     private HbbtvPreferencesManager mPreferencesManager;
     private int mScreenSize_width = 0;
     private int mScreensize_heigh = 0;
+    private boolean mWeakSignal = false;
      /**
     * @ingroup AmlTunerDelegateapi
     * @brief Called by HbbTvManager when the browser is started. construct AmlTunerDelegate.
@@ -1951,9 +1952,11 @@ public class AmlTunerDelegate implements TunerDelegate {
 
                     if (state.equals("badsignal")) {
                         sendNotifyMsg(MSG.MSG_WEAK_SIGANL, 0, 0, null);
+                        mWeakSignal = true;
                     }
-                    if (state.equals("playing")) {
+                    if (state.equals("playing") && mWeakSignal) {
                         sendNotifyMsg(MSG.MSG_START_AV, 0, 0, null);
+                        mWeakSignal = false;
                     }
                     break;
                 default:

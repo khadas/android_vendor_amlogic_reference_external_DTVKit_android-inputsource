@@ -31,12 +31,12 @@ public class AmlHbbTvClient implements HbbTvClient {
     private static final String TAG = "AmlHbbTvClient";
     private static final boolean DEBUG = true;
     private AmlHbbTvView mAmlHbbTvView;
-    private boolean isApplicationStarted = false;
     private String mUrl = null;
     private HbbTvApplication[] mApplications;
     private static final int INDEX_FOR_MAIN = 0;
     private int mCouneter = 0;
     private AmlTunerDelegate mAmlTunerDelegate;
+    private int mApplicationStatus = ApplicaitonStatus.APP_INIT;
 
     /**
      * @ingroup amlhbbtvclientapi
@@ -99,6 +99,9 @@ public class AmlHbbTvClient implements HbbTvClient {
 
     }
 
+    public int getApplicationStatus() {
+        return mApplicationStatus;
+    }
 
     /**
      * @ingroup amlhbbtvclientapi
@@ -214,6 +217,7 @@ public class AmlHbbTvClient implements HbbTvClient {
         }
 
         mApplications = hbbTvApplications;
+        mApplicationStatus = ApplicaitonStatus.APP_INIT;
 
         Log.i(TAG,"onAitUpdated​  end");
     }
@@ -312,6 +316,7 @@ public class AmlHbbTvClient implements HbbTvClient {
                 + ", orgId="+ orgId + ", appUrl=" + StringUtils.truncateUrlForLogging(appUrl)
                 + ", isBroadcastRelated="+ isBroadcastRelated);
         }
+         mApplicationStatus = ApplicaitonStatus.APP_STOPPED;
 
         Log.i(TAG,"onApplicationNotStarted​  end");
     }
@@ -365,8 +370,7 @@ public class AmlHbbTvClient implements HbbTvClient {
                 + ", isTrusted=" + isTrusted + ", isActive=" + isActive);
         }
 
-        isApplicationStarted = true;
-        mAmlHbbTvView.setApplicationStartedStatus(isApplicationStarted);
+        mApplicationStatus = ApplicaitonStatus.APP_STARTED;
 
         Log.i(TAG,"onApplicationStarted  end");
     }
@@ -418,6 +422,7 @@ public class AmlHbbTvClient implements HbbTvClient {
         mAmlTunerDelegate.setFullScreen();
         mAmlHbbTvView.setKeySet(0);
         mAmlTunerDelegate.setSubtitleSwichFlagByHbbtv(false);
+        mApplicationStatus = ApplicaitonStatus.APP_STOPPED;
         Log.i(TAG,"onApplicationStopped  end");
     }
 
@@ -777,6 +782,12 @@ public class AmlHbbTvClient implements HbbTvClient {
 
     public HbbTvApplication[] getApplications() {
         return mApplications;
+    }
+
+    public class ApplicaitonStatus {
+        public final static int APP_INIT= 0;
+        public final static int APP_STARTED = 1;
+        public final static int APP_STOPPED = 2;
     }
 
 

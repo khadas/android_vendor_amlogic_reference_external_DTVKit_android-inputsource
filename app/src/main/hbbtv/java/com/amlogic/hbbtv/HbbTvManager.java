@@ -356,7 +356,8 @@ public class HbbTvManager{
     public void reloadApplicaition() {
         Log.i(TAG,"reloadApplicaition start");
         if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
-            if (!mAmlHbbTvView.isApplicationRunning()) {
+            if (!mAmlHbbTvView.isApplicationRunning()
+                    && mAmlHbbTvClient.getApplicationStatus() == AmlHbbTvClient.ApplicaitonStatus.APP_STOPPED) {
                  mAmlHbbTvView.terminateApplicationAndLaunchAutostart();
             }
         }

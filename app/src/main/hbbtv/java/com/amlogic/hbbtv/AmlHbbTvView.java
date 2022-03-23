@@ -28,7 +28,6 @@ import java.util.Arrays;
 public class AmlHbbTvView extends HbbTvView {
     private static final String TAG = "AmlHbbTvView";
     private static final int KEY_ACTION= KeyEvent.ACTION_DOWN;
-    private boolean mIsApplicationStarted = false;
     private static final boolean DEBUG = true;
     private int mkeySet = 0;
     private Context mContext = null;
@@ -44,22 +43,6 @@ public class AmlHbbTvView extends HbbTvView {
         mContext = context;
         Log.i(TAG, "AmlHbbTvView instance create start");
         Log.i(TAG, "AmlHbbTvView instance create end");
-    }
-
-
-    /**
-     * @ingroup amlhbbtvviewapi
-     * @brief  set the happlication started status
-     * @param isApplicationStarted  The flag indicates whether the application started
-     */
-    public void setApplicationStartedStatus(boolean isApplicationStarted) {
-        Log.i(TAG, "setApplicationStartedStatus start");
-        if (DEBUG) {
-            Log.d(TAG,"The isApplicationStarted = " + isApplicationStarted);
-        }
-
-        mIsApplicationStarted = isApplicationStarted;
-        Log.i(TAG, "setApplicationStartedStatus end");
     }
 
      /**
@@ -284,10 +267,7 @@ public class AmlHbbTvView extends HbbTvView {
         }
         KeyEvent event  = KeyEventUtils.remapKeyEvent(keyEvent);
         int keyCode = event.getKeyCode();
-        if (mIsApplicationStarted && shouldConsumeKey(keyCode)) {
-            if (DEBUG) {
-                Log.d(TAG,"dispatchKeyEvent: application has been started mIsApplicationStarted = " + mIsApplicationStarted);
-            }
+        if (isApplicationRunning() && shouldConsumeKey(keyCode)) {
             if (KeyEventUtils.isExitKey(event) && (event.getAction() == KeyEvent.ACTION_UP)) {
                 terminateApplicationAndLaunchAutostart();
                 Log.i(TAG, "dispatchKeyEvent end");
@@ -296,11 +276,9 @@ public class AmlHbbTvView extends HbbTvView {
                 Log.i(TAG, "dispatchKeyEvent to super");
                 return super.dispatchKeyEvent(event);
             }
-
         } else {
             if (DEBUG) {
-                Log.d(TAG,"dispatchKeyEvent : the application has been not stared," +
-                    "mIsApplicationStarted = " + mIsApplicationStarted +",or the hbbtv view don't handle this key");
+                Log.d(TAG,"dispatchKeyEvent : the application has been not stared");
             }
             if (keyCode == KeyEvent.KEYCODE_MEDIA_RECORD) {
                 return isConsumeRecordKey();
