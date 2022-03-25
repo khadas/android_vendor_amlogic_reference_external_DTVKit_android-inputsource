@@ -86,6 +86,7 @@ public class AmlTunerDelegate implements TunerDelegate {
     private HbbtvPreferencesManager mPreferencesManager;
     private int mScreenSize_width = 0;
     private int mScreensize_heigh = 0;
+    private int mOriMheg5Cfg = 1;
     private boolean mWeakSignal = false;
      /**
     * @ingroup AmlTunerDelegateapi
@@ -101,6 +102,12 @@ public class AmlTunerDelegate implements TunerDelegate {
         mSession = session;
         mInputId = inputId;
         mAmlHbbTvView = amlHbbTvView;
+        initTunedelegate();
+        Log.i(TAG, "new AmlTunerDelegate out");
+    }
+
+    private void initTunedelegate() {
+        Log.i(TAG, "initTunedelegate in");
         mIsFirstEnter = true;
         initHandler();
         mPlayState = PlayState.PLAYSTATE_INIT;
@@ -109,7 +116,41 @@ public class AmlTunerDelegate implements TunerDelegate {
         mChannelListUpdate = false;
         DtvkitGlueClient.getInstance().setPidFilterListener(blistener);
         mOwnResourceByBr = true;
-        Log.i(TAG, "new AmlTunerDelegate out");
+        //mOriMheg5Cfg = getMhegCfg();
+        setMhegCfg(0);
+        Log.i(TAG, "initTunedelegate out");
+    }
+
+    private void setMhegCfg(int cfgFlag) {
+        Log.i(TAG, "setMhegCfg in" );
+        try {
+            JSONArray args = new JSONArray();
+            args.put(cfgFlag);
+            DtvkitGlueClient.getInstance().request("Hbbtv.HBBSetCustomMhegCfg", args);
+        } catch (Exception e) {
+            Log.e(TAG, "HBBSetCustomMhegCfg = " + e.getMessage());
+        }
+        Log.i(TAG, "setMhegCfg out" );
+    }
+
+    private int getMhegCfg() {
+        Log.i(TAG, "getMhegCfg in" );
+        int mhegCfg = 0;
+        try {
+            JSONArray args = new JSONArray();
+            JSONObject customMhegCfg;
+            customMhegCfg = DtvkitGlueClient.getInstance().request("Hbbtv.HBBGetCustomMhegCfg", args);
+            if (customMhegCfg != null) {
+                customMhegCfg = (JSONObject)customMhegCfg.get("data");
+                if (customMhegCfg != null) {
+                    mhegCfg = customMhegCfg.getInt("mhegCfg");
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "HBBGetCustomMhegCfg = " + e.getMessage());
+        }
+        Log.i(TAG, "getMhegCfg out" );
+        return mhegCfg;
     }
 
     private void checkFirstEnterStatus() {
