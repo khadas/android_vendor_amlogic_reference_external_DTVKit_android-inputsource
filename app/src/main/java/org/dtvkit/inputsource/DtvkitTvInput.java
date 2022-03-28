@@ -5909,25 +5909,28 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private void playerStop() {
-        playerStop(INDEX_FOR_MAIN, true);
-        playerStop(INDEX_FOR_MAIN, false);
+        playerStop(INDEX_FOR_MAIN, 2); // stop FCC on index 0
+        playerStop(INDEX_FOR_MAIN, 1); // stop main on index 0
     }
 
-    private void playerStopAndKeepFfc() {
-        playerStop(INDEX_FOR_MAIN, false);
+    private void playerStopAndKeepFcc() {
+        playerStop(INDEX_FOR_MAIN, 1); // stop main on index 0
     }
 
     private void playerPipStop() {
-        playerStop(INDEX_FOR_PIP, false);
+        playerStop(INDEX_FOR_PIP, 0);  // stop main&FCC on index 1
+                                       // notice we didn't run FCC on index 1
     }
 
-    private void playerStop(int index, boolean stopFcc) {
+    /* About stopMode, 0: stop Main&FCC, 1: stop Main, 2: stop FCC */
+    private void playerStop(int index, int stopMode) {
         synchronized (mLock) {
             try {
                 JSONArray args = new JSONArray();
                 args.put(index);
-                args.put(stopFcc);
+                args.put(stopMode);
                 DtvkitGlueClient.getInstance().request("Player.stop", args);
+                Log.d(TAG, "playerStop idx:" + index + " stopMode:" + stopMode);
             } catch (Exception e) {
                 Log.e(TAG, "playerStop = " + e.getMessage());
             }
