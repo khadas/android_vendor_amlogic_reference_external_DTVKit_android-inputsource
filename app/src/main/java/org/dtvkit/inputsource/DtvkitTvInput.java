@@ -707,7 +707,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         EpgSyncJobService.cancelAllSyncRequests(this);
         ComponentName sync = new ComponentName(this, DtvkitEpgSync.class);
         Bundle parameters = new Bundle();
-        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
+        //parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
         EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, mInputId, false,sync, parameters);
     }
@@ -4392,7 +4392,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     EpgSyncJobService.cancelAllSyncRequests(outService);
                     ComponentName sync = new ComponentName(outService, DtvkitEpgSync.class);
                     Bundle parameters = new Bundle();
-                    parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
+                    //parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
                     parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
                     EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(outService, mInputId, false,sync, parameters);
                     if (TextUtils.isEmpty(mDynamicDbSyncTag)) {
@@ -5668,15 +5668,39 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return channel;
         }
 
+        private String createQuerySelection(int dvbsource) {
+            String result = null;
+
+            switch (dvbsource) {
+                case ParameterMananer.SIGNAL_COFDM:
+                    result = "type=\"TYPE_DVB_T\" or type=\"TYPE_DVB_T2\"";
+                    break;
+                case ParameterMananer.SIGNAL_QAM:
+                    result = "type=\"TYPE_DVB_C\"";
+                    break;
+                case ParameterMananer.SIGNAL_QPSK:
+                    result = "type=\"TYPE_DVB_S\" or type=\"TYPE_DVB_S2\"";
+                    break;
+                case ParameterMananer.SIGNAL_ISDBT:
+                    result = "type=\"TYPE_ISDB_T\"";
+                    break;
+                default:
+                    break;
+            }
+            return result;
+        }
+
         private Channel getFirstChannel() {
             Channel channel = null;
             Cursor cursor = null;
             Uri uri = TvContract.buildChannelsUriForInput(mInputId);
-            String signalType = dvbSourceToChannelTypeString(getCurrentDvbSource());
+            int dvbSource = getCurrentDvbSource();
+            String signalType = dvbSourceToChannelTypeString(dvbSource);
+            String signalSelection = createQuerySelection(dvbSource);
             boolean isOpEnv = isInOpProfileEnv();
             try {
                 if (uri != null) {
-                    cursor = outService.getContentResolver().query(uri, Channel.PROJECTION, null, null, null);
+                    cursor = outService.getContentResolver().query(uri, Channel.PROJECTION, signalSelection, null, null);
                 }
                 if (cursor == null || cursor.getCount() == 0) {
                     return null;
