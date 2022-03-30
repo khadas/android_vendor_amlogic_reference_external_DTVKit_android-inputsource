@@ -428,6 +428,13 @@ public class HbbTvManager{
         Log.i(TAG,"isHbbTvApplicationRunning end");
         return isHbbTvRunning;
     }
+
+    public void closeTeletextAppliacation() {
+        if (mAmlHbbTvView != null && mAmlHbbTvView.isInitialized()) {
+            mAmlHbbTvView.closeTeletextApplication();
+        }
+
+    }
 }
 
 

@@ -3355,6 +3355,22 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return result;
         }
 
+        private void reloadHbbTvApplication() {
+            runOnMainThread(()->{
+                if (mHbbTvManager != null) {
+                    Log.d(TAG,"reload the application when broadcast teletext off");
+                    mHbbTvManager.reloadApplicaition();
+                }
+            });
+        }
+
+        private void closeHbbtvTeleTextApplication() {
+            runOnMainThread(()->{
+                 if (mHbbTvManager != null) {
+                     mHbbTvManager.closeTeletextAppliacation();
+                 }
+            });
+        }
         private boolean selectSubtitleOrTeletext(int istele, int type, String indexId) {
             boolean result;
             Log.d(TAG, "selectSubtitleOrTeletext istele = " + istele
@@ -3372,7 +3388,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (playerIsTeletextOn()) {
                     boolean setTeleOff = playerSetTeletextOn(false, -1);//close if opened
                     Log.d(TAG, "selectSubtitleOrTeletext off setTeleOff = " + setTeleOff);
-
+                    reloadHbbTvApplication();
                     if (mSubFlagTtxPage) {
                         Log.d(TAG, "selectSubtitleOrTeletext ttx page exit, restart ttx sub");
                         playerSetSubtitlesOn(true);
@@ -3409,6 +3425,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (!playerIsTeletextOn()) {
                         boolean setTeleOn = playerSetTeletextOn(true, Integer.parseInt(indexId));
                         Log.d(TAG, "selectSubtitleOrTeletext start setTeleOn = " + setTeleOn);
+                        closeHbbtvTeleTextApplication();
                     } else {
                         boolean startTele = false;
                         if ((getSubtitleFlag() & SUBCTL_HK_TTXPAG) == SUBCTL_HK_TTXPAG) {

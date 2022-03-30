@@ -637,15 +637,58 @@ public class AmlTunerDelegate implements TunerDelegate {
         return ret;
     }
 
+    private void playerSubtitleById(String sourceTrackId) {
+        Log.i(TAG, "playerSubtitleById in");
+        String trackId = null;
+        if (!TextUtils.isEmpty(sourceTrackId) && !TextUtils.isDigitsOnly(sourceTrackId)) {
+            String[] nameValuePairs = sourceTrackId.split("&");
+            if (nameValuePairs != null && nameValuePairs.length >= 3) {
+                String[] nameValue = nameValuePairs[0].split("=");
+                String[] typeValue = nameValuePairs[1].split("=");
+                String[] teleValue = nameValuePairs[2].split("=");
+                if (nameValue != null && nameValue.length == 2
+                        && TextUtils.equals(nameValue[0], "id")
+                        && TextUtils.isDigitsOnly(nameValue[1])) {
+                    trackId = nameValue[1];//parse id
+                }
+            }
+        }
+        Log.d(TAG, "playerSubtitleById sourceTrackId = "  + sourceTrackId + ", trackId = " + trackId);
+        if (TextUtils.isDigitsOnly(trackId)) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(0);
+                args.put(Integer.parseInt(trackId));
+                DtvkitGlueClient.getInstance().request("Player.setSubtitleStream", args);
+            } catch (Exception e) {
+                Log.e(TAG, "setSubtitleStream = " + e.getMessage());
+            }
+        }
+        Log.i(TAG, "playerSubtitleById out");
+    }
+
+    //trackid as none :means stop subtitle; else means play subtitle
     private boolean playerSelectSubtitleTrackById(String trackId) {
         Log.i(TAG, "playerSelectSubtitleTrackById in");
         Log.d(TAG, "playerSelectSubtitleTrackById trackId = " + trackId);
-        if (trackId != null) {
+        /*if (trackId != null) {
             setSubtitleSwichFlagByHbbtv(false);
         } else {
             setSubtitleSwichFlagByHbbtv(true);//means off by HBBTV test
+        }*/
+        if (trackId == null) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(0);
+                args.put(0xffff);
+                DtvkitGlueClient.getInstance().request("Player.setSubtitleStream", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerSelectAudioTrackById = " + e.getMessage());
+            }
+        } else {
+            playerSubtitleById(trackId);
         }
-        mSession.onSelectTrack(TvTrackInfo.TYPE_SUBTITLE, trackId);
+
         Log.i(TAG, "playerSelectSubtitleTrackById out");
         return true;
     }
@@ -711,7 +754,7 @@ public class AmlTunerDelegate implements TunerDelegate {
         String trackId = null;
         try {
             if (compObj.getString("encoding").equals("TXT")) {
-                int teletexttype = compObj.getInt("teletext_type");
+                //int teletexttype = compObj.getInt("teletext_type");
                 if (!compObj.getBoolean("hearing_impaired")) {
                     trackId = "id=" + Integer.toString(compObj.getInt("trackId")) + "&" + "type=" + "4" + "&teletext=1&hearing=0&flag=TTX";
                 } else {

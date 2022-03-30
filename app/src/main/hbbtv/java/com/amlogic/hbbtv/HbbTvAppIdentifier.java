@@ -19,7 +19,12 @@ public class HbbTvAppIdentifier {
     * @param appUrl  URL of the application.
     * @return the instance of HbbTbAppIdentifier
     */
-    public HbbTvAppIdentifier(int appId, int orgId, String appUrl) {
+    public HbbTvAppIdentifier(int appId, int orgId) {
+        mAppId = appId;
+        mOrgId = orgId;
+    }
+
+   public HbbTvAppIdentifier(int appId, int orgId, String appUrl) {
         mAppId = appId;
         mOrgId = orgId;
         mAppUrl = appUrl;
@@ -84,7 +89,7 @@ public class HbbTvAppIdentifier {
         return mAppId == 0 && mOrgId == 0;
     }
 
-    private final int mAppId;
-    private final int mOrgId;
-    private final String mAppUrl;
+    private int mAppId;
+    private int mOrgId;
+    private String mAppUrl;
 }
