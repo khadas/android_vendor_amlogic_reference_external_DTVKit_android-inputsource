@@ -3518,6 +3518,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public void notifyVideoUnavailable(final int reason) {
+            runOnMainThread(() -> {
+                if (mHbbTvManager != null ) {
+                    Bundle request = new Bundle();
+                    request.putString("isRunning", mHbbTvManager.isHbbTvApplicationRunning() ? "true" : "false");
+                    sendBundleToAppByTif(ConstantManager.ACTION_HBBTV_APPLICATION_RUNNING, request);
+                }
+            });
+
             super.notifyVideoUnavailable(reason);
             if (TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY == reason
                     || TvInputManager.VIDEO_UNAVAILABLE_REASON_WEAK_SIGNAL == reason) {
