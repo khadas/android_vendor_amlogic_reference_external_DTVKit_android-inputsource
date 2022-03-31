@@ -2694,7 +2694,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     notifyChannelRetuned(channelUri);
             }
             //playerStopTeletext();//no need to save teletext select status
-            onFinish(mhegTune, !getFeatureSupportFcc() || getFccBufferUri().isEmpty());
+            onFinish(mhegTune, getFeatureSupportFcc() && !getFccBufferUri().isEmpty());
             //setParentalControlOn(false);
             //playerResetAssociateDualSupport();
             userDataStatus(false);
@@ -5300,6 +5300,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 // dvr playback
                 return;
             }
+
             mSessionState = SessionState.TUNED;
             recordedProgram = getRecordedProgram(uri);
             if (recordedProgram != null) {
@@ -5307,6 +5308,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 onFinish(true, true);
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
+                mIsTimeshiftingPlayed = true;
                 if (playerPlay(INDEX_FOR_MAIN, recordedProgram.getRecordingDataUri(),
                         mAudioADAutoStart, false, 0, "", "").equals("ok")) {
                     notifyChannelRetuned(uri);
@@ -5380,7 +5382,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 ret = playerPlayTimeshiftRecording(paused, current);
                 mIsTimeshiftingPlayed = ret;
             } else {
-                Log.e(TAG, "playTimeshiftRecordingInSession state:" + timeshiftRecorderState);
+                Log.w(TAG, "playTimeshiftRecordingInSession state:" + timeshiftRecorderState);
             }
             return ret;
         }
