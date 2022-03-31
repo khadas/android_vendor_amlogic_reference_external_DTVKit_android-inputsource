@@ -69,9 +69,11 @@ public:
     std::string request(const std::string& resource, const std::string& json);
     void setAfd(int player, int afd);
     void setSubtitleFlag(int flag);
+    MessageQueueSync* getQueue();
 
 private:
     static void  once_run(void);
+    static void* pid_run(void *arg);
     sp<DTVKitHidlClient> mDkSession;
     mutable Mutex mLock;
     static DTVKitClientJni *mInstance;

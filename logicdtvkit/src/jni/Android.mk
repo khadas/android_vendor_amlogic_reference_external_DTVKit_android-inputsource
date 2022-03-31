@@ -13,7 +13,8 @@ LOCAL_C_INCLUDES += frameworks/base/core/jni/include \
     system/libhidl/libhidlcache/include \
     system/libhidl/transport/token/1.0/utils/include \
     hardware/libhardware/include \
-    $(LOCAL_PATH)/../../../app/src/main/client
+    $(LOCAL_PATH)/../../../app/src/main/client \
+    system/libfmq/include
 
 LOCAL_MODULE := libdtvkit_jni
 LOCAL_HEADER_LIBRARIES := jni_headers
@@ -31,6 +32,7 @@ LOCAL_SHARED_LIBRARIES :=  \
     libhardware \
     libdtvkithidlclient
 
+LOCAL_LDLIBS := -lfmq_vendor
 
 SUBTITLE_INCLUDES := \
     vendor/amlogic/common/frameworks/services/subtitleserver/client

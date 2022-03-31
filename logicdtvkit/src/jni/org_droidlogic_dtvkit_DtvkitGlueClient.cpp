@@ -26,6 +26,8 @@
 //#include <hardware/gralloc1.h>
 //#include "amlogic/am_gralloc_ext.h"
 #include <dlfcn.h>
+#include <sys/prctl.h>
+#include <pthread.h>
 #include <android/hidl/memory/1.0/IMemory.h>
 #include <hidlmemory/mapping.h>
 #include "org_droidlogic_dtvkit_DtvkitGlueClient.h"
@@ -41,7 +43,7 @@ static jmethodID notifyPidFilterData;
 
 static uint8_t*  gJbuffer = NULL; //java direct buffer
 static int       gJbufSize = 0;
-
+static jboolean  gJNIReady = false;
 
 static jobject DtvkitObject;
 //sp<Surface> mSurface;
@@ -161,7 +163,7 @@ static void postSubtitleData(int width, int height, int dst_x, int dst_y, int ds
 
 static void postPidFilterData(int length, uint8_t* data)
 {
-    //ALOGD("callback postPidFilterData data = %p", data);
+    //ALOGD("postPidFilterData length = %d", length);
     bool attached = false;
     JNIEnv *env = getJniEnv(&attached);
 
@@ -290,11 +292,75 @@ static void postDvbParam(const std::string& resource, const std::string json, in
 
 }
 pthread_once_t once = PTHREAD_ONCE_INIT;
+pthread_t pid_thread;
+
 void  DTVKitClientJni::once_run(void)
 {
     if (NULL == mInstance)
          mInstance = new DTVKitClientJni();
 }
+
+static size_t QueueSize = 1880;
+static uint8_t data[1880] = {0};
+void*  DTVKitClientJni::pid_run(void *arg)
+{
+    ALOGD("Enter pid_run");
+    prctl(PR_SET_NAME, "pid_run");
+    if (NULL == mInstance) {
+        ALOGE("mInstance null");
+        return NULL;
+    }
+
+    MessageQueueSync* fmq = mInstance->getQueue();
+    if (NULL == fmq) {
+        ALOGE("get fmq null");
+        return NULL;
+    }
+
+    std::atomic<uint32_t>* fwAddr = fmq->getEventFlagWord();
+    if (NULL == fwAddr) {
+        ALOGE("get fwAddr null");
+        return NULL;
+    }
+
+    android::hardware::EventFlag* efGroup = nullptr;
+    android::hardware::EventFlag::createEventFlag(fwAddr, &efGroup);
+    assert(nullptr != efGroup);
+
+    ALOGD("fmq %p, efGroup %p\n", fmq, efGroup);
+
+    while (true) {
+            //ALOGD("Enter fmq loop");
+            if (!gJNIReady) {
+                ALOGE("gJNIReady not ready!");
+                sleep(1);
+                continue;
+            }
+
+            //size_t numMessagesMax = fmq->getQuantumCount();
+            //size_t size = fmq->getQuantumSize();
+            size_t availToRead = fmq->availableToRead();
+            //ALOGD("availToRead %d\n", availToRead);
+            if (availToRead > 0) {
+                bool result = fmq->readBlocking(&data[0],
+                                 QueueSize,
+                                 static_cast<uint32_t>(kFmqNotFull),
+                                 static_cast<uint32_t>(kFmqNotEmpty),
+                                 5000000000 /* timeOutNanos */,
+                                 efGroup);
+                if (!result) {
+                    ALOGE("fmq read failed!");
+                }
+
+                postPidFilterData(QueueSize, data);
+                //ALOGD("numMessages %lu,size %lu\n", numMessagesMax, size);
+           } else {
+                usleep(100*1000);//100ms
+            }
+    }
+
+}
+
 
 DTVKitClientJni::DTVKitClientJni()  {
     mDkSession = DTVKitHidlClient::connect(DTVKitHidlClient::CONNECT_TYPE_HAL);
@@ -304,6 +370,7 @@ DTVKitClientJni::DTVKitClientJni()  {
 DTVKitClientJni *DTVKitClientJni::mInstance = NULL;
 DTVKitClientJni *DTVKitClientJni::GetInstance() {
     pthread_once(&once, once_run);
+    pthread_create(&pid_thread, NULL, pid_run, NULL);
     return mInstance;
 }
 
@@ -323,11 +390,16 @@ void DTVKitClientJni::setSubtitleFlag(int flag) {
     mDkSession->setSubtitleFlag(flag);
 }
 
+MessageQueueSync* DTVKitClientJni::getQueue() {
+    ALOGD("Enter getQueue");
+    return mDkSession->getQueue();
+}
+
+
 void DTVKitClientJni::notify(const parcel_t &parcel) {
     AutoMutex _l(mLock);
-    if (parcel.msgType != HBBTV_DRAW) {
-        ALOGD("notify msgType = %d  this:%p", parcel.msgType, this);
-    }
+
+    ALOGD("notify msgType = %d  this:%p", parcel.msgType, this);
 
     if (parcel.msgType == DTVKIT_DRAW) {
         datablock_t datablock;
@@ -412,19 +484,6 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
         }
     }
 
-    if (parcel.msgType == HBBTV_DRAW) {
-        //ALOGD("notify msgType = %d  this:%p", parcel.msgType, this);
-        sp<IMemory> memory = mapMemory(parcel.mem);
-        if (memory == nullptr) {
-            ALOGE("[%s] memory map is null", __FUNCTION__);
-            return;
-        }
-        uint8_t *data = static_cast<uint8_t*>(static_cast<void*>(memory->getPointer()));
-        memory->read();
-        memory->commit();
-
-        postPidFilterData(memory->getSize(), data);
-    }
 }
 
 static void getSubtitleListenerImpl() {
@@ -441,6 +500,7 @@ static void connectdtvkit(JNIEnv *env, jclass clazz __unused, jobject obj, jobje
     gJbuffer = (uint8_t*)env->GetDirectBufferAddress(buffer);
     gJbufSize = env->GetDirectBufferCapacity(buffer);
     ALOGE("native buffer info %p,length %d\n", gJbuffer, gJbufSize);
+    gJNIReady = true;
 }
 
 static void disconnectdtvkit(JNIEnv *env, jclass clazz __unused)

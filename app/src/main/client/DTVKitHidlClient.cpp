@@ -122,6 +122,24 @@ void DTVKitHidlClient::setSubtitleFlag(int flag) {
     }
 }
 
+MessageQueueSync *DTVKitHidlClient::getQueue() {
+
+    MessageQueueSync* fmq = NULL;
+    Return<void> ret = mDTVKitServer->getQueue([&fmq](const MQDescriptorSync<uint8_t>& in) {
+        fmq = new (std::nothrow) MessageQueueSync(in);
+    });
+
+    if (!ret.isOk()) {
+        ALOGE("Failed to getQueue.");
+        return NULL;
+    }
+
+    ALOGD("getQueue Success.");
+    return fmq;
+}
+
+
+
 Return<void> DTVKitHidlClient::DTVKitHidlCallback::notifyCallback(const DTVKitHidlParcel& hidlParcel) {
     //ALOGD("[%s] notifyCallback msgType = %d", __FUNCTION__, hidlParcel.msgType);
     sp<DTVKitListener> listener;
