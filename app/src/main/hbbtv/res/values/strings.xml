@@ -1,3 +1,4 @@
 <resources>
     <string name="hbbtv_not_support_pvr">This condition doesn\'t support pvr record</string>
+    <string name="hbbtv_not_connect_network">please connect the network first</string>
 </resources>

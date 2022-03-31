@@ -16,8 +16,10 @@ import com.vewd.core.shared.KeyDescription;
 import com.vewd.core.shared.HandsetCapabilities;
 import com.vewd.core.sdk.HbbTvApplicationInfo;
 import com.droidlogic.dtvkit.inputsource.R;
-
-
+import org.droidlogic.dtvkit.DtvkitGlueClient;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.Arrays;
 
@@ -27,10 +29,13 @@ import java.util.Arrays;
  */
 public class AmlHbbTvView extends HbbTvView {
     private static final String TAG = "AmlHbbTvView";
+    private static final int INDEX_FOR_MAIN = 0;
     private static final int KEY_ACTION= KeyEvent.ACTION_DOWN;
     private static final boolean DEBUG = true;
     private int mkeySet = 0;
     private Context mContext = null;
+    private HbbTvAppIdentifier mHbbTvAppIdentifier = null;
+    private boolean mLoadTeleTextApplication = false;
 
     /**
      * @ingroup amlhbbtvviewapi
@@ -283,6 +288,9 @@ public class AmlHbbTvView extends HbbTvView {
             if (keyCode == KeyEvent.KEYCODE_MEDIA_RECORD) {
                 return isConsumeRecordKey();
             }
+            if (keyCode == KeyEvent.KEYCODE_ZOOM_IN && event.getAction() == KeyEvent.ACTION_UP) {
+                return isConsumeTeleTextKey();
+            }
             Log.i(TAG, "dispatchKeyEvent end");
             return false;
         }
@@ -312,6 +320,73 @@ public class AmlHbbTvView extends HbbTvView {
         return isHandleRecordKey;
    }
 
+    private boolean isConsumeTeleTextKey() {
+        Log.d(TAG,"isConsumeTeleTextKey start");
+        boolean isHandleTeleTextKey = false;
+        boolean isAppRunning = isApplicationRunning();
+        Log.d(TAG,"isAppRunning = " + isAppRunning);
+        Log.d(TAG,"mLoadTeleTextApplication = " + mLoadTeleTextApplication);
+        if (isAppRunning) {
+            if (mHbbTvAppIdentifier != null) {
+                Log.d(TAG,"mHbbTvAppIdentifier = " + mHbbTvAppIdentifier);
+                if (!mLoadTeleTextApplication) {
+                    terminateApplication();
+                    loadAitApplication(mHbbTvAppIdentifier.getAppId(), mHbbTvAppIdentifier.getOrgId());
+                    mLoadTeleTextApplication = true;
+                    isHandleTeleTextKey = true;
+                } else {
+                    if (!hasStandardTeletext()) {
+                        terminateApplicationAndLaunchAutostart();
+                        isHandleTeleTextKey = true;
+                    } else {
+                        isHandleTeleTextKey = false;
+                        Log.d(TAG,"teletext application has load up");
+                    }
+                }
+            }
+        } else {
+            if (mHbbTvAppIdentifier != null && !hasStandardTeletext()) {
+                Log.d(TAG,"hbbtv not connect netwoek");
+                Toast.makeText(mContext,
+                    R.string.hbbtv_not_connect_network, Toast.LENGTH_SHORT).show();
+                isHandleTeleTextKey = true;
+            }
+        }
+        Log.d(TAG,"isConsumeTeleTextKey end");
+        return isHandleTeleTextKey;
+    }
+
+    private boolean hasStandardTeletext() {
+        boolean hasStandardTeletext = false;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(INDEX_FOR_MAIN);
+            JSONArray teletextStreams = DtvkitGlueClient.getInstance().request("Player.getListOfTeletextStreams", args).getJSONArray("data");
+            Log.d(TAG,"the teletext data length = " + teletextStreams.length());
+            if (teletextStreams.length() >0) {
+                hasStandardTeletext = true;
+            }
+        } catch (Exception e) {
+           Log.e(TAG, "hasStandardTeletext = " + e.getMessage());
+           return false;
+        }
+        return hasStandardTeletext;
+    }
+
+    public void closeTeletextApplication() {
+        if (mLoadTeleTextApplication) {
+            terminateApplication();
+            mLoadTeleTextApplication = false;
+        }
+    }
+
+    public void setTeletextApplicationStatus(boolean teletextAppStatus) {
+        mLoadTeleTextApplication = teletextAppStatus;
+    }
+
+    public void setHbbTvIdentifier(HbbTvAppIdentifier hbbTvAppIdentifier) {
+        mHbbTvAppIdentifier = hbbTvAppIdentifier;
+    }
     /**
      * @ingroup amlhbbtvviewapi
      * @brief  Clears the DSMCC File System Acceleration (FSA) disk cache.
@@ -758,6 +833,8 @@ public class AmlHbbTvView extends HbbTvView {
     @Override
     public void terminateApplicationAndLaunchAutostart() {
         Log.i(TAG,"terminateApplicationAndLaunchAutostart start");
+        //mHbbTvAppIdentifier = null;
+        mLoadTeleTextApplication = false;
         super.terminateApplicationAndLaunchAutostart();
         Log.i(TAG,"terminateApplicationAndLaunchAutostart end");
     }

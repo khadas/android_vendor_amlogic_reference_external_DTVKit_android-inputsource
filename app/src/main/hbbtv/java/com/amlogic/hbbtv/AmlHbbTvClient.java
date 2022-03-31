@@ -15,6 +15,7 @@ import com.vewd.core.shared.DvbLocator;
 import com.vewd.core.shared.HbbTvApplication;
 
 import java.util.Arrays;
+import java.util.List;
 
 import com.amlogic.hbbtv.utils.StringUtils;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
@@ -29,6 +30,7 @@ import org.json.JSONObject;
  */
 public class AmlHbbTvClient implements HbbTvClient {
     private static final String TAG = "AmlHbbTvClient";
+    private static final int TELETEXT_APPLICATION_USAGE_TYPE = 1;
     private static final boolean DEBUG = true;
     private AmlHbbTvView mAmlHbbTvView;
     private String mUrl = null;
@@ -218,8 +220,26 @@ public class AmlHbbTvClient implements HbbTvClient {
 
         mApplications = hbbTvApplications;
         mApplicationStatus = ApplicaitonStatus.APP_INIT;
-
+        setTeletextApplication(mApplications);
+        mAmlHbbTvView.setTeletextApplicationStatus(false);
         Log.i(TAG,"onAitUpdated​  end");
+    }
+
+    private void setTeletextApplication(HbbTvApplication[] hbbTvApplications) {
+        Log.i(TAG,"setTeletextApplication  start");
+        List<HbbTvApplication> hbbtvApplicationList = Arrays.asList(hbbTvApplications);
+        HbbTvAppIdentifier hbbTvAppIdentifier = null;
+        for (HbbTvApplication hbbtvApplication:hbbtvApplicationList) {
+            if (hbbtvApplication.getUsageType() == TELETEXT_APPLICATION_USAGE_TYPE) {
+                int appId = hbbtvApplication.getId();
+                int orgId = hbbtvApplication.getOrgId();
+                Log.d(TAG,"the appId = "+appId + ",orgId =" + orgId);
+                hbbTvAppIdentifier = new HbbTvAppIdentifier(appId,orgId);
+                break;
+            }
+        }
+        mAmlHbbTvView.setHbbTvIdentifier(hbbTvAppIdentifier);
+        Log.i(TAG,"setTeletextApplication  end");
     }
 
     /**
