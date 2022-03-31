@@ -449,6 +449,30 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 mainSession.sendBundleToAppByTif(action, request);
                             }
                             break;
+                        case ConstantManager.VALUE_CI_PLUS_COMMAND_TRICK_LIMIT:
+                            //trick limit
+                            //am broadcast -a "ci_plus_info" --es command "trick_limit" --es "trick_limit" "content protection record" --ei errcode 1
+                            showToast(ConstantManager.VALUE_CI_PLUS_COMMAND_TRICK_LIMIT);
+                            if (mainSession != null) {
+                                Bundle request = new Bundle();
+                                request.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_TRICK_LIMIT);
+                                request.putString("trick_limit", intent.getStringExtra("trick_limit"));
+                                request.putInt("trick_limit", intent.getIntExtra("errcode", 0));
+                                mainSession.sendBundleToAppByTif(action, request);
+                            }
+                            break;
+                        case ConstantManager.VALUE_CI_PLUS_COMMAND_DO_PVR_LIMITED:
+                            //pvr start failed
+                            //am broadcast -a "ci_plus_info" --es command "DoPVRLimited" --es "do_pvr_limited" "content protection record" --ei errcode 1
+                            showToast(ConstantManager.VALUE_CI_PLUS_COMMAND_DO_PVR_LIMITED);
+                            if (mainSession != null) {
+                                Bundle request = new Bundle();
+                                request.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_DO_PVR_LIMITED);
+                                request.putString("do_pvr_limited", intent.getStringExtra("do_pvr_limited"));
+                                request.putInt("do_pvr_limited", intent.getIntExtra("errcode", 0));
+                                mainSession.sendBundleToAppByTif(action, request);
+                            }
+                            break;
                         default:
                             break;
                     }
@@ -4470,12 +4494,30 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     } catch (Exception e) {
                         Log.d(TAG, "IgnoreUserInput Exception = " + e.getMessage());
                     }
-                } else if (signal.equals(ConstantManager.VALUE_CI_PLUS_COMMAND_PVRPLAYBACK_STATUS)) {
-                    //Ciplus license status, only for playback
+                } else if (signal.equals("PvrPlaybackStatus")
+                        || signal.equals("content_protection")
+                        || signal.equals("playback_camid_mismatch")
+                        || signal.equals("playback_license_timeout")
+                        || signal.equals("playback_license_received_after_timeout")) {
+                    //Ciplus notify that PVR can't play
                     Bundle playbackBundle = new Bundle();
                     playbackBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_PVRPLAYBACK_STATUS);
                     playbackBundle.putString("playback", data.optString("playback", ""));
                     playbackBundle.putInt("errcode", data.optInt("errcode", 0));
+                    sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
+                } else if (signal.equals("trick_limit")) {
+                    //Ciplus notify that can't FF/FB when PVR play
+                    Bundle playbackBundle = new Bundle();
+                    playbackBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_TRICK_LIMIT);
+                    playbackBundle.putString("trick_limit", data.optString("trick_limit", ""));
+                    playbackBundle.putInt("trick_limit", data.optInt("errcode", 0));
+                    sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
+                } else if (signal.equals("pvr start failed")) {
+                    //Ciplus notify that can't PVR
+                    Bundle playbackBundle = new Bundle();
+                    playbackBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_DO_PVR_LIMITED);
+                    playbackBundle.putString("do_pvr_limited", data.optString("do_pvr_limited", ""));
+                    playbackBundle.putInt("do_pvr_limited", data.optInt("errcode", 0));
                     sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
                 } else if (signal.equals("DvbNetworkChange") || signal.equals("DvbUpdatedService")) {
                     Log.i(TAG, "DvbNetworkChange or DvbUpdatedService, IsPip=" + mIsPip);
