@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
+import com.amlogic.hbbtv.HbbTvConstantManager;
 
 /**
  * @ingroup hbbtvutilsapi
@@ -38,6 +39,39 @@ public class AmlHbbTvTvContractUtils {
         TvContract.Channels.COLUMN_INTERNAL_PROVIDER_DATA,
     };
 
+    public static int getCurrentDvbSource() {
+        int source = HbbTvConstantManager.SIGNAL_COFDM;
+        try {
+            JSONObject sourceReq = DtvkitGlueClient.getInstance().request("Dvb.GetDvbSource", new JSONArray());
+            if (sourceReq != null) {
+                source = sourceReq.optInt("data");
+            }
+        } catch (Exception e) {
+        }
+        return source;
+    }
+
+    public static String dvbSourceToChannelTypeString(int source) {
+        String result = "TYPE_DVB_T";
+        switch (source) {
+            case HbbTvConstantManager.SIGNAL_COFDM:
+                result = "TYPE_DVB_T";
+                break;
+            case HbbTvConstantManager.SIGNAL_QAM:
+                result = "TYPE_DVB_C";
+                break;
+            case HbbTvConstantManager.SIGNAL_QPSK:
+                result = "TYPE_DVB_S";
+                break;
+            case HbbTvConstantManager.SIGNAL_ISDBT:
+                result = "TYPE_ISDB_T";
+                break;
+            default:
+                break;
+        }
+        return result;
+    }
+
    /**
     * @ingroup amlhbbtvtvcontractutilsapi.
     * @brief get channel uris with the tv input id
@@ -49,12 +83,14 @@ public class AmlHbbTvTvContractUtils {
         Log.i(TAG, "getChannelUrisForInput in");
         List<Uri> channels = new ArrayList<>();
         Cursor cursor = null;
+
+        String type = dvbSourceToChannelTypeString(getCurrentDvbSource());
         try {
             cursor = contentResolver.query(TvContract.buildChannelsUriForInput(inputId),
                     new String[] {
                             TvContract.Channels._ID,
                     },
-                    null, null, ContentResolverUtils.CHANNELS_ORDER_BY);
+                    TvContract.Channels.COLUMN_TYPE + "=?", new String[]{type}, ContentResolverUtils.CHANNELS_ORDER_BY);
             if (cursor != null && cursor.getCount() > 0) {
                 while (cursor.moveToNext()) {
                     channels.add(TvContract.buildChannelUri(cursor.getLong(0)));
@@ -461,7 +497,7 @@ public class AmlHbbTvTvContractUtils {
             return null;
         }
         int freq = 0;//bytesToInt(dsd);
-        Log.d(TAG, "getChannelUriByTriplet serviceId = " + serviceId + ", freq = " + freq);
+        Log.d(TAG, "getChannelUriByDsd serviceId = " + serviceId + ", freq = " + freq);
         Cursor cursor = null;
         try {
             cursor = contentResolver.query(TvContract.buildChannelsUriForInput(inputId),
