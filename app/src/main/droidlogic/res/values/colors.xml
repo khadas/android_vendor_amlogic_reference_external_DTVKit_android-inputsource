@@ -9,6 +9,7 @@
     <color name="common_blue">#0000FF</color>
     <color name="common_yellow">#ffff00</color>
     <color name="common_white">#ffffff</color>
+    <color name="common_s_bg">#262626</color>
 
     <!-- epg -->
      <color name="color_text_blue_0">#FF39A8D5</color>

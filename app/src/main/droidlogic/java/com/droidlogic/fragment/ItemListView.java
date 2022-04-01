@@ -54,6 +54,7 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
 
     public static final String LIST_LEFT = "left";
     public static final String LIST_RIGHT = "right";
+    public static final String LIST_MIDDLE = "middle";
     private String mCurrentListSide = LIST_LEFT;
 
     public ItemListView(Context context) {
@@ -109,7 +110,7 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
                         }
                         bundle1.putString("action", function);
                         bundle1.putInt("keycode", event.getKeyCode());
-                        bundle1.putString("listtype", isLeftList() ? mParameterMananer.getDvbsParaManager().getCurrentListType() : ItemListView.ITEM_OPTION);
+                        bundle1.putString("listtype", isLeftList() ?  ItemListView.ITEM_LNB : mParameterMananer.getDvbsParaManager().getCurrentListType());
                         String parameter = "";
                         View selectedView1 = getSelectedView();
                         TextView textview = null;
@@ -137,6 +138,21 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
                         mDataCallBack.onStatusChange(getSelectedView(), ParameterMananer.KEY_FUNCTION, bundle1);
                     }
                     return true;
+
+                case KeyEvent.KEYCODE_MEDIA_STOP:
+                    if (isRightList() || isLeftList()) {
+                        return true;
+                    }
+                    String savedListType = mParameterMananer.getDvbsParaManager().getCurrentListType();
+                    String leftListType = TextUtils.isEmpty(savedListType) ? mListType : savedListType;
+                    String result = switchListType(leftListType);
+                    if (LIST_LEFT.equals(mCurrentListSide) && result != null) {
+                        mListType = result;
+                    }
+                    if (mListTypeSwitchedListener != null && result != null) {
+                        mListTypeSwitchedListener.onListTypeSwitched(result);
+                    }
+                    break;
                 case KeyEvent.KEYCODE_DPAD_UP:
                     if (selectedPosition == 0)
                         return true;
@@ -148,7 +164,7 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
                 case KeyEvent.KEYCODE_DPAD_LEFT:
                     Log.d(TAG, "KEYCODE_DPAD_LEFT mListSwitchedListener = " + mListSwitchedListener + ", mListType = " + mListType + ", isLeftList = " + isLeftList());
                     if (isLeftList()) {
-                        String savedListType = mParameterMananer.getDvbsParaManager().getCurrentListType();
+                        /*String savedListType = mParameterMananer.getDvbsParaManager().getCurrentListType();
                         String leftListType = TextUtils.isEmpty(savedListType) ? mListType : savedListType;
                         String result = switchListType(leftListType);
                         Log.d(TAG, "mListSwitchedListener: switchList result = " + result + ", currentListType = " + savedListType);
@@ -157,7 +173,8 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
                         }
                         if (mListTypeSwitchedListener != null && result != null) {
                             mListTypeSwitchedListener.onListTypeSwitched(result);
-                        }
+                        }*/
+                        mParameterMananer.getDvbsParaManager().setCurrentListDirection("left");
                         return true;
                     } else if (isRightList()) {
                         /*LinkedList<ItemDetail> satellitelist = mParameterMananer.getSatelliteList();
@@ -169,15 +186,31 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
                             return true;
                         }*/
                         if (mListSwitchedListener != null) {
-                            mListSwitchedListener.onListSwitched(LIST_LEFT);
+                            mListSwitchedListener.onListSwitched(LIST_MIDDLE);
                         }
                         return true;
+                    } else if (isMiddleList()) {
+                        if (mListSwitchedListener != null) {
+                            mListSwitchedListener.onListSwitched(LIST_LEFT);
+                        }
+                        mParameterMananer.getDvbsParaManager().setCurrentListDirection("left");
                     }
                     return super.dispatchKeyEvent(event);
                     //break;
                 case KeyEvent.KEYCODE_DPAD_RIGHT:
                     Log.d(TAG, "KEYCODE_DPAD_RIGHT mListSwitchedListener = " + mListSwitchedListener + ", mListType = " + mListType);
-                    if (isLeftList() || isRightList()) {
+                    /*if (isLeftList() || isRightList()) {
+                        if (mListSwitchedListener != null) {
+                            mListSwitchedListener.onListSwitched(LIST_RIGHT);
+                        }
+                        return true;
+                    }*/
+                    if (isLeftList()) {
+                        if (mListSwitchedListener != null) {
+                            mListSwitchedListener.onListSwitched(LIST_MIDDLE);
+                        }
+                        return true;
+                    } else if (isMiddleList() || isRightList()) {
                         if (mListSwitchedListener != null) {
                             mListSwitchedListener.onListSwitched(LIST_RIGHT);
                         }
@@ -188,6 +221,16 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
                 case KeyEvent.KEYCODE_DPAD_CENTER:
                 case KeyEvent.KEYCODE_NUMPAD_ENTER:
                     if (isLeftList()) {
+                        if (mListItemSelectedListener != null) {
+                            mListItemSelectedListener.onListItemSelected(getSelectedItemPosition(), mListType, true);
+                        }
+                        return true;
+                    } else if (isRightList()) {
+                        if (mListItemSelectedListener != null) {
+                            mListItemSelectedListener.onListItemSelected(getSelectedItemPosition(), mListType, true);
+                        }
+                        return true;
+                    } else if (isMiddleList()) {
                         boolean selected = true;
                         ItemDetail item = (ItemDetail)getAdapter().getItem(getSelectedItemPosition());
                         if (ITEM_SATALLITE.equals(mListType) || ITEM_TRANSPONDER.equals(mListType)) {
@@ -201,11 +244,6 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
                         }
                         if (mListItemSelectedListener != null) {
                             mListItemSelectedListener.onListItemSelected(getSelectedItemPosition(), mListType, selected);
-                        }
-                        return true;
-                    } else if (isRightList()) {
-                        if (mListItemSelectedListener != null) {
-                            mListItemSelectedListener.onListItemSelected(getSelectedItemPosition(), mListType, true);
                         }
                         return true;
                     }
@@ -389,15 +427,22 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
         return false;
     }
 
+    public boolean isMiddleList() {
+        if ("middle".equals(mParameterMananer.getDvbsParaManager().getCurrentListDirection())) {
+            return true;
+        }
+        return false;
+    }
+
     public boolean isSatelliteList(String type) {
-        if (ITEM_SATALLITE.equals(type) && "left".equals(mParameterMananer.getDvbsParaManager().getCurrentListDirection())) {
+        if (ITEM_SATALLITE.equals(type) && "middle".equals(mParameterMananer.getDvbsParaManager().getCurrentListDirection())) {
             return true;
         }
         return false;
     }
 
     public boolean isTransponderList(String type) {
-        if (ITEM_TRANSPONDER.equals(type) && "left".equals(mParameterMananer.getDvbsParaManager().getCurrentListDirection())) {
+        if (ITEM_TRANSPONDER.equals(type) && "middle".equals(mParameterMananer.getDvbsParaManager().getCurrentListDirection())) {
             return true;
         }
         return false;
@@ -421,12 +466,14 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
         String result = null;
         if (ITEM_SATALLITE.equals(leftListType)) {
             ItemDetail item = (ItemDetail)getAdapter().getItem(getSelectedItemPosition());
-            if (item.getEditStatus() != ItemDetail.SELECT_EDIT) {
+            /*if (item.getEditStatus() != ItemDetail.SELECT_EDIT) {
                 result = null;
             } else {
                 mParameterMananer.getDvbsParaManager().setCurrentSatellite(item.getFirstText());
                 result = ITEM_TRANSPONDER;
-            }
+            }*/
+            mParameterMananer.getDvbsParaManager().setCurrentSatellite(item.getFirstText());
+            result = ITEM_TRANSPONDER;
         } else if (ITEM_TRANSPONDER.equals(leftListType)) {
             result = ITEM_SATALLITE;
         }

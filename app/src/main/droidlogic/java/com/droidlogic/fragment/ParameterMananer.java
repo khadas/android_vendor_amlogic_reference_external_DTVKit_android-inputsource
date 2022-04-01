@@ -92,7 +92,7 @@ public class ParameterMananer {
     public static final String KEY_DISEQC1_2_DISH_MOVE_TO_POSITION = "key_dish_move_to_position";
     public static final String KEY_DISEQC1_3_LOCATION_STRING = "key_diseqc_location";
 
-    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATELLITES, KEY_SATALLITE, KEY_TRANSPONDER,
+    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATALLITE, KEY_TRANSPONDER,
             KEY_LNB_TYPE, KEY_UNICABLE_SWITCH/*KEY_UNICABLE*/, KEY_LNB_POWER,
             KEY_22_KHZ, KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
     public static final String KEY_LNB_CUSTOM = "key_lnb_custom";
