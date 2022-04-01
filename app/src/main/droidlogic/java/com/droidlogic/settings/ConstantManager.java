@@ -128,6 +128,7 @@ public class ConstantManager {
     public static final String VALUE_CI_MENU_MMI_SCREEN_REQUEST = "ci_menu_mmi_screen_request";
     public static final String VALUE_CI_MENU_MMI_ENQ_REQUEST = "ci_menu_mmi_enq_request";
     public static final String VALUE_CIPLUS_MMI_CLOSE = "ci_menu_mmi_close";
+    public static final String ACTION_HBBTV_APPLICATION_RUNNING = "hbbtv_running";
 
     public static final Map<String, String> PI_TO_VIDEO_FORMAT_MAP = new HashMap<>();
     static {
