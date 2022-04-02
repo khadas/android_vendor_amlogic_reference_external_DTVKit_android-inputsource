@@ -5297,8 +5297,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         private void setAdAssociate(boolean enable) {
-            boolean result = playersetAudioDescriptionOn(enable);
-            result = playerPipsetAudioDescriptionOn(enable);
+            boolean result;
+            if (playerGetMute()) {
+                result = playersetAudioDescriptionOn(enable) && playerPipsetAudioDescriptionOn(enable);
+            } else {
+                result = playerPipsetAudioDescriptionOn(enable) && playersetAudioDescriptionOn(enable);
+            }
             Log.d(TAG, "setAdAssociate result=" + result + "setAudioDescriptionOn:" + enable);
         }
 
