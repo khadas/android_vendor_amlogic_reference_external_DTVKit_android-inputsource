@@ -21,8 +21,11 @@
 
 #ifndef _DTVKIT_HIDL_CLIENT_H_
 #define _DTVKIT_HIDL_CLIENT_H_
+#include <assert.h>
 #include <utils/RefBase.h>
 #include <utils/Mutex.h>
+#include <fmq/MessageQueue.h>
+#include <fmq/EventFlag.h>
 
 #include <vendor/amlogic/hardware/dtvkitserver/1.0/IDTVKitServer.h>
 
@@ -39,6 +42,22 @@ using ::android::hardware::hidl_vec;
 using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
+
+using ::android::hardware::kSynchronizedReadWrite;
+using ::android::hardware::kUnsynchronizedWrite;
+using ::android::hardware::MQDescriptorSync;
+using ::android::hardware::MQDescriptorUnsync;
+using ::android::hardware::MessageQueue;
+
+
+typedef MessageQueue<uint8_t, kSynchronizedReadWrite> MessageQueueSync;
+#define ASSERT(condition)     assert(condition);
+
+enum EventFlagBits : uint32_t {
+    kFmqNotEmpty = 1 << 0,
+    kFmqNotFull = 1 << 1,
+};
+
 
 typedef struct s_dvb_subt_info
 {
@@ -91,6 +110,7 @@ public:
     std::string request(const std::string& resource, const std::string& json);
     void setAfd(int player, int afd);
     void setSubtitleFlag(int flag);
+    MessageQueueSync *getQueue();
 
 private:
     class DTVKitHidlCallback : public IDTVKitServerCallback {
