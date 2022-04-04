@@ -26,6 +26,14 @@
 #include "DTVKitHidlClient.h"
 namespace android {
 
+//use for hbbtv fmq
+namespace hardware {
+namespace details {
+    void __attribute__((weak)) check(bool exp, const char* message) {
+        //CHECK(exp) << message;
+    }
+}
+}
 using ::android::hidl::memory::V1_0::IMemory;
 
 Mutex DTVKitHidlClient::mLock;
