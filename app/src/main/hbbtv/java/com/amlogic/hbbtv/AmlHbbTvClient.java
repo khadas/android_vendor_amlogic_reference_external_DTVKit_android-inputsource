@@ -81,6 +81,8 @@ public class AmlHbbTvClient implements HbbTvClient {
                 + isBroadcastRelated);
         }
 
+        mApplicationStatus = ApplicaitonStatus.APP_STOPPED;
+
         Log.i(TAG,"onAitApplicationNotStarted​  end");
 
     }
