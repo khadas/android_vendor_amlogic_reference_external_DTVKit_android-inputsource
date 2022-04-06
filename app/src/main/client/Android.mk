@@ -16,9 +16,8 @@ LOCAL_SHARED_LIBRARIES := \
     libhidlmemory \
     liblog \
     libcutils \
-    libutils
-
-LOCAL_LDLIBS := -lfmq_vendor
+    libutils \
+    libfmq
 
 LOCAL_C_INCLUDES += \
   system/libhidl/transport/include/hidl \
