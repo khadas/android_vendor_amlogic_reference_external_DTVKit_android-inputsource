@@ -30,9 +30,8 @@ LOCAL_SHARED_LIBRARIES :=  \
     libutils \
     liblog \
     libhardware \
-    libdtvkithidlclient
-
-LOCAL_LDLIBS := -lfmq_vendor
+    libdtvkithidlclient \
+    libfmq
 
 SUBTITLE_INCLUDES := \
     vendor/amlogic/common/frameworks/services/subtitleserver/client
