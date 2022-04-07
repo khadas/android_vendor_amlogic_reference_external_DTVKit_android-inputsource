@@ -2589,6 +2589,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         DtvkitMainTvSession(DtvkitTvInput service) {
             super(service, false);
+            setOverlayViewEnabled(true);
         }
 
         public void setFccBufferUri(Uri previous, Uri next) {
@@ -2614,7 +2615,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.e(TAG, "resource not ready!");
                 return false;
             }
-            setOverlayViewEnabled(surface != null);
             if (null == surface) {
                 writeSysFs("/sys/class/video/video_inuse", "0");
             } else {
@@ -2893,6 +2893,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mIsPip) {
                 return null;
             }
+            Log.d(TAG, "onCreateOverlayView");
             if (mView == null) {
                 mView = new DtvkitOverlayView(outService, mMainHandle);
                 mView.setSize(mWinWidth, mWinHeight);
