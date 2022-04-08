@@ -303,6 +303,11 @@ public class DtvkitDvbSettings extends Activity {
                 if (!TextUtils.equals(previousMainAudioName, currentMainAudioName) || !TextUtils.equals(previousAssistAudioName, currentAssistAudioName)) {
                     needClearAudioLangSetting = true;
                 }
+
+                String iso = mParameterMananer.getCurrentCountryIso3Name();
+                TimezoneSelect timezone = new TimezoneSelect(DtvkitDvbSettings.this);
+                timezone.selectTimeZone(iso);
+
                 checkPassWordInfo();
             }
 
