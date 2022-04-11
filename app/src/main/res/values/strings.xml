@@ -39,9 +39,10 @@
         <item>qam256</item>
     </string-array>
     <string name="strSearchNotStarted">Search not started</string>
-    <string name="strSearchDvbcDescription">Press START SEARCH to start searching for DVB-C channels.</string>
-    <string name="strSearchDvbtDescription">Press START SEARCH to start searching for DVB-T channels.</string>
-    <string name="strSearchIsdbtDescription">Press START SEARCH to start searching for ISDB-T channels.</string>
+    <string name="strSearchDvbsDescription">DVB-S channels tuner setup</string>
+    <string name="strSearchDvbcDescription">DVB-C channels tuner setup</string>
+    <string name="strSearchDvbtDescription">DVB-T channels tuner setup</string>
+    <string name="strSearchIsdbtDescription">ISDB-T channels tuner setup</string>
     <string name="strStartSearch">Start Search</string>
     <string name="strManualSearch">Manual Search</string>
     <string name="strAutoSearch">Auto Search</string>
@@ -132,7 +133,8 @@
     <string name="strOperator">Operator</string>
     <string name="strLcnOnOff">Lcn On</string>
     <string name="strDvbcAutoScanType">Auto Scan Type</string>
-    <string name="strDvbcNetworkId">Network ID</string>
+    <string name="strDvbcNetworkId">Network ID:</string>
     <string name="strChannelType">Channel Type</string>
     <string name="strServiceType">Service Type</string>
+    <string name="tv_mode_option">Mode Option:</string>
 </resources>

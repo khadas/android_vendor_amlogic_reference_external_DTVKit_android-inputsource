@@ -1,319 +1,427 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
+    android:animateLayoutChanges="true"
     android:keepScreenOn="true"
-    android:orientation="vertical">
-
-    <!--<ImageView
-        android:id="@+id/imageView3"
-        android:layout_width="match_parent"
-        android:layout_height="67dp"
-        android:src="@drawable/dtvkit" />-->
-
-    <TextView
-        android:id="@+id/dvb_search"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@android:color/holo_orange_dark"
-        android:fontFamily="sans-serif"
-        android:gravity="center"
-        android:padding="10dp"
-        android:text="@string/public_dvb_search"
-        android:textSize="@dimen/dvb_search_text_size"
-        android:textStyle="bold" />
-
-    <CheckBox
-        android:id="@+id/network"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:nextFocusDown="@+id/frequency"
-        android:text="@string/strNetworkSearch" />
-
-    <CheckBox
-        android:id="@+id/clear_old"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/strClearOld"
-        android:visibility="gone" />
-    <!-- hide for  the moment -->
-
-    <CheckBox
-        android:id="@+id/dvbs2"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:nextFocusDown="@+id/search_mode"
-        android:visibility="gone"
-        android:text="@string/strDVBS2" />
+    android:orientation="horizontal"
+    android:paddingStart="100dp">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
         android:gravity="left|center_vertical"
-        android:orientation="horizontal" >
+        android:orientation="vertical">
 
         <TextView
-            android:id="@+id/search_mode_text"
-            android:layout_width="250dp"
+            android:id="@+id/dvb_search"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/strSearchMode" />
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-light"
+            android:maxLines="@integer/ut_scan_title_max_lines"
+            android:text="@string/strSearchDvbsDescription"
+            android:textColor="@color/ut_scan_title_text"
+            android:textSize="@dimen/ut_scan_title_text_size" />
 
-        <Spinner
-            android:id="@+id/search_mode"
-            android:layout_width="200dp"
+        <ProgressBar
+            android:id="@+id/searchprogress"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="@dimen/ut_scan_progress_width"
+            android:layout_height="@dimen/ut_scan_progress_height"
+            android:layout_marginTop="@dimen/ut_scan_progress_margin_top"
+            android:progressDrawable="@drawable/tv_scan_progress" />
+
+        <TextView
+            android:id="@+id/searchstatus"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="15dp"
-            android:entries="@array/search_mode_entries"/>
+            android:layout_marginTop="@dimen/ut_scan_description_margin_top"
+            android:accessibilityLiveRegion="polite"
+            android:fontFamily="sans-serif"
+            android:text="@string/strSearchNotStarted"
+            android:textColor="@color/ut_scan_description_text"
+            android:textSize="@dimen/ut_scan_description_text_size" />
+
+        <CheckBox
+            android:id="@+id/network"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/ut_scan_description_margin_top"
+            android:text="@string/strNetworkSearch" />
+
+        <CheckBox
+            android:id="@+id/clear_old"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/strClearOld"
+            android:visibility="gone"
+            tools:visibility="visible" />
+        <!-- hide for  the moment -->
+
+        <CheckBox
+            android:id="@+id/dvbs2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nextFocusDown="@+id/search_mode"
+            android:text="@string/strDVBS2"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/mode_option"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/ut_scan_description_margin_top"
+            android:accessibilityLiveRegion="polite"
+            android:fontFamily="sans-serif"
+            android:text="@string/tv_mode_option"
+            android:textColor="@color/ut_scan_description_text"
+            android:textSize="@dimen/ut_scan_button_text_size" />
 
         <LinearLayout
-            android:id="@+id/blind_frequency_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:gravity="left|center_vertical"
-            android:orientation="horizontal"
-            android:visibility="gone" >
+            android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/start_freq"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="Start Frequency:" />
+                android:orientation="vertical">
 
-            <EditText
-                android:id="@+id/edit_start_freq"
-                android:layout_width="100dp"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:gravity="center"
-                android:hint="MHz"
-                android:inputType="number" />
+                <TextView
+                    android:id="@+id/search_mode_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding"
+                    android:text="@string/strSearchMode"
+                    android:textColor="@color/ut_scan_description_text"
+                    android:textSize="@dimen/ut_scan_description_text_size" />
 
-            <TextView
-                android:id="@+id/end_freq"
+                <Spinner
+                    android:id="@+id/search_mode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:entries="@array/search_mode_entries"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+
+                <LinearLayout
+                    android:id="@+id/blind_frequency_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/start_freq"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="Start Frequency:" />
+
+                        <EditText
+                            android:id="@+id/edit_start_freq"
+                            android:layout_width="100dp"
+                            android:layout_height="wrap_content"
+                            android:ems="10"
+                            android:gravity="center"
+                            android:hint="MHz"
+                            android:inputType="number" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/end_freq"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:hint="MHz"
+                            android:text="End Frequency:" />
+
+                        <EditText
+                            android:id="@+id/edit_end_freq"
+                            android:layout_width="100dp"
+                            android:layout_height="wrap_content"
+                            android:ems="10"
+                            android:gravity="center"
+                            android:hint="MHz"
+                            android:inputType="number" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/fec_mode_container"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:hint="MHz"
-                android:text="End Frequency:" />
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
 
-            <EditText
-                android:id="@+id/edit_end_freq"
-                android:layout_width="100dp"
+                <TextView
+                    android:id="@+id/fec_mode_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding"
+                    android:text="@string/strFecMode"
+                    android:textColor="@color/ut_scan_description_text"
+                    android:textSize="@dimen/ut_scan_description_text_size" />
+
+                <Spinner
+                    android:id="@+id/fec_mode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:entries="@array/fec_mode_entries"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/modulation_mode_container"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:ems="10"
-                android:gravity="center"
-                android:hint="MHz"
-                android:inputType="number" />
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:id="@+id/modulation_mode_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding"
+                    android:text="@string/strModulationMode"
+                    android:textColor="@color/ut_scan_description_text"
+                    android:textSize="@dimen/ut_scan_description_text_size" />
+
+                <Spinner
+                    android:id="@+id/modulation_mode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:entries="@array/modulation_mode_entries"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding"
+                    android:text="@string/strChannelType"
+                    android:textColor="@color/ut_scan_description_text"
+                    android:textSize="@dimen/ut_scan_description_text_size" />
+
+                <Spinner
+                    android:id="@+id/channel_type"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:entries="@array/dvbs_channel_type"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding"
+                    android:text="@string/strServiceType"
+                    android:textColor="@color/ut_scan_description_text"
+                    android:textSize="@dimen/ut_scan_description_text_size" />
+
+                <Spinner
+                    android:id="@+id/service_type"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:entries="@array/dvbs_service_type"
+                    android:fontFamily="sans-serif"
+                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+
+            </LinearLayout>
 
         </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/option_set_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/ut_scan_button_height"
+                android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:fontFamily="sans-serif-condensed"
+                android:paddingLeft="@dimen/ut_scan_button_padding"
+                android:paddingRight="@dimen/ut_scan_button_padding"
+                android:text="@string/strSettings"
+                android:textAllCaps="false"
+                android:textColor="@color/ut_scan_button_text"
+                android:textSize="@dimen/ut_scan_button_text_size" />
+
+            <Button
+                android:id="@+id/import_satellite"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/ut_scan_button_height"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:fontFamily="sans-serif-condensed"
+                android:paddingLeft="@dimen/ut_scan_button_padding"
+                android:paddingRight="@dimen/ut_scan_button_padding"
+                android:text="@string/strImportSatellite"
+                android:textAllCaps="false"
+                android:textColor="@color/ut_scan_button_text"
+                android:textSize="@dimen/ut_scan_button_text_size"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <Button
+                android:id="@+id/setup"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/ut_scan_button_height"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:fontFamily="sans-serif-condensed"
+                android:paddingLeft="@dimen/ut_scan_button_padding"
+                android:paddingRight="@dimen/ut_scan_button_padding"
+                android:text="@string/strSetUp"
+                android:textAllCaps="false"
+                android:textColor="@color/ut_scan_button_text"
+                android:textSize="@dimen/ut_scan_button_text_size" />
+
+            <Button
+                android:id="@+id/startsearch"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/ut_scan_button_height"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:fontFamily="sans-serif-condensed"
+                android:paddingLeft="@dimen/ut_scan_button_padding"
+                android:paddingRight="@dimen/ut_scan_button_padding"
+                android:text="@string/strStartSearch"
+                android:textAllCaps="false"
+                android:textColor="@color/ut_scan_button_text"
+                android:textSize="@dimen/ut_scan_button_text_size" />
+
+            <Button
+                android:id="@+id/stopsearch"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/ut_scan_button_height"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:fontFamily="sans-serif-condensed"
+                android:paddingLeft="@dimen/ut_scan_button_padding"
+                android:paddingRight="@dimen/ut_scan_button_padding"
+                android:text="@string/strStopSearch"
+                android:textAllCaps="false"
+                android:textColor="@color/ut_scan_button_text"
+                android:textSize="@dimen/ut_scan_button_text_size"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
-    <!--<EditText
-        android:id="@+id/frequency"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:hint="Frequency"
-        android:inputType="number"
-        android:nextFocusDown="@+id/satellite"
-        android:singleLine="false" />
-
-    <Spinner
-        android:id="@+id/satellite"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:nextFocusUp="@+id/frequency"
-        android:entries="@array/satellites" />
-
-    <Spinner
-        android:id="@+id/polarity"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:nextFocusDown="@+id/symbolrate"
-        android:entries="@array/polarities" />
-
-    <EditText
-        android:id="@+id/symbolrate"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:hint="Symbol rate"
-        android:inputType="number" />-->
-
     <LinearLayout
-        android:id="@+id/fec_mode_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="left|center_vertical"
+        android:id="@+id/channel_holder"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="60dp"
+        android:layout_weight="1"
+        android:animateLayoutChanges="true"
+        android:descendantFocusability="blocksDescendants"
+        android:focusable="false"
+        android:orientation="vertical"
         android:visibility="gone"
-        android:orientation="horizontal" >
+        tools:visibility="visible">
 
         <TextView
-            android:id="@+id/fec_mode_text"
-            android:layout_width="250dp"
+            android:id="@+id/strengthstatus"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/strFecMode" />
-
-        <Spinner
-            android:id="@+id/fec_mode"
-            android:layout_width="200dp"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="15dp"
-            android:entries="@array/fec_mode_entries"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/modulation_mode_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="left|center_vertical"
-        android:visibility="gone"
-        android:orientation="horizontal" >
+            android:textSize="14sp"
+            tools:text="Strength:0%" />
 
         <TextView
-            android:id="@+id/modulation_mode_text"
-            android:layout_width="250dp"
+            android:id="@+id/qualitystatus"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/strModulationMode" />
-
-        <Spinner
-            android:id="@+id/modulation_mode"
-            android:layout_width="200dp"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="15dp"
-            android:entries="@array/modulation_mode_entries"/>
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="left|center_vertical"
-        android:orientation="horizontal" >
+            android:layout_marginTop="5dp"
+            android:textSize="14sp"
+            tools:text="Quality:0%" />
 
         <TextView
-            android:layout_width="250dp"
-            android:layout_height="wrap_content"
-            android:text="@string/strChannelType" />
-
-        <Spinner
-            android:id="@+id/channel_type"
-            android:layout_width="200dp"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="15dp"
-            android:entries="@array/dvbs_channel_type"/>
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="left|center_vertical"
-        android:orientation="horizontal" >
-
-        <TextView
-            android:layout_width="250dp"
-            android:layout_height="wrap_content"
-            android:text="@string/strServiceType" />
-
-        <Spinner
-            android:id="@+id/service_type"
-            android:layout_width="200dp"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="15dp"
-            android:entries="@array/dvbs_service_type"/>
-    </LinearLayout>
-    <!--<Spinner
-        android:id="@+id/fec"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:entries="@array/fecs" />
-
-    <Spinner
-        android:id="@+id/modulation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:entries="@array/modulations" />-->
-
-    <TextView
-        android:id="@+id/searchstatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:layout_marginTop="10dp"
-        android:text="@string/strSearchNotStarted"
-        android:textAlignment="center"
-        android:textSize="20dp" />
-
-    <ProgressBar
-        android:id="@+id/searchprogress"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal" >
-
-        <Button
-            android:id="@+id/import_satellite"
+            android:id="@+id/description"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="1dp"
-            android:background="@drawable/button"
-            android:layout_weight="1"
-            android:text="@string/strImportSatellite"
-            android:visibility="gone"/>
+            android:layout_marginTop="5dp"
+            android:textSize="14sp"
+            tools:text="Channel:0" />
 
-        <Button
-            android:id="@+id/setup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="1dp"
-            android:background="@drawable/button"
-            android:layout_weight="1"
-            android:text="@string/strSetUp" />
-
-        <Button
-            android:id="@+id/startsearch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="1dp"
-            android:layout_marginRight="1dp"
-            android:background="@drawable/button"
-            android:layout_weight="1"
-            android:text="@string/strStartSearch" />
-
-        <Button
-            android:id="@+id/stopsearch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="1dp"
-            android:background="@drawable/button"
-            android:layout_weight="1"
-            android:text="@string/strStopSearch" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/description"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:layout_marginTop="10dp"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/strengthstatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/qualitystatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp" />
 </LinearLayout>

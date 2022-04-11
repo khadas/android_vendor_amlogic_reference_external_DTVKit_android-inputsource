@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.media.tv.TvContract;
 import android.media.tv.TvInputInfo;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
@@ -63,6 +64,8 @@ public class DtvkitDvbsSetup extends Activity {
 
     private final static int MSG_FINISH_SEARCH = 1;
     private final static int MSG_ON_SIGNAL = 2;
+
+    private long clickLastTime;
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -124,43 +127,62 @@ public class DtvkitDvbsSetup extends Activity {
         mDataMananer = new DataMananer(this);
         mPvrStatusConfirmManager = new PvrStatusConfirmManager(this, mDataMananer);
         mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
-        Intent intent = getIntent();
-        if (intent != null) {
-            String status = intent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
+        Intent cIntent = getIntent();
+        final String inputId;
+        final String status;
+        if (cIntent != null) {
+            inputId = cIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+            status = cIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
             mPvrStatusConfirmManager.setPvrStatus(status);
             Log.d(TAG, "onCreate pvr status = " + status);
+        } else {
+            inputId = null;
+            status = null;
         }
-
-        final Button search = (Button)findViewById(R.id.startsearch);
-        final Button stop = (Button)findViewById(R.id.stopsearch);
-        final Button setup = (Button)findViewById(R.id.setup);
-        final Button importSatellite = (Button)findViewById(R.id.import_satellite);
+        final Button optionSet = findViewById(R.id.option_set_btn);
+        optionSet.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intentSet = new Intent();
+                if (inputId != null) {
+                    intentSet.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
+                }
+                String pvrFlag = PvrStatusConfirmManager.read(DtvkitDvbsSetup.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
+                if (status != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
+                    intentSet.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, status);
+                } else {
+                    intentSet.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
+                }
+                intentSet.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_SETTINGS);
+                startActivity(intentSet);
+                mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_SETTINGS);
+            }
+        });
+        final Button search = (Button) findViewById(R.id.startsearch);
+        final Button setup = (Button) findViewById(R.id.setup);
+        final Button importSatellite = (Button) findViewById(R.id.import_satellite);
         search.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                mPvrStatusConfirmManager.setSearchType(ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
-                boolean checkPvr = mPvrStatusConfirmManager.needDeletePvrRecordings();
-                if (checkPvr) {
-                    mPvrStatusConfirmManager.showDialogToAppoint(DtvkitDvbsSetup.this, false);
-                } else {
-                    mPvrStatusConfirmManager.sendDvrCommand(DtvkitDvbsSetup.this);
-                    search.setEnabled(false);
-                    stop.setEnabled(true);
-                    stop.requestFocus();
-                    startSearch();
+                long currentTime = SystemClock.elapsedRealtime();
+                if (currentTime - clickLastTime > 500) {
+                    clickLastTime = currentTime;
+                    mPvrStatusConfirmManager.setSearchType(ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
+                    boolean checkPvr = mPvrStatusConfirmManager.needDeletePvrRecordings();
+                    if (checkPvr) {
+                        mPvrStatusConfirmManager.showDialogToAppoint(DtvkitDvbsSetup.this, false);
+                    } else {
+                        if (mStartSearch) {
+                            stopSearch(true);
+                        } else {
+                            search.setText(R.string.strStopSearch);
+                            mPvrStatusConfirmManager.sendDvrCommand(DtvkitDvbsSetup.this);
+                            startSearch();
+                        }
+                    }
                 }
             }
         });
         search.requestFocus();
-
-        stop.setEnabled(false);
-        stop.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                stop.setEnabled(false);
-                search.setEnabled(true);
-                search.requestFocus();
-                stopSearch(true);
-            }
-        });
 
         setup.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -179,6 +201,19 @@ public class DtvkitDvbsSetup extends Activity {
         importSatellite.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 mParameterMananer.importDatabase(ConstantManager.DTVKIT_SATELLITE_DATA);
+            }
+        });
+
+        TextView dvb_search = (TextView)findViewById(R.id.dvb_search);
+        View channel_holder = findViewById(R.id.channel_holder);
+        dvb_search.post(new Runnable() {
+            @Override
+            public void run() {
+                LinearLayout.LayoutParams pms= (LinearLayout.LayoutParams) channel_holder.getLayoutParams();
+                int[] location = new int[2];
+                dvb_search.getLocationOnScreen(location);
+                pms.topMargin=location[1];
+                channel_holder.setLayoutParams(pms);
             }
         });
 
@@ -335,11 +370,11 @@ public class DtvkitDvbsSetup extends Activity {
 
     private void dealOnSignal(int progress) {
         Log.d(TAG, "onSignal progress = " + progress);
-        setSearchProgress(progress);
         int found = getFoundServiceNumber();
+        setSearchProgress(progress, String.format(Locale.ENGLISH, "Channel: %d", found));
         int sstatus = mParameterMananer.getStrengthStatus();
         int qstatus = mParameterMananer.getQualityStatus();
-        setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), String.format(Locale.ENGLISH, "Found %d services", found));
+        setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
         setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", sstatus), String.format(Locale.ENGLISH, "Quality: %d%%", qstatus));
         if (progress >= 100) {
             sendFinishSearch();
@@ -354,12 +389,14 @@ public class DtvkitDvbsSetup extends Activity {
         }
     }
 
-    private void setSearchProgress(final int progress) {
+    private void setSearchProgress(final int progress , final String description) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 final ProgressBar bar = (ProgressBar) findViewById(R.id.searchprogress);
                 bar.setProgress(progress);
+                final TextView text2 = (TextView) findViewById(R.id.description);
+                text2.setText(description);
             }
         });
     }
@@ -650,7 +687,7 @@ public class DtvkitDvbsSetup extends Activity {
         setStrengthAndQualityStatus("Strength:",  "Quality:");
         getProgressBar().setIndeterminate(false);
         startMonitoringSearch();
-
+        updateSearchButton(false);
         /*CheckBox network = (CheckBox)findViewById(R.id.network);
         EditText frequency = (EditText)findViewById(R.id.frequency);
         Spinner satellite = (Spinner)findViewById(R.id.satellite);
@@ -684,7 +721,6 @@ public class DtvkitDvbsSetup extends Activity {
                 stopMonitoringSearch();
                 setSearchStatus(getString(R.string.invalid_parameter), "");
                 setStrengthAndQualityStatus("",  "");
-                enableSearchButton(true);
                 stopSearch(true);
                 return;
             }
@@ -698,8 +734,7 @@ public class DtvkitDvbsSetup extends Activity {
 
     private void stopSearch(boolean sync) {
         mStartSearch = false;
-        enableSearchButton(true);
-        enableStopButton(false);
+        updateSearchButton(true);
         setSearchStatus("Finishing search");
         setStrengthAndQualityStatus("",  "");
         getProgressBar().setIndeterminate(sync);
@@ -740,8 +775,8 @@ public class DtvkitDvbsSetup extends Activity {
                     mParameterMananer.saveChannelIdForSource(-1);
                 } catch (Exception e) {
                     doStopByUiThread(e);
+                    updateSearchButton(true);
                 }
-                enableSearchButton(true);
             }
         }).start();
     }
@@ -765,28 +800,19 @@ public class DtvkitDvbsSetup extends Activity {
         });
     }
 
-    private void enableSearchButton(boolean enable) {
+    private void updateSearchButton(boolean strStart) {
         runOnUiThread(new Runnable() {
             public void run() {
                 Button search = (Button)findViewById(R.id.startsearch);
-                search.setEnabled(enable);
-            }
-        });
-    }
-
-    private void enableStopButton(boolean enable) {
-        runOnUiThread(new Runnable() {
-            public void run() {
-                Button stop = (Button)findViewById(R.id.stopsearch);
-                stop.setEnabled(enable);
+                search.setText(strStart ? R.string.strStartSearch : R.string.strStopSearch);
             }
         });
     }
 
     private void onSearchFinished() {
         mStartSearch = false;
-        enableSearchButton(false);
-        enableStopButton(false);
+        runOnUiThread(() -> findViewById(R.id.startsearch).setEnabled(false));
+        updateSearchButton(true);
         enableSetupButton(false);
         setSearchStatus("Finishing search");
         setStrengthAndQualityStatus("",  "");
@@ -858,10 +884,7 @@ public class DtvkitDvbsSetup extends Activity {
             public void run() {
                 Log.i(TAG, String.format("Search status \"%s\"", status));
                 final TextView text = (TextView) findViewById(R.id.searchstatus);
-                text.setText(status);
-
-                final TextView text2 = (TextView) findViewById(R.id.description);
-                text2.setText(description);
+                text.setText(String.format("%s\t%s",status,description));
             }
         });
     }
@@ -916,6 +939,11 @@ public class DtvkitDvbsSetup extends Activity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (TextUtils.isEmpty(sstatus) && TextUtils.isEmpty(qstatus)) {
+                    findViewById(R.id.channel_holder).setVisibility(View.GONE);
+                } else {
+                    findViewById(R.id.channel_holder).setVisibility(View.VISIBLE);
+                }
                 Log.i(TAG, String.format("Strength: %s", sstatus));
                 final TextView strengthText = (TextView) findViewById(R.id.strengthstatus);
                 strengthText.setText(sstatus);

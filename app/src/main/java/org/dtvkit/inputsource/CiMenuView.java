@@ -301,31 +301,30 @@ public class CiMenuView extends LinearLayout {
         }
 
         private void setUpAndPrintMenuItem(final int buttonNum, final String itemText) {
-            final LayoutInflater inflater = LayoutInflater.from(mContext);
-            final Button button = (Button)inflater.inflate(R.layout.mmibutton, null);
             final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+            final LayoutInflater inflater = LayoutInflater.from(mContext);
+            final TextView textView = (Button)inflater.inflate(R.layout.mmibutton, linearLayout , false);
 
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    button.setLayoutParams(new LinearLayout.LayoutParams(findViewById(R.id.textViewMenuTitle).getWidth(), 40));
-                    button.setText(itemText);
-                    button.setId(buttonNum);
+                    textView.setText(itemText);
+                    textView.setId(buttonNum);
 
-                    button.setFocusable(true);
-                    button.setFocusableInTouchMode(true);
+                    textView.setFocusable(true);
+                    textView.setFocusableInTouchMode(true);
 
-                    linearLayout.addView(button);
+                    linearLayout.addView(textView);
 
-                    button.setOnClickListener(new View.OnClickListener() {
+                    textView.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
-                            selectMenuOption(button.getId());
-                            Log.i(TAG, "Clicking button " + Integer.toString(button.getId()));
+                            selectMenuOption(textView.getId());
+                            Log.i(TAG, "Clicking button " + Integer.toString(textView.getId()));
                         }
                     });
 
-                    button.setOnKeyListener(new View.OnKeyListener() {
+                    textView.setOnKeyListener(new View.OnKeyListener() {
                         @Override
                         public boolean onKey(View v, int keyCode, KeyEvent event) {
                             /* Return to previous level */

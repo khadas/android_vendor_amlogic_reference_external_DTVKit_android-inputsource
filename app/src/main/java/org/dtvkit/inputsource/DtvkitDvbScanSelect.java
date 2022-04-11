@@ -179,8 +179,12 @@ public class DtvkitDvbScanSelect extends Activity {
         final Intent intent = new Intent();
         final String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
         final String pvrStatus = mIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
+        String searchType = mIntent.getStringExtra("search_type");
         if (inputId != null) {
             intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
+        }
+        if (pvrStatus != null) {
+            intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
         }
         //init pvr set flag when inited
         String firstPvrFlag = PvrStatusConfirmManager.read(this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
@@ -203,25 +207,7 @@ public class DtvkitDvbScanSelect extends Activity {
         spinnerDvbSource.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                int source = 0;
-                switch (i) {
-                    case 0:
-                        source = ParameterMananer.SIGNAL_QAM;
-                        break;
-                    case 1:
-                        source = ParameterMananer.SIGNAL_COFDM;
-                        break;
-                    case 2:
-                        source = ParameterMananer.SIGNAL_QPSK;
-                        break;
-                    case 3:
-                        source = ParameterMananer.SIGNAL_ISDBT;
-                        break;
-                }
-                if (currentDvbSource != source) {
-                    currentDvbSource = source;
-                    setCurrentDvbSource(source);
-                }
+                choiceSource(i);
             }
 
             @Override
@@ -296,6 +282,56 @@ public class DtvkitDvbScanSelect extends Activity {
                 Log.d(TAG, "start to set related language");
             }
         });
+
+        Log.i("searchType", "" + searchType);
+        if (searchType != null) {
+            switch (searchType) {
+                case "cable":
+                    searchType = getString(R.string.strDvbc);
+                    break;
+                case "terrestrial":
+                    searchType = getString(R.string.strDvbt);
+                    break;
+                case "satellite":
+                    searchType = getString(R.string.strDvbs);
+                    break;
+                case "isdb":
+                    searchType = getString(R.string.strIsdbt);
+                    break;
+            }
+            for (int position = 0; position < systems.size(); position++) {
+                if (TextUtils.equals(systems.get(position), searchType)) {
+                    choiceSource(position);
+                    scan.performClick();
+                    finish();
+                    Log.i("searchType", "setCurrentDvbSource:" + position + "\t" + systems.get(position));
+                    break;
+                }
+            }
+        }
+
+    }
+
+    private void choiceSource(int position) {
+        int source = 0;
+        switch (position) {
+            case 0:
+                source = ParameterMananer.SIGNAL_QAM;
+                break;
+            case 1:
+                source = ParameterMananer.SIGNAL_COFDM;
+                break;
+            case 2:
+                source = ParameterMananer.SIGNAL_QPSK;
+                break;
+            case 3:
+                source = ParameterMananer.SIGNAL_ISDBT;
+                break;
+        }
+        if (currentDvbSource != source) {
+            currentDvbSource = source;
+            setCurrentDvbSource(source);
+        }
     }
 
     private void showOperatorTypeConfirmDialog(final int tunerType, final Context context, final JSONArray operatorsTypeArray) {

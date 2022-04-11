@@ -3,4 +3,15 @@
     <color name="button_enabled">#12345b</color>
     <color name="button_focused">#145195</color>
     <color name="button_pressed">#92145195</color>
+    <color name="ut_scan_title_text">#EEEEEE</color>
+    <color name="ut_scan_description_text">#B3EEEEEE</color>
+    <color name="side_panel_header_droid_background">#37474F</color>
+    <color name="black_background">#000000</color>
+    <color name="ut_scan_progress_background">#26EEEEEE</color>
+    <color name="ut_scan_progress">#EEEEEE</color>
+    <color name="ut_scan_button_text">#EEEEEE</color>
+    <color name="option_item_text_color_enabled">#FFEEEEEE</color>
+    <color name="option_item_text_color_disabled">#4DEEEEEE</color>
+    <color name="channel_bottom_blue">#2E2F32</color>
+    <color name="color_transparent">#00000000</color>
 </resources>

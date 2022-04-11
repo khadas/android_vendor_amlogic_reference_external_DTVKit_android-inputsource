@@ -215,9 +215,13 @@
             <Button
                 android:id="@+id/storage_refresh"
                 android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:gravity="center_vertical"
+                android:layout_height="wrap_content"
+                android:gravity="center"
                 android:textAllCaps="false"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:paddingLeft="5dp"
+                android:paddingRight="5dp"
                 android:text="@string/strSettingsRefresh"/>
 
             <CheckBox
@@ -269,9 +273,13 @@
             <Button
                 android:id="@+id/network_update_button"
                 android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:gravity="center_vertical"
+                android:layout_height="wrap_content"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:gravity="center"
                 android:textAllCaps="false"
+                android:paddingLeft="5dp"
+                android:paddingRight="5dp"
                 android:text="@string/strSettingsUpdateNetworkUpdate" />
         </LinearLayout>
 
@@ -317,9 +325,13 @@
             <Button
                 android:id="@+id/auto_searching_button"
                 android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:gravity="center_vertical"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
                 android:textAllCaps="false"
+                android:paddingLeft="5dp"
+                android:paddingRight="5dp"
                 android:text="@string/strSettingsAutoSearchingSetting" />
         </LinearLayout>
         <LinearLayout
@@ -342,9 +354,13 @@
             <Button
                 android:id="@+id/factory_settings_button"
                 android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:gravity="center_vertical"
+                android:layout_height="wrap_content"
+                android:gravity="center"
                 android:textAllCaps="false"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:paddingLeft="5dp"
+                android:paddingRight="5dp"
                 android:text="@string/strSettingsAutoSearchingSetting" />
         </LinearLayout>
     </LinearLayout>
