@@ -2707,6 +2707,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mainMuteStatus && !TextUtils.isEmpty(previousUriStr) && !TextUtils.isEmpty(nextUriStr)) {
                 mainMuteStatus = false;
             }
+            if (mHbbTvManager != null) {
+                mHbbTvManager.setTuneChannelUri(channelUri);
+            }
             boolean playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart,
                     mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
             if (playResult) {
@@ -2716,8 +2719,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
             }
 
-            if (mHbbTvManager != null) {
-                mHbbTvManager.setTuneChannelUri(playResult ? channelUri : null);
+            if (mHbbTvManager != null && !playResult) {
+                mHbbTvManager.setTuneChannelUri(null);
             }
             return playResult;
         }

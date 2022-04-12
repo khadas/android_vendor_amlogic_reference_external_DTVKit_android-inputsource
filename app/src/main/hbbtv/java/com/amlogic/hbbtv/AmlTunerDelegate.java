@@ -2155,7 +2155,7 @@ public class AmlTunerDelegate implements TunerDelegate {
         DtvkitGlueClient.getInstance().setPidFilterListener(null);
         setResourceOwnerByBrFlag(true);
         setTuneChannelUri(null);
-        sendNotifyMsg(MSG.MSG_CHANNELCHANGED, 0, 0, null);
+        notifyChannelChanged();
         stopAllPidFilter();
         Log.i(TAG, "release out");
 
