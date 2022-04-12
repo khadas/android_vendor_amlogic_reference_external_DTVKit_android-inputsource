@@ -435,6 +435,12 @@ public class HbbTvManager{
         }
 
     }
+
+    public void notifyTrackSelectedToHbbtv(int type, String trackId) {
+        if (mAmlTunerDelegate != null) {
+            mAmlTunerDelegate.notifyTrackSelectedFromOthers(type, trackId);
+        }
+    }
 }
 
 

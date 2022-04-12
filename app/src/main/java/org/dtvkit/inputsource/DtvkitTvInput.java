@@ -3347,9 +3347,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         || (mCaptioningManager != null && mCaptioningManager.isEnabled()))
                         && selectSubtitleOrTeletext(isTele, subType, trackId)) {
                     notifyTrackSelected(type, sourceTrackId);
+                    if (mHbbTvManager != null) {
+                        mHbbTvManager.notifyTrackSelectedToHbbtv(type, sourceTrackId);
+                    }
                 } else {
                     Log.d(TAG, "onSelectTrack mCaptioningManager closed or invlid sub");
                     notifyTrackSelected(type, null);
+                    if (mHbbTvManager != null) {
+                        mHbbTvManager.notifyTrackSelectedToHbbtv(type, null);
+                    }
                 }
                 result = true;
             }
