@@ -709,7 +709,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         Bundle parameters = new Bundle();
         //parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
-        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, mInputId, false,sync, parameters);
+        String inputId = TextUtils.isEmpty(mInputId) ? "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19" : mInputId;
+        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, inputId, false,sync, parameters);
     }
 
     private boolean sendEmptyMessageToInputThreadHandler(int what) {
