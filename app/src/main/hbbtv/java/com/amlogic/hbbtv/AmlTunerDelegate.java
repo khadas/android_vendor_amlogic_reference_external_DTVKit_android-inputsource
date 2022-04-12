@@ -1265,17 +1265,38 @@ public class AmlTunerDelegate implements TunerDelegate {
     private void  notifyTracksChanged() {
         Log.i(TAG, "notifyTracksChanged in ");
         synchronized (mTrackLock) {
-            if (mAllTracksInfo != null && mAllTracksInfo.size() > 0) {
+            if ((mAllTracksInfo != null) && (mSelectTrackInfo != null)) {
                 for (TunerDelegateClient client : mTunerDelegateClientList) {
                     client.onTracksChanged(mAllTracksInfo, mSelectTrackInfo);
                     Log.d(TAG, "notify onTracksChanged tracks.size= " + mAllTracksInfo.size());
                 }
-
-            } else {
-                Log.d(TAG, "notifyTracksChanged no track info");
             }
         }
         Log.i(TAG, "notifyTracksChanged out ");
+    }
+
+    public void notifyTrackSelectedFromOthers(int type, String trackId) {
+        Log.i(TAG, "notifyTrackSelectedFromOthers in ");
+        String curTrackId = null;
+         synchronized (mTrackLock) {
+            if (mSelectTrackInfo != null) {
+                curTrackId = mSelectTrackInfo.get(type);
+            }
+        }
+        Log.i(TAG, "notifyTrackSelectedFromOthers type = " + type + ", curTrackId = " + curTrackId
+        + ", trackId = " + trackId);
+        if (curTrackId != null && trackId != null) {
+            if (!curTrackId.equals(trackId)) {
+                updateSelectTrackInfo(type, trackId);
+                sendNotifyMsg(MSG.MSG_TRACKSCHANGED, 1, 0, null);
+            }
+        } else if (curTrackId == null && trackId == null) {
+            Log.i(TAG, "notifyTrackSelectedFromOthers same track ");
+        } else {
+            updateSelectTrackInfo(type, trackId);
+            sendNotifyMsg(MSG.MSG_TRACKSCHANGED, 1, 0, null);
+        }
+        Log.i(TAG, "notifyTrackSelectedFromOthers out ");
     }
 
     private void  notifyTrackSelected(int type, String trackId) {
@@ -1449,6 +1470,9 @@ public class AmlTunerDelegate implements TunerDelegate {
             return null;
         }
         Log.i(TAG, "getAudioTrackList size= " + audioTracks.size());
+        if (audioTracks.size() == 0) {
+            updateSelectTrackInfo(TvTrackInfo.TYPE_AUDIO, null);
+        }
         Log.i(TAG, "getAudioTrackList out ");
         return audioTracks;
 
@@ -1498,6 +1522,9 @@ public class AmlTunerDelegate implements TunerDelegate {
             return null;
         }
         Log.i(TAG, "getVideoTrackList size= " + videoTracks.size());
+        if (videoTracks.size() == 0) {
+            updateSelectTrackInfo(TvTrackInfo.TYPE_VIDEO, null);
+        }
         Log.i(TAG, "getVideoTrackList out ");
         return videoTracks;
 
@@ -1546,6 +1573,9 @@ public class AmlTunerDelegate implements TunerDelegate {
             return null;
         }
         Log.d(TAG, "getSubtitleTrackList size= " + subtitleTracks.size());
+        if (subtitleTracks.size() == 0) {
+            updateSelectTrackInfo(TvTrackInfo.TYPE_SUBTITLE, null);
+        }
         Log.i(TAG, "getSubtitleTrackList out ");
         return subtitleTracks;
     }
@@ -1636,6 +1666,69 @@ public class AmlTunerDelegate implements TunerDelegate {
         }
     }
 
+    private boolean isSameTrackBundle(Bundle oldBundle, Bundle curBundle) {
+        boolean  bRet = true;
+        if (oldBundle == curBundle) {
+            bRet = true;
+        } else if(oldBundle == null || curBundle == null) {
+            bRet = false;
+        } else {
+            boolean isPrivateForOld = oldBundle.getBoolean(HbbTvConstantManager.KEY_TRACK_IS_PRIVATE);
+            int componentTagForOld = oldBundle.getInt(TrackInfoExtra.TRACK_INFO_COMPONENT_TAG);
+            int pidForOld = oldBundle.getInt(TrackInfoExtra.TRACK_INFO_PID);
+
+            boolean isPrivateForCur = curBundle.getBoolean(HbbTvConstantManager.KEY_TRACK_IS_PRIVATE);
+            int componentTagForCur = curBundle.getInt(TrackInfoExtra.TRACK_INFO_COMPONENT_TAG);
+            int pidForCur = curBundle.getInt(TrackInfoExtra.TRACK_INFO_PID);
+            if ((isPrivateForOld != isPrivateForCur) || (componentTagForOld != componentTagForCur) ||
+                (pidForOld != pidForCur)) {
+                bRet = false;
+            }
+        }
+        Log.i(TAG, "isSameTrackBundle bRet = " + bRet);
+        return bRet;
+    }
+
+    private boolean isSameTrackInfo(List<TvTrackInfo> oldTracks, List<TvTrackInfo>curTracks ) {
+        boolean bRet = true;
+        if (oldTracks == curTracks) {
+            bRet = true;
+        } else if (oldTracks == null || curTracks == null) {
+            bRet = false;
+        } else {
+            int oldTracksSize = oldTracks.size();
+            int curTracksSize = curTracks.size();
+            if (oldTracksSize != curTracksSize) {
+                bRet = false;
+            } else if (oldTracksSize == curTracksSize && curTracksSize != 0) {
+                if (!oldTracks.equals(curTracks)) {
+                    bRet = false;
+                } else {
+                    Bundle curBundle = null;
+                    Bundle oldBundle = null;
+                    bRet = true;
+                    for (TvTrackInfo curTrackInfo : curTracks) {
+                        for (TvTrackInfo oldTrackInfo : oldTracks) {
+                            if (curTrackInfo.equals(oldTrackInfo)) {
+                                curBundle = curTrackInfo.getExtra();
+                                oldBundle = oldTrackInfo.getExtra();
+                                if (!isSameTrackBundle(oldBundle, curBundle)) {
+                                    bRet = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!bRet) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        Log.i(TAG, "isSameTrackInfo bRet = " + bRet);
+        return bRet;
+    }
+
     private void checkTracksInfoUpdate(boolean forceUpdate) {
         Log.i(TAG, "checkTracksInfoUpdate in ");
         boolean updateTriggered = true;
@@ -1643,23 +1736,17 @@ public class AmlTunerDelegate implements TunerDelegate {
         boolean bUpdate = false;
 
         synchronized (mTrackLock) {
-            if (tracks != null && tracks.size() > 0 && mAllTracksInfo != null && mAllTracksInfo.size() > 0) {
-                if (!tracks.equals(mAllTracksInfo)) {
-                    mAllTracksInfo = tracks;
-                    bUpdate = true;
-                    Log.d(TAG, "checkTrackinfoUpdate update new tracks");
-                }
-            } else if (tracks != null && tracks.size() > 0 && mAllTracksInfo == null) {
-                    mAllTracksInfo = tracks;
-                    bUpdate = true;
-                    Log.d(TAG, "checkTrackinfoUpdate sync to mAllTracksInfo");
+            if (!isSameTrackInfo(mAllTracksInfo, tracks)) {
+                mAllTracksInfo = tracks;
+                bUpdate = true;
+                Log.d(TAG, "checkTrackinfoUpdate update new tracks");
             }
         }
+        Log.d(TAG, "checkTracksInfoUpdate - forceUpdate = " + forceUpdate + ", bUpdate = " + bUpdate);
         if (bUpdate || forceUpdate) {
             Log.d(TAG, "checkTracksInfoUpdate - notifyTracksChanged");
             notifyTracksChanged();
         }
-
         Log.i(TAG, "checkTracksInfoUpdate out ");
     }
 
@@ -1674,11 +1761,17 @@ public class AmlTunerDelegate implements TunerDelegate {
             if (obj != null && obj.getBoolean("accepted")) {
                 compArray = obj.getJSONArray("data");
             } else {
-                return null;
+                updateSelectTrackInfo(TvTrackInfo.TYPE_AUDIO, null);
+                updateSelectTrackInfo(TvTrackInfo.TYPE_VIDEO, null);
+                updateSelectTrackInfo(TvTrackInfo.TYPE_SUBTITLE, null);
+                return tracks;
             }
         } catch (Exception e) {
             Log.e(TAG, "getAllTracksInfo Exception = " + e.getMessage());
-            return null;
+            updateSelectTrackInfo(TvTrackInfo.TYPE_AUDIO, null);
+            updateSelectTrackInfo(TvTrackInfo.TYPE_VIDEO, null);
+            updateSelectTrackInfo(TvTrackInfo.TYPE_SUBTITLE, null);
+            return tracks;
         }
         int audioTracksSize = 0;
         int videoTrackSize = 0;
@@ -1823,7 +1916,7 @@ public class AmlTunerDelegate implements TunerDelegate {
                         break;
                     }
                     case MSG.MSG_TRACKSCHANGED: {
-                        checkTracksInfoUpdate(false);
+                        checkTracksInfoUpdate(msg.arg1>0 ? true:false);
                         break;
                     }
                     case MSG.MSG_TUNERSTATECHANGED: {
