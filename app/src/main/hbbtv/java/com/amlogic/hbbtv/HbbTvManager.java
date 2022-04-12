@@ -198,7 +198,7 @@ public class HbbTvManager{
         public void onResourceGranted() {
             Log.i(TAG, "Resource granted");
             if (!mAmlHbbTvView.isControllingBroadcastApplicationRunning()
-                    && !mAmlHbbTvView.isBroadcastIndependentApplicationRunning()) {
+                    /*&& !mAmlHbbTvView.isBroadcastIndependentApplicationRunning()*/) {
                 mAmlTunerDelegate.tuneToCurrentChannel();
                 setResourceOwnedByBr(true);
             }
