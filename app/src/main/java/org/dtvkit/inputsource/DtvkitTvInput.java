@@ -2564,9 +2564,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                  String dvbUri, boolean mhegTune) {
             onFinish(false, false);
             DtvkitGlueClient.getInstance().registerSignalHandler(mHandler, INDEX_FOR_PIP);
+            mTunedChannel = newChannel; // before play
             boolean playResult = playerPlay(INDEX_FOR_PIP, dvbUri, mAudioADAutoStart,
                     true, 0, "", "").equals("ok");
             if (!playResult) {
+                mTunedChannel = null;
                 DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
             }
             return playResult;
@@ -2690,13 +2692,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             if (mhegTune) {
                 mhegSuspend();
-                if (mhegGetNextTuneInfo(dvbUri) == 0)
+                if (mhegGetNextTuneInfo(dvbUri) == 0) {
                     notifyChannelRetuned(channelUri);
+                }
             }
-            //playerStopTeletext();//no need to save teletext select status
+
             onFinish(mhegTune, getFeatureSupportFcc() && !getFccBufferUri().isEmpty());
-            //setParentalControlOn(false);
-            //playerResetAssociateDualSupport();
             userDataStatus(false);
 
             // start tune flow
@@ -2707,20 +2708,22 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mainMuteStatus && !TextUtils.isEmpty(previousUriStr) && !TextUtils.isEmpty(nextUriStr)) {
                 mainMuteStatus = false;
             }
+
             if (mHbbTvManager != null) {
                 mHbbTvManager.setTuneChannelUri(channelUri);
             }
+            mTunedChannel = newChannel; // before play
             boolean playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart,
                     mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
             if (playResult) {
                 userDataStatus(true);
                 playerInitAssociateDualSupport();
             } else {
+                mTunedChannel = null;
+                if (mHbbTvManager != null) {
+                    mHbbTvManager.setTuneChannelUri(null);
+                }
                 DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
-            }
-
-            if (mHbbTvManager != null && !playResult) {
-                mHbbTvManager.setTuneChannelUri(null);
             }
             return playResult;
         }
@@ -2728,14 +2731,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         @Override
         protected void onFinish(boolean ignoreMheg, boolean ignoreFcc) {
             Log.i(TAG, "onFinish ignoreMheg:" + ignoreMheg + ", ignoreFcc:" + ignoreFcc);
+            boolean doStop = stopTimeshiftIfNeeded();
             if (!ignoreMheg) {
                 mhegStop();
             }
-            if (timeshiftRecorderState != RecorderState.STOPPED) {
-                if (stopTimeshiftRecordingInSession(false)) {
-                    timeshiftRecorderState = RecorderState.STOPPED;
-                }
-            }
+
             if (!ignoreFcc) {
                 playerStop();
             }
@@ -2752,7 +2752,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     public abstract class DtvkitTvInputSession extends Session {
         protected final String TAG = this + "";
-        private Channel mTunedChannel = null;
+        protected Channel mTunedChannel = null;
 
         private List<TvTrackInfo> mTunedTracks = null;
         private RecordedProgram recordedProgram = null;
@@ -3077,6 +3077,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return result;
         }
 
+        boolean stopTimeshiftIfNeeded() {
+            boolean ret = false;
+            if (getFeatureSupportTimeshifting()) {
+                if (timeshiftRecorderState != RecorderState.STOPPED) {
+                    Log.i(TAG, "reset timeshiftState to STOPPED.");
+                    ret = stopTimeshiftRecordingInSession(false);
+                    if (ret) {
+                        timeshiftRecorderState = RecorderState.STOPPED;
+                    }
+                }
+                timeshiftAvailable.setYes(true);
+            }
+            return ret;
+        }
+
         protected void onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
             if (!hasTunePermission()) {
                 tunePendingIfNeeded(SEMAPHORE_TIME_OUT);
@@ -3094,18 +3109,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mSessionState = SessionState.TUNED;
             mPendingTuneUri = null;
             Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + ", mIsPip = " + mIsPip);
-            // before tune to new channel, stop timeshift first.
-            boolean ret = true;
-            if (timeshiftRecorderState != RecorderState.STOPPED) {
-                Log.i(TAG, "reset timeshiftState to STOPPED.");
-                ret = stopTimeshiftRecordingInSession(timeshiftStartMode == 1);
-                if (ret) {
-                    timeshiftRecorderState = RecorderState.STOPPED;
-                }
-            }
-            if (ret) {
-                timeshiftAvailable.setYes(true);
-            }
 
             Channel firtDbValidChannel = getFirstChannel();
             if (firtDbValidChannel == null) {
@@ -3167,10 +3170,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0, 0);
 
             boolean playResult = doTune(mTunedChannel, tunedChannel, channelUri, dvbUri, mhegTune);
-            if (playResult) {
-                mTunedChannel = tunedChannel;
-            } else {
-                mTunedChannel = null;
+            if (!playResult) {
                 notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
 
@@ -4152,14 +4152,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                              * type: "dvbtimeshifting" -> timeshift streaming
                              */
                             if (type.equals("dvblive")) {
-                                if (mTunedChannel != null) {
-                                    if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
-                                        notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
-                                    } else {
-                                        notifyVideoAvailable();
-                                    }
+                                if (mTunedChannel != null &&
+                                    mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
+                                    notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
                                 } else {
-                                    Log.d(TAG, "on signal dvblive null mTunedChannel");
+                                    notifyVideoAvailable();
                                 }
                                 if (mIsPip) {
                                     Log.d(TAG, "dvblive PIP only need video status");
