@@ -332,7 +332,8 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "setChannel in");
         Log.d(TAG, "setChannel ccid= " + ccid + ", quietMode= " + quietMode);
         if (null == ccid) {
-            notifyChannelChangedError(null, TunerDelegateChannelErrorState.UNKNOWN_CHANNEL);
+            setTuneChannelUri(null);
+            notifyChannelChanged();
             return;
         }
         Uri channelUri =
@@ -490,7 +491,8 @@ public class AmlTunerDelegate implements TunerDelegate {
                 forceRequestResource();
             }
         } else {
-            notifyChannelChangedError(null, TunerDelegateChannelErrorState.UNKNOWN_CHANNEL);
+            //notifyChannelChangedError(null, TunerDelegateChannelErrorState.UNKNOWN_CHANNEL);
+            notifyChannelChanged();
         }
         Log.i(TAG, "tuneToCurrentChannel out");
     }
