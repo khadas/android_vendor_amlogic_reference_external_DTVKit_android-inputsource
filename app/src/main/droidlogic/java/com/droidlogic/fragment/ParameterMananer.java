@@ -729,7 +729,9 @@ public class ParameterMananer {
                 }
                 for (int i = 0; i < data.length(); i++) {
                     String countryName = (String)(((JSONObject)(data.get(i))).get("country_name"));
-                    if (allLocale != null && allLocale.length > 0) {
+                    if (countryName.equalsIgnoreCase("twn")) {
+                        countryName = "Taiwan(China)";
+                    } else if (allLocale != null && allLocale.length > 0) {
                         Log.d(TAG, "allLocale size = " + allLocale.length);
                         for (Locale one : allLocale) {
                             try {
