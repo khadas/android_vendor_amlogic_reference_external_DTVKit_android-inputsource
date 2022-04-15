@@ -332,8 +332,7 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "setChannel in");
         Log.d(TAG, "setChannel ccid= " + ccid + ", quietMode= " + quietMode);
         if (null == ccid) {
-            setTuneChannelUri(null);
-            notifyChannelChanged();
+            notifyChannelChangedNull();
             return;
         }
         Uri channelUri =
@@ -491,8 +490,7 @@ public class AmlTunerDelegate implements TunerDelegate {
                 forceRequestResource();
             }
         } else {
-            //notifyChannelChangedError(null, TunerDelegateChannelErrorState.UNKNOWN_CHANNEL);
-            notifyChannelChanged();
+            notifyChannelChangedNull();
         }
         Log.i(TAG, "tuneToCurrentChannel out");
     }
@@ -527,6 +525,13 @@ public class AmlTunerDelegate implements TunerDelegate {
         Log.i(TAG, "setTuneChannelUri in ");
         Log.d(TAG,"setTuneChannelUri  ChannelUri = " + ChannelUri);
         mTunedChannelUri = ChannelUri;
+        if (ChannelUri != null) {
+            if (getPlaystate() == PlayState.PLAYSTATE_INIT) {
+                if (checkResourceOwnedIsBr()) {
+                    setPlaystate(PlayState.PLAYSTATE_CONNECTING);
+                }
+            }
+        }
         Log.i(TAG, "setTuneChannelUri out ");
     }
 
@@ -1244,6 +1249,15 @@ public class AmlTunerDelegate implements TunerDelegate {
         }
 
         Log.i(TAG, "notifyChannelChanged out ");
+    }
+
+    private void  notifyChannelChangedNull() {
+        Log.i(TAG, "notifyChannelChangedNull in ");
+         for (TunerDelegateClient client : mTunerDelegateClientList) {
+            client.onChannelChanged(null);
+        }
+
+        Log.i(TAG, "notifyChannelChangedNull out ");
     }
 
     private void  notifyVideoAvailable() {
