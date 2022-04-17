@@ -17,6 +17,7 @@ LOCAL_C_INCLUDES += frameworks/base/core/jni/include \
     system/libfmq/include
 
 LOCAL_MODULE := libdtvkit_jni
+LOCAL_MULTILIB := 32
 LOCAL_HEADER_LIBRARIES := jni_headers
 LOCAL_SHARED_LIBRARIES :=  \
     vendor.amlogic.hardware.dtvkitserver@1.0 \
