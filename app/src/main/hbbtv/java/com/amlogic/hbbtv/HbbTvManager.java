@@ -16,6 +16,7 @@ import com.vewd.core.sdk.BroadcastResourceClient;
 import com.vewd.core.sdk.BroadcastResourceReleaseRequest;
 import com.vewd.core.shared.MediaComponentsPreferences;
 import com.vewd.core.sdk.HbbTvApplicationInfo;
+import com.vewd.core.shared.HandsetCapabilities;
 
 import com.amlogic.hbbtv.utils.StringUtils;
 import com.amlogic.hbbtv.utils.UserAgentUtils;
@@ -24,6 +25,12 @@ import com.amlogic.hbbtv.utils.BroadcastResourceManager;
 
 import android.media.tv.TvInputService.Session;
 import android.media.tv.TvInputService;
+
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.Enumeration;
+
 
 /**
  * @ingroup hbbtvclientapi
@@ -147,6 +154,11 @@ public class HbbTvManager{
         mPreferencesManager.updateHbbTvMediaComponentsPreferences();
         mAmlTunerDelegate.setHbbtvPreferencesManager(mPreferencesManager);
         //mAmlHbbTvView.loadUrlApplication("http://itv.mit-xperts.com/hbbtvtest");
+
+        //set Handset Component
+        HandsetCapabilities handsetCapabilities = new HandsetCapabilities();
+        handsetCapabilities.setLocalAddress(getIPv4Address());
+        mAmlHbbTvView.startHandset(handsetCapabilities);
         Log.d(TAG,"initializeHbbTvView end");
     }
 
@@ -184,6 +196,7 @@ public class HbbTvManager{
         if (mAmlHbbTvView != null) {
             if (mAmlHbbTvView.isInitialized()) {
                 Log.d(TAG,"the hbbtv view dispose");
+                mAmlHbbTvView.stopHandset();
                 mAmlHbbTvView.dispose();
             } else {
                 Log.d(TAG,"mAmlHbbTvView  not init");
@@ -440,6 +453,30 @@ public class HbbTvManager{
         if (mAmlTunerDelegate != null) {
             mAmlTunerDelegate.notifyTrackSelectedFromOthers(type, trackId);
         }
+    }
+
+
+    private String getIPv4Address() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
+                    en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                if (intf.isUp() && !intf.getDisplayName().contains("p2p")) {
+                    for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses();
+                            enumIpAddr.hasMoreElements();) {
+                        InetAddress inetAddress = enumIpAddr.nextElement();
+                        if (!inetAddress.isLoopbackAddress()) {
+                            String addr = inetAddress.getHostAddress();
+                            if (!addr.contains(":")) {
+                                return addr;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+        }
+        return null;
     }
 }
 
