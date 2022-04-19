@@ -3025,7 +3025,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mView != null) {
                 mView.setSize(width, height);
             }
-            playerSetRectangle(Boolean.compare(mIsPip, false), 0, 0, width, height);
+            //playerSetRectangle(Boolean.compare(mIsPip, false), 0, 0, width, height);
         }
 
         @Override
@@ -4659,6 +4659,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 else if (signal.equals("AppVideoPosition"))
                 {
                    Log.i(TAG, "AppVideoPosition");
+                   /*
                    if (getIsFixedTunnel()) {
                        SystemControlManager SysContManager = SystemControlManager.getInstance();
                        int UiSettingMode = SysContManager.GetDisplayMode(SystemControlManager.SourceInput.DTV.toInt());
@@ -4710,7 +4711,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                Log.d(TAG, "AppVideoPosition layoutSurface("+left+","+top+","+right+","+bottom+")(LTRB)");
                                layoutSurface(left,top,right,bottom);
                        }
-                    }
+                   }
+                   */
                 }
                 else if (signal.equals("ServiceRetuned")) {
                    String dvbUri = "";
