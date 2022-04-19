@@ -2638,6 +2638,19 @@ public class ParameterMananer {
         return activeRecordings;
     }
 
+    public boolean renameRecord(String name, String dvbUri) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(dvbUri);
+            args.put(name);
+            DtvkitGlueClient.getInstance().request("Recording.renameRecording", args);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
     public String casSessionRequest(long session, String request) {
         String result = null;
 

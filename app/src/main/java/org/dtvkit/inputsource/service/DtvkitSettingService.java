@@ -198,6 +198,11 @@ public class DtvkitSettingService extends Service {
         public void clearHbbTvCookies() {
             mHbbTvUISetting.clearHbbTvCookies();
         }
+
+        @Override
+        public void renameRecord(String name, String uri) throws RemoteException {
+            mParameterManager.renameRecord(name, uri);
+        }
     }
 
     private void updatingGuide() {

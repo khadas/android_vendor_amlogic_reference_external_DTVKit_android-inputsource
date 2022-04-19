@@ -61,4 +61,6 @@ interface IDtvkitSetting {
     void setHbbTvFeature(boolean status);
 
     void setHbbTvServiceStatusForCurChannel(boolean status);
+
+    void renameRecord(String name, String uri);
 }
