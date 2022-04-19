@@ -30,7 +30,9 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
-
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * @ingroup hbbtvclientapi
@@ -130,7 +132,7 @@ public class HbbTvManager{
     private void initializeHbbTvView() {
         Log.d(TAG,"initializeHbbTvView start");
 
-        mPreferencesManager = new HbbtvPreferencesManager(mAmlHbbTvView);
+        mPreferencesManager = new HbbtvPreferencesManager(mContext, mAmlHbbTvView);
         mAmlHbbTvClient = new AmlHbbTvClient(mAmlHbbTvView, mAmlTunerDelegate);
         mAmlChromeClient = new AmlChromeClient();
         mAmlViewClient = new AmlViewClient();
@@ -152,6 +154,10 @@ public class HbbTvManager{
         mPreferencesManager.setDeviceUniqueNumber(null);
         mPreferencesManager.setManufacturerSecretNumber(null);
         mPreferencesManager.updateHbbTvMediaComponentsPreferences();
+        mPreferencesManager.setUser_agent(readUserAgent());
+        //mPreferencesManager.setSoftware_version("1.0");
+        //mPreferencesManager.setHardware_version("1.0");
+        //mPreferencesManager.setFamily_name("demo");
         mAmlTunerDelegate.setHbbtvPreferencesManager(mPreferencesManager);
         //mAmlHbbTvView.loadUrlApplication("http://itv.mit-xperts.com/hbbtvtest");
 
@@ -477,6 +483,40 @@ public class HbbTvManager{
         } catch (SocketException ex) {
         }
         return null;
+    }
+
+    private String readUserAgent() {
+       String userAgent = null;
+       /*try {
+           JSONObject obj = DtvkitGlueClient.getInstance().request("Hbbtv.HBBGetUserAgent", new JSONArray());
+           userAgent = obj.getString("data");
+           Log.i(TAG, "UserAgent: " + userAgent);
+       } catch (Exception e) {
+           Log.e(TAG, e.getMessage());
+       }*/
+       String space = " ";
+       String separate = "; ";
+       String START = " (";
+       String END = ";) ";
+       String product = "Mozilla/5.0";
+       String system_information = "(Linux; Android 11; AML/Smith)";
+       String platform = "AppleWdbKit/537.36 (KHTML, like Gecko)";
+       String platform_extensions = "";
+       String hbbtv_version = "HbbTV/1.6.1";
+       String hbbtv_capabilities = "+DRM";
+       String hbbtv_vendorName = "Amlogic";
+       String hbbtv_modelName = "AR311-T965D4";
+       String hbbtv_softwareVersion = "1.0";
+       String hbbtv_hardwareVersion = "1.0";
+       String hbbtv_familyName = "com.amlogic.2021AR311-T965D4";
+       String fvp_version = "FVC/7.0";
+       String fvp_vendorName = hbbtv_vendorName;
+       String fvp_familyName = hbbtv_familyName;
+       userAgent = product + space + system_information + space + platform + space + platform_extensions + space
+            + hbbtv_version + START + hbbtv_capabilities + separate + hbbtv_vendorName + separate + hbbtv_modelName + separate + hbbtv_softwareVersion + separate + hbbtv_hardwareVersion + separate + hbbtv_familyName + END
+            + fvp_version + START + fvp_vendorName + separate + fvp_familyName + END;
+       Log.i(TAG, "UserAgent: " + userAgent);
+       return userAgent;
     }
 }
 

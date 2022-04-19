@@ -11,6 +11,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.util.Log;
 
 import java.io.Serializable;
@@ -38,8 +40,11 @@ public class HbbtvPreferencesManager {
     private static final int INDEX_FOR_MAIN = 0;
     private boolean mSwitchSubtitleByHbbtv = false;
     private boolean mSubtitleEnable = true;
-    public HbbtvPreferencesManager(AmlHbbTvView amlHbbTvView) {
+    private static final String ACTION_SET_PREF = "com.vewd.core.service.SET_PREF";
+    private Context mContext;
+    public HbbtvPreferencesManager(Context context, AmlHbbTvView amlHbbTvView) {
         Log.d(TAG,"Init PreferencesManager");
+        mContext = context;
         mAmlHbbTvView = amlHbbTvView;
    }
 
@@ -264,6 +269,59 @@ public class HbbtvPreferencesManager {
         Log.d(TAG,"countryCode :" + countryCode);
         mAmlHbbTvView.setPref("ooif.configuration.country_id", countryCode);
         return;
+    }
+
+    private static void setIntentTarget(Context context, Intent intent) {
+        ApplicationInfo applicationInfo;
+        try {
+            applicationInfo = context.getPackageManager().getApplicationInfo(
+                    context.getPackageName(), PackageManager.GET_META_DATA);
+        } catch (PackageManager.NameNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        String browserServicePackage = applicationInfo.metaData.getString(
+                "com.vewd.core.browser_service_package");
+        intent.setClassName(browserServicePackage,
+                browserServicePackage + ".GlobalParamsReceiverForTesting");
+    }
+
+    public void setPref(String name, String value) {
+        Intent intent = new Intent(ACTION_SET_PREF);
+        intent.putExtra("name", name);
+        intent.putExtra("value", value);
+        setIntentTarget(mContext, intent);
+        Log.d(TAG, "Send " + intent.getAction());
+        mContext.sendBroadcast(intent);
+    }
+
+    public void setVendor_name(String vendor_name) {
+        Log.d(TAG, "ooif.configuration.vendor_name = " + vendor_name);
+        setPref("ooif.configuration.vendor_name", vendor_name);
+    }
+
+    public void setModel_name(String model_name) {
+        Log.d(TAG, "ooif.configuration.model_name = " + model_name);
+        setPref("ooif.configuration.model_name", model_name);
+    }
+
+    public void setSoftware_version(String software_version) {
+        Log.d(TAG, "ooif.configuration.software_version = " + software_version);
+        setPref("ooif.configuration.software_version", software_version);
+    }
+
+    public void setHardware_version(String hardware_version) {
+        Log.d(TAG, "ooif.configuration.hardware_version = " + hardware_version);
+        setPref("ooif.configuration.hardware_version", hardware_version);
+    }
+
+    public void setFamily_name(String family_name) {
+        Log.d(TAG, "ooif.configuration.family_name = " + family_name);
+        setPref("ooif.configuration.family_name", family_name);
+    }
+
+    public void setUser_agent(String user_agent) {
+        Log.d(TAG, "user_agent = " + user_agent);
+        mAmlHbbTvView.setPref("user_agent", user_agent);
     }
 
     private AmlHbbTvView mAmlHbbTvView;
