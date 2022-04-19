@@ -2537,13 +2537,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         @Override
-        public void onSetStreamVolume(float volume) {
-            if (isTuned()) {
-                playerSetPipMute(volume == 0.0f);
-            }
-        }
-
-        @Override
         public boolean onSetSurface(Surface surface) {
             if (mPipHardware == null || mPipConfigs == null) {
                 Log.e(TAG, "pip resource not ready!");
@@ -2608,11 +2601,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         @Override
-        public void onSetStreamVolume(float volume) {
-            playerSetMute(volume == 0.0f);
-        }
-
-        @Override
         public boolean onSetSurface(Surface surface) {
             if (mHardware == null || mConfigs == null) {
                 Log.e(TAG, "resource not ready!");
@@ -2657,8 +2645,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected boolean doTune(Channel oldChannel, Channel newChannel, Uri channelUri,
                                  String dvbUri, boolean mhegTune) {
             mParameterMananer.saveChannelIdForSource(newChannel.getId());
-
-            boolean mainMuteStatus = playerGetMute();
             if (newChannel != null) {
                 String previousCiNumber = null;
                 String previousCiProfileVersion = null;
@@ -2698,6 +2684,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             }
 
+            boolean mainMuteStatus = playerGetMute(); // must before stop
+
             onFinish(mhegTune, getFeatureSupportFcc() && !getFccBufferUri().isEmpty());
             userDataStatus(false);
 
@@ -2706,7 +2694,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             String previousUriStr = getChannelInternalDvbUriForFcc(mFccPreviousBufferUri);
             String nextUriStr = getChannelInternalDvbUriForFcc(mFccNextBufferUri);
 
-            if (mainMuteStatus && !TextUtils.isEmpty(previousUriStr) && !TextUtils.isEmpty(nextUriStr)) {
+            if (!TextUtils.isEmpty(previousUriStr) && !TextUtils.isEmpty(nextUriStr)) {
+                // when fcc tune, param: disable_audio in playerPlay must be false.
                 mainMuteStatus = false;
             }
 
@@ -2714,11 +2703,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mHbbTvManager.setTuneChannelUri(channelUri);
             }
             mTunedChannel = newChannel; // before play
+
             boolean playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart,
                     mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
             if (playResult) {
                 userDataStatus(true);
-                playerInitAssociateDualSupport();
             } else {
                 mTunedChannel = null;
                 if (mHbbTvManager != null) {
@@ -2879,6 +2868,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
                 playerSetTimeshiftBufferSize(getTimeshiftBufferSizeMins(), getTimeshiftBufferSizeMBs());
                 resetRecordingPath();
+            }
+        }
+
+        @Override
+        public void onSetStreamVolume(float volume) {
+            Log.e(TAG, "onSetStreamVolume " + volume);
+            int index = Boolean.compare(mIsPip, false);
+            playerSetMute(volume == 0.0f, index);
+            if (volume > 0.0f) {
+                playerInitAssociateDualSupport(index);
             }
         }
 
@@ -3729,17 +3728,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mAudioADAutoStart = data.getInt(DataMananer.PARA_ENABLE) == 1;
                 Log.d(TAG, "do private cmd: ACTION_DTV_ENABLE_AUDIO_AD: " + mAudioADAutoStart);
                 setAdAssociate(mAudioADAutoStart);
-                playerSetADMixLevel(INDEX_FOR_MAIN, mAudioADMixingLevel);
+                playerInitAssociateDualSupport(Boolean.compare(playerGetMute(), false));
                 if (mHbbTvManager != null) {
                     mHbbTvManager.setAudioDescriptions();
                 }
             } else if (TextUtils.equals(DataMananer.ACTION_AD_MIXING_LEVEL, action)) {
                 mAudioADMixingLevel = data.getInt(DataMananer.PARA_VALUE1);
                 Log.d(TAG, "do private cmd: ACTION_AD_MIXING_LEVEL: " + mAudioADMixingLevel);
-                playerSetADMixLevel(INDEX_FOR_MAIN, mAudioADMixingLevel);
+                int index = Boolean.compare(playerGetMute(), false);
+                playerSetADMixLevel(index, mAudioADMixingLevel);
             } else if (TextUtils.equals(DataMananer.ACTION_AD_VOLUME_LEVEL, action)) {
                 mAudioADVolume = data.getInt(DataMananer.PARA_VALUE1);
-                playerSetADVolume(INDEX_FOR_MAIN, mAudioADVolume);
+                int index = Boolean.compare(playerGetMute(), false);
+                playerSetADVolume(index, mAudioADVolume);
             } else if (TextUtils.equals(PropSettingManager.ACTON_CONTROL_TIMESHIFT, action)) {
                 if (data != null) {
                     boolean status = data.getBoolean(
@@ -5066,22 +5067,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             notifyContentAllowed();
         }
 
-        protected boolean playerInitAssociateDualSupport() {
-            //mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
+        protected boolean playerInitAssociateDualSupport(int index) {
             mAudioADMixingLevel = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_MIX);
             mAudioADVolume = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_VOLUME);
-            boolean adOn = playergetAudioDescriptionOn();
-            Log.d(TAG, "playerInitAssociateDualSupport mAudioADAutoStart = " + mAudioADAutoStart + ", mAudioADMixingLevel = " + mAudioADMixingLevel + ", mAudioADVolume = " + mAudioADVolume);
             if (mAudioADAutoStart) {
-                playerSetADMixLevel(INDEX_FOR_MAIN, mAudioADMixingLevel);
-                playerSetADVolume(INDEX_FOR_MAIN, mAudioADVolume);
+                Log.d(TAG, "playerInitAssociateDualSupport path=" + index
+                            + ", mAudioADAutoStart = " + mAudioADAutoStart
+                            + ", mAudioADMixingLevel = " + mAudioADMixingLevel
+                            + ", mAudioADVolume = " + mAudioADVolume);
+                playerSetADMixLevel(index, mAudioADMixingLevel);
+                playerSetADVolume(index, mAudioADVolume);
             }
             return true;
-        }
-
-        private void playerResetAssociateDualSupport() {
-            setAdAssociate(false);
-            playerSetADMixLevel(INDEX_FOR_MAIN, mAudioADMixingLevel);
         }
 
         private class MainHandler extends Handler {
@@ -5814,6 +5811,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private String getChannelInternalDvbUriForFcc(Uri channelUri) {
         String result = "";
+        if (channelUri == null) {
+            return result;
+        }
         Channel channel = null;
         try {
             if (getMainTunerSession() != null) {
