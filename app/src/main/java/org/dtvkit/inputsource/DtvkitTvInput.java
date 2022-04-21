@@ -3089,6 +3089,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 }
                 timeshiftAvailable.setYes(true);
+                mIsTimeshiftingPlayed = false;
             }
             return ret;
         }
