@@ -73,7 +73,6 @@ public class CiMenuView extends LinearLayout {
                                     Log.i(TAG, "TEST_CASE Ci Menu: command = " + command);
                                     clearPreviousMenu();
                                     signalTriggered = true;
-                                    menuHandler(true);
                                     break;
                                 case ConstantManager.VALUE_CI_MENU_CLOSE_MODULE:
                                     //am broadcast -a ci_menu_info --es command "ci_menu_close_module"
@@ -168,7 +167,6 @@ public class CiMenuView extends LinearLayout {
                 clearPreviousMenu();
                 Log.i(TAG, "Ci Menu: OnSignal " + signal);
                 signalTriggered = true;
-                menuHandler(false);
             }
             else if (signal.equals("CiCloseModule")) {
                 Log.i(TAG, "Ci Menu: OnSignal " + signal);
@@ -207,6 +205,7 @@ public class CiMenuView extends LinearLayout {
         public void handleMessage(Message msg) {
             if (msg.what == MENU_TIMEOUT_MESSAGE && signalTriggered == false) {
                 setMenuTitleText("Ci menu response timeout. Check CAM is inserted");
+                setMenuSubTitleText("", false);
                 setMenuFooterText(EXIT_TO_QUIT);
             }
         }
@@ -261,6 +260,11 @@ public class CiMenuView extends LinearLayout {
             if (!TextUtils.isEmpty(title)) {
                 setMenuTitleText(title);
             }
+
+            if (!TextUtils.isEmpty(subTitle)) {
+                setMenuSubTitleText(subTitle, true);
+            }
+
             if (!TextUtils.isEmpty(bottomLine)) {
                 setMenuFooterText(bottomLine);
             }
@@ -275,7 +279,6 @@ public class CiMenuView extends LinearLayout {
                     Log.e(TAG, e.getMessage());
                 }
             }
-
             for (int i = 0; i < menuItems.size(); i++) {
                 setUpAndPrintMenuItem(menuItems.get(i).getItemNum(), menuItems.get(i).getItemText());
             }
@@ -296,18 +299,19 @@ public class CiMenuView extends LinearLayout {
                 Log.i(TAG, e.getMessage());
             }
             setMenuTitleText("");
+            setMenuSubTitleText("",false);
             setMenuFooterText(" ");
             createEnquiryMenu(title, textLength, isBlind);
         }
 
         private void setUpAndPrintMenuItem(final int buttonNum, final String itemText) {
-            final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
-            final LayoutInflater inflater = LayoutInflater.from(mContext);
-            final TextView textView = (Button)inflater.inflate(R.layout.mmibutton, linearLayout , false);
-
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+                    final LayoutInflater inflater = LayoutInflater.from(mContext);
+                    final TextView textView = (TextView)inflater.inflate(R.layout.mmibutton, null);
+                    textView.setLayoutParams(new LinearLayout.LayoutParams(findViewById(R.id.textViewMenuTitle).getWidth(), 40));
                     textView.setText(itemText);
                     textView.setId(buttonNum);
 
@@ -397,308 +401,6 @@ public class CiMenuView extends LinearLayout {
         }
     }
 
-    private class CiListMenu {
-        public CiListMenu() {
-            int numMenuItems;
-
-            Log.i(TAG, "Entered menu List Handler");
-            boolean isTest = PropSettingManager.getBoolean(PropSettingManager.CI_MENU_ITEM_TEST, false);
-
-            /* Generate list of options */
-            readCiMenuTitle(isTest);
-
-            numMenuItems = getCiNumMenuItems(isTest);
-            readCiMenuOptions(numMenuItems, isTest);
-
-            readCiMenuBottomText(isTest);
-        }
-
-        private void readCiMenuTitle(boolean isTest) {
-            String textBoxText;
-            if (isTest) {
-                setMenuTitleText("title ci menu item test");
-                return;
-            }
-            try {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCiMenuScreenTitle", new JSONArray());
-                textBoxText = "CAM ID: " + obj.getString("data");
-                Log.i(TAG, "CiMenuTitle: " + textBoxText);
-                setMenuTitleText(textBoxText);
-            } catch (Exception ignore) {
-                Log.e(TAG, ignore.getMessage());
-            }
-        }
-
-        private int getCiNumMenuItems(boolean isTest) {
-            int numMenuItems = 0;
-            if (isTest) {
-                return mCiMenuTestItemCount;
-            }
-            try {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCiMenuScreenNumItems", new JSONArray());
-                numMenuItems = obj.getInt("data");
-                Log.i(TAG, "Num menu options: " + Integer.toString(numMenuItems));
-            } catch (Exception ignore) {
-                Log.e(TAG, ignore.getMessage());
-            }
-
-            return numMenuItems;
-        }
-
-        private void readCiMenuOptions(final int numMenuItems, final boolean isTest) {
-            String itemText;
-            JSONArray args;
-            ArrayList<MenuItem> menuItems = new ArrayList<MenuItem>();
-
-            /* Get Args */
-            try {
-                for (int i = 1; i <= numMenuItems; i++) {
-                    args = new JSONArray();
-                    args.put(i-1);
-
-                    JSONObject obj = null;
-                    if (isTest) {
-                        obj = mCiMenuTestItemArray.getJSONObject(i-1);
-                    } else {
-                        obj = DtvkitGlueClient.getInstance().request("Dvb.getCiMenuScreenItemText", args);
-                    }
-                    itemText = Integer.toString(i) + ")" + formatSpaces(i) + obj.getString("data");
-
-                    Log.i(TAG, itemText);
-                    menuItems.add(new MenuItem(i, itemText));
-                }
-            } catch (Exception ignore) {
-                Log.e(TAG, ignore.getMessage());
-            }
-
-            /* We get the args first to remove latency when printing the menu options */
-            for (int i = 0; i < menuItems.size(); i++) {
-                setUpAndPrintMenuItem(menuItems.get(i).getItemNum(), menuItems.get(i).getItemText());
-            }
-
-            /* Set focus on the first menu item */
-            setMenuFocus(1, true);
-        }
-
-        private void setUpAndPrintMenuItem(final int buttonNum, final String itemText) {
-            final LayoutInflater inflater = LayoutInflater.from(mContext);
-            final Button button = (Button)inflater.inflate(R.layout.mmibutton, null);
-            final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
-
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    button.setLayoutParams(new LinearLayout.LayoutParams(findViewById(R.id.textViewMenuTitle).getWidth(), 40));
-                    button.setText(itemText);
-                    button.setId(buttonNum);
-
-                    button.setFocusable(true);
-                    button.setFocusableInTouchMode(true);
-
-                    linearLayout.addView(button);
-
-                    button.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            selectMenuOption(button.getId());
-                            Log.i(TAG, "Clicking button " + Integer.toString(button.getId()));
-                        }
-                    });
-
-                    button.setOnKeyListener(new View.OnKeyListener() {
-                        @Override
-                        public boolean onKey(View v, int keyCode, KeyEvent event) {
-                            /* Return to previous level */
-                            if (keyCode == KeyEvent.KEYCODE_CLEAR) {
-                                selectMenuOption(RETURN_BUTTON_NUM);
-                            }
-                            return false;
-                        }
-                    });
-                }
-            });
-        }
-
-        private void selectMenuOption(final int optionId) {
-            JSONArray args = new JSONArray();
-            args.put(optionId);
-
-            try {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.setCiMenuResponse", args);
-            } catch (Exception ignore) {
-                Log.e(TAG, ignore.getMessage());
-            }
-        }
-
-        private void readCiMenuBottomText(boolean isTest) {
-            String text;
-
-            try {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCiMenuScreenBottomText", new JSONArray());
-                text = obj.getString("data");
-                Log.i(TAG, "CiMenuFooter: " + text);
-                setMenuFooterText(text);
-
-            } catch (Exception ignore) {
-                Log.e(TAG, ignore.getMessage());
-            }
-        }
-
-        private String formatSpaces(int menuNumber) {
-            /* Compensate for extra digits if above 10 */
-            String spaces;
-
-            if (menuNumber < 10) {
-                spaces = "    ";
-            } else {
-                spaces = "  ";
-            }
-
-            return spaces;
-        }
-    }
-
-    private class CiEnquiryMenu {
-
-        public CiEnquiryMenu() {
-            String enquiryText;
-            int enquiryMaxLength;
-            boolean hideEnquiryResponse;
-
-            enquiryText = readEnquiryText();
-            enquiryMaxLength = readEnquiryMaxLength();
-            hideEnquiryResponse = readEnquiryHideResponse();
-
-            createEnquiryMenu(enquiryText, enquiryMaxLength, hideEnquiryResponse);
-        }
-
-        private String readEnquiryText() {
-            String enquiry;
-
-            try {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCiEnquiryScreenText", new JSONArray());
-                enquiry = obj.getString("data");
-                Log.i(TAG, enquiry);
-
-            } catch (Exception ignore) {
-                Log.e(TAG, ignore.getMessage());
-                enquiry = "Enquiry ERROR";
-            }
-            return enquiry;
-        }
-
-        private int readEnquiryMaxLength() {
-            int length;
-
-            try {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCiEnquiryResponseLength", new JSONArray());
-                length = obj.getInt("data");
-            } catch (Exception ignore) {
-                Log.e(TAG, ignore.getMessage());
-                length = 0;
-            }
-            return length;
-        }
-
-        private boolean readEnquiryHideResponse() {
-            boolean hideEnquiryResponse = false;
-
-            try {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCiEnquiryHideResponse", new JSONArray());
-                hideEnquiryResponse = obj.getBoolean("data");
-            } catch (Exception ignore) {
-                Log.e(TAG, ignore.getMessage());
-            }
-            return hideEnquiryResponse;
-        }
-
-        private void createEnquiryMenu(final String text, final int maxLength, final boolean hide) {
-            final LayoutInflater inflater = LayoutInflater.from(mContext);
-
-            final LinearLayout parentLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
-            final LinearLayout enquiryLayout = (LinearLayout)inflater.inflate(R.layout.enquiryform, null);
-
-            final TextView enquiryTextView = (TextView)(enquiryLayout.findViewById(R.id.textViewEnquiryName));
-            final EditText enquiryEditText = (EditText)(enquiryLayout.findViewById(R.id.editTextEnquiry));
-
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    enquiryLayout.setId(0);
-                    enquiryTextView.setText(text);
-                    enquiryEditText.requestFocus();
-
-                    enquiryEditText.setFilters(new InputFilter[] {
-                            new InputFilter.LengthFilter(maxLength)
-                    });
-
-                    if (hide) {
-                        enquiryEditText.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                    }
-
-                    parentLayout.addView(enquiryLayout);
-
-                    enquiryEditText.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            sendEnquiryResponse(enquiryEditText.getText().toString(), true);
-                        }
-                    });
-                }
-            });
-        }
-
-        private void sendEnquiryResponse(final String response, boolean response_ok) {
-            JSONArray args = new JSONArray();
-            args.put(response);
-            args.put(response_ok);
-
-            try {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.setCiEnquiryResponse", args);
-            } catch (Exception ignore) {
-                Log.e(TAG, ignore.getMessage());
-            }
-        }
-    }
-
-    private enum MenuType {
-        MENU_NONE("MENU_NONE") {
-            public void menuHandler(CiMenuView Ci) {
-                Ci.menuNoneHandler();
-            }
-        },
-        MENU_ENQUIRY("MENU_ENQUIRY") {
-            public void menuHandler(CiMenuView Ci) {
-                Ci.menuEnquiryHandler();
-            }
-        },
-        MENU_LIST("MENU_LIST") {
-            public void menuHandler(CiMenuView Ci) {
-                Ci.menuListHandler();
-            }
-        };
-
-        private String text;
-
-        MenuType(String text) {
-            this.text = text;
-        }
-
-        public String getText() {
-            return this.text;
-        }
-
-        public abstract void menuHandler(CiMenuView Ci);
-
-        public static CiMenuView.MenuType fromString(String text) {
-            for (CiMenuView.MenuType m : CiMenuView.MenuType.values()) {
-                if (m.text.equalsIgnoreCase(text)) {
-                    return m;
-                }
-            }
-            throw new IllegalArgumentException("No constant with text " + text + " found");
-        }
-    }
 
     public CiMenuView(Context context) {
         super(context);
@@ -845,6 +547,7 @@ public class CiMenuView extends LinearLayout {
 
         if (enterCiMenu() == false) {
             setMenuTitleText("Ci Module not detected");
+            setMenuSubTitleText("",false);
             setMenuFooterText(EXIT_TO_QUIT);
             Log.e(TAG, "Ci Module not detected");
         }
@@ -876,44 +579,11 @@ public class CiMenuView extends LinearLayout {
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
     }
 
-    private void menuHandler(boolean isTest) {
-        MenuType menuType;
-        clearPreviousMenu();
-        setMenuVisible();
-        if (isTest) {
-            menuType = MenuType.fromString(mCiMenuTestItemType);
-            menuType.menuHandler(this);
-            return;
-        }
-        try {
-            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCiMenuMode", new JSONArray());
-            menuType = MenuType.fromString(obj.getString("data"));
-            Log.i(TAG, "menuHandler Menu type " + obj.getString("data"));
-        } catch (Exception err) {
-            Log.e(TAG, err.getMessage());
-            menuType = MenuType.MENU_NONE;
-        }
-
-        menuType.menuHandler(this);
-    }
-
-    private void menuListHandler() {
-        new CiListMenu();
-    }
-
-    private void menuEnquiryHandler() {
-        new CiEnquiryMenu();
-    }
-
-    private void menuNoneHandler() {
-        setMenuTitleText("No MMI menu found for this CAM");
-        setMenuFooterText(EXIT_TO_QUIT);
-    }
-
     private void menuCloseHandler(final String titleText, final String footerText) {
         // if (isMenuVisible) {
             setMenuTitleText(titleText);
             setMenuFooterText(footerText);
+            setMenuSubTitleText("",false);
         // }
     }
 
@@ -924,7 +594,7 @@ public class CiMenuView extends LinearLayout {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final Button button = (Button)linearLayout.findViewById(buttonNum);
+                final TextView button = (TextView)linearLayout.findViewById(buttonNum);
 
                 if (linearLayout.getChildCount() > 0) {
                     button.setFocusable(true);
@@ -1002,6 +672,15 @@ public class CiMenuView extends LinearLayout {
         final TextView textMenuTitle = (TextView)findViewById(R.id.textViewMenuTitle);
         printReceivedSignal(text, textMenuTitle);
     }
+
+
+    private void setMenuSubTitleText(final String text, boolean isMenuVisible) {
+        Log.i(TAG, "setMenuTitleText: text = " + text);
+        final TextView textMenuSubTitle = (TextView)findViewById(R.id.textViewMenuSubTitle);
+        textMenuSubTitle.setVisibility(isMenuVisible ? View.VISIBLE : View.GONE);
+        printReceivedSignal(text, textMenuSubTitle);
+    }
+
 
     private void setMenuFooterText(final String text) {
         Log.i(TAG, "setMenuFooterText: text = " + text);

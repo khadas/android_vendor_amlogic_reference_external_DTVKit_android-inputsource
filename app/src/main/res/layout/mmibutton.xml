@@ -11,10 +11,8 @@
     android:gravity="center_vertical"
     android:minHeight="48dp"
     android:paddingStart="32dp"
-    android:paddingTop="11dp"
-    android:paddingBottom="12dp"
     android:singleLine="true"
-    android:textColor="#FFEEEEEE"
+    android:textColor="#ffffffff"
     android:textSize="16sp"
     tools:text="123" />
 

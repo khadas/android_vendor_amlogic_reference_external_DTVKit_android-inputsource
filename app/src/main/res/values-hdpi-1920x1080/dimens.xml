@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="px_718.0">478.7dp</dimen>
+    <dimen name="px_1050.0">700dp</dimen>
 </resources>

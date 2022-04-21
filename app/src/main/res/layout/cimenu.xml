@@ -5,12 +5,11 @@
     android:id="@+id/linearLayout1"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000"
     android:orientation="vertical">
 
     <LinearLayout
         android:id="@+id/linearlayoutMMI"
-        android:layout_width="@dimen/px_718.0"
+        android:layout_width="@dimen/px_1050.0"
         android:layout_height="match_parent"
         android:layout_gravity="right"
         android:orientation="vertical">
@@ -18,44 +17,56 @@
         <TextView
             android:id="@+id/textViewMenuTitle"
             android:layout_width="match_parent"
-            android:layout_height="87dp"
+            android:layout_height="wrap_content"
             android:fontFamily="@string/condensed_font"
-            android:gravity="center_vertical"
             android:paddingStart="32dp"
-            android:paddingTop="27dp"
-            android:paddingEnd="56dp"
             android:singleLine="true"
             android:textColor="@color/option_item_text_color"
             android:textSize="24sp"
             tools:text="CI Card" />
 
-        <ScrollView
+        <TextView
+            android:id="@+id/textViewMenuSubTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@string/condensed_font"
+            android:paddingStart="32dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:singleLine="true"
+            android:textColor="@color/option_item_text_color"
+            android:textSize="20sp"
+            tools:text="CI Card"
+            android:visibility="gone"/>
+
+        <com.droidlogic.dtvkit.inputsource.MaxHeightScrollView
             android:id="@+id/scrollContainer"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="match_parent"
+            app:maxHeight="300dp">
 
             <LinearLayout
                 android:id="@+id/linearlayoutMMIItems"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"/>
+                android:orientation="vertical">
+            </LinearLayout>
 
-        </ScrollView>
+        </com.droidlogic.dtvkit.inputsource.MaxHeightScrollView>
 
         <TextView
             android:id="@+id/textViewMenuFooter"
             android:layout_width="match_parent"
-            android:layout_height="87dp"
+            android:layout_height="wrap_content"
             android:fontFamily="@string/condensed_font"
             android:gravity="center_vertical"
             android:paddingStart="32dp"
-            android:paddingTop="27dp"
-            android:paddingEnd="56dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
             android:singleLine="true"
             android:textColor="@color/option_item_text_color"
             android:textSize="24sp"
             tools:text="Bottom" />
-
     </LinearLayout>
 
 </LinearLayout>

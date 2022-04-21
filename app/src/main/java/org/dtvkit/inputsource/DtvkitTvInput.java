@@ -5752,7 +5752,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             TvContractUtils.getStringFromChannelInternalProviderData(nextChannel, Channel.KEY_CHANNEL_PROFILE, null);
                         String profileversion =
                             TvContractUtils.getStringFromChannelInternalProviderData(nextChannel, Channel.KEY_CHANNEL_CI_PROFILE_VERSION, null);
-                        boolean isOpchannel = !TextUtils.isEmpty(profileName) && ("v1".equalsIgnoreCase(profileversion));
+                        boolean isOpchannel = !TextUtils.isEmpty(profileName) && ("v1".equalsIgnoreCase(profileversion) || "v2".equalsIgnoreCase(profileversion));
                         if (isOpchannel == isOpEnv) {
                             channel = nextChannel;
                             break;
