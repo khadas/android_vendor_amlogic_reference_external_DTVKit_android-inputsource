@@ -772,8 +772,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private synchronized void initDtvkitTvInput() {
+        int subFlg = getSubtitleFlag();
         if (mIsInited) {
             Log.d(TAG, "initDtvkitTvInput already");
+            DtvkitGlueClient.getInstance().destroySubtitleCtl();
+            DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
             return;
         }
         Log.d(TAG, "initDtvkitTvInput start");
@@ -792,7 +795,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_DTVKIT_SATELLITE);
         sendEmptyMessageToInputThreadHandler(MSG_UPDATE_DTVKIT_DATABASE);
         resetRecordingPath();
-        int subFlg = getSubtitleFlag();
         if (subFlg >= SUBCTL_HK_DVBSUB) {
             DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
             if ((subFlg & SUBCTL_HK_CC) == SUBCTL_HK_CC) {

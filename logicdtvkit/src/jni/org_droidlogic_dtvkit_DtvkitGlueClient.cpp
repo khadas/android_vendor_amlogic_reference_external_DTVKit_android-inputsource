@@ -657,6 +657,12 @@ static void detachSubtitleCtl(JNIEnv *env, jclass clazz __unused)
         mpDtvkitJni->setSubtitleFlag(0);
 }
 
+static void destroySubtitleCtl(JNIEnv *env, jclass clazz __unused)
+{
+    ALOGV("SubtitleServiceCtl:destroySubtitleCtl.");
+    mSubContext = nullptr;
+}
+
 static bool getIsdbtSupport(JNIEnv *env, jclass clazz __unused)
 {
 #ifdef SUPPORT_ISDBT
@@ -808,6 +814,10 @@ static JNINativeMethod gMethods[] = {
 {
    "native_detachSubtitleCtl", "()V",
    (void*) detachSubtitleCtl
+},
+{
+   "native_destroySubtitleCtl", "()V",
+   (void*) destroySubtitleCtl
 },
 {
     "native_UnCrypt", "(Ljava/lang/String;Ljava/lang/String;)V",

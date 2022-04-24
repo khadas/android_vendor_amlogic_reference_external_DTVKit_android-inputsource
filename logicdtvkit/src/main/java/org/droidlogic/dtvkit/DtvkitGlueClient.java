@@ -50,6 +50,7 @@ public class DtvkitGlueClient {
     private native String nativerequest(String resource, String json);
     private native void native_attachSubtitleCtl(int flag);
     private native void native_detachSubtitleCtl();
+    private native void native_destroySubtitleCtl();
     private native boolean nativeIsdbtSupport();
     private native void native_UnCrypt(String src, String dest);
     private native void native_openUserData();
@@ -357,6 +358,10 @@ public class DtvkitGlueClient {
 
     public void attachSubtitleCtl(int flag) {
         native_attachSubtitleCtl(flag);
+    }
+
+    public void destroySubtitleCtl() {
+        native_destroySubtitleCtl();
     }
 
     public boolean isdbtSupport() {
