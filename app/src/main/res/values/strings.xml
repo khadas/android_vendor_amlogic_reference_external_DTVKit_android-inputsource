@@ -111,6 +111,10 @@
     <string name="strIsdbt">ISDB-T</string>
     <string name="public_dtv_search">DTV SEARCH</string>
 
+    <!-- timeshift -->
+    <string name="timeshift_unavailable_program">Timeshift is unavailable by program</string>
+    <string name="timeshift_unsupported_system">Timeshift is unsupported by system</string>
+
     <!-- play -->
     <string name="play_scrambled">Scrambled</string>
 
