@@ -2,6 +2,7 @@
 package com.droidlogic.dtvkit;
 
 // Declare any non-default types here with import statements
+import com.droidlogic.dtvkit.IMGRCallbackListener;
 
 interface IDtvkitSetting {
     /**
@@ -63,4 +64,14 @@ interface IDtvkitSetting {
     void setHbbTvServiceStatusForCurChannel(boolean status);
 
     void renameRecord(String name, String uri);
+
+    void registerListener(IMGRCallbackListener listener);
+
+    void unregisterListener(IMGRCallbackListener listener);
+
+    void updateChannelList();
+
+    void syncDatabase();
+
+    void setDVBChannelType(String channelType);
 }

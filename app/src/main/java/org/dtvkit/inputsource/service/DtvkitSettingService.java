@@ -4,10 +4,20 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.os.RemoteCallbackList;
 import android.provider.Settings;
 import android.util.Log;
 import android.content.ComponentName;
-
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.support.v4.content.LocalBroadcastManager;
+import android.content.Context;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import com.droidlogic.dtvkit.IDtvkitSetting;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 import com.droidlogic.fragment.ParameterMananer;
@@ -16,12 +26,18 @@ import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.settings.SysSettingManager;
 import com.amlogic.hbbtv.HbbTvUISetting;
+import com.droidlogic.dtvkit.IMGRCallbackListener;
 
 import java.io.File;
 import java.util.List;
 
 public class DtvkitSettingService extends Service {
     private static final String TAG = "DtvkitSettingService";
+    private static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
+    private static final int SYNC_FINISHED = 0x01;
+    private static final int SYNC_RUNNING = 0x02;
+    public static final String EPGSYNC_STOPPED = "EPGSYNC_STOPPED";
+    public static final String EPGSYNC_RUNNING = "EPGSYNC_RUNNING";
     protected ParameterMananer mParameterManager;
     protected HbbTvUISetting mHbbTvUISetting;
 
@@ -34,8 +50,29 @@ public class DtvkitSettingService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
+        startMonitoringSync();
         return new DtvkitSettingBinder();
     }
+
+    private RemoteCallbackList<IMGRCallbackListener> mListenerList = new RemoteCallbackList<>();
+
+    private Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg){
+            super.handleMessage(msg);
+            //MGRMessage message = new MGRMessage(msg.what, msg.arg1, (String)(msg.obj));
+            String message = (String)(msg.obj);
+            try{
+                int count = mListenerList.beginBroadcast();
+                for (int i = 0; i < count; i++) {
+                    mListenerList.getBroadcastItem(i).onRespond(message);
+                }
+                mListenerList.finishBroadcast();
+            } catch (RemoteException e){
+                e.printStackTrace();
+            }
+        }
+    };
 
     private class DtvkitSettingBinder extends IDtvkitSetting.Stub {
 
@@ -145,6 +182,31 @@ public class DtvkitSettingService extends Service {
         }
 
         @Override
+        public void registerListener(IMGRCallbackListener listener) throws RemoteException {
+            mListenerList.register(listener);
+        }
+
+        @Override
+        public void unregisterListener(IMGRCallbackListener listener) throws RemoteException {
+            mListenerList.unregister(listener);
+        }
+
+        @Override
+        public void updateChannelList() throws RemoteException {
+            updateChannelListAndCheckLcn(false);
+        }
+
+        @Override
+        public void syncDatabase() throws RemoteException {
+            updatingGuide();
+        }
+
+        @Override
+        public void setDVBChannelType(String channelType) throws RemoteException {
+            setChannelTypeFilter(channelType);
+        }
+
+        @Override
         public boolean getHbbTvFeature() {
             return mHbbTvUISetting.getHbbTvFeature();
         }
@@ -227,4 +289,99 @@ public class DtvkitSettingService extends Service {
         }
         return folderReady;
     }
+
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, final Intent intent) {
+            String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
+            if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
+                //mStartSync = false;
+                Log.d(TAG,"EpgSyncJobService.SYNC_FINISHED");
+                //MGRMessage message = new MGRMessage(SYNC_FINISHED, 0 , "SYNC_FINISHED");
+                String message = EPGSYNC_STOPPED;
+                sendMGRMessage(SYNC_FINISHED,0,0,message);
+            }else if (status.equals(EpgSyncJobService.SYNC_STARTED)) {
+                Log.d(TAG,"EpgSyncJobService.SYNC_STARTED");
+                String message = EPGSYNC_RUNNING;
+                sendMGRMessage(SYNC_RUNNING,0,0,message);
+            }
+        }
+    };
+
+    @Override
+    public void onDestroy() {
+        stopMonitoringSync();
+        super.onDestroy();
+    }
+
+    private void setChannelTypeFilter(String channelType) {
+        Log.i(TAG, "setChannelTypeFilter channelType = " + channelType);
+        EpgSyncJobService.setChannelTypeFilter(channelType);
+    }
+
+    private void startMonitoringSync() {
+        //mStartSync = true;
+        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver,
+                new IntentFilter(EpgSyncJobService.ACTION_SYNC_STATUS_CHANGED));
+    }
+
+    private void stopMonitoringSync() {
+        //mStartSync = false;
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
+    }
+
+    private void updateChannelListAndCheckLcn(boolean needCheckLcn){
+        JSONArray mServiceList  = getServiceList();
+        int mFoundServiceNumber = getFoundServiceNumber();
+        if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
+            Log.d(TAG, "mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
+            mFoundServiceNumber = mServiceList.length();
+        }
+        EpgSyncJobService.cancelAllSyncRequests(this);
+        Bundle parameters = new Bundle();
+        if (needCheckLcn) {
+            parameters.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_LCN_CONFLICT, false);
+        }
+        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, DTVKIT_INPUTID, (mFoundServiceNumber > 0),
+            new ComponentName(this, DtvkitEpgSync.class), parameters);
+    }
+
+    private int getFoundServiceNumber() {
+        int found = 0;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getNumberOfServices", new JSONArray());
+            found = obj.getInt("data");
+            Log.i(TAG, "getFoundServiceNumber found = " + found);
+        } catch (Exception ignore) {
+            Log.e(TAG, "getFoundServiceNumber Exception = " + ignore.getMessage());
+        }
+        return found;
+    }
+
+    private JSONArray getServiceList() {
+        JSONArray result = null;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServices", new JSONArray());
+            JSONArray services = obj.getJSONArray("data");
+            result = services;
+            Log.i(TAG, "getServiceList services = " + services.length());
+            /*for (int i = 0; i < services.length(); i++) {
+                JSONObject service = services.getJSONObject(i);
+                //Log.i(TAG, "getServiceList service = " + service.toString());
+            }*/
+        } catch (Exception e) {
+            Log.e(TAG, "getServiceList Exception = " + e.getMessage());
+        }
+        return result;
+    }
+
+    private void sendMGRMessage(int what,int arg1,int arg2,Object message) {
+        if (mHandler != null) {
+            mHandler.removeMessages(what);
+            Message mess = mHandler.obtainMessage(what, arg1, arg2, message);
+            boolean info = mHandler.sendMessageDelayed(mess, 0);
+            Log.d(TAG, "sendMGRMessage info= " + info);
+        }
+    }
+
 }
