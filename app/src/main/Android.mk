@@ -8,16 +8,14 @@ LOCAL_AAPT_FLAGS := --auto-add-overlay \
 
 LOCAL_RESOURCE_DIR := frameworks/support/leanback/src/main/res \
    $(LOCAL_PATH)/res \
-   $(LOCAL_PATH)/droidlogic/res \
-   $(LOCAL_PATH)/hbbtv/res
+   $(LOCAL_PATH)/droidlogic/res
 
 LOCAL_STATIC_JAVA_LIBRARIES += \
    androidx.annotation_annotation \
    guava \
    companionlibrary \
    android-support-v17-leanback \
-   libvewdcore-shared-hbbtv \
-   libvewdcore-client-hbbtv
+   amlogic-hbbtv-client
 
 LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/aidl
 
@@ -51,19 +49,9 @@ include $(BUILD_PACKAGE)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE_CLASS := JAVA_LIBRARIES
-LOCAL_MODULE := libvewdcore-shared-hbbtv
+LOCAL_MODULE := amlogic-hbbtv-client
 LOCAL_SDK_VERSION := current
-LOCAL_SRC_FILES := hbbtv/libs/vewdcore-shared.jar
-LOCAL_UNINSTALLABLE_MODULE := true
-
-include $(BUILD_PREBUILT)
-
-include $(CLEAR_VARS)
-
-LOCAL_MODULE_CLASS := JAVA_LIBRARIES
-LOCAL_MODULE := libvewdcore-client-hbbtv
-LOCAL_SDK_VERSION := current
-LOCAL_SRC_FILES := hbbtv/libs/vewdcore-client.jar
+LOCAL_SRC_FILES := libs/hbbtv-client.jar
 LOCAL_UNINSTALLABLE_MODULE := true
 
 include $(BUILD_PREBUILT)
