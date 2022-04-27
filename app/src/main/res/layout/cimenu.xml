@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/linearLayout1"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:id="@+id/linearlayoutMMI"
         android:layout_width="@dimen/px_1050.0"
-        android:layout_height="match_parent"
-        android:layout_gravity="right"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="30dp"
+        android:layout_marginStart="30dp"
+        android:background="@color/ci_menu_background"
         android:orientation="vertical">
 
         <TextView
@@ -20,9 +22,8 @@
             android:layout_height="wrap_content"
             android:fontFamily="@string/condensed_font"
             android:paddingStart="32dp"
-            android:singleLine="true"
-            android:textColor="@color/option_item_text_color"
-            android:textSize="24sp"
+            android:textColor="@color/ci_menu_title_color"
+            android:textSize="36sp"
             tools:text="CI Card" />
 
         <TextView
@@ -31,12 +32,21 @@
             android:layout_height="wrap_content"
             android:fontFamily="@string/condensed_font"
             android:paddingStart="32dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="10dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
             android:singleLine="true"
-            android:textColor="@color/option_item_text_color"
+            android:textColor="@color/ci_menu_title_color"
             android:textSize="20sp"
             tools:text="CI Card"
+            android:visibility="gone"/>
+
+        <View
+            android:id="@+id/ci_menu_top_line"
+            android:layout_width="@dimen/px_954.0"
+            android:layout_height="2dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginBottom="5dp"
+            android:background="@color/divide_line_color"
             android:visibility="gone"/>
 
         <com.droidlogic.dtvkit.inputsource.MaxHeightScrollView
@@ -54,6 +64,15 @@
 
         </com.droidlogic.dtvkit.inputsource.MaxHeightScrollView>
 
+        <View
+            android:id="@+id/ci_menu_bottom_line"
+            android:layout_width="@dimen/px_954.0"
+            android:layout_height="2dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginStart="32dp"
+            android:background="@color/divide_line_color"
+            android:visibility="gone"/>
+
         <TextView
             android:id="@+id/textViewMenuFooter"
             android:layout_width="match_parent"
@@ -61,12 +80,12 @@
             android:fontFamily="@string/condensed_font"
             android:gravity="center_vertical"
             android:paddingStart="32dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="5dp"
             android:layout_marginBottom="10dp"
             android:singleLine="true"
-            android:textColor="@color/option_item_text_color"
-            android:textSize="24sp"
+            android:textColor="@color/ci_menu_footer_color"
+            android:textSize="20sp"
             tools:text="Bottom" />
     </LinearLayout>
 
-</LinearLayout>
+</RelativeLayout>

@@ -12,7 +12,7 @@
     android:minHeight="48dp"
     android:paddingStart="32dp"
     android:singleLine="true"
-    android:textColor="#ffffffff"
+    android:textColor="@color/ci_menu_title_color"
     android:textSize="16sp"
     tools:text="123" />
 

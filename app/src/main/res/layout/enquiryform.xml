@@ -12,9 +12,10 @@ android:layout_marginLeft="30dp">
         android:layout_width="400dp"
         android:layout_height="match_parent"
         android:gravity="left|center_vertical"
-        android:textColor="#ffffffff"
+        android:textColor="#E6000716"
+        android:layout_marginStart="32dp"
         android:paddingLeft="10dip"
-        android:background="#06516e"
+        android:background="@color/ci_menu_item_color"
         android:textSize="24sp" />
 
     <EditText

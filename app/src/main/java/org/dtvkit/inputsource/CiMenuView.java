@@ -206,6 +206,7 @@ public class CiMenuView extends LinearLayout {
             if (msg.what == MENU_TIMEOUT_MESSAGE && signalTriggered == false) {
                 setMenuTitleText("Ci menu response timeout. Check CAM is inserted");
                 setMenuSubTitleText("", false);
+                setDevideLineVisible(false);
                 setMenuFooterText(EXIT_TO_QUIT);
             }
         }
@@ -265,6 +266,8 @@ public class CiMenuView extends LinearLayout {
                 setMenuSubTitleText(subTitle, true);
             }
 
+            setDevideLineVisible(true);
+
             if (!TextUtils.isEmpty(bottomLine)) {
                 setMenuFooterText(bottomLine);
             }
@@ -299,6 +302,7 @@ public class CiMenuView extends LinearLayout {
                 Log.i(TAG, e.getMessage());
             }
             setMenuTitleText("");
+            setDevideLineVisible(false);
             setMenuSubTitleText("",false);
             setMenuFooterText(" ");
             createEnquiryMenu(title, textLength, isBlind);
@@ -332,7 +336,8 @@ public class CiMenuView extends LinearLayout {
                         @Override
                         public boolean onKey(View v, int keyCode, KeyEvent event) {
                             /* Return to previous level */
-                            if (keyCode == KeyEvent.KEYCODE_CLEAR) {
+                            if (keyCode == KeyEvent.KEYCODE_CLEAR && KeyEvent.ACTION_UP == event.getAction()) {
+                                Log.i(TAG,"Return to previous level");
                                 selectMenuOption(RETURN_BUTTON_NUM);
                             }
                             return false;
@@ -529,7 +534,6 @@ public class CiMenuView extends LinearLayout {
     private boolean enterCiMenu() {
         boolean result = false;
         try {
-//            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.enterCiMenu", new JSONArray());
             JSONObject obj = DtvkitGlueClient.getInstance().request("CIPlus.enterMMI", new JSONArray());
             result =  obj.getBoolean("data");
 
@@ -547,6 +551,7 @@ public class CiMenuView extends LinearLayout {
 
         if (enterCiMenu() == false) {
             setMenuTitleText("Ci Module not detected");
+            setDevideLineVisible(false);
             setMenuSubTitleText("",false);
             setMenuFooterText(EXIT_TO_QUIT);
             Log.e(TAG, "Ci Module not detected");
@@ -561,7 +566,6 @@ public class CiMenuView extends LinearLayout {
 
     private void exitCiMenu() {
         try {
-            //JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.exitCiMenu", new JSONArray());
             JSONObject obj = DtvkitGlueClient.getInstance().request("CIPlus.closeMMI", new JSONArray());
         } catch (Exception ignore) {
             Log.e(TAG, ignore.getMessage());
@@ -584,6 +588,7 @@ public class CiMenuView extends LinearLayout {
             setMenuTitleText(titleText);
             setMenuFooterText(footerText);
             setMenuSubTitleText("",false);
+            setDevideLineVisible(false);
         // }
     }
 
@@ -675,9 +680,14 @@ public class CiMenuView extends LinearLayout {
 
 
     private void setMenuSubTitleText(final String text, boolean isMenuVisible) {
-        Log.i(TAG, "setMenuTitleText: text = " + text);
+        Log.i(TAG, "setMenuSubTitleText: text = " + text);
         final TextView textMenuSubTitle = (TextView)findViewById(R.id.textViewMenuSubTitle);
-        textMenuSubTitle.setVisibility(isMenuVisible ? View.VISIBLE : View.GONE);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                textMenuSubTitle.setVisibility(isMenuVisible ? View.VISIBLE : View.GONE);
+            }
+        });
         printReceivedSignal(text, textMenuSubTitle);
     }
 
@@ -686,6 +696,18 @@ public class CiMenuView extends LinearLayout {
         Log.i(TAG, "setMenuFooterText: text = " + text);
         final TextView textMenuFooter = (TextView)findViewById(R.id.textViewMenuFooter);
         printReceivedSignal(text, textMenuFooter);
+    }
+
+    private void setDevideLineVisible(boolean isDevideLineVisible) {
+        final View devideTopLine = (View)findViewById(R.id.ci_menu_top_line);
+        final View devideBottomLine = (View)findViewById(R.id.ci_menu_bottom_line);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                devideTopLine.setVisibility(isDevideLineVisible ? View.VISIBLE : View.GONE);
+                devideBottomLine.setVisibility(isDevideLineVisible ? View.VISIBLE : View.GONE);
+            }
+        });
     }
 
     private void printReceivedSignal(final String sigText, final TextView text) {

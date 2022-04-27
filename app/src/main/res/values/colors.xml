@@ -14,4 +14,10 @@
     <color name="option_item_text_color_disabled">#4DEEEEEE</color>
     <color name="channel_bottom_blue">#2E2F32</color>
     <color name="color_transparent">#00000000</color>
+    <color name="divide_line_color">#80000716</color>
+    <color name="ci_menu_background">#FFF6F5F5</color>
+    <color name="ci_menu_item_color">#FFBD446D</color>
+    <color name="ci_menu_title_color">#E6000716</color>
+    <color name="ci_menu_footer_color">#80000000</color>
+    <color name="white">#FFFFFF</color>
 </resources>

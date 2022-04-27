@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <item android:drawable="@color/channel_bottom_blue" android:state_focused="true"/>
+    <item android:drawable="@color/ci_menu_item_color" android:state_focused="true"/>
 
 </selector>
