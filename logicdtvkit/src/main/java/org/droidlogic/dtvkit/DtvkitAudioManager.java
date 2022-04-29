@@ -12,7 +12,7 @@ public class DtvkitAudioManager {
     private static final String TAG = "DtvkitAudioManager";
     AudioManager audioManager;
 
-    enum EntryType {
+    public enum EntryType {
         DIALOGUE_ENHANCEMENT_LEVEL,
     }
 
