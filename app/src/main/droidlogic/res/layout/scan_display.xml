@@ -10,8 +10,8 @@
 
     <ImageView
         android:id="@+id/circle_blue"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
+        android:layout_width="@dimen/px_20.0"
+        android:layout_height="@dimen/px_20.0"
         android:background="@drawable/ic_brightness_blue_30dp" />
 
     <TextView
@@ -20,6 +20,7 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical|center_horizontal"
         android:paddingRight="10dp"
+        android:paddingLeft="@dimen/px_3.0"
         android:text="@string/dialog_scan"
         android:textColor="#B3EEEEEE"
         android:textSize="14sp" />

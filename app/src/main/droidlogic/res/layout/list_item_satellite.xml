@@ -9,13 +9,13 @@
     android:orientation="horizontal"
     android:paddingTop="8dp"
     android:paddingBottom="8dp"
-    android:weightSum="5">
+    android:weightSum="2">
 
     <LinearLayout
         android:id="@+id/list_item1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="3"
+        android:layout_weight="1"
         android:gravity="center_vertical">
 
         <TextView
@@ -24,7 +24,7 @@
             android:layout_height="15dp"
             android:layout_marginLeft="4dp"
             android:layout_marginRight="4dp"
-            android:background="@drawable/ic_check_white_24dp" />
+            android:background="@drawable/item_choose" />
 
         <TextView
             android:id="@+id/textview_second"
@@ -40,18 +40,17 @@
         android:id="@+id/list_item2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="2"
+        android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
+        <ImageView
             android:id="@+id/left_array_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="4dp"
             android:layout_marginRight="4dp"
-            android:layout_weight="1"
-            android:background="@drawable/ic_arrow_right_white_24dp"
+            android:src="@drawable/arrow_right"
             android:gravity="center"
             android:rotation="180" />
 
@@ -59,20 +58,19 @@
             android:id="@+id/textview_third"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
+            android:layout_weight="1"
             android:gravity="center"
             android:text="third"
             android:textColor="#B3EEEEEE"
             android:textSize="14sp" />
 
-        <TextView
+        <ImageView
             android:id="@+id/right_array_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="4dp"
             android:layout_marginRight="4dp"
-            android:layout_weight="1"
-            android:background="@drawable/ic_arrow_right_white_24dp" />
+            android:src="@drawable/arrow_right" />
     </LinearLayout>
 
 </LinearLayout>

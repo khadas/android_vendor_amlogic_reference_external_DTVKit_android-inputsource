@@ -8,13 +8,10 @@
     android:gravity="center_vertical|center_horizontal"
     android:orientation="horizontal">
 
-    <TextView
+    <ImageView
+        android:layout_gravity="center"
         android:id="@+id/textView_wheel"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:background="@drawable/direction_key"
-        android:gravity="center_vertical|center_horizontal"
-        android:paddingRight="20dp"
-        android:textColor="#B3EEEEEE"
-        android:textSize="14sp" />
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/wheel"/>
 </LinearLayout>

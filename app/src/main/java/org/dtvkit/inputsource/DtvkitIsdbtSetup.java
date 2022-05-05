@@ -394,16 +394,6 @@ public class DtvkitIsdbtSetup extends Activity {
         Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
         Button search = (Button)findViewById(R.id.terrestrialstartsearch);
         CheckBox nit = (CheckBox)findViewById(R.id.network);
-        dvb_search.post(new Runnable() {
-            @Override
-            public void run() {
-                LinearLayout.LayoutParams pms= (LinearLayout.LayoutParams) channel_holder.getLayoutParams();
-                int[] location = new int[2];
-                dvb_search.getLocationOnScreen(location);
-                pms.topMargin=location[1];
-                channel_holder.setLayoutParams(pms);
-            }
-        });
 
         int isFrequencyMode = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
         if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
@@ -866,6 +856,10 @@ public class DtvkitIsdbtSetup extends Activity {
     }
 
     private void setStrengthAndQualityStatus(final String sstatus, final String qstatus) {
+        setStrengthAndQualityStatus(sstatus, qstatus, "");
+    }
+
+    private void setStrengthAndQualityStatus(final String sstatus, final String qstatus, final String channel) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -875,24 +869,19 @@ public class DtvkitIsdbtSetup extends Activity {
                     findViewById(R.id.channel_holder).setVisibility(View.VISIBLE);
                 }
                 Log.i(TAG, String.format("Strength: %s", sstatus));
-                final TextView strengthText = (TextView) findViewById(R.id.strengthstatus);
-                strengthText.setText(sstatus);
-
                 Log.i(TAG, String.format("Quality: %s", qstatus));
-                final TextView qualityText = (TextView) findViewById(R.id.qualitystatus);
-                qualityText.setText(qstatus);
+                TextView channelInfo = (TextView) findViewById(R.id.tv_scan_info);
+                channelInfo.setText(sstatus + "\t\t" + qstatus + "\t\t" + channel);
             }
         });
     }
 
-    private void setSearchProgress(final int progress , final String description) {
+    private void setSearchProgress(final int progress) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 final ProgressBar bar = (ProgressBar) findViewById(R.id.searchprogress);
                 bar.setProgress(progress);
-                final TextView text2 = (TextView) findViewById(R.id.description);
-                text2.setText(description);
             }
         });
     }
@@ -978,8 +967,8 @@ public class DtvkitIsdbtSetup extends Activity {
             Log.d(TAG, "dealOnSignal null map");
             return;
         }
-        String signal = (String)map.get("signal");
-        JSONObject data = (JSONObject)map.get("data");
+        String signal = (String) map.get("signal");
+        JSONObject data = (JSONObject) map.get("data");
         if (signal != null && signal.equals("IsdbtStatusChanged")) {
             int progress = getSearchProcess(data);
             Log.d(TAG, "onSignal progress = " + progress);
@@ -987,9 +976,9 @@ public class DtvkitIsdbtSetup extends Activity {
             int qstatus = mParameterMananer.getQualityStatus();
             if (progress < 100) {
                 int found = getFoundServiceNumber();
-                setSearchProgress(progress , String.format(Locale.ENGLISH, "Channel: %d", found));
-                setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress) , "");
-                setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", sstatus), String.format(Locale.ENGLISH, "Quality: %d%%", qstatus));
+                setSearchProgress(progress);
+                setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
+                setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", sstatus), String.format(Locale.ENGLISH, "Quality: %d%%", qstatus), String.format(Locale.ENGLISH, "Channel: %d", found));
             } else {
                 //onSearchFinished();
                 sendFinishSearch();

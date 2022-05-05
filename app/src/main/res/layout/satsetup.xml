@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
     android:keepScreenOn="true"
-    android:orientation="horizontal"
-    android:paddingStart="100dp">
+    android:orientation="horizontal">
 
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:gravity="left|center_vertical"
-        android:orientation="vertical">
+    <android.support.constraint.ConstraintLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/px_260.0"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/dvb_search"
@@ -24,7 +26,10 @@
             android:maxLines="@integer/ut_scan_title_max_lines"
             android:text="@string/strSearchDvbsDescription"
             android:textColor="@color/ut_scan_title_text"
-            android:textSize="@dimen/ut_scan_title_text_size" />
+            android:textSize="@dimen/ut_scan_title_text_size"
+            android:textStyle="bold"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ProgressBar
             android:id="@+id/searchprogress"
@@ -32,7 +37,9 @@
             android:layout_width="@dimen/ut_scan_progress_width"
             android:layout_height="@dimen/ut_scan_progress_height"
             android:layout_marginTop="@dimen/ut_scan_progress_margin_top"
-            android:progressDrawable="@drawable/tv_scan_progress" />
+            android:progressDrawable="@drawable/tv_scan_progress"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/dvb_search" />
 
         <TextView
             android:id="@+id/searchstatus"
@@ -43,21 +50,51 @@
             android:fontFamily="sans-serif"
             android:text="@string/strSearchNotStarted"
             android:textColor="@color/ut_scan_description_text"
-            android:textSize="@dimen/ut_scan_description_text_size" />
+            android:textSize="@dimen/ut_scan_description_text_size"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/searchprogress" />
+
+        <LinearLayout
+            android:id="@+id/channel_holder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:animateLayoutChanges="true"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/searchstatus"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/tv_scan_info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:textColor="#80FFFFFF"
+                android:textSize="18sp"
+                tools:text="Strength:0%" />
+
+        </LinearLayout>
 
         <CheckBox
             android:id="@+id/network"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/ut_scan_description_margin_top"
-            android:text="@string/strNetworkSearch" />
+            android:layout_marginTop="@dimen/px_24.0"
+            android:text="@string/strNetworkSearch"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/searchstatus" />
 
         <CheckBox
             android:id="@+id/clear_old"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/px_24.0"
             android:text="@string/strClearOld"
             android:visibility="gone"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/network"
             tools:visibility="visible" />
         <!-- hide for  the moment -->
 
@@ -65,9 +102,12 @@
             android:id="@+id/dvbs2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/px_24.0"
             android:nextFocusDown="@+id/search_mode"
             android:text="@string/strDVBS2"
             android:visibility="gone"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/clear_old"
             tools:visibility="visible" />
 
         <TextView
@@ -78,13 +118,20 @@
             android:accessibilityLiveRegion="polite"
             android:fontFamily="sans-serif"
             android:text="@string/tv_mode_option"
-            android:textColor="@color/ut_scan_description_text"
-            android:textSize="@dimen/ut_scan_button_text_size" />
+            android:textColor="#FFFFFF"
+            android:textSize="@dimen/ut_scan_button_text_size"
+            android:textStyle="bold"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/dvbs2" />
 
         <LinearLayout
+            android:id="@+id/mode_option_content"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_marginTop="@dimen/ut_scan_description_margin_top"
+            android:orientation="horizontal"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/mode_option">
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -95,10 +142,8 @@
                     android:id="@+id/search_mode_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
                     android:accessibilityLiveRegion="polite"
                     android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding"
                     android:text="@string/strSearchMode"
                     android:textColor="@color/ut_scan_description_text"
                     android:textSize="@dimen/ut_scan_description_text_size" />
@@ -107,17 +152,18 @@
                     android:id="@+id/search_mode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:layout_marginTop="@dimen/px_15.0"
                     android:entries="@array/search_mode_entries"
-                    android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+                    android:fontFamily="sans-serif" />
 
                 <LinearLayout
                     android:id="@+id/blind_frequency_container"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/px_15.0"
                     android:orientation="vertical"
-                    android:visibility="gone">
+                    android:visibility="gone"
+                    tools:visibility="visible">
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -182,10 +228,9 @@
                     android:id="@+id/fec_mode_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
                     android:accessibilityLiveRegion="polite"
                     android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding"
+                    android:paddingRight="@dimen/px_22.0"
                     android:text="@string/strFecMode"
                     android:textColor="@color/ut_scan_description_text"
                     android:textSize="@dimen/ut_scan_description_text_size" />
@@ -194,10 +239,9 @@
                     android:id="@+id/fec_mode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:layout_marginTop="@dimen/px_15.0"
                     android:entries="@array/fec_mode_entries"
-                    android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+                    android:fontFamily="sans-serif" />
 
             </LinearLayout>
 
@@ -213,10 +257,9 @@
                     android:id="@+id/modulation_mode_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
                     android:accessibilityLiveRegion="polite"
                     android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding"
+                    android:paddingRight="@dimen/px_22.0"
                     android:text="@string/strModulationMode"
                     android:textColor="@color/ut_scan_description_text"
                     android:textSize="@dimen/ut_scan_description_text_size" />
@@ -225,10 +268,9 @@
                     android:id="@+id/modulation_mode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:layout_marginTop="@dimen/px_15.0"
                     android:entries="@array/modulation_mode_entries"
-                    android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+                    android:fontFamily="sans-serif" />
 
             </LinearLayout>
 
@@ -240,10 +282,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
                     android:accessibilityLiveRegion="polite"
                     android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding"
                     android:text="@string/strChannelType"
                     android:textColor="@color/ut_scan_description_text"
                     android:textSize="@dimen/ut_scan_description_text_size" />
@@ -252,10 +292,9 @@
                     android:id="@+id/channel_type"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:layout_marginTop="@dimen/px_15.0"
                     android:entries="@array/dvbs_channel_type"
-                    android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+                    android:fontFamily="sans-serif" />
 
             </LinearLayout>
 
@@ -267,10 +306,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
                     android:accessibilityLiveRegion="polite"
                     android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding"
                     android:text="@string/strServiceType"
                     android:textColor="@color/ut_scan_description_text"
                     android:textSize="@dimen/ut_scan_description_text_size" />
@@ -279,10 +316,9 @@
                     android:id="@+id/service_type"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                    android:layout_marginTop="@dimen/px_15.0"
                     android:entries="@array/dvbs_service_type"
-                    android:fontFamily="sans-serif"
-                    android:paddingLeft="@dimen/ut_scan_button_padding" />
+                    android:fontFamily="sans-serif" />
 
             </LinearLayout>
 
@@ -292,7 +328,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/mode_option_content">
 
             <Button
                 android:id="@+id/option_set_btn"
@@ -384,44 +422,15 @@
 
         </LinearLayout>
 
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/channel_holder"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_marginLeft="60dp"
-        android:layout_weight="1"
-        android:animateLayoutChanges="true"
-        android:descendantFocusability="blocksDescendants"
-        android:focusable="false"
-        android:orientation="vertical"
-        android:visibility="gone"
-        tools:visibility="visible">
-
-        <TextView
-            android:id="@+id/strengthstatus"
+        <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
-            tools:text="Strength:0%" />
+            android:src="@drawable/tv_antenna"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toRightOf="@+id/searchprogress"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:id="@+id/qualitystatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:textSize="14sp"
-            tools:text="Quality:0%" />
+    </android.support.constraint.ConstraintLayout>
 
-        <TextView
-            android:id="@+id/description"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:textSize="14sp"
-            tools:text="Channel:0" />
-
-    </LinearLayout>
-
-</LinearLayout>
+</android.support.constraint.ConstraintLayout>

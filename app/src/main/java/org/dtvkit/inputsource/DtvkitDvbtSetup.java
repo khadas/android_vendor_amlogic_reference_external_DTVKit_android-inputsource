@@ -407,16 +407,6 @@ public class DtvkitDvbtSetup extends Activity {
         Spinner dvbc_autoscantype_spinner = (Spinner) findViewById(R.id.dvbc_autoscantype_spinner);
         EditText dvbc_networkid_editText = (EditText) findViewById(R.id.dvbc_networkid_edit);
         EditText dvbc_frequency_editText = (EditText) findViewById(R.id.dvbc_freqency_edit);
-        dvb_search.post(new Runnable() {
-            @Override
-            public void run() {
-               LinearLayout.LayoutParams pms= (LinearLayout.LayoutParams) channel_holder.getLayoutParams();
-               int[] location = new int[2];
-               dvb_search.getLocationOnScreen(location);
-               pms.topMargin=location[1];
-               channel_holder.setLayoutParams(pms);
-            }
-        });
 
         int isFrequencyMode = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
         if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
@@ -1208,6 +1198,10 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private void setStrengthAndQualityStatus(final String sstatus, final String qstatus) {
+        setStrengthAndQualityStatus(sstatus, qstatus, "");
+    }
+
+    private void setStrengthAndQualityStatus(final String sstatus, final String qstatus, final String channel) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -1217,24 +1211,19 @@ public class DtvkitDvbtSetup extends Activity {
                     findViewById(R.id.channel_holder).setVisibility(View.VISIBLE);
                 }
                 Log.i(TAG, String.format("Strength: %s", sstatus));
-                final TextView strengthText = (TextView) findViewById(R.id.strengthstatus);
-                strengthText.setText(sstatus);
-
                 Log.i(TAG, String.format("Quality: %s", qstatus));
-                final TextView qualityText = (TextView) findViewById(R.id.qualitystatus);
-                qualityText.setText(qstatus);
+                TextView channelInfo = (TextView) findViewById(R.id.tv_scan_info);
+                channelInfo.setText(sstatus + "\t\t" + qstatus + "\t\t" + channel);
             }
         });
     }
 
-    private void setSearchProgress(final int progress , final String description) {
+    private void setSearchProgress(final int progress) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 final ProgressBar bar = (ProgressBar) findViewById(R.id.searchprogress);
                 bar.setProgress(progress);
-                final TextView text2 = (TextView) findViewById(R.id.description);
-                text2.setText(description);
             }
         });
     }
@@ -1320,24 +1309,24 @@ public class DtvkitDvbtSetup extends Activity {
             Log.d(TAG, "dealOnSignal null map");
             return;
         }
-        String signal = (String)map.get("signal");
-        JSONObject data = (JSONObject)map.get("data");
+        String signal = (String) map.get("signal");
+        JSONObject data = (JSONObject) map.get("data");
         int sstatus = mParameterMananer.getStrengthStatus();
         int qstatus = mParameterMananer.getQualityStatus();
+        int found = getFoundServiceNumber();
         if (signal != null && ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged")))) {
             int progress = getSearchProcess(data);
             Log.d(TAG, "onSignal progress = " + progress);
-            int found = getFoundServiceNumber();
-            setSearchProgress(progress , String.format(Locale.ENGLISH, "Channel: %d", found));
-            setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress) , "");
-            setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", sstatus), String.format(Locale.ENGLISH, "Quality: %d%%", qstatus));
+            setSearchProgress(progress);
+            setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
+            setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", sstatus), String.format(Locale.ENGLISH, "Quality: %d%%", qstatus), String.format(Locale.ENGLISH, "Channel: %d", found));
             if (progress >= 100) {
                 //onSearchFinished();
                 sendFinishSearch(false);
             }
-        }else if (signal != null && ((mIsDvbt && signal.equals("UpdateMsgStatus")) || (!mIsDvbt && signal.equals("UpdateMsgStatus")))) {
+        } else if (signal != null && ((mIsDvbt && signal.equals("UpdateMsgStatus")) || (!mIsDvbt && signal.equals("UpdateMsgStatus")))) {
             Log.d(TAG, "UpdateMsgStatus: sstatus = " + sstatus + "%, qstatus = " + qstatus + "%");
-            setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", sstatus), String.format(Locale.ENGLISH, "Quality: %d%%", qstatus));
+            setStrengthAndQualityStatus(String.format(Locale.getDefault(), "Strength: %d%%", sstatus), String.format(Locale.getDefault(), "Quality: %d%%", qstatus), String.format(Locale.ENGLISH, "Channel: %d", found));
         }
     }
 

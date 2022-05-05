@@ -2,8 +2,8 @@
 <resources>
     <color name="common_text_color">#B3EEEEEE</color>
     <color name="common_background">#37474F</color>
-    <color name="common_item_background">#263238</color>
-    <color name="common_focus">#00BFFF</color>
+    <color name="common_item_background">#262626</color>
+    <color name="common_focus">#979797</color>
     <color name="common_red">#FF0000</color>
     <color name="common_green">#00FF00</color>
     <color name="common_blue">#0000FF</color>
@@ -27,4 +27,8 @@
     <color name="pin_dialog_background">#24252B</color>
     <color name="pin_number_picker_focused_background">#007AC3</color>
     <drawable name="translucent_background">#00000000</drawable>
+
+    <color name="line_color">#979797</color>
+
+
 </resources>

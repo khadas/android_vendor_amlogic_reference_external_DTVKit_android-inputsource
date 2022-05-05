@@ -206,16 +206,6 @@ public class DtvkitDvbsSetup extends Activity {
 
         TextView dvb_search = (TextView)findViewById(R.id.dvb_search);
         View channel_holder = findViewById(R.id.channel_holder);
-        dvb_search.post(new Runnable() {
-            @Override
-            public void run() {
-                LinearLayout.LayoutParams pms= (LinearLayout.LayoutParams) channel_holder.getLayoutParams();
-                int[] location = new int[2];
-                dvb_search.getLocationOnScreen(location);
-                pms.topMargin=location[1];
-                channel_holder.setLayoutParams(pms);
-            }
-        });
 
         CheckBox nit = (CheckBox)findViewById(R.id.network);
         CheckBox clear = (CheckBox)findViewById(R.id.clear_old);
@@ -371,11 +361,11 @@ public class DtvkitDvbsSetup extends Activity {
     private void dealOnSignal(int progress) {
         Log.d(TAG, "onSignal progress = " + progress);
         int found = getFoundServiceNumber();
-        setSearchProgress(progress, String.format(Locale.ENGLISH, "Channel: %d", found));
+        setSearchProgress(progress);
         int sstatus = mParameterMananer.getStrengthStatus();
         int qstatus = mParameterMananer.getQualityStatus();
         setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
-        setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", sstatus), String.format(Locale.ENGLISH, "Quality: %d%%", qstatus));
+        setStrengthAndQualityStatus(String.format(Locale.getDefault(), "Strength: %d%%", sstatus), String.format(Locale.getDefault(), "Quality: %d%%", qstatus), String.format(Locale.getDefault(), "Channel: %d", found));
         if (progress >= 100) {
             sendFinishSearch();
         }
@@ -389,14 +379,12 @@ public class DtvkitDvbsSetup extends Activity {
         }
     }
 
-    private void setSearchProgress(final int progress , final String description) {
+    private void setSearchProgress(final int progress) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 final ProgressBar bar = (ProgressBar) findViewById(R.id.searchprogress);
                 bar.setProgress(progress);
-                final TextView text2 = (TextView) findViewById(R.id.description);
-                text2.setText(description);
             }
         });
     }
@@ -936,6 +924,10 @@ public class DtvkitDvbsSetup extends Activity {
     }
 
     private void setStrengthAndQualityStatus(final String sstatus, final String qstatus) {
+        setStrengthAndQualityStatus(sstatus, qstatus, "");
+    }
+
+    private void setStrengthAndQualityStatus(final String sstatus, final String qstatus, final String channel) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -944,15 +936,11 @@ public class DtvkitDvbsSetup extends Activity {
                 } else {
                     findViewById(R.id.channel_holder).setVisibility(View.VISIBLE);
                 }
-                Log.i(TAG, String.format("Strength: %s", sstatus));
-                final TextView strengthText = (TextView) findViewById(R.id.strengthstatus);
-                strengthText.setText(sstatus);
-
-                Log.i(TAG, String.format("Quality: %s", qstatus));
-                final TextView qualityText = (TextView) findViewById(R.id.qualitystatus);
-                qualityText.setText(qstatus);
+                TextView channelInfo = (TextView) findViewById(R.id.tv_scan_info);
+                channelInfo.setText(sstatus + "\t\t" + qstatus + "\t\t" + channel);
             }
         });
     }
+
 }
 

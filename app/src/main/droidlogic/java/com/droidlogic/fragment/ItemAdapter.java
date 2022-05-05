@@ -56,9 +56,9 @@ public class ItemAdapter extends BaseAdapter {
             holder.container = (LinearLayout) convertView.findViewById(R.id.textview_title);
             holder.select = (TextView) convertView.findViewById(R.id.item_select);
             holder.textview2 = (TextView) convertView.findViewById(R.id.textview_second);
-            holder.leftarray = (TextView) convertView.findViewById(R.id.left_array_text);
+            holder.leftarray = (View) convertView.findViewById(R.id.left_array_text);
             holder.textview3 = (TextView) convertView.findViewById(R.id.textview_third);
-            holder.rightarray = (TextView) convertView.findViewById(R.id.right_array_text);
+            holder.rightarray = (View) convertView.findViewById(R.id.right_array_text);
             convertView.setTag(holder);
         } else{
             holder = (ViewHolder) convertView.getTag();
@@ -93,7 +93,7 @@ public class ItemAdapter extends BaseAdapter {
             holder.leftarray.setVisibility(View.GONE);
             holder.rightarray.setVisibility(View.GONE);
             if (editstatus == ItemDetail.SELECT_EDIT) {
-                holder.select.setBackgroundResource(R.drawable.ic_check_white_24dp);
+                holder.select.setBackgroundResource(R.drawable.item_choose);
             } else {
                 holder.select.setVisibility(View.INVISIBLE);
             }
@@ -174,8 +174,8 @@ public class ItemAdapter extends BaseAdapter {
         LinearLayout container;
         TextView select;
         TextView textview2;
-        TextView leftarray;
+        View leftarray;
         TextView textview3;
-        TextView rightarray;
+        View rightarray;
     }
 }

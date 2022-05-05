@@ -15,7 +15,8 @@ LOCAL_STATIC_JAVA_LIBRARIES += \
    guava \
    companionlibrary \
    android-support-v17-leanback \
-   amlogic-hbbtv-client
+   amlogic-hbbtv-client \
+   android-support-constraint-layout
 
 LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/aidl
 

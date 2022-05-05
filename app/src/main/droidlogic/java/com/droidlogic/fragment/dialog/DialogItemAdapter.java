@@ -58,11 +58,11 @@ public class DialogItemAdapter extends BaseAdapter {
             holder.selectText = (TextView) convertView.findViewById(R.id.select_text);
             holder.selectText = (TextView) convertView.findViewById(R.id.select_text);
             holder.titleText = (TextView) convertView.findViewById(R.id.title_text);
-            holder.leftarrayText = (TextView) convertView.findViewById(R.id.left_array_text);
+            holder.leftarrayText = (View) convertView.findViewById(R.id.left_array_text);
             holder.progressBar = (ProgressBar) convertView.findViewById(R.id.progressBar);
             holder.parameterText = (TextView) convertView.findViewById(R.id.parameter_text);
             holder.editText = (EditText) convertView.findViewById(R.id.editText);
-            holder.rightarrayText = (TextView) convertView.findViewById(R.id.right_array_text);
+            holder.rightarrayText = (View) convertView.findViewById(R.id.right_array_text);
             convertView.setTag(holder);
         } else{
             holder = (ViewHolder) convertView.getTag();
@@ -238,10 +238,10 @@ public class DialogItemAdapter extends BaseAdapter {
     public class ViewHolder{
         TextView selectText;
         TextView titleText;
-        TextView leftarrayText;
+        View leftarrayText;
         ProgressBar progressBar;
         TextView parameterText;
         EditText editText;
-        TextView rightarrayText;
+        View rightarrayText;
     }
 }

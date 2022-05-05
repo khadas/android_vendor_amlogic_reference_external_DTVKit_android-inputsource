@@ -118,20 +118,24 @@
             android:id="@+id/button1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/selector_button"
             android:layout_weight="1"
+            android:layout_margin="@dimen/px_2.0"
             android:focusable="true"
             android:text="@string/dialog_ok"
-            android:textColor="@android:color/black"
+            android:textColor="@android:color/white"
             android:textSize="14sp" />
 
         <Button
             android:id="@+id/button2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/selector_button"
             android:layout_weight="1"
+            android:layout_margin="@dimen/px_2.0"
             android:focusable="true"
             android:text="@string/dialog_cancel"
-            android:textColor="@android:color/black"
+            android:textColor="@android:color/white"
             android:textSize="14sp" />
     </LinearLayout>
 </LinearLayout>

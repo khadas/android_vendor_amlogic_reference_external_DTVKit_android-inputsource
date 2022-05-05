@@ -39,10 +39,10 @@
         <item>qam256</item>
     </string-array>
     <string name="strSearchNotStarted">Search not started</string>
-    <string name="strSearchDvbsDescription">DVB-S channels tuner setup</string>
-    <string name="strSearchDvbcDescription">DVB-C channels tuner setup</string>
-    <string name="strSearchDvbtDescription">DVB-T channels tuner setup</string>
-    <string name="strSearchIsdbtDescription">ISDB-T channels tuner setup</string>
+    <string name="strSearchDvbsDescription">DVB-S channel tuner setup</string>
+    <string name="strSearchDvbcDescription">DVB-C channel tuner setup</string>
+    <string name="strSearchDvbtDescription">DVB-T channel tuner setup</string>
+    <string name="strSearchIsdbtDescription">ISDB-T channel tuner setup</string>
     <string name="strStartSearch">Start Search</string>
     <string name="strManualSearch">Manual Search</string>
     <string name="strAutoSearch">Auto Search</string>

@@ -3,8 +3,8 @@
     <color name="button_enabled">#12345b</color>
     <color name="button_focused">#145195</color>
     <color name="button_pressed">#92145195</color>
-    <color name="ut_scan_title_text">#EEEEEE</color>
-    <color name="ut_scan_description_text">#B3EEEEEE</color>
+    <color name="ut_scan_title_text">#FFFFFF</color>
+    <color name="ut_scan_description_text">#80FFFFFF</color>
     <color name="side_panel_header_droid_background">#37474F</color>
     <color name="black_background">#000000</color>
     <color name="ut_scan_progress_background">#26EEEEEE</color>
