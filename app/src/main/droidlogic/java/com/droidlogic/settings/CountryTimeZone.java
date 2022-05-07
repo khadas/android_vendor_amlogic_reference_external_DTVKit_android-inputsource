@@ -20,6 +20,7 @@ public class CountryTimeZone {
         "irn","mar","tun","are","isr",
         "dza","jor","lby","irq","geo",
         "sau","sgp","mys","idn","tha",
+        "ind","pak",
     };
 
     String timezone[][] = {
@@ -110,6 +111,8 @@ public class CountryTimeZone {
             "Asia/Pontianak",
         }, //idn
         {"Asia/Bangkok"}, //tha
+        {"Asia/Kolkata"}, //ind
+        {"Asia/Karachi"}, //pak
 };
 
     public String[] getTimezone(String name){
