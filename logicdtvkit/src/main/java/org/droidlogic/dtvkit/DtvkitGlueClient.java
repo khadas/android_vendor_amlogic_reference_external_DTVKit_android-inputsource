@@ -30,7 +30,7 @@ public class DtvkitGlueClient {
     private Handler mMainHandler = null;
 
     private static DtvkitGlueClient mSingleton = null;
-    private ArrayList<Pair<Integer, SignalHandler>> mHandlers = new ArrayList<>();
+    private final ArrayList<Pair<Integer, SignalHandler>> mHandlers = new ArrayList<>();
     // Notification object used to listen to the start of the rpcserver daemon.
     //private final ServiceNotification mServiceNotification = new ServiceNotification();
     //private static final int DTVKITSERVER_DEATH_COOKIE = 1000;
@@ -243,12 +243,14 @@ public class DtvkitGlueClient {
         // Singleton
         mDirectBuffer = ByteBuffer.allocateDirect(DIRECT_BUFFER_SIZE);
         nativeconnectdtvkit(this, mDirectBuffer);
+        /*
         int debuggable = SystemProperties.getInt("ro.debuggable", 0);
         if (debuggable == 1) {
             HandlerThread thread = new HandlerThread("GlueClientThread");
             thread.start();
             mMainHandler = new Handler(thread.getLooper());
         }
+        */
     }
 
     public synchronized static DtvkitGlueClient getInstance() {
@@ -302,17 +304,9 @@ public class DtvkitGlueClient {
 
     public JSONObject request(String resource, JSONArray arguments) throws Exception {
         final String reason = resource + " : " + arguments;
+        long startTime = System.nanoTime();
         try {
-            long startTime = System.nanoTime();
             JSONObject object = new JSONObject(nativerequest(resource, arguments.toString()));
-            long durationMs = (System.nanoTime() - startTime) / (1000 * 1000);
-            if (durationMs > REQUEST_MESSAGE_TIMEOUT_LONG_MILLIS) {
-                Log.e(TAG, "[critical]request (" + reason + ") took too long time (duration="
-                    + durationMs + "ms)");
-            } else if (durationMs > REQUEST_MESSAGE_TIMEOUT_SHORT_MILLIS) {
-                Log.w(TAG, "[warning]request (" + reason + ") took a long time (duration="
-                    + durationMs + "ms)");
-            }
             if (object.getBoolean("accepted")) {
                 return object;
             } else {
@@ -321,8 +315,13 @@ public class DtvkitGlueClient {
         } catch (JSONException | RemoteException e) {
             throw new Exception(e.getMessage());
         } finally {
-            if (mMainHandler != null) {
-                mMainHandler.removeCallbacksAndMessages(null);
+            long durationMs = (System.nanoTime() - startTime) / (1000 * 1000);
+            if (durationMs > REQUEST_MESSAGE_TIMEOUT_LONG_MILLIS) {
+                Log.e(TAG, "[critical]request (" + reason + ") took too long time (duration="
+                    + durationMs + "ms)");
+            } else if (durationMs > REQUEST_MESSAGE_TIMEOUT_SHORT_MILLIS) {
+                Log.w(TAG, "[warning]request (" + reason + ") took a long time (duration="
+                    + durationMs + "ms)");
             }
         }
     }

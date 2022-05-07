@@ -664,7 +664,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 case MSG_HANDLE_RECORDING_FROM_DTVKIT: {
                     JSONArray data = (JSONArray) msg.obj;
-                    syncRecordingProgramsWithDtvkit(data);
+                    if (syncRecordingProgramsWithDtvkit(data) == 0) {
+                        mCachedRecordingsPrograms.clear();
+                    }
                     break;
                 }
                 case MSG_ADD_DTVKIT_DISK_PATH: {
@@ -1096,7 +1098,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             for (Map.Entry<Long, DtvkitTvInputSession> entry : mTunerSessions.entrySet()) {
                 index = entry.getKey();
                 session = entry.getValue();
-                if (!session.isPipSession() && session.isTuned()) {
+                if (!session.isPipSession() && session.isSessionAvailable()) {
                     result = session;
                     Log.i(TAG, "getMainTunerSession index = " + index);
                 }
@@ -1561,16 +1563,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         return lastest;
     }
 
-    private void updateRcordsFromDisk(ArrayList<Long> recordingsInDB, JSONArray recordings) {
+    private int updateRcordsFromDisk(ArrayList<Long> recordingsInDB, JSONArray recordings) {
         if (recordings.length() == 0) {
             if (recordingsInDB.size() != 0) {
                 mContentResolver.delete(TvContract.RecordedPrograms.CONTENT_URI, "_id!=-1", null);
                 Log.w(TAG, "delete recordings in tv.db");
+                return 0;
+            } else {
+                return -1;
             }
-            return;
         } else {
             if (recordings.length() == recordingsInDB.size()) {
-                return;
+                return -1;
             }
             /* in this case, we ignore change, because dtvkit
              * recordings may change later than tvprovider when
@@ -1579,7 +1583,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
              */
             if (mRecordingStarted && (recordingsInDB.size() == recordings.length() + 1)) {
                 Log.w(TAG, "don't update it");
-                return;
+                return -1;
             }
         }
 
@@ -1649,7 +1653,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     + " recording size from dtvkit:" + recordings.length()
                     + ", recording size in databases:" + recordingsInDB.size()
                     + ", inValidNumber:" + inValidNumber);
-            return;
+            return -1;
         }
 
         int from = 0;
@@ -1667,18 +1671,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         } catch (Exception e) {
             Log.e(TAG, "recordings DB update [" + from + ", " + to + ") failed:" + e.getMessage());
-            return;
+            return -1;
         }
 
         Log.i(TAG, "sync recordings from disk to tv.db done!");
+        return 1;
     }
 
-    private void syncRecordingProgramsWithDtvkit(JSONArray recordings) {
+    /* return value : changed or not */
+    private int syncRecordingProgramsWithDtvkit(JSONArray recordings) {
         ArrayList<Long> recordingsInDB = new ArrayList<>();
         Cursor cursor = null;
         if (recordings == null) {
             Log.e(TAG, "null list when syncRecordingPrograms!");
-            return;
+            return -1;
         }
         try {
             cursor = mContentResolver.query(TvContract.RecordedPrograms.CONTENT_URI,
@@ -1695,7 +1701,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         Log.d(TAG, "recordings: db[" + recordingsInDB.size() + "] dtvkit[" + recordings.length() + "]");
-        updateRcordsFromDisk(recordingsInDB, recordings);
+        return updateRcordsFromDisk(recordingsInDB, recordings);
     }
 
     class NativeOverlayView extends View {
@@ -2585,7 +2591,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         DtvkitMainTvSession(DtvkitTvInput service) {
             super(service, false);
+            init();
+        }
+
+        private void init() {
             setOverlayViewEnabled(true);
+            if (hasAnotherSession(this, false)) {
+                DtvkitTvInputSession oldSession = getMainTunerSession();
+                // As early as possible to stop oldSession.
+                // bugfix : from launcher to livetv, livetv splash launcher video once.
+                if (oldSession.isTuned()) {
+                    Log.e(TAG, "stop old session!");
+                    oldSession.onFinish(false, false);
+                }
+            }
         }
 
         public void setFccBufferUri(Uri previous, Uri next) {
@@ -2991,7 +3010,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public void onSurfaceChanged(int format, int width, int height) {
-            Log.i(TAG, "onSurfaceChanged format:" + format + ", " + width);
+            Log.i(TAG, "onSurfaceChanged format:" + format + ", "
+                + "(w=" + width + ",h=" + height + ")");
         }
 
         @Override
@@ -3065,8 +3085,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (isTuned()) {
                     result = true;
                 } else {
+                    Log.i(TAG, "tryAcquire mSemaphore");
                     if (mSessionSemaphore.tryAcquire(SEMAPHORE_TIME_OUT, TimeUnit.MILLISECONDS)) {
                         result = true;
+                        Log.i(TAG, "tryAcquire mSemaphore OK");
                     } else {
                         Log.w(TAG, "tryAcquire mSemaphore timeout, please check");
                     }
