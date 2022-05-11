@@ -2600,7 +2600,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 DtvkitTvInputSession oldSession = getMainTunerSession();
                 // As early as possible to stop oldSession.
                 // bugfix : from launcher to livetv, livetv splash launcher video once.
-                if (oldSession.isTuned()) {
+                if (oldSession != null && oldSession.isTuned()) {
                     Log.e(TAG, "stop old session!");
                     oldSession.onFinish(false, false);
                 }
@@ -3500,12 +3500,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return true;
         }
 
-        private void updateTrackAndSelect(int isDvrPlaying) {
+        private void updateTrackAndSelect(int isDvrPlaying, boolean clear) {
             boolean retuneSubtile = true;
             if ((isDvrPlaying == 1) && (dvrSubtitleFlag == 1)) {
                 retuneSubtile = false;
             }
 
+            if (clear) {
+                Log.w(TAG, "updateTrackAndSelect: clear Tracks because of locked or scrambled program");
+                mTunedTracks = new ArrayList<>();
+                notifyTracksChanged(mTunedTracks);
+                return;
+            }
             if (retuneSubtile
                     && (!getFeatureSupportCaptioningManager()
                     || (mCaptioningManager != null && mCaptioningManager.isEnabled()))) {
@@ -4160,20 +4166,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (signal.equals("PlayerStatusChanged")) {
                     String state = "off";
                     String dvbUri = "";
+                    String type = "dvblive";
                     try {
                         state = data.getString("state");
                         dvbUri = data.getString("uri");
+                        type = data.getString("type");
                     } catch (JSONException ignore) {
                     }
                     Log.i(TAG, "signal: " + state);
                     switch (state) {
                         case "playing":
-                            String type = "dvblive";
-                            try {
-                                type = data.getString("type");
-                            } catch (JSONException e) {
-                                Log.e(TAG, e.getMessage());
-                            }
                             /*
                              * type: "dvblive"         -> livetv streaming
                              * type: "dvbrecording"    -> dvr playback
@@ -4189,13 +4191,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 if (mIsPip) {
                                     Log.d(TAG, "dvblive PIP only need video status");
                                     return;
-                                }
-                                //update track info in message queue
-                                if (mHandlerThreadHandle != null) {
-                                    mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKS_AND_SELECT);
-                                    Message msg = mHandlerThreadHandle.obtainMessage(MSG_UPDATE_TRACKS_AND_SELECT);
-                                    msg.arg1 = 0;
-                                    mHandlerThreadHandle.sendMessageDelayed(msg, 0);
                                 }
                                 if (mTunedChannel != null && mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO)) {
                                     if (mHandlerThreadHandle != null) {
@@ -4218,13 +4213,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 runOnMainThread(() -> {
                                     notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_AVAILABLE);
                                 });
-                                //update track info in message queue
-                                if (mHandlerThreadHandle != null) {
-                                    mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKS_AND_SELECT);
-                                    Message msg = mHandlerThreadHandle.obtainMessage(MSG_UPDATE_TRACKS_AND_SELECT);
-                                    msg.arg1 = 1;
-                                    mHandlerThreadHandle.sendMessageDelayed(msg, 0);
-                                }
                             } else if (type.equals("dvbtimeshifting")) {
                                 if (mTunedChannel != null) {
                                     if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
@@ -4349,13 +4337,29 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             } else {
                                 Log.d(TAG, "mMainHandle is null");
                             }
-                            if (playerGetSubtitlesOn()) {
-                                playerSetSubtitlesOn(false);
-                            }
                             break;
                         default:
                             Log.i(TAG, "Unhandled state: " + state);
                             break;
+                    }
+                    //update track info in message queue
+                    {
+                        if (mHandlerThreadHandle == null) {
+                            return;
+                        }
+                        mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKS_AND_SELECT);
+                        Message msg = mHandlerThreadHandle.obtainMessage(MSG_UPDATE_TRACKS_AND_SELECT);
+                        if (!TextUtils.equals(state, "playing")) {
+                            // clear tracks
+                            msg.arg2 = 1;
+                        } else {
+                            if (TextUtils.equals(type, "dvblive")) {
+                                msg.arg1 = 0;
+                            } else if (TextUtils.equals(type, "dvbrecording")) {
+                                msg.arg1 = 1;
+                            }
+                        }
+                        mHandlerThreadHandle.sendMessage(msg);
                     }
                 } else if (signal.equals("PlayerTimeshiftRecorderStatusChanged")) {
                     switch (playerGetTimeshiftRecorderState(data)) {
@@ -4935,7 +4939,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         tryStopTimeshifting();
                         break;
                     case MSG_UPDATE_TRACKS_AND_SELECT:
-                        updateTrackAndSelect(msg.arg1);
+                        updateTrackAndSelect(msg.arg1, msg.arg2 == 1);
                         break;
                     case MSG_SELECT_TRACK:
                         doSelectTrack(msg.arg1, (String) msg.obj);
