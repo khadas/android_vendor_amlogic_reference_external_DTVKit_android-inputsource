@@ -3328,6 +3328,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (type == TvTrackInfo.TYPE_AUDIO) {
                 if (playerSelectAudioTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
                     notifyTrackSelected(type, trackId);
+                    if (mHbbTvManager != null) {
+                        mHbbTvManager.notifyTrackSelectedToHbbtv(type, trackId);
+                    }
                     //check trackinfo update
                     if (mHandlerThreadHandle != null) {
                         mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
