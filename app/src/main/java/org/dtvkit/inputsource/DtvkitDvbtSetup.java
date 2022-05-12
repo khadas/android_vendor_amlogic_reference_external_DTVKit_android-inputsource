@@ -51,6 +51,7 @@ import java.util.HashMap;
 import com.droidlogic.fragment.ParameterMananer;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+import com.droidlogic.app.DataProviderManager;
 
 public class DtvkitDvbtSetup extends Activity {
     private static final String TAG = "DtvkitDvbtSetup";
@@ -270,6 +271,7 @@ public class DtvkitDvbtSetup extends Activity {
             //stopSearch();
             sendStopSearch();
         }
+        DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, false);
     }
 
     @Override
@@ -887,6 +889,7 @@ public class DtvkitDvbtSetup extends Activity {
 
     private void startSearch() {
         setSearchStatus("Searching", "");
+        DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, true);
         setSearchProgressIndeterminate(false);
         startMonitoringSearch();
         mFoundServiceNumber = 0;

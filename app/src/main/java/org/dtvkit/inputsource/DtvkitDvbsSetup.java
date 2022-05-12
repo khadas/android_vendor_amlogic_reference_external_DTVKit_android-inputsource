@@ -41,6 +41,7 @@ import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.fragment.ParameterMananer;
 import com.droidlogic.fragment.DvbsParameterManager;
+import com.droidlogic.app.DataProviderManager;
 
 import java.util.List;
 import java.util.Locale;
@@ -548,6 +549,8 @@ public class DtvkitDvbsSetup extends Activity {
             stopMonitoringSearch();
             stopSearch(false);
         }
+        DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, false);
+
     }
 
     @Override
@@ -672,6 +675,7 @@ public class DtvkitDvbsSetup extends Activity {
 
     private void startSearch() {
         setSearchStatus("Searching", "");
+        DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, true);
         setStrengthAndQualityStatus("Strength:",  "Quality:");
         getProgressBar().setIndeterminate(false);
         startMonitoringSearch();

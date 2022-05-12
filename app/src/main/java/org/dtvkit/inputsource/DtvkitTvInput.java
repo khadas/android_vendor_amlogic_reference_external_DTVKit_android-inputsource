@@ -2073,7 +2073,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (!recordingStartRecording(dvbUri, mPath, recordingResponse)) {
                 if (recordingResponse.toString().equals("Could not start record")) {
                     Log.i(TAG, "record error Could not start record");
-                    notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
+                    notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
                 } else if (recordingResponse.toString().equals("Limited by minimum free disk space")) {
                     Log.e(TAG, "record error min free limited");
                     notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
