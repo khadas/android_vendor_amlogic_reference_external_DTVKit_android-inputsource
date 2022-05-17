@@ -3428,6 +3428,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         playerSetSubtitlesOn(true);
                         mSubFlagTtxPage = false;
                     }
+                    if (mMainHandle != null) {
+                        mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
+                        mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
+                    }
                 }
                 boolean stopSub = playerSelectSubtitleTrack(0xFFFF);
                 boolean stopTele = playerSelectTeletextTrack(0xFFFF);
@@ -5106,6 +5110,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "MainHandler [[[:" + msg.what);
                 switch (msg.what) {
                     case MSG_MAIN_HANDLE_DESTROY_OVERLAY:
+                        if (!mTeleTextMixNormal) {
+                            mTeleTextMixNormal = true;
+                            playerSetRectangle(0, 0, mWinWidth, mWinHeight);
+                        }
                         doDestroyOverlay();
                         if (mHandlerThreadHandle != null && mLivingHandlerThread != null) {
                             mHandlerThreadHandle.sendEmptyMessage(MSG_RELEASE_WORK_THREAD);
