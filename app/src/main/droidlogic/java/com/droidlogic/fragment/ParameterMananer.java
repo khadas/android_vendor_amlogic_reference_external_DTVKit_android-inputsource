@@ -1519,9 +1519,36 @@ public class ParameterMananer {
         return resultObj;
     }
 
+    private int getTeletextRegionIdFromCharsetPosition(int position) {
+        int regionId = 0;
+        switch (position) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+                regionId = position * 8;
+                break;
+            case 5:
+                regionId = 48;
+                break;
+            case 6:
+                regionId = 64;
+                break;
+            case 7:
+                regionId = 80;
+                break;
+            default:
+                break;
+        }
+        return regionId;
+    }
+
     public JSONObject setCurrentTeletextCharsetByPosition(int position) {
         JSONObject resultObj = null;
+        int regionId = getTeletextRegionIdFromCharsetPosition(position);
         String charSet = getTeletextCharsetByPosition(position);
+        DtvkitGlueClient.getInstance().setRegionId(regionId);
         if (charSet != null) {
             resultObj = setCurrentTeletextCharset(charSet);
         } else {

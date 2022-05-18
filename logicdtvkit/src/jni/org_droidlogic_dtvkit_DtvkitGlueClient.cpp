@@ -57,6 +57,7 @@ static jmethodID notifyMixVideoEventCallback;
 sp<amlogic::SubtitleServerClient> mSubContext;
 static jboolean g_bSubStatus = false;
 static int subtitle_ca_flag = 0;
+static int teletext_region_id = 0;
 
 #define DTVKIT_SUBTITLE_ADD_OFFSET 4
 #define SUBTITLE_DEMUX_SOURCE 4
@@ -566,6 +567,7 @@ static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int m
     if (mSubContext->open("", iotType))
     {
         if ((type == SUBTITLE_SUB_TYPE_TTX)) {
+            mSubContext->ttControl(TT_EVENT_SET_REGION_ID, -1, -1, teletext_region_id, -1);
             mSubContext->ttControl(TT_EVENT_GO_TO_PAGE, magazine, page, 0, 0);
         } else if (type == SUBTITLE_SUB_TYPE_TTXSUB) {
             mSubContext->ttControl(TT_EVENT_GO_TO_SUBTITLE, magazine, page, 0, 0);
@@ -762,6 +764,7 @@ static void openUserData() {
 
 static void setRegionId(JNIEnv *env, jclass clazz __unused, jint regionId) {
     ALOGD("set region Id:%d", regionId);
+    teletext_region_id = regionId;
     if (mSubContext != nullptr) {
         mSubContext->ttControl(TT_EVENT_SET_REGION_ID, -1, -1, regionId, -1);
     }
