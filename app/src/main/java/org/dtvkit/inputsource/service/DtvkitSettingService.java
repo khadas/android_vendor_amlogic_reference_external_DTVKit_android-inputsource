@@ -34,7 +34,7 @@ import java.util.List;
 
 public class DtvkitSettingService extends Service {
     private static final String TAG = "DtvkitSettingService";
-    private static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
+    public static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
     private static final int SYNC_FINISHED = 0x01;
     private static final int SYNC_RUNNING  = 0x02;
     private static final int SYNC_ONSIGNAL = 0x03;
@@ -312,8 +312,7 @@ public class DtvkitSettingService extends Service {
 
     private void updatingGuide() {
         EpgSyncJobService.cancelAllSyncRequests(this);
-        String inputId = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
-        EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class));
+        EpgSyncJobService.requestImmediateSync(this, DTVKIT_INPUTID, true, new ComponentName(this, DtvkitEpgSync.class));
     }
 
     private boolean checkAndCreatPvrFolderInStorage(String storagePath) {

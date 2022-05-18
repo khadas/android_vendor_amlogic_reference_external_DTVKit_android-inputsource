@@ -530,7 +530,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         parentalRating += 3; //minimum age = rating + 3 years
         Log.d(TAG, "parseParentalRatings parentalRating:"+ parentalRating + ", title = " + title);
         if (parentalRating >= 4 && parentalRating <= 18) {
-            TvContentRating r = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, DVB_ContentRating[parentalRating-4], null);
+            TvContentRating r = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, DVB_ContentRating[parentalRating-4], (String) null);
             if (r != null) {
                 ratings_arry[0] = r;
                 Log.d(TAG, "parse ratings add rating:"+r.flattenToString()  + ", title = " + title);

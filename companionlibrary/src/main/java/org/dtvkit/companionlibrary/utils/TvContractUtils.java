@@ -18,6 +18,7 @@
 
 package com.droidlogic.dtvkit.companionlibrary.utils;
 
+import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -28,7 +29,6 @@ import android.media.tv.TvContract;
 import android.media.tv.TvContract.Channels;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
@@ -81,6 +81,7 @@ public class TvContractUtils {
      * @hide
      */
 
+    @SuppressLint("WrongConstant")
     public static void updateChannels(Context context, String inputId, boolean isSearched, List<Channel> channels, String updateChannelType, PersistableBundle extras) {
         // Create a map from original network ID to channel row ID for existing channels.
         ArrayMap<String, Long> channelMap = new ArrayMap<>();
@@ -493,8 +494,8 @@ public class TvContractUtils {
      * Channel object.
      * @hide
      */
-    public static LongSparseArray<Channel> buildChannelMap(@NonNull ContentResolver resolver,
-            @NonNull String inputId) {
+    public static LongSparseArray<Channel> buildChannelMap(ContentResolver resolver,
+            String inputId) {
         Uri uri = TvContract.buildChannelsUriForInput(inputId);
         LongSparseArray<Channel> channelMap = new LongSparseArray<>();
         Cursor cursor = null;
@@ -596,9 +597,9 @@ public class TvContractUtils {
             }
             Channel channel = null;
             int foundFrequency = 0;
-            while (cursor != null && cursor.moveToNext()) {
+            while (cursor.moveToNext()) {
                 channel = Channel.fromCursor(cursor);
-                foundFrequency = Integer.valueOf(channel.getInternalProviderData().get("frequency").toString());
+                foundFrequency = Integer.parseInt(channel.getInternalProviderData().get("frequency").toString());
                 if (frequency <= 0) {
                     break;
                 } else if (frequency == foundFrequency) {

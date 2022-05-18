@@ -35,6 +35,7 @@ import android.os.AsyncTask;
 import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.os.Bundle;
+
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -74,7 +75,7 @@ import org.json.JSONObject;
  * To start periodically syncing data, call
  * {@link #setUpPeriodicSync(Context, String, ComponentName, long, long)}.
  * <p />
- * To sync manually, call {@link #requestImmediateSync(Context, String, long, boolean, ComponentName)}.
+ * To sync manually, call {@link #requestImmediateSync(Context, String, boolean, ComponentName)}.
  */
 public abstract class EpgSyncJobService extends JobService {
     private static final String TAG = "EpgSyncJobService";
@@ -158,6 +159,7 @@ public abstract class EpgSyncJobService extends JobService {
     public static final String BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE = "BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE";
     public static final String BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY = "BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY";
     public static final String BUNDLE_KEY_SYNC_REASON = "BUNDLE_KEY_SYNC_REASON";
+    public static final String BUNDLE_KEY_SYNC_FROM = "BUNDLE_KEY_SYNC_FROM";
 
     private final SparseArray<EpgSyncTask> mTaskArray = new SparseArray<>();
     private static final Object mContextLock = new Object();
@@ -472,6 +474,7 @@ public abstract class EpgSyncJobService extends JobService {
             mUpdateByScan = extras.getBoolean(BUNDLE_KEY_SYNC_REASON, false);
             String syncSignalType = extras.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE);
             boolean syncCurrent = true;
+            Log.d(TAG, "extras info:" + extras);
             if ("full".equals(syncSignalType)) {
                 syncCurrent = false;
             }
@@ -605,6 +608,7 @@ public abstract class EpgSyncJobService extends JobService {
             intent.putExtra(
                     BUNDLE_KEY_INPUT_ID, jobParams.getExtras().getString(BUNDLE_KEY_INPUT_ID));
             intent.putExtra(SYNC_STATUS, SYNC_FINISHED);
+            intent.putExtra(BUNDLE_KEY_SYNC_FROM, jobParams.getExtras().getString(BUNDLE_KEY_SYNC_FROM));
 
             Log.d(TAG, "finishEpgSync notify Update channel mUpdateByScan = " + mUpdateByScan);
             if (mUpdateByScan) {
@@ -617,6 +621,7 @@ public abstract class EpgSyncJobService extends JobService {
         }
 
         private void broadcastError(int reason) {
+            Log.e(TAG, "broadcastError:" + reason);
             Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);
             intent.putExtra(BUNDLE_KEY_INPUT_ID, mInputId);
             intent.putExtra(SYNC_STATUS, SYNC_ERROR);

@@ -17,6 +17,7 @@
  */
 package com.droidlogic.dtvkit.companionlibrary.model;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -434,6 +435,7 @@ public class RecordedProgram {
      * into the TV Input Framework database.
      * @hide
      */
+    @SuppressLint("WrongConstant")
     public ContentValues toContentValues() {
         ContentValues values = new ContentValues();
         if (mId != INVALID_INT_VALUE) {
@@ -772,7 +774,7 @@ public class RecordedProgram {
         }
 
         /**
-         * Sets the ID of the {@link Channel} that contains this RecordedProgram.
+         * Sets the ID of the {@link com.droidlogic.dtvkit.companionlibrary.model.Channel} that contains this RecordedProgram.
          *
          * @param channelId The value of {@link TvContract.RecordedPrograms#COLUMN_CHANNEL_ID for
          * the RecordedProgram.

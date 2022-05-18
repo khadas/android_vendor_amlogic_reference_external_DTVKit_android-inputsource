@@ -371,6 +371,7 @@ public class DtvkitBackGroundSearch {
         Bundle parameters = new Bundle();
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, dvbSourceToSyncType());
+        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
         EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(mContext, mInputId, (mFoundServiceNumber > 0),new ComponentName(mContext, DtvkitEpgSync.class), parameters);
     }
 
@@ -572,10 +573,19 @@ public class DtvkitBackGroundSearch {
 
     private void responseOnReceive(Intent intent) {
         if (intent != null) {
+            String from = intent.getStringExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM);
             String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
             if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
+                if (from == null || !TAG.equals(from)) {
+                    Log.i(TAG, "Sync Msg is from:" + from);
+                    return;
+                }
                 stopMonitoringSync(false);
             } else if (status.equals(EpgSyncJobService.SYNC_ERROR)) {
+                if (from == null || !TAG.equals(from)) {
+                    Log.i(TAG, "Sync Error Msg is from:" + from);
+                    return;
+                }
                 stopMonitoringSync(true);
             }
         } else {

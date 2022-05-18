@@ -18,14 +18,17 @@
 
 package com.droidlogic.dtvkit.companionlibrary.model;
 
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.media.tv.TvContentRating;
 import android.media.tv.TvContract;
 import android.os.Build;
+
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
+import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 import com.droidlogic.dtvkit.companionlibrary.utils.CollectionUtils;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 
@@ -351,6 +354,7 @@ public final class Program implements Comparable<Program> {
      * TV Input Framework database.
      * @hide
      */
+    @SuppressLint("WrongConstant")
     public ContentValues toContentValues() {
         ContentValues values = new ContentValues();
         if (mId != INVALID_LONG_VALUE) {
@@ -633,7 +637,7 @@ public final class Program implements Comparable<Program> {
          * Creates a new Builder object with values from the Channel this program is playing on.
          * @param channel The Channel that contains this Program
          */
-        public Builder(Channel channel) {
+        public Builder(com.droidlogic.dtvkit.companionlibrary.model.Channel channel) {
             mProgram = new Program();
             mProgram.mChannelId = channel.getId();
             mProgram.mDescription = channel.getDescription();
@@ -654,7 +658,7 @@ public final class Program implements Comparable<Program> {
         }
 
         /**
-         * Sets the ID of the {@link Channel} that contains this program.
+         * Sets the ID of the {@link com.droidlogic.dtvkit.companionlibrary.model.Channel} that contains this program.
          *
          * @param channelId The value of {@link TvContract.Programs#COLUMN_CHANNEL_ID for the
          * program.

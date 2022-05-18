@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <string name="app_name">DvbSSettings</string>
-
     <string name="title_dish_setup">DISH SETUP</string>
     <string name="list_type_satellite">Satellite</string>
     <string name="lnb_selected_satellites">Selected Satellites</string>

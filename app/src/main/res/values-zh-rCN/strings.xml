@@ -100,4 +100,7 @@
     <string name="no_sub_regions">无次级区域</string>
     <string name="target_region_country">国家</string>
     <string name="tv_mode_option">模式选项:</string>
+
+    <string name="strContinue">继续</string>
+    <string name="strSkip">跳过</string>
 </resources>

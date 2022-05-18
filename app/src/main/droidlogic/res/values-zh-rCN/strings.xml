@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">DvbS设置</string>
-
     <string name="title_dish_setup">DISH设置</string>
     <string name="list_type_satellite">卫星</string>
     <string name="list_type_transponder">转发器</string>

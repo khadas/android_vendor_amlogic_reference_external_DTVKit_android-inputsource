@@ -18,7 +18,7 @@ import android.text.TextUtils;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 
-
+import com.droidlogic.dtvkit.inputsource.DataMananer;
 import com.droidlogic.settings.ConstantManager;
 
 public class PvrStatusConfirmManager {

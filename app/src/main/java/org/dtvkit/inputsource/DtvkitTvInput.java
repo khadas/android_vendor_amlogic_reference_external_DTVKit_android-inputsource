@@ -71,7 +71,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import com.amlogic.hbbtv.HbbTvManager;
 import com.droidlogic.app.AudioConfigManager;
@@ -719,7 +719,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         Bundle parameters = new Bundle();
         //parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
-        String inputId = TextUtils.isEmpty(mInputId) ? "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19" : mInputId;
+        String inputId = TextUtils.isEmpty(mInputId) ? com.droidlogic.dtvkit.inputsource.service.DtvkitSettingService.DTVKIT_INPUTID : mInputId;
         EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, inputId, false,sync, parameters);
     }
 
@@ -3128,9 +3128,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mHbbTvManager = HbbTvManager.getInstance();
                     mHbbTvManager.setHbbTvManagerParams(this, mInputId, outService.getApplicationContext());
                     runOnMainThread(() -> {
-                        mHbbTvManager.initHbbTvResource();
-                        mHbbTvManager.initBrowser();
-                        mView.addHbbTvView(mHbbTvManager.getHbbTvView());
+                        if (mHbbTvManager != null) {
+                            mHbbTvManager.initHbbTvResource();
+                            mHbbTvManager.initBrowser();
+                            mView.addHbbTvView(mHbbTvManager.getHbbTvView());
+                        }
                     });
                 } else {
                     Log.i(TAG, "Don't createHbbTvManager as mWinWidth = " + mWinWidth + " mWinHeight = " + mWinHeight);

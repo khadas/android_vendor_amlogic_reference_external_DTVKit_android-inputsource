@@ -50,6 +50,7 @@ import java.util.HashMap;
 import com.droidlogic.fragment.ParameterMananer;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+import com.droidlogic.dtvkit.inputsource.DataMananer;
 
 public class DtvkitIsdbtSetup extends Activity {
     private static final String TAG = "DtvkitIsdbtSetup";

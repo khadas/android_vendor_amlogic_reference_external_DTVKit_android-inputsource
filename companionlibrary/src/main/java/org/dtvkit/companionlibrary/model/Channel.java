@@ -25,6 +25,7 @@ import android.media.tv.TvContract;
 import android.os.Build;
 import android.text.TextUtils;
 
+import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 import com.droidlogic.dtvkit.companionlibrary.utils.CollectionUtils;
 
 /**

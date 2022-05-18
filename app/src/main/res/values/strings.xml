@@ -141,4 +141,7 @@
     <string name="strChannelType">Channel Type</string>
     <string name="strServiceType">Service Type</string>
     <string name="tv_mode_option">Mode Option:</string>
+
+    <string name="strContinue">Continue</string>
+    <string name="strSkip">Skip</string>
 </resources>

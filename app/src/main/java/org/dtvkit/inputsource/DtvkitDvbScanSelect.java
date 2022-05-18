@@ -104,6 +104,7 @@ public class DtvkitDvbScanSelect extends Activity {
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(TAG, "onActivityResult requestCode:" + requestCode + ", resultCode:" + resultCode);
         switch (requestCode) {
             case REQUEST_CODE_START_DVBC_ACTIVITY:
             case REQUEST_CODE_START_DVBT_ACTIVITY:

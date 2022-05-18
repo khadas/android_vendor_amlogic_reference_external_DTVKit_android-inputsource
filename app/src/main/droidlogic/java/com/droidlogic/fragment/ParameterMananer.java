@@ -230,6 +230,10 @@ public class ParameterMananer {
         }
     }
 
+    DtvkitGlueClient getDtvkitGlueClient() {
+        return mDtvkitGlueClient;
+    }
+
     public DvbsParameterManager getDvbsParaManager() {
         return mDvbsParaManager;
     }
@@ -521,6 +525,19 @@ public class ParameterMananer {
             e.printStackTrace();
         }
         Log.d(TAG, "stopDishMove");
+    }
+
+    public JSONObject dvbsScanControl(JSONArray array) {
+        JSONObject resultObj = new JSONObject();
+        try {
+            resultObj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+            if (resultObj != null) {
+                Log.d(TAG, "Dvbs.scanControl resultObj:" + resultObj.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return resultObj;
     }
 
     public void storeDishPosition(int position) {
@@ -2804,7 +2821,7 @@ public class ParameterMananer {
         }
     }
 
-    private void setCurrentDvbSource(int source) {
+    public void setCurrentDvbSource(int source) {
         JSONArray array = new JSONArray();
         try {
             array.put(source);
@@ -2838,7 +2855,7 @@ public class ParameterMananer {
         return result;
     }
 
-    private String dvbSourceToString(int source) {
+    public static String dvbSourceToString(int source) {
         String result = "DVB-T";
 
         switch (source) {
@@ -2860,7 +2877,7 @@ public class ParameterMananer {
         return result;
     }
 
-    private int dvbSourceToInt(String sourceName) {
+    public static int dvbSourceToInt(String sourceName) {
         int source = 0;
         switch (sourceName) {
             case "TYPE_DVB_C":
@@ -2875,6 +2892,7 @@ public class ParameterMananer {
                 source = ParameterMananer.SIGNAL_QPSK;
                 break;
             case "ISDB-T":
+            case "TYPE_ISDB_T":
                 source = ParameterMananer.SIGNAL_ISDBT;
                 break;
         }
