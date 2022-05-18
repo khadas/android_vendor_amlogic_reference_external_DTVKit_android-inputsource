@@ -301,8 +301,8 @@ void  DTVKitClientJni::once_run(void)
          mInstance = new DTVKitClientJni();
 }
 
-static size_t QueueSize = 1880;
-static uint8_t data[1880] = {0};
+static size_t QueueSize = 188;
+static uint8_t data[188] = {0};
 void*  DTVKitClientJni::pid_run(void *arg)
 {
     ALOGD("Enter pid_run");

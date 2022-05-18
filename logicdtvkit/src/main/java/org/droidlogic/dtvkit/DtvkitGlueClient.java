@@ -23,7 +23,7 @@ public class DtvkitGlueClient {
 
     public static final int INDEX_FOR_MAIN = 0;
     public static final int INDEX_FOR_PIP = 1;
-    public static final int DIRECT_BUFFER_SIZE = 1880;
+    public static final int DIRECT_BUFFER_SIZE = 188;
     private static final int REQUEST_MESSAGE_TIMEOUT_SHORT_MILLIS = 1000;
     private static final int REQUEST_MESSAGE_TIMEOUT_LONG_MILLIS = 3000;
     private static final int REQUEST_MESSAGE_BOMB_MILLIS = 15000;
