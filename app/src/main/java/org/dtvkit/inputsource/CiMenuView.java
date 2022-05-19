@@ -617,13 +617,14 @@ public class CiMenuView extends LinearLayout {
 
     private void setMenuVisible() {
         final CiMenuView runnableView = this;
-
+        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMI);
         Log.i(TAG, "set MMI Menu Visible");
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 runnableView.setVisibility(View.VISIBLE);
+                linearLayout.setVisibility(View.VISIBLE);
                 runnableView.requestFocus();
             }
         });

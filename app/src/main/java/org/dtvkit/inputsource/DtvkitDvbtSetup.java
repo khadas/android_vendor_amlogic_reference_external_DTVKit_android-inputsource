@@ -287,7 +287,6 @@ public class DtvkitDvbtSetup extends Activity {
             //stopSearch();
             sendStopSearch();
         }
-        DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, false);
         if (null != mDtvKitScanSignalPresenter) {
             mDtvKitScanSignalPresenter.releaseSignalCheckResource();
         }
@@ -1221,6 +1220,7 @@ public class DtvkitDvbtSetup extends Activity {
         } else {
             updateChannelList();
         }
+        DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, false);
     }
 
     private void updateChannelList() {

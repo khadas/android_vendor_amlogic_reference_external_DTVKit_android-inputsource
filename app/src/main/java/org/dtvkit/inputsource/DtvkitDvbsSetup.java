@@ -549,7 +549,6 @@ public class DtvkitDvbsSetup extends Activity {
             stopMonitoringSearch();
             stopSearch(false);
         }
-        DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, false);
 
     }
 
@@ -838,6 +837,7 @@ public class DtvkitDvbsSetup extends Activity {
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "DVB-S");
         EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, inputId, (mFoundServiceNumber > 0),new ComponentName(this, DtvkitEpgSync.class), parameters);
+        DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, false);
     }
 
     private void startMonitoringSearch() {

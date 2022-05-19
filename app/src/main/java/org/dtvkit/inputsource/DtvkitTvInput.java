@@ -607,6 +607,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     protected static final int MSG_START_MONITOR_SYNCING = 6;
     protected static final int MSG_STOP_MONITOR_SYNCING = 7;
     protected static final int MSG_CHECK_PINCODE_CHANGED = 8;
+    protected static final int MSG_CHECK_CHANNEL_SEARCH_STATUS = 9;
 
     protected static final int PERIOD_RIGHT_NOW = 0;
     protected static final int PERIOD_CHECK_TV_PROVIDER_DELAY = 10;
@@ -690,6 +691,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     break;
                 }
+                case MSG_CHECK_CHANNEL_SEARCH_STATUS: {
+                    //Power off and on during channel search, the status in the search are not updated, update here
+                    if (DataProviderManager.getBooleanValue(this, "is_channel_searching", false)) {
+                        DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, false);
+                    }
+                    break;
+                }
+
                 default:
                     break;
             }
@@ -794,6 +803,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         updateRecorderNumber();
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_DTVKIT_SATELLITE);
         sendEmptyMessageToInputThreadHandler(MSG_UPDATE_DTVKIT_DATABASE);
+        sendDelayedEmptyMessageToInputThreadHandler(MSG_CHECK_CHANNEL_SEARCH_STATUS, 1000);
         resetRecordingPath();
         if (subFlg >= SUBCTL_HK_DVBSUB) {
             DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
