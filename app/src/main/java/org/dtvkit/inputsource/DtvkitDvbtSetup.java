@@ -714,6 +714,26 @@ public class DtvkitDvbtSetup extends Activity {
         String operator = "";
         if (operatorAdpater != null) {
             operator = (String) operatorAdpater.getItem(operator_spinner.getSelectedItemPosition());
+
+            JSONArray operatorList = mParameterMananer.getOperatorsTypeList(ParameterMananer.SIGNAL_QAM);
+            try {
+                if (operatorList != null && operatorList.length() > 0) {
+                    for (int i = 0; i < operatorList.length(); i++) {
+                        JSONObject object = (JSONObject) operatorList.get(i);
+                        if (object != null) {
+                            if (object.optString("operators_name").equals(operator))
+                            {
+                                JSONArray args = new JSONArray();
+                                args.put(ParameterMananer.SIGNAL_QAM);
+                                args.put(object.getInt("operators_value"));
+                                DtvkitGlueClient.getInstance().request("Dvb.SetOperatorsType", args);
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+            }
         }
 
         JSONArray array = new JSONArray();
