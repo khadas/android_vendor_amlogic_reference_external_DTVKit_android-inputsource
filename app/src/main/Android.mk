@@ -47,15 +47,5 @@ LOCAL_VENDOR_MODULE := true
 #LOCAL_PRIVATE_PLATFORM_APIS := true
 include $(BUILD_PACKAGE)
 
-include $(CLEAR_VARS)
-
-LOCAL_MODULE_CLASS := JAVA_LIBRARIES
-LOCAL_MODULE := amlogic-hbbtv-client
-LOCAL_SDK_VERSION := current
-LOCAL_SRC_FILES := libs/hbbtv-client.jar
-LOCAL_UNINSTALLABLE_MODULE := true
-
-include $(BUILD_PREBUILT)
-
 include $(call all-makefiles-under, $(LOCAL_PATH))
 
