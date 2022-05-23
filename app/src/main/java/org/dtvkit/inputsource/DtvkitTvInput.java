@@ -2531,6 +2531,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 event.putString(ConstantManager.KEY_INFO, "Stop record due to tuner resource busy");
                 notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
                 doStopRecording();
+            } else if (signal.equals("DvbNetworkChange") || signal.equals("DvbUpdatedService")) {
+                if (mTvInputInfo != null && mTvInputInfo.getTunerCount() < 2) {
+                    doStopRecording();
+                }
             }
         };
     }
