@@ -6,6 +6,17 @@ LOCAL_MULTILIB := 32
 LOCAL_AAPT_FLAGS := --auto-add-overlay \
    --extra-packages android.support.v17.leanback
 
+ifneq (0, $(shell expr $(PLATFORM_SDK_VERSION) \<= 28))
+LOCAL_AAPT_FLAGS += --extra-packages android.support.constraint
+
+LOCAL_STATIC_ANDROID_LIBRARIES:= \
+    android-support-constraint-layout
+
+LOCAL_STATIC_JAVA_LIBRARIES += android-support-constraint-layout-solver
+
+LOCAL_USE_AAPT2 := true
+endif
+
 LOCAL_RESOURCE_DIR := frameworks/support/leanback/src/main/res \
    $(LOCAL_PATH)/res \
    $(LOCAL_PATH)/droidlogic/res
@@ -15,8 +26,11 @@ LOCAL_STATIC_JAVA_LIBRARIES += \
    guava \
    companionlibrary \
    android-support-v17-leanback \
-   amlogic-hbbtv-client \
-   android-support-constraint-layout
+   amlogic-hbbtv-client
+
+ifneq (0, $(shell expr $(PLATFORM_SDK_VERSION) \>= 29))
+LOCAL_STATIC_JAVA_LIBRARIES += android-support-constraint-layout
+endif
 
 LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/aidl
 
