@@ -4663,6 +4663,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 else if (signal.equals("AppVideoPosition"))
                 {
                    Log.i(TAG, "AppVideoPosition");
+                   if (mHandlerThreadHandle != null) {
+                       mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
+                   }
                    /*
                    if (getIsFixedTunnel()) {
                        SystemControlManager SysContManager = SystemControlManager.getInstance();
@@ -4688,9 +4691,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                           hoff1 = data.getInt("crop-hoff1");
                        } catch (JSONException e) {
                           Log.e(TAG, e.getMessage());
-                       }
-                       if (mHandlerThreadHandle != null) {
-                           mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
                        }
                        //add for pip setting
                        if (!mIsPip) {
