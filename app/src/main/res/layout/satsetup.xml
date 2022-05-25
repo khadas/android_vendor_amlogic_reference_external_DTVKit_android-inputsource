@@ -84,7 +84,7 @@
             android:layout_marginTop="@dimen/px_24.0"
             android:text="@string/strNetworkSearch"
             app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/searchstatus" />
+            app:layout_constraintTop_toBottomOf="@id/channel_holder" />
 
         <CheckBox
             android:id="@+id/clear_old"
