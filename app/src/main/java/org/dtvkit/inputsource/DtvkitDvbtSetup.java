@@ -17,6 +17,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Button;
@@ -52,6 +53,7 @@ import com.droidlogic.fragment.ParameterMananer;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.app.DataProviderManager;
+import com.droidlogic.settings.PropSettingManager;
 
 public class DtvkitDvbtSetup extends Activity {
     private static final String TAG = "DtvkitDvbtSetup";
@@ -68,6 +70,7 @@ public class DtvkitDvbtSetup extends Activity {
     private int mSearchManualAutoType = -1;// 0 manual 1 auto
     private int mSearchDvbcDvbtType = -1;
     private PvrStatusConfirmManager mPvrStatusConfirmManager = null;
+    private DtvKitScanSignalPresenter mDtvKitScanSignalPresenter = null;
 
     private AutoNumberEditText mDvbcNitAutoEdit = null;
     private AutoNumberEditText mDvbcSymAutoEdit = null;
@@ -182,6 +185,9 @@ public class DtvkitDvbtSetup extends Activity {
                         } else {
                             startSearch.setText(R.string.strStopSearch);
                             onStartSearchClick();
+                            if (null != mDtvKitScanSignalPresenter) {
+                                mDtvKitScanSignalPresenter.stopMonitorSignal();
+                            }
                         }
                     }
                 }
@@ -207,6 +213,16 @@ public class DtvkitDvbtSetup extends Activity {
             if (mThreadHandler != null) {
                 mThreadHandler.sendEmptyMessageDelayed(MSG_START_BY_AUTOMATIC_MODE, 2000);
             }
+        }
+
+        if (!isPipOrFccEnable()) {
+            mDtvKitScanSignalPresenter = new DtvKitScanSignalPresenter(mParameterMananer, mDataMananer, mIsDvbt);
+            mDtvKitScanSignalPresenter.registerUpdateView(new DtvKitScanSignalPresenter.UpdateView(){
+                @Override
+                public void updateSignalView(int strength, int quality){
+                    setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", strength), String.format(Locale.ENGLISH, "Quality: %d%%", quality));
+                }
+            });
         }
     }
 
@@ -272,6 +288,9 @@ public class DtvkitDvbtSetup extends Activity {
             sendStopSearch();
         }
         DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, false);
+        if (null != mDtvKitScanSignalPresenter) {
+            mDtvKitScanSignalPresenter.releaseSignalCheckResource();
+        }
     }
 
     @Override
@@ -457,7 +476,19 @@ public class DtvkitDvbtSetup extends Activity {
             public_search_channel_name_containner.setVisibility(View.GONE);
             public_typein_containner.setVisibility(View.GONE);
             search.setText(R.string.strAutoSearch);
+            if (!isPipOrFccEnable()) {
+                findViewById(R.id.channel_holder).setVisibility(View.GONE);
+                if (null != mDtvKitScanSignalPresenter) {
+                    mDtvKitScanSignalPresenter.stopMonitorSignal();
+                }
+            }
         } else {
+            if (!isPipOrFccEnable()) {
+                findViewById(R.id.channel_holder).setVisibility(View.VISIBLE);
+                if (null != mDtvKitScanSignalPresenter) {
+                    mDtvKitScanSignalPresenter.startMonitorSignal();
+                }
+            }
             search.setText(R.string.strManualSearch);
             if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
                 public_typein_containner.setVisibility(View.VISIBLE);
@@ -498,6 +529,7 @@ public class DtvkitDvbtSetup extends Activity {
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "dvbt_bandwidth_spinner onItemSelected position = " + position);
                     mDataMananer.saveIntParameters(DataMananer.KEY_DVBT_BANDWIDTH, position);
+                    trylockForScanParaChange();
                 }
 
                 @Override
@@ -510,6 +542,7 @@ public class DtvkitDvbtSetup extends Activity {
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "dvbt_mode_spinner onItemSelected position = " + position);
                     mDataMananer.saveIntParameters(DataMananer.KEY_DVBT_MODE, position);
+                    trylockForScanParaChange();
                 }
 
                 @Override
@@ -527,6 +560,7 @@ public class DtvkitDvbtSetup extends Activity {
                     Log.d(TAG, "dvbt_type_spinner onItemSelected position = " + position);
                     mDataMananer.saveIntParameters(DataMananer.KEY_DVBT_TYPE, position);
                     initOrUpdateView(false);
+                    trylockForScanParaChange();
                 }
 
                 @Override
@@ -539,6 +573,7 @@ public class DtvkitDvbtSetup extends Activity {
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "dvbc_mode_spinner onItemSelected position = " + position);
                     mDataMananer.saveIntParameters(DataMananer.KEY_DVBC_MODE, position);
+                    trylockForScanParaChange();
                 }
 
                 @Override
@@ -589,6 +624,7 @@ public class DtvkitDvbtSetup extends Activity {
                     } else {
                         mDataMananer.saveIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME, position);
                     }
+                    trylockForScanParaChange();
                 }
 
                 @Override
@@ -602,6 +638,23 @@ public class DtvkitDvbtSetup extends Activity {
                         mParameterMananer.setAutomaticOrderingEnabled(true);
                     } else {
                         mParameterMananer.setAutomaticOrderingEnabled(false);
+                    }
+                }
+            });
+            public_type_edit.addTextChangedListener (new TextWatcher(){
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (null != s) {
+                        Log.d(TAG, "frequency afterTextChanged = " + s.toString());
+                        trylockForScanParaChange();
                     }
                 }
             });
@@ -664,6 +717,23 @@ public class DtvkitDvbtSetup extends Activity {
                 if (mInAutomaticMode) {
                     dvbc_autoscantype_spinner.setSelection(2);
                 }
+                dvbc_symbol_edit.addTextChangedListener (new TextWatcher(){
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        if (null != s) {
+                            Log.d(TAG, "dvbc_symbol_edit afterTextChanged = " + s.toString());
+                            trylockForScanParaChange();
+                        }
+                    }
+                });
             }
         }
         if (!mIsDvbt) {
@@ -1612,6 +1682,44 @@ public class DtvkitDvbtSetup extends Activity {
         return result;
     }
 
+    private void trylockForScanParaChange(){
+        if (isPipOrFccEnable()) {
+            Log.d(TAG, "Pip and Fcc can't start signal check");
+            return;
+        }
+
+        if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE)) {
+            Log.d(TAG, "trylockForScanParaChange auto not need trylock");
+            return;
+        }
+        if (null != mDtvKitScanSignalPresenter) {
+            Log.d(TAG, "trylockForScanParaChange");
+            if (DataMananer.VALUE_FREQUENCY_MODE == mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY)) {
+                EditText public_type_edit = (EditText)findViewById(R.id.public_typein_edit);
+                Editable freq = public_type_edit.getText();
+                if (mIsDvbt) {
+                    mDtvKitScanSignalPresenter.freqTunerTryLock(freq.toString());
+                } else {
+                    EditText dvbc_symbol_edit = (EditText)findViewById(R.id.dvbc_symbol_edit);
+                    Editable dvbcSymbol = dvbc_symbol_edit.getText();
+                    mDtvKitScanSignalPresenter.dvbcSymbolTryLock(dvbcSymbol.toString(), freq.toString());
+                }
+            } else {
+                mDtvKitScanSignalPresenter.channelTunerTryLock();
+            }
+        } else {
+            Log.e(TAG, "trylockForScanParaChange DtvKitScanSignalPresenter is null");
+        }
+    }
+
+    private boolean isPipOrFccEnable(){
+        if (PropSettingManager.getBoolean(PropSettingManager.ENABLE_FULL_PIP_FCC_ARCHITECTURE, false)) {
+            if (PropSettingManager.getBoolean(PropSettingManager.ENABLE_PIP_SUPPORT, false) || PropSettingManager.getBoolean(PropSettingManager.ENABLE_FCC_SUPPORT, false)) {
+                return true;
+            }
+        }
+        return false;
+    }
     /*private boolean hasSelectToEnd(JSONArray lcnConflictArray, int selectEndIndex) {
         boolean result = false;
         if (lcnConflictArray != null && lcnConflictArray.length() > 0) {
