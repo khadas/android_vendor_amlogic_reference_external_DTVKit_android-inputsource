@@ -4367,7 +4367,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 msg.arg1 = 1;
                             }
                         }
-                        mHandlerThreadHandle.sendMessage(msg);
+                        if (!TextUtils.equals(type, "dvbtimeshifting")) {
+                            mHandlerThreadHandle.sendMessage(msg);
+                        }
                     }
                 } else if (signal.equals("PlayerTimeshiftRecorderStatusChanged")) {
                     switch (playerGetTimeshiftRecorderState(data)) {
