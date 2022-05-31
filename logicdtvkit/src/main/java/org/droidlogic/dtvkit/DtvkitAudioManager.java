@@ -17,7 +17,7 @@ public class DtvkitAudioManager {
     }
 
     public DtvkitAudioManager(Context context) {
-        AudioManager audioManager = context.getSystemService(AudioManager.class);
+        audioManager = context.getSystemService(AudioManager.class);
     }
 
     /**
