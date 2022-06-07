@@ -6406,18 +6406,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 track.setLanguage(audioLang);
                 track.setDescription(audioStream.getString("message"));
-                bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD, false);
-                if (audioStream.getBoolean("ad")) {
-                    bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD, true);
-                }
-                bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_SS, false);
-                if (audioStream.getBoolean("ss")) {
-                    bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_SS, true);
-                }
-                bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD_SS, false);
-                if (audioStream.getBoolean("ad_ss")) {
-                    bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD_SS, true);
-                }
+
+                boolean audioAd = audioStream.getBoolean("ad");
+                boolean audioSS = audioStream.getBoolean("ss");
+                bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD, audioAd);
+                bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_SS, audioSS);
+                bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD_SS, audioAd && audioSS);
+
                 String codes = audioStream.getString("codec");
                 int pid = audioStream.getInt("pid");
                 if (!TextUtils.isEmpty(codes)) {
