@@ -4619,43 +4619,44 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
                 } else if (signal.equals("DvbNetworkChange") || signal.equals("DvbUpdatedService")) {
                     Log.i(TAG, "DvbNetworkChange or DvbUpdatedService, IsPip=" + mIsPip);
-                    //currently support dvbc dvbt dvbt2 only
-                    String channelSignalType = null;
-                    if (mTunedChannel != null) {
-                        try {
-                            channelSignalType = mTunedChannel.getInternalProviderData().get("channel_signal_type").toString();
-                        } catch (Exception e) {
-                            Log.i(TAG, "DvbNetworkChange or DvbUpdatedService get channel_signal_type Exception " + e.getMessage());
+                    boolean bgSearchInDvb = true;//the newer dtvkit version will handle the dvb update
+                    if (!bgSearchInDvb) {
+                        String channelSignalType = null;
+                        if (mTunedChannel != null) {
+                            try {
+                                channelSignalType = mTunedChannel.getInternalProviderData().get("channel_signal_type").toString();
+                            } catch (Exception e) {
+                                Log.i(TAG, "DvbNetworkChange or DvbUpdatedService get channel_signal_type Exception " + e.getMessage());
+                            }
+                        }
+                        if (mDvbNetworkChangeSearchStatus) {
+                            return;
+                        }
+                        mDvbNetworkChangeSearchStatus = true;
+                        if (mIsPip) {
+                            DtvkitTvInputSession mainSession = getMainTunerSession();
+                            mPipDvbChannel = mTunedChannel;
+                            if (mainSession != null) {
+                                mMainDvbChannel = mainSession.mTunedChannel;
+                            }
+                        } else {
+                            DtvkitTvInputSession pipSession = getPipTunerSession();
+                            mMainDvbChannel = mTunedChannel;
+                            if (pipSession != null) {
+                                mPipDvbChannel = pipSession.mTunedChannel;
+                            }
+                        }
+                        if (mHandlerThreadHandle != null) {
+                            mHandlerThreadHandle.post(() -> {
+                                onFinish(false, false);
+                                mHandlerThreadHandle.removeMessages(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
+                                mHandlerThreadHandle.sendMessageDelayed(
+                                        mHandlerThreadHandle.obtainMessage(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG,
+                                                (mIsPip ? INDEX_FOR_PIP : INDEX_FOR_MAIN), 0),
+                                        MSG_SHOW_STREAM_CHANGE_DELAY);
+                            });
                         }
                     }
-                    if (mDvbNetworkChangeSearchStatus) {
-                        return;
-                    }
-                    mDvbNetworkChangeSearchStatus = true;
-                    if (mIsPip) {
-                        DtvkitTvInputSession mainSession = getMainTunerSession();
-                        mPipDvbChannel = mTunedChannel;
-                        if (mainSession != null) {
-                            mMainDvbChannel = mainSession.mTunedChannel;
-                        }
-                    } else {
-                        DtvkitTvInputSession pipSession = getPipTunerSession();
-                        mMainDvbChannel = mTunedChannel;
-                        if (pipSession != null) {
-                            mPipDvbChannel = pipSession.mTunedChannel;
-                        }
-                    }
-                    if (mHandlerThreadHandle != null) {
-                        mHandlerThreadHandle.post(() -> {
-                            onFinish(false, false);
-                            mHandlerThreadHandle.removeMessages(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
-                            mHandlerThreadHandle.sendMessageDelayed(
-                                    mHandlerThreadHandle.obtainMessage(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG,
-                                            (mIsPip ? INDEX_FOR_PIP : INDEX_FOR_MAIN), 0),
-                                    MSG_SHOW_STREAM_CHANGE_DELAY);
-                        });
-                    }
-
                 } else if (signal.equals("DvbUpdatedChannelData")) {
                     Log.i(TAG, "DvbUpdatedChannelData");
                     List<TvTrackInfo> tracks = playerGetTracks(mTunedChannel, false);
