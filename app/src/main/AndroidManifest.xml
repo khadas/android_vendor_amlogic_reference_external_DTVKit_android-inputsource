@@ -115,7 +115,7 @@
         </activity>
         <service android:exported="false"
             android:name=".DtvkitTvInput"
-            android:label="DTVKit2"
+            android:label="DTV"
             android:permission="android.permission.BIND_TV_INPUT">
             <intent-filter android:priority="1">
                 <action android:name="android.media.tv.TvInputService" />
