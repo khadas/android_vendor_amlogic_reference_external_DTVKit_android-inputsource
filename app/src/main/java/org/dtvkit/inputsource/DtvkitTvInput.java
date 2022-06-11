@@ -5478,19 +5478,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 playerSetTimeshiftBufferSize(getTimeshiftBufferSizeMins(), getTimeshiftBufferSizeMBs());
                 Log.i(TAG, "tryStartTimeshifting timeshiftAvailable: " + timeshiftAvailable
                         + ", timeshiftRecorderState: " + timeshiftRecorderState);
-                if (timeshiftAvailable.isAvailable() && timeshiftRecorderState == RecorderState.STOPPED) {
+                if (timeshiftAvailable.isAvailable()) {
+                    if (timeshiftRecorderState != RecorderState.STOPPED) {
+                        Log.w(TAG, "tryStartTimeshifting do nothing, timeshift is not stopped.");
+                        return;
+                    }
+                    timeshiftRecorderState = RecorderState.STARTING;
                     if (playerStartTimeshiftRecording()) {
                         Log.i(TAG, "tryStartTimeshifting OK");
-                        /*
-                          The onSignal callback may be triggerd before here,
-                          and changes the state to a further value.
-                          so check the state first, in order to prevent getting it reset.
-                        */
-                        if (timeshiftRecorderState != RecorderState.RECORDING) {
-                            timeshiftRecorderState = RecorderState.STARTING;
-                        }
                         success = true;
                     } else {
+                        timeshiftRecorderState = RecorderState.STOPPED;
                         Log.e(TAG, "tryStartTimeshifting fail");
                     }
                 }
