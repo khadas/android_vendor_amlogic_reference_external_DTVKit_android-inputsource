@@ -5,6 +5,9 @@ import android.media.AudioManager;
 import android.os.Bundle;
 import android.util.Log;
 
+import org.droidlogic.dtvkit.DtvkitGlueClient;
+import org.json.JSONArray;
+
 /**
  * The type Dtvkit audio manager.
  */
@@ -70,4 +73,42 @@ public class DtvkitAudioManager {
                 break;
         }
     }
+
+    /**
+     * setMute.
+     *
+     * @param tvMute set mute to TV Stream
+     */
+    public void setMute(boolean tvMute) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(0);
+            args.put(tvMute);
+            DtvkitGlueClient.getInstance().request("Player.setMute", args);
+        } catch (Exception e) {
+            Log.e(TAG, "SetMute failed, error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * setMute.
+     *
+     * @param mmMute set mute to Music Stream
+     * @param tvMute set mute to TV Stream
+     */
+    public void setMute(boolean mmMute, boolean tvMute) {
+        audioManager.adjustStreamVolume(
+                AudioManager.STREAM_MUSIC,
+                mmMute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE,
+                0);
+        try {
+            JSONArray args = new JSONArray();
+            args.put(0);
+            args.put(tvMute);
+            DtvkitGlueClient.getInstance().request("Player.setMute", args);
+        } catch (Exception e) {
+            Log.e(TAG, "SetMute failed, error: " + e.getMessage());
+        }
+    }
+
 }
