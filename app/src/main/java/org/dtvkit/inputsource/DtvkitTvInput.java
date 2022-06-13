@@ -2222,6 +2222,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     mContext.getContentResolver().update(mRecordedProgramUri,
                             values, null, null);
+                    // if (isSdkAfterAndroidQ())
+                    mContext.getContentResolver().notifyChange(
+                            mRecordedProgramUri, mRecordingsContentObserver, 1 << 15);
                 } else {
                     Log.i(TAG, "updateRecordingToDb update mRecordedProgramUri null");
                 }
