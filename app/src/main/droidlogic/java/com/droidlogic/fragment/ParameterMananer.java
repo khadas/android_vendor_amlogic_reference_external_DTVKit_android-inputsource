@@ -147,6 +147,7 @@ public class ParameterMananer {
     public static final String KEY_REMOVE_OPERATOR_PROFILE_BYCAMID = "key_remove_operator_profile_byCamid";
     public static final String KEY_LINK_BARKER_CHANNEL = "key_link_baker_channel";
     public static final String KEY_LEAVE_BARKER_CHANNEL = "key_leave_baker_channel";
+    public static final String KEY_GET_PLATFORM_PROPERTY = "key_get_platform_property";
 
     //default value that is save by index
     public static final int KEY_SATALLITE_DEFAULT_VALUE_INDEX = 0;
@@ -2258,6 +2259,9 @@ public class ParameterMananer {
             case KEY_GET_CURRENT_COUNTRY_NAME:
                 result = getCurrentCountryIso3Name();
                 break;
+            case KEY_GET_PLATFORM_PROPERTY:
+                result = getPlatformProperty(defaultJsonValue);
+                break;
             default:
                 result = defaultJsonValue;
                 break;
@@ -2859,6 +2863,23 @@ public class ParameterMananer {
                 break;
         }
         return source;
+    }
+
+    private String getPlatformProperty(String prop) {
+        String result = null;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(prop);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getPlatformProperty", args);
+            if (null != obj) {
+                result = obj.optString("data");
+                Log.d(TAG, "getPlatformProperty result = " + result);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getPlatformProperty = " + e.getMessage());
+            return result;
+        }
+        return result;
     }
 
 }
