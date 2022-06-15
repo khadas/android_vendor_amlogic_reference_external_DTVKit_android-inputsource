@@ -84,6 +84,7 @@ public class ConstantManager {
     public static final String VALUE_TVINPUTINFO_VIDEO_PROGRESSIVE = "P";
     //audio
     public static final String KEY_TVINPUTINFO_AUDIO_INDEX = "audio_index";
+    public static final String KEY_TVINPUTINFO_AUDIO_HI = "audio_hi";
     public static final String KEY_TVINPUTINFO_AUDIO_AD = "audio_ad";
     public static final String KEY_TVINPUTINFO_AUDIO_SS = "audio_ss";
     public static final String KEY_TVINPUTINFO_AUDIO_AD_SS = "audio_ad_ss";

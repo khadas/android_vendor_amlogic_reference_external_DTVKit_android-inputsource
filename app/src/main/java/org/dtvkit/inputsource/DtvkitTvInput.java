@@ -2820,6 +2820,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private CaptioningManager mCaptioningManager = null;
         private AudioSystemCmdManager mAudioSystemCmdManager;
+        private int mCurrentAudioTrackId = -1;
 
         private final class AvailableState {
             AvailableState() {
@@ -3350,6 +3351,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (type == TvTrackInfo.TYPE_AUDIO) {
                 if (mResourceOwnedByBr == true) {
                 if (playerSelectAudioTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
+                    mCurrentAudioTrackId = Integer.parseInt(trackId);
                     notifyTrackSelected(type, trackId);
                     if (mHbbTvManager != null) {
                         mHbbTvManager.notifyTrackSelectedToHbbtv(type, trackId);
@@ -3565,6 +3567,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             notifyTracksChanged(mTunedTracks);
             int audioTrack = playerGetSelectedAudioTrack();
             Log.i(TAG, "updateTrackAndSelect audio track selected: " + audioTrack);
+            mCurrentAudioTrackId = audioTrack;
             notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(audioTrack));
             initSubtitleOrTeletextIfNeed();
         }
@@ -4664,8 +4667,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         mTunedTracks = tracks;
                         notifyTracksChanged(mTunedTracks);
                     }
-                    Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
-                    notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
+
+                    int trackId = playerGetSelectedAudioTrack();
+                    Log.i(TAG, "audio track selected: " + trackId);
+                    mCurrentAudioTrackId = trackId;
+                    notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(trackId));
                     initSubtitleOrTeletextIfNeed();
                     //check trackinfo update
                     if (mHandlerThreadHandle != null) {
@@ -5311,12 +5317,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mResourceOwnedByBr == true) {
             List<TvTrackInfo> tracks = playerGetTracks(mTunedChannel, true);
             boolean needCheckAgain = false;
+            int trackId = -1;
+            String currentAudioId = "";
             if (tracks.size() > 0) {
+                trackId = playerGetSelectedAudioTrack();
+                currentAudioId = Integer.toString(trackId);
                 for (TvTrackInfo temp : tracks) {
                     int type = temp.getType();
                     switch (type) {
                         case TvTrackInfo.TYPE_AUDIO:
-                            String currentAudioId = Integer.toString(playerGetSelectedAudioTrack());
                             if (TextUtils.equals(currentAudioId, temp.getId())) {
                                 if (temp.getAudioSampleRate() == 0
                                         || temp.getAudioChannelCount() == 0) {
@@ -5344,6 +5353,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     notifyTracksChanged(mTunedTracks);
                     Log.d(TAG, "checkTrackinfoUpdate update new mTunedTracks");
                     result = true;
+                }
+
+                if (trackId >= 0 && mCurrentAudioTrackId != trackId) {
+                    Log.d(TAG, "checkTrackinfoUpdate notifyTrackSelected");
+                    mCurrentAudioTrackId = trackId;
+                    notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, currentAudioId);
                 }
             }
             if (needCheckAgain) {
@@ -6447,9 +6462,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
                 boolean audioAd = audioStream.getBoolean("ad");
                 boolean audioSS = audioStream.getBoolean("ss");
+                boolean audioHi = audioStream.getBoolean("hi");
                 bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD, audioAd);
                 bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_SS, audioSS);
                 bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD_SS, audioAd && audioSS);
+                bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_HI, audioHi);
 
                 String codes = audioStream.getString("codec");
                 int pid = audioStream.getInt("pid");
