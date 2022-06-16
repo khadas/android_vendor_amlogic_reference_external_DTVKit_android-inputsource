@@ -3881,8 +3881,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public void onTimeShiftPause() {
             Log.i(TAG, "onTimeShiftPause ");
             if (mHandlerThreadHandle != null) {
-                mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_PASUE);
-                Message mess = mHandlerThreadHandle.obtainMessage(MSG_TIMESHIFT_PASUE, 0, 0, null);
+                mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_PAUSE);
+                Message mess = mHandlerThreadHandle.obtainMessage(MSG_TIMESHIFT_PAUSE, 0, 0, null);
                 boolean info = mHandlerThreadHandle.sendMessage(mess);
                 Log.d(TAG, "onTimeShiftPause sendMessage " + info);
             }
@@ -4823,7 +4823,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
         protected static final int MSG_TIMESHIFT_RESUME = 31;
-        protected static final int MSG_TIMESHIFT_PASUE = 32;
+        protected static final int MSG_TIMESHIFT_PAUSE = 32;
         protected static final int MSG_TIMESHIFT_SEEK = 33;
         protected static final int MSG_CHECK_REC_PATH_DIRECTLY = 34;
         protected static final int MSG_SCHEDULE_TIMESHIFT_RECORDING_TASK = 35;
@@ -4905,7 +4905,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         finalReleaseWorkThread();
                         break;
                     case MSG_GET_SIGNAL_STRENGTH:
-                        sendCurrentSignalInfomation();
+                        sendCurrentSignalInformation();
                         if (mHandlerThreadHandle != null) {
                             mHandlerThreadHandle.removeMessages(MSG_GET_SIGNAL_STRENGTH);
                             mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_GET_SIGNAL_STRENGTH,
@@ -4979,7 +4979,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     case MSG_TIMESHIFT_RESUME:
                         setTimeshiftResume();
                         break;
-                    case MSG_TIMESHIFT_PASUE:
+                    case MSG_TIMESHIFT_PAUSE:
                         setTimeshiftPasue();
                         break;
                     case MSG_TIMESHIFT_SEEK:
@@ -5332,7 +5332,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return result;
         }
 
-        private boolean sendCurrentSignalInfomation() {
+        private boolean sendCurrentSignalInformation() {
             if (mTunedChannel == null) {
                 return false;
             }
@@ -5341,7 +5341,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             signalbundle.putInt(ConstantManager.KEY_SIGNAL_STRENGTH, signalInfo[0]);
             signalbundle.putInt(ConstantManager.KEY_SIGNAL_QUALITY, signalInfo[1]);
             notifySessionEvent(ConstantManager.EVENT_SIGNAL_INFO, signalbundle);
-            Log.d(TAG, "sendCurrentSignalInfomation notify signalStrength = " + signalInfo[0]
+            Log.d(TAG, "sendCurrentSignalInformation notify signalStrength = " + signalInfo[0]
                     + ", signalQuality = " + signalInfo[1]);
             return true;
         }
@@ -8163,15 +8163,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                          boolean isPip, Bundle extras) {
         TvInputInfo result = null;
         try {
-            String lable = null;
+            String label = null;
             boolean canRecord = true;
             if (isPip) {
-                lable = "DTVKit-PIP";
+                label = "DTVKit-PIP";
                 canRecord = false;
             }
             result = new TvInputInfo.Builder(getApplicationContext(), new ComponentName(getApplicationContext(), DtvkitTvInput.class))
                     .setTvInputHardwareInfo(hardwareInfo)
-                    .setLabel(lable)
+                    .setLabel(label)
                     .setCanRecord(canRecord)
                     .setTunerCount(tunerCount)//will update it in code
                     .setExtras(extras)

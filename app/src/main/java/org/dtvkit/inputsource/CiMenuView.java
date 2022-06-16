@@ -206,7 +206,7 @@ public class CiMenuView extends LinearLayout {
             if (msg.what == MENU_TIMEOUT_MESSAGE && signalTriggered == false) {
                 setMenuTitleText("Ci menu response timeout. Check CAM is inserted");
                 setMenuSubTitleText("", false);
-                setDevideLineVisible(false);
+                setDivideLineVisible(false);
                 setMenuFooterText(EXIT_TO_QUIT);
             }
         }
@@ -266,7 +266,7 @@ public class CiMenuView extends LinearLayout {
                 setMenuSubTitleText(subTitle, true);
             }
 
-            setDevideLineVisible(true);
+            setDivideLineVisible(true);
 
             if (!TextUtils.isEmpty(bottomLine)) {
                 setMenuFooterText(bottomLine);
@@ -302,7 +302,7 @@ public class CiMenuView extends LinearLayout {
                 Log.i(TAG, e.getMessage());
             }
             setMenuTitleText("");
-            setDevideLineVisible(false);
+            setDivideLineVisible(false);
             setMenuSubTitleText("",false);
             setMenuFooterText(" ");
             createEnquiryMenu(title, textLength, isBlind);
@@ -551,7 +551,7 @@ public class CiMenuView extends LinearLayout {
 
         if (enterCiMenu() == false) {
             setMenuTitleText("Ci Module not detected");
-            setDevideLineVisible(false);
+            setDivideLineVisible(false);
             setMenuSubTitleText("",false);
             setMenuFooterText(EXIT_TO_QUIT);
             Log.e(TAG, "Ci Module not detected");
@@ -588,7 +588,7 @@ public class CiMenuView extends LinearLayout {
             setMenuTitleText(titleText);
             setMenuFooterText(footerText);
             setMenuSubTitleText("",false);
-            setDevideLineVisible(false);
+            setDivideLineVisible(false);
         // }
     }
 
@@ -699,14 +699,14 @@ public class CiMenuView extends LinearLayout {
         printReceivedSignal(text, textMenuFooter);
     }
 
-    private void setDevideLineVisible(boolean isDevideLineVisible) {
-        final View devideTopLine = (View)findViewById(R.id.ci_menu_top_line);
-        final View devideBottomLine = (View)findViewById(R.id.ci_menu_bottom_line);
+    private void setDivideLineVisible(boolean isDivideLineVisible) {
+        final View divideTopLine = (View)findViewById(R.id.ci_menu_top_line);
+        final View divideBottomLine = (View)findViewById(R.id.ci_menu_bottom_line);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                devideTopLine.setVisibility(isDevideLineVisible ? View.VISIBLE : View.GONE);
-                devideBottomLine.setVisibility(isDevideLineVisible ? View.VISIBLE : View.GONE);
+                divideTopLine.setVisibility(isDivideLineVisible ? View.VISIBLE : View.GONE);
+                divideBottomLine.setVisibility(isDivideLineVisible ? View.VISIBLE : View.GONE);
             }
         });
     }
