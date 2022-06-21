@@ -636,7 +636,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         sendDelayedEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY,
                                 PERIOD_CHECK_TV_PROVIDER_DELAY);
                     } else {
-                        initDtvkitTvInput();
+                        Log.i(TAG, "initInputThreadHandler，initDtvkitTvInput");
+                        initDtvkitTvInput(true);
                     }
                     break;
                 }
@@ -780,10 +781,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         return ret;
     }
 
-    private synchronized void initDtvkitTvInput() {
+    private synchronized void initDtvkitTvInput(boolean isCreateSession) {
         int subFlg = getSubtitleFlag();
-        if (mIsInited) {
-            Log.d(TAG, "initDtvkitTvInput already");
+        if (mIsInited && isCreateSession) {
+            Log.d(TAG, "initDtvkitTvInput already isCreateSession:"+isCreateSession);
             DtvkitGlueClient.getInstance().destroySubtitleCtl();
             DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
             return;
@@ -1054,13 +1055,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     @Override
     public final Session onCreateSession(String inputId) {
         Log.i(TAG, "onCreateSession " + inputId);
-        initDtvkitTvInput();
         DtvkitTvInputSession session = null;
         if (inputId.contains(String.valueOf(HARDWARE_PIP_DEVICE_ID))) {
             if (getFeatureSupportPip()) {
+                initDtvkitTvInput(false);
                 session = new DtvkitPipTvSession(this);
             }
         } else {
+            initDtvkitTvInput(true);
             session = new DtvkitMainTvSession(this);
         }
         addTunerSession(session);
@@ -1813,7 +1815,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     @Override
     public RecordingSession onCreateRecordingSession(String inputId) {
-        initDtvkitTvInput();
+        Log.d(TAG, "onCreateRecordingSession initDtvkitTvInput");
+        initDtvkitTvInput(false);
         mDtvkitRecordingSessionCount++;
         return new DtvkitRecordingSession(this, inputId);
     }
