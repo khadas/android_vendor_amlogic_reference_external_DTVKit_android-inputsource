@@ -2962,6 +2962,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mSystemControlManager.SetDtvKitSourceEnable(1);
                     mSystemControlManager.SetCurrentSourceInfo(
                             SystemControlManager.SourceInput.DTV, 0, 0);
+                    int aspect_mode = mSystemControlManager.GetDisplayMode(SystemControlManager.SourceInput.DTV.toInt());
+                    setTVAspectMode(aspect_mode == DISPLAY_MODE_NORMAL ? ASPECT_MODE_AUTO : ASPECT_MODE_CUSTOM);
                 }
             } else {
                 if (hasAnotherSession(this, false)) {
