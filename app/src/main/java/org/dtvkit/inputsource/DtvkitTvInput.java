@@ -2021,6 +2021,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             String dvbUri;
             long durationSecs = 0;
             Program program = getProgram(uri);
+/*
             if (program != null) {
                 startRecordTimeMillis = program.getStartTimeUtcMillis();
                 startRecordSystemTimeMillis = SystemClock.uptimeMillis();
@@ -2031,6 +2032,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 dvbUri = getChannelInternalDvbUri(getChannel(mChannel));
                 durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
             }
+*/
+            startRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);//start record time always is equal to the current stream time
+            startRecordSystemTimeMillis = SystemClock.uptimeMillis();
+            dvbUri = getChannelInternalDvbUri(getChannel(mChannel));
+            durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
+            Log.d(TAG, "startRecordTimeMillis :" + startRecordTimeMillis + "|startRecordSystemTimeMillis :" + startRecordSystemTimeMillis);
+
             StringBuffer recordingResponse = new StringBuffer();
             Log.i(TAG, "startRecording path:" + mPath);
             if (!recordingStartRecording(dvbUri, mPath, recordingResponse)) {
@@ -2117,6 +2125,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     String name = getRecordName(channel, program);
                     builder.setTitle(name);
                     renameRecord(name, recordingUri);
+                    builder.setStartTimeUtcMillis(startRecordTimeMillis);
                 }
                 data = new InternalProviderData();
                 String currentPath = mDataManager.getStringParameters(DataManager.KEY_PVR_RECORD_PATH);
