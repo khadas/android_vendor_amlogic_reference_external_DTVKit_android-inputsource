@@ -64,6 +64,7 @@ import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.settings.SysSettingManager;
 import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.fragment.PasswordCheckUtil;
+import com.amlogic.hbbtv.HbbTvManager;
 
 public class DtvkitDvbSettings extends Activity {
 
@@ -1080,15 +1081,11 @@ public class DtvkitDvbSettings extends Activity {
         }
     }
 
-
     private void updatingHbbtvCountryId() {
         boolean mHbbTvFeatherStatus = PropSettingManager.getBoolean("vendor.tv.dtv.hbbtv.enable", false);
         Log.d(TAG, "getFeatureSupportHbbTV: " + mHbbTvFeatherStatus);
         if (mHbbTvFeatherStatus) {
-            Intent intent = new Intent();
-            intent.setAction("com.vewd.core.service.COUNTRY_ID_CHANGED");
-            intent.putExtra("CountryId",mParameterMananer.getCurrentCountryIso3Name());
-            sendBroadcast(intent);
+            HbbTvManager.getInstance().setHbbTVCountryID(mParameterMananer.getCurrentCountryIso3Name());
         }
     }
 }
