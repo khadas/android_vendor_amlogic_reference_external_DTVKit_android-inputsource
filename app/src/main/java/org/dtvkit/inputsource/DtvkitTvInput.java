@@ -1833,7 +1833,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private long endRecordSystemTimeMillis = 0;
         private String recordingUri = null;
         private Uri mRecordedProgramUri = null;
-        private boolean tunedNotified = false;
         private boolean mTuned = false;
         private int mPath = -1;
         protected HandlerThread mRecordingHandlerThread = null;
@@ -1974,7 +1973,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 return;
             }
 
-            tunedNotified = false;
             mTuned = false;
             mRecordingStarted = false;
 
@@ -2041,7 +2039,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (mTuned) {
                         Log.i(TAG, "recording tuned ok.");
                         notifyTuned(uri);
-                        tunedNotified = true;
                     } else {
                         Log.i(TAG, "recording (path:" + mPath + ") tunning...");
                     }
@@ -2325,7 +2322,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         private void doFinalReleaseByThread() {
-            new Thread(() -> {
+            runOnMainThread(() -> {
                 Log.d(TAG, "doFinalReleaseByThread start index = " + mCurrentRecordIndex);
                 if (mRecordingHandlerThread != null) {
                     mRecordingHandlerThread.getLooper().quitSafely();
@@ -2336,7 +2333,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 mRecordingProcessHandler = null;
                 Log.d(TAG, "doFinalReleaseByThread end  index = " + mCurrentRecordIndex);
-            }).start();
+            });
         }
 
         private Program getProgram(Uri uri) {
@@ -2498,14 +2495,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } catch (JSONException ignore) {
                 }
                 Log.i(TAG, "tune to: " + path + ", " + state);
-                if (path != mPath)
+                if (path == -1 || path == 255 )
                     return;
 
                 switch (state) {
                     case "ok":
-                        mTuned = true;
-                        if (!tunedNotified)
+                        if (!mTuned) {
                             notifyTuned(mChannel);
+                            mTuned = true;
+                        }
                         break;
                 }
             } else if (signal.equals("RecordingStatusChanged")) {
