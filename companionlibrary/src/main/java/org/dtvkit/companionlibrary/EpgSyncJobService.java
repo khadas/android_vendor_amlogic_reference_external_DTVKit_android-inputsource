@@ -44,6 +44,7 @@ import android.util.SparseArray;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.os.PowerManager;
 
 import com.droidlogic.dtvkit.companionlibrary.model.Channel;
 import com.droidlogic.dtvkit.companionlibrary.model.EventPeriod;
@@ -206,9 +207,7 @@ public abstract class EpgSyncJobService extends JobService {
 
     @Override
     public boolean onStartJob(JobParameters params) {
-        if (DEBUG) {
-            Log.d(TAG, "onStartJob(" + params.getJobId() + ")");
-        }
+        Log.d(TAG, "onStartJob(" + params.getJobId() + ")");
         // Broadcast status
         Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);
         intent.putExtra(BUNDLE_KEY_INPUT_ID, params.getExtras().getString(BUNDLE_KEY_INPUT_ID));
@@ -225,6 +224,7 @@ public abstract class EpgSyncJobService extends JobService {
 
     @Override
     public boolean onStopJob(JobParameters params) {
+        Log.d(TAG, "onStopJob(" + params.getJobId() + ")");
         synchronized (mTaskArray) {
             int jobId = params.getJobId();
             EpgSyncTask epgSyncTask = mTaskArray.get(jobId);
@@ -527,8 +527,11 @@ public abstract class EpgSyncJobService extends JobService {
 
                 Uri channelUri = TvContract.buildChannelUri(channelMap.keyAt(i));
 
+                PowerManager powerManager = mContext.getSystemService(PowerManager.class);
+                boolean active = powerManager.isInteractive();
                 /* Check whether the job has been cancelled */
-                if (isCancelled()) {
+                if (isCancelled() || !active) {
+                    Log.w(TAG, "EPG_SYNC_CANCELED isInteractive " + active);
                     broadcastError(ERROR_EPG_SYNC_CANCELED);
                     return null;
                 }
