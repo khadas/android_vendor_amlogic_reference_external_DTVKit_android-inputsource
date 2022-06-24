@@ -77,6 +77,7 @@ public class DtvkitDvbScanSelect extends Activity {
     private Context mContext;
     private int currentIndex = 0;
     private int currentDvbSource = 0;
+    private boolean autoChannelScan = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -112,7 +113,11 @@ public class DtvkitDvbScanSelect extends Activity {
                     finish();
                 } else {
                     setResult(RESULT_CANCELED);
+                    if (autoChannelScan) {
+                        finish();
+                    }
                 }
+                autoChannelScan = false;
                 break;
             case REQUEST_CODE_START_SETTINGS_ACTIVITY:
                 if (resultCode == RESULT_OK) {
@@ -203,7 +208,6 @@ public class DtvkitDvbScanSelect extends Activity {
         ArrayAdapter<String> dvbSystemAdapter = new ArrayAdapter<>(mContext, android.R.layout.simple_spinner_item, systems);
         dvbSystemAdapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         spinnerDvbSource.setAdapter(dvbSystemAdapter);
-        spinnerDvbSource.setSelection(dvbSourceToSpinnerPos(currentDvbSource));
         spinnerDvbSource.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
@@ -303,13 +307,12 @@ public class DtvkitDvbScanSelect extends Activity {
                 if (TextUtils.equals(systems.get(position), searchType)) {
                     choiceSource(position);
                     scan.performClick();
-                    finish();
-                    Log.i("searchType", "setCurrentDvbSource:" + position + "\t" + systems.get(position));
+                    autoChannelScan = true;
                     break;
                 }
             }
         }
-
+        spinnerDvbSource.setSelection(dvbSourceToSpinnerPos(currentDvbSource));
     }
 
     private void choiceSource(int position) {
