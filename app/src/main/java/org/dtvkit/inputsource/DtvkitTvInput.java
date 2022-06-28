@@ -2799,6 +2799,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private int dvrSubtitleFlag = 0;
 
         private boolean mTimeShiftInited = false;
+        private boolean mResourceOwnedByBr = true;
 
         protected long mCurrentDtvkitTvInputSessionIndex;
         private HandlerThread mLivingHandlerThread = null;
@@ -3331,11 +3332,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public boolean onSelectTrack(int type, String trackId) {
             Log.i(TAG, "onSelectTrack " + type + ", " + trackId);
             boolean result = false;
-            boolean resourceOwnedByBr = true;
-            if (mHbbTvManager != null) {
-                resourceOwnedByBr = mHbbTvManager.checkIsBroadcastOwnResource();
-            }
-            if (mHandlerThreadHandle != null && resourceOwnedByBr) {
+            if (mHandlerThreadHandle != null) {
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_SELECT_TRACK, type, 0, trackId);
                 result = mHandlerThreadHandle.sendMessage(mess);
             }
@@ -3346,11 +3343,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             boolean result = false;
             Log.i(TAG, "doSelectTrack " + type + ", " + trackId);
             if (type == TvTrackInfo.TYPE_AUDIO) {
+                if (mResourceOwnedByBr == true) {
                 if (playerSelectAudioTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
                     notifyTrackSelected(type, trackId);
                     if (mHbbTvManager != null) {
                         mHbbTvManager.notifyTrackSelectedToHbbtv(type, trackId);
                     }
+                    //check trackinfo update
+                    if (mHandlerThreadHandle != null) {
+                        mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
+                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
+                    }
+                    result = true;
+                }
+                } else {
+                    mHbbTvManager.selectBroadbandTracksAndNotify(type, trackId);
                     //check trackinfo update
                     if (mHandlerThreadHandle != null) {
                         mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
@@ -4916,6 +4923,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                         break;
                     case MSG_UPDATE_TRACKINFO:
+                        if (mHbbTvManager != null) {
+                            runOnMainThread(() -> { mResourceOwnedByBr = mHbbTvManager.checkIsBroadcastOwnResource(); });
+                        }
                         if (!checkTrackInfoUpdate()) {
                             if (mHandlerThreadHandle != null) {
                                 mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
@@ -5292,6 +5302,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "checkTrackinfoUpdate no need");
                 return result;
             }
+            if (mResourceOwnedByBr == true) {
             List<TvTrackInfo> tracks = playerGetTracks(mTunedChannel, true);
             boolean needCheckAgain = false;
             if (tracks.size() > 0) {
@@ -5330,6 +5341,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             }
             if (needCheckAgain) {
+                result = false;
+            }
+            } else {
+                mHbbTvManager.getBroabandTracksAndNotify();
                 result = false;
             }
             return result;
