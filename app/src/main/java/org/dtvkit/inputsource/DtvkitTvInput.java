@@ -1285,9 +1285,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        public void showScrambledText(String text, boolean isPip) {
+        public void showBlockedText(String text, boolean isPip) {
             if (mText != null && mRelativeLayout != null) {
-                Log.d(TAG, "showText");
+                Log.d(TAG, "showText:" + text);
 
                 mText.setText(text);
                 if (mText.getVisibility() != View.VISIBLE) {
@@ -1308,7 +1308,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        public void hideScrambledText() {
+        public void hideBlockedText() {
             try {
                 DtvkitTvInputSession mainSession = getMainTunerSession();
                 mainSession.mView.mSubServerView.clearSubtitle();
@@ -3176,7 +3176,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
             if (mMainHandle != null) {
-                mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
+                mMainHandle.sendEmptyMessage(MSG_HIDE_BLOCKED_TEXT);
                 mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
                 mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
             }
@@ -3586,7 +3586,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public void notifyVideoAvailable() {
             super.notifyVideoAvailable();
             if (mMainHandle != null) {
-                mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
+                mMainHandle.sendEmptyMessage(MSG_HIDE_BLOCKED_TEXT);
                 mMainHandle.sendEmptyMessage(MSG_HIDE_TUNING_IMAGE);
             }
 
@@ -3611,7 +3611,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY == reason
                     || TvInputManager.VIDEO_UNAVAILABLE_REASON_WEAK_SIGNAL == reason) {
                 if (mMainHandle != null) {
-                    mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
+                    mMainHandle.sendEmptyMessage(MSG_HIDE_BLOCKED_TEXT);
                     mMainHandle.sendEmptyMessage(MSG_HIDE_TUNING_IMAGE);
                 }
             }
@@ -4355,7 +4355,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                         mTunedChannel, Channel.KEY_IS_DATA_SERVICE, false)) {
                                     if (!isAv) {
                                         Log.d(TAG, "data_service isAv=false can not play well!");
-                                        notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
+                                        notifySessionEvent("signal_data_service", null);
                                     }
                                 }
                             } else {
@@ -4371,11 +4371,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         case "scambled":
                             /*notify scambled*/
                             Log.i(TAG, "** scambled **");
-                            if (mMainHandle != null) {
-                                mMainHandle.sendEmptyMessage(MSG_SHOW_SCAMBLEDTEXT);
-                            } else {
-                                Log.d(TAG, "mMainHandle is null");
-                            }
+                            notifySessionEvent("signal_scrambled_service", null);
+                            break;
+                        case "not_running":
+                            notifySessionEvent("signal_invalid_service", null);
                             break;
                         default:
                             Log.i(TAG, "Unhandled state: " + state);
@@ -4869,8 +4868,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_SHOW_STREAM_CHANGE_DELAY = 500;//MS
 
         protected static final int MSG_MAIN_HANDLE_DESTROY_OVERLAY = 1;
-        protected static final int MSG_SHOW_SCAMBLEDTEXT = 2;
-        protected static final int MSG_HIDE_SCAMBLEDTEXT = 3;
+        protected static final int MSG_SHOW_BLOCKED_TEXT = 2;
+        protected static final int MSG_HIDE_BLOCKED_TEXT = 3;
         protected static final int MSG_DISPLAY_STREAM_CHANGE_DIALOG = 4;
         protected static final int MSG_SUBTITLE_SHOW_CLOSED_CAPTION = 5;
         protected static final int MSG_SET_TELETEXT_MIX_NORMAL = 6;
@@ -5165,14 +5164,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             mHandlerThreadHandle.sendEmptyMessage(MSG_RELEASE_WORK_THREAD);
                         }
                         break;
-                    case MSG_SHOW_SCAMBLEDTEXT:
+                    case MSG_SHOW_BLOCKED_TEXT:
                         if (mView != null) {
-                            mView.showScrambledText(getString(R.string.play_scrambled), mIsPip);
+                            String text = (String) msg.obj;
+                            mView.showBlockedText(text, mIsPip);
                         }
                         break;
-                    case MSG_HIDE_SCAMBLEDTEXT:
+                    case MSG_HIDE_BLOCKED_TEXT:
                         if (mView != null) {
-                            mView.hideScrambledText();
+                            mView.hideBlockedText();
                         }
                         break;
                     case MSG_SHOW_TUNING_IMAGE:
@@ -5686,7 +5686,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else {
                     if ("DscState".equals(type)) {
                         int state = casEvent.optInt("DscState", 0);
-                        int scrambledMsg = state + MSG_SHOW_SCAMBLEDTEXT;
+                        int scrambledMsg = state + MSG_SHOW_BLOCKED_TEXT;
                         if (mMainHandle != null) {
                             mMainHandle.sendEmptyMessage(scrambledMsg);
                         }
