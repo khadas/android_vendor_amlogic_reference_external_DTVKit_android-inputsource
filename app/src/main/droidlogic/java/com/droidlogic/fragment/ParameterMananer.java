@@ -148,6 +148,10 @@ public class ParameterMananer {
     public static final String KEY_LINK_BARKER_CHANNEL = "key_link_baker_channel";
     public static final String KEY_LEAVE_BARKER_CHANNEL = "key_leave_baker_channel";
     public static final String KEY_GET_PLATFORM_PROPERTY = "key_get_platform_property";
+    public static final String KEY_GET_DAYLIGHT_SAVING_MODE = "key_get_daylight_saving_mode";
+    public static final String KEY_SET_DAYLIGHT_SAVING_MODE = "key_set_daylight_saving_mode";
+    public static final String KEY_SET_TIME_ZONE = "key_set_time_zone";
+    public static final String KEY_GET_TIME_ZONE = "key_get_time_zone";
 
     //default value that is save by index
     public static final int KEY_SATALLITE_DEFAULT_VALUE_INDEX = 0;
@@ -2262,6 +2266,12 @@ public class ParameterMananer {
             case KEY_GET_PLATFORM_PROPERTY:
                 result = getPlatformProperty(defaultJsonValue);
                 break;
+            case KEY_GET_DAYLIGHT_SAVING_MODE:
+                result = getDaylightSavingMode();
+                break;
+            case KEY_GET_TIME_ZONE:
+                result = getTimeZone();
+                break;
             default:
                 result = defaultJsonValue;
                 break;
@@ -2296,6 +2306,12 @@ public class ParameterMananer {
                 break;
             case KEY_LEAVE_BARKER_CHANNEL:
                 leaveBarkerChannel();
+                break;
+            case KEY_SET_DAYLIGHT_SAVING_MODE:
+                setDaylightSavingMode(Integer.parseInt(newJsonValues));
+                break;
+            case KEY_SET_TIME_ZONE:
+                setTimeZone(Integer.parseInt(newJsonValues));
                 break;
             default:
                 break;
@@ -2882,4 +2898,49 @@ public class ParameterMananer {
         return result;
     }
 
+    public String getDaylightSavingMode() {
+        String result = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.GetDayLightSavingMode", args1);
+            int data = obj.getInt("data");
+            result = Integer.toString(data);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    public void setDaylightSavingMode(int mode) {
+        JSONArray array = new JSONArray();
+        try {
+            array.put(mode);
+            DtvkitGlueClient.getInstance().request("Dvb.SetDayLightSavingMode", array);
+        } catch (Exception e) {
+            Log.i(TAG,"setDaylightSavingMode fail");
+        }
+    }
+
+    public String getTimeZone() {
+        String result = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.GetTimeZone", args1);
+            int data = obj.getInt("data");
+            result = Integer.toString(data);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    private void setTimeZone(int timeZone) {
+        JSONArray array = new JSONArray();
+        try {
+            array.put(timeZone);
+            DtvkitGlueClient.getInstance().request("Dvb.SetTimeZone", array);
+        } catch (Exception e) {
+            Log.i(TAG,"setTimeZone fail");
+        }
+    }
 }

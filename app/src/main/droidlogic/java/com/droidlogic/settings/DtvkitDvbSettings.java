@@ -3,7 +3,6 @@ package com.droidlogic.settings;
 import android.util.Log;
 import android.app.Activity;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Spinner;
@@ -28,7 +27,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.content.Context;
 import android.widget.TextView;
-import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ContentResolver;
 import android.net.Uri;
@@ -73,7 +71,7 @@ public class DtvkitDvbSettings extends Activity {
 
     private DtvkitGlueClient mDtvkitGlueClient = DtvkitGlueClient.getInstance();
     private SystemControlManager mSysControlManager = SystemControlManager.getInstance();
-    private ParameterMananer mParameterMananer = null;
+    private ParameterMananer mParameterManager = null;
     private SysSettingManager mSysSettingManager = null;
     private List<String> mStoragePathList = new ArrayList<String>();
     private List<String> mStorageNameList = new ArrayList<String>();
@@ -124,7 +122,7 @@ public class DtvkitDvbSettings extends Activity {
                         String volumeId = (String)msg.obj;
                         String formattedPath = mSysSettingManager.getStorageRawPathByVolumeId(volumeId);
                         if (!TextUtils.isEmpty(formattedPath)) {
-                            mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, formattedPath);
+                            mParameterManager.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, formattedPath);
                         }
                     }
                     hideFormatConfirmDialog();
@@ -145,7 +143,7 @@ public class DtvkitDvbSettings extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.lanuage_settings);
-        mParameterMananer = new ParameterMananer(this, mDtvkitGlueClient);
+        mParameterManager = new ParameterMananer(this, mDtvkitGlueClient);
         mSysSettingManager = new SysSettingManager(this);
         mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         updateStorageList();
@@ -163,7 +161,7 @@ public class DtvkitDvbSettings extends Activity {
     protected void onPause() {
         super.onPause();
         if (needClearAudioLangSetting) {
-            mParameterMananer.clearUserAudioSelect();
+            mParameterManager.clearUserAudioSelect();
         }
         if (needSyncChannels) {
             updatingGuide();
@@ -184,7 +182,7 @@ public class DtvkitDvbSettings extends Activity {
         EpgSyncJobService.cancelAllSyncRequests(this);
         String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
         Log.i(TAG, String.format("inputId: %s", inputId));
-        int dvbSource = mParameterMananer.getCurrentDvbSource();
+        int dvbSource = mParameterManager.getCurrentDvbSource();
         EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
         EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class));
     }
@@ -212,8 +210,8 @@ public class DtvkitDvbSettings extends Activity {
     }
 
     private void checkPassWordInfo() {
-        String pinCode = mParameterMananer.getStringParameters(ParameterMananer.SECURITY_PASSWORD);
-        String countryCode = mParameterMananer.getCurrentCountryIso3Name();
+        String pinCode = mParameterManager.getStringParameters(ParameterMananer.SECURITY_PASSWORD);
+        String countryCode = mParameterManager.getCurrentCountryIso3Name();
         if ("fra".equals(countryCode)) {
             if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
                 PasswordCheckUtil passwordDialog = new PasswordCheckUtil(pinCode);
@@ -222,7 +220,7 @@ public class DtvkitDvbSettings extends Activity {
                     @Override
                     public void passwordRight(String password) {
                         Log.d(TAG, "password is right");
-                        mParameterMananer.saveStringParameters(mParameterMananer.SECURITY_PASSWORD, password);
+                        mParameterManager.saveStringParameters(mParameterManager.SECURITY_PASSWORD, password);
                         getContentResolver().notifyChange(
                             Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
                             null, ContentResolver.NOTIFY_SYNC_TO_NETWORK);
@@ -230,7 +228,7 @@ public class DtvkitDvbSettings extends Activity {
                     @Override
                     public void onKeyBack() {
                         Log.d(TAG, "onKeyBack");
-                        String newPinCode = mParameterMananer.getStringParameters(mParameterMananer.SECURITY_PASSWORD);
+                        String newPinCode = mParameterManager.getStringParameters(mParameterManager.SECURITY_PASSWORD);
                         if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
                             //finish current activity when passward hasn't been set right
                             setResult(RESULT_OK);
@@ -286,26 +284,27 @@ public class DtvkitDvbSettings extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "country onItemSelected position = " + position);
-                int saveCountryCode = mParameterMananer.getCurrentCountryCode();
-                int selectCountryCode = mParameterMananer.getCountryCodeByIndex(position);
-                String previousMainAudioName = mParameterMananer.getCurrentMainAudioLangName();
-                String previousAssistAudioName = mParameterMananer.getCurrentSecondAudioLangName();
+                int saveCountryCode = mParameterManager.getCurrentCountryCode();
+                int selectCountryCode = mParameterManager.getCountryCodeByIndex(position);
+                String previousMainAudioName = mParameterManager.getCurrentMainAudioLangName();
+                String previousAssistAudioName = mParameterManager.getCurrentSecondAudioLangName();
                 if (saveCountryCode == selectCountryCode) {
                     Log.d(TAG, "country onItemSelected same position");
                     return;
                 }
-                mParameterMananer.setCountryCodeByIndex(position);
+                mParameterManager.setCountryCodeByIndex(position);
+                mParameterManager.setDaylightSavingMode(2);
                 updatingHbbtvCountryId();
                 //updatingGuide();
                 needSyncChannels = true;
                 initLayout(true);
-                String currentMainAudioName = mParameterMananer.getCurrentMainAudioLangName();
-                String currentAssistAudioName = mParameterMananer.getCurrentSecondAudioLangName();
+                String currentMainAudioName = mParameterManager.getCurrentMainAudioLangName();
+                String currentAssistAudioName = mParameterManager.getCurrentSecondAudioLangName();
                 if (!TextUtils.equals(previousMainAudioName, currentMainAudioName) || !TextUtils.equals(previousAssistAudioName, currentAssistAudioName)) {
                     needClearAudioLangSetting = true;
                 }
 
-                String iso = mParameterMananer.getCurrentCountryIso3Name();
+                String iso = mParameterManager.getCurrentCountryIso3Name();
                 TimezoneSelect timezone = new TimezoneSelect(DtvkitDvbSettings.this);
                 timezone.selectTimeZone(iso);
 
@@ -321,13 +320,13 @@ public class DtvkitDvbSettings extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "main_audio onItemSelected position = " + position);
-                int currentMainAudio = mParameterMananer.getCurrentMainAudioLangId();
-                int savedMainAudio = mParameterMananer.getLangIndexCodeByPosition(position);
+                int currentMainAudio = mParameterManager.getCurrentMainAudioLangId();
+                int savedMainAudio = mParameterManager.getLangIndexCodeByPosition(position);
                 if (currentMainAudio == savedMainAudio) {
                     Log.d(TAG, "main_audio onItemSelected same position");
                     return;
                 }
-                mParameterMananer.setPrimaryAudioLangByPosition(position);
+                mParameterManager.setPrimaryAudioLangByPosition(position);
                 //updatingGuide();
                 needSyncChannels = true;
                 needClearAudioLangSetting = true;
@@ -342,13 +341,13 @@ public class DtvkitDvbSettings extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "assist_audio onItemSelected position = " + position);
-                int currentAssistAudio = mParameterMananer.getCurrentSecondAudioLangId();
-                int savedAssistAudio = mParameterMananer.getSecondLangIndexCodeByPosition(position);
+                int currentAssistAudio = mParameterManager.getCurrentSecondAudioLangId();
+                int savedAssistAudio = mParameterManager.getSecondLangIndexCodeByPosition(position);
                 if (currentAssistAudio == savedAssistAudio) {
                     Log.d(TAG, "assist_audio onItemSelected same position");
                     return;
                 }
-                mParameterMananer.setSecondaryAudioLangByPosition(position);
+                mParameterManager.setSecondaryAudioLangByPosition(position);
                 //updatingGuide();
                 needSyncChannels = true;
                 needClearAudioLangSetting = true;
@@ -363,13 +362,13 @@ public class DtvkitDvbSettings extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "main_subtitle onItemSelected position = " + position);
-                int currentMainSub = mParameterMananer.getCurrentMainSubLangId();
-                int savedMainSub = mParameterMananer.getLangIndexCodeByPosition(position);
+                int currentMainSub = mParameterManager.getCurrentMainSubLangId();
+                int savedMainSub = mParameterManager.getLangIndexCodeByPosition(position);
                 if (currentMainSub == savedMainSub) {
                     Log.d(TAG, "main_subtitle onItemSelected same position");
                     return;
                 }
-                mParameterMananer.setPrimaryTextLangByPosition(position);
+                mParameterManager.setPrimaryTextLangByPosition(position);
                 //updatingGuide();
                 needSyncChannels = true;
             }
@@ -383,13 +382,13 @@ public class DtvkitDvbSettings extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "assist_subtitle onItemSelected position = " + position);
-                int currentAssistSub = mParameterMananer.getCurrentSecondSubLangId();
-                int savedAssistSub = mParameterMananer.getSecondLangIndexCodeByPosition(position);
+                int currentAssistSub = mParameterManager.getCurrentSecondSubLangId();
+                int savedAssistSub = mParameterManager.getSecondLangIndexCodeByPosition(position);
                 if (currentAssistSub == savedAssistSub) {
                     Log.d(TAG, "assist_subtitle onItemSelected same position");
                     return;
                 }
-                mParameterMananer.setSecondaryTextLangByPosition(position);
+                mParameterManager.setSecondaryTextLangByPosition(position);
                 //updatingGuide();
                 needSyncChannels = true;
             }
@@ -403,12 +402,12 @@ public class DtvkitDvbSettings extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "teletext_charset onItemSelected position = " + position);
-                int savedCharSet = mParameterMananer.getCurrentTeletextCharsetIndex();
+                int savedCharSet = mParameterManager.getCurrentTeletextCharsetIndex();
                 if (savedCharSet == position) {
                     Log.d(TAG, "teletext_charset onItemSelected same position");
                     return;
                 }
-                mParameterMananer.setCurrentTeletextCharsetByPosition(position);
+                mParameterManager.setCurrentTeletextCharsetByPosition(position);
             }
 
             @Override
@@ -420,12 +419,12 @@ public class DtvkitDvbSettings extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "hearing_impaired onItemSelected position = " + position);
-                int saved = mParameterMananer.getHearingImpairedSwitchStatus() ? 1 : 0;
+                int saved = mParameterManager.getHearingImpairedSwitchStatus() ? 1 : 0;
                 if (saved == position) {
                     Log.d(TAG, "hearing_impaired onItemSelected same position");
                     return;
                 }
-                mParameterMananer.setHearingImpairedSwitchStatus(position == 1);
+                mParameterManager.setHearingImpairedSwitchStatus(position == 1);
             }
 
             @Override
@@ -436,7 +435,7 @@ public class DtvkitDvbSettings extends Activity {
         pvr_path.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String saved = mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
+                String saved = mParameterManager.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
                 String current = getCurrentStoragePath(position);
                 Log.d(TAG, "pvr_path onItemSelected previous = " + saved + ", new = " + current);
                 if (mSysSettingManager.isMediaPath(current) && !SysSettingManager.isStorageFatFormat(mSysSettingManager.getStorageFsType(current))) {
@@ -448,7 +447,7 @@ public class DtvkitDvbSettings extends Activity {
                     Log.d(TAG, "pvr_path onItemSelected same path");
                     return;
                 }
-                mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, current);
+                mParameterManager.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, current);
             }
 
             @Override
@@ -475,18 +474,18 @@ public class DtvkitDvbSettings extends Activity {
         });
         adSupport.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                mParameterMananer.saveIntParameters(ParameterMananer.TV_KEY_AD_SWITCH, adSupport.isChecked() ? 1 : 0);
+                mParameterManager.saveIntParameters(ParameterMananer.TV_KEY_AD_SWITCH, adSupport.isChecked() ? 1 : 0);
             }
         });
         networkUpdate.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                showNetworkInfoConfirmDialog(DtvkitDvbSettings.this, mParameterMananer.getNetworksOfRegion());
+                showNetworkInfoConfirmDialog(DtvkitDvbSettings.this, mParameterManager.getNetworksOfRegion());
             }
         });
 
        auto_ordering.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                mParameterMananer.setAutomaticOrderingEnabled(auto_ordering.isChecked());
+                mParameterManager.setAutomaticOrderingEnabled(auto_ordering.isChecked());
             }
         });
 
@@ -511,7 +510,7 @@ public class DtvkitDvbSettings extends Activity {
                 @Override
                 public void onClick(View v) {
                     String inputId = DtvkitDvbSettings.this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
-                    new FactorySettings(DtvkitDvbSettings.this, mParameterMananer, inputId, factoryCallback).start();
+                    new FactorySettings(DtvkitDvbSettings.this, mParameterManager, inputId, factoryCallback).start();
                 }
             });
         }
@@ -536,79 +535,79 @@ public class DtvkitDvbSettings extends Activity {
         ArrayAdapter<String> adapter = null;
         int select = 0;
         //add country
-        list = mParameterMananer.getCountryDisplayList();
+        list = mParameterManager.getCountryDisplayList();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         country.setAdapter(adapter);
-        select = mParameterMananer.getCurrentCountryIndex();
+        select = mParameterManager.getCurrentCountryIndex();
         country.setSelection(select);
         //add main audio
-        list = mParameterMananer.getCurrentLangNameList();
+        list = mParameterManager.getCurrentLangNameList();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         main_audio.setAdapter(adapter);
-        select = mParameterMananer.getCurrentMainAudioLangId();
+        select = mParameterManager.getCurrentMainAudioLangId();
         main_audio.setSelection(select);
         //add second audio
-        list = mParameterMananer.getCurrentSecondLangNameList();
+        list = mParameterManager.getCurrentSecondLangNameList();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         assist_audio.setAdapter(adapter);
-        select = mParameterMananer.getCurrentSecondAudioLangId();
+        select = mParameterManager.getCurrentSecondAudioLangId();
         assist_audio.setSelection(select);
         //add main subtitle
-        list = mParameterMananer.getCurrentLangNameList();
+        list = mParameterManager.getCurrentLangNameList();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         main_subtitle.setAdapter(adapter);
-        select = mParameterMananer.getCurrentMainSubLangId();
+        select = mParameterManager.getCurrentMainSubLangId();
         main_subtitle.setSelection(select);
         //add second subtitle
-        list = mParameterMananer.getCurrentSecondLangNameList();
+        list = mParameterManager.getCurrentSecondLangNameList();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         assist_subtitle.setAdapter(adapter);
-        select = mParameterMananer.getCurrentSecondSubLangId();
+        select = mParameterManager.getCurrentSecondSubLangId();
         assist_subtitle.setSelection(select);
         //add teletext charset
-        list = mParameterMananer.getTeletextCharsetNameList();
+        list = mParameterManager.getTeletextCharsetNameList();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         teletext_charset.setAdapter(adapter);
-        select = mParameterMananer.getCurrentTeletextCharsetIndex();
+        select = mParameterManager.getCurrentTeletextCharsetIndex();
         teletext_charset.setSelection(select);
         //add hearing impaired
         list = getHearingImpairedOption();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         hearing_impaired.setAdapter(adapter);
-        select = mParameterMananer.getHearingImpairedSwitchStatus() ? 1 : 0;
+        select = mParameterManager.getHearingImpairedSwitchStatus() ? 1 : 0;
         hearing_impaired.setSelection(select);
         //add pvr path select
         list = mStorageNameList;
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         pvr_path.setAdapter(adapter);
-        String devicePath = mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
+        String devicePath = mParameterManager.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
         if (!mSysSettingManager.isDeviceExist(devicePath)) {
             select = 0;
-            mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, SysSettingManager.PVR_DEFAULT_PATH);
+            mParameterManager.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, SysSettingManager.PVR_DEFAULT_PATH);
         } else {
             select = getCurrentStoragePosition(devicePath);
         }
         pvr_path.setSelection(select);
         String pvrRecordMode = PropSettingManager.getString(PropSettingManager.PVR_RECORD_MODE, PropSettingManager.PVR_RECORD_MODE_CHANNEL);
         recordFrequency.setChecked(PropSettingManager.PVR_RECORD_MODE_FREQUENCY.equals(pvrRecordMode) ? true : false);
-        adSupport.setChecked(mParameterMananer.getIntParameters(ParameterMananer.TV_KEY_AD_SWITCH) == 1 ? true : false);
-        if (mParameterMananer.needConfirmNetWorkInfomation(mParameterMananer.getNetworksOfRegion())) {
+        adSupport.setChecked(mParameterManager.getIntParameters(ParameterMananer.TV_KEY_AD_SWITCH) == 1 ? true : false);
+        if (mParameterManager.needConfirmNetWorkInfomation(mParameterManager.getNetworksOfRegion())) {
             networkUpdateContainer.setVisibility(View.VISIBLE);
         } else {
             networkUpdateContainer.setVisibility(View.GONE);
         }
 
-        if (mParameterMananer.checkIsItalyCountry()) {
+        if (mParameterManager.checkIsItalyCountry()) {
             autoOrderingContainer.setVisibility(View.VISIBLE);
-            auto_ordering.setChecked(mParameterMananer.getAutomaticOrderingEnabled());
+            auto_ordering.setChecked(mParameterManager.getAutomaticOrderingEnabled());
         } else {
             autoOrderingContainer.setVisibility(View.GONE);
         }
@@ -643,7 +642,7 @@ public class DtvkitDvbSettings extends Activity {
             }
         }
         if (!found) {
-            mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, mSysSettingManager.getAppDefaultPath());
+            mParameterManager.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, mSysSettingManager.getAppDefaultPath());
         }
         return result;
     }
@@ -813,8 +812,8 @@ public class DtvkitDvbSettings extends Activity {
             String name = null;
             for (int i = 0; i < networkArray.length(); i++) {
                 HashMap<String, Object> map = new HashMap<String, Object>();
-                networkObj = mParameterMananer.getJSONObjectFromJSONArray(networkArray, i);
-                name = mParameterMananer.getNetworkName(networkObj);
+                networkObj = mParameterManager.getJSONObjectFromJSONArray(networkArray, i);
+                name = mParameterManager.getNetworkName(networkObj);
                 map.put("name", name);
                 dataList.add(map);
             }
@@ -828,19 +827,19 @@ public class DtvkitDvbSettings extends Activity {
                 new int[] {R.id.name});
 
         listView.setAdapter(adapter);
-        listView.setSelection(mParameterMananer.getCurrentNetworkIndex(networkArray));
+        listView.setSelection(mParameterManager.getCurrentNetworkIndex(networkArray));
         title.setText(R.string.search_confirm_network);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, final int position, long id) {
-                int currentNetWorkIndex = mParameterMananer.getCurrentNetworkIndex(networkArray);
+                int currentNetWorkIndex = mParameterManager.getCurrentNetworkIndex(networkArray);
                 if (currentNetWorkIndex == position) {
                     Log.d(TAG, "showNetworkInfoConfirmDialog same position = " + position);
                     alert.dismiss();
                     return;
                 }
                 Log.d(TAG, "showNetworkInfoConfirmDialog onItemClick position = " + position);
-                mParameterMananer.setNetworkPreferedOfRegion(mParameterMananer.getNetworkId(networkArray, position));
+                mParameterManager.setNetworkPreferedOfRegion(mParameterManager.getNetworkId(networkArray, position));
                 //updatingGuide();
                 needSyncChannels = true;
                 alert.dismiss();
@@ -881,7 +880,7 @@ public class DtvkitDvbSettings extends Activity {
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, modeList);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         mode.setAdapter(adapter);
-        mode.setSelection(mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_MODE));
+        mode.setSelection(mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_MODE));
 
         mode.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
@@ -894,7 +893,7 @@ public class DtvkitDvbSettings extends Activity {
                 }
 
                 Log.d(TAG, "mAutoSearchingMode =" + mAutoSearchingMode);
-                mParameterMananer.saveIntParameters(mParameterMananer.AUTO_SEARCHING_MODE, mAutoSearchingMode);
+                mParameterManager.saveIntParameters(mParameterManager.AUTO_SEARCHING_MODE, mAutoSearchingMode);
             }
 
             @Override
@@ -909,7 +908,7 @@ public class DtvkitDvbSettings extends Activity {
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, repList);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         repetition.setAdapter(adapter);
-        repetition.setSelection(mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_REPTITION));
+        repetition.setSelection(mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_REPTITION));
         repetition.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -920,7 +919,7 @@ public class DtvkitDvbSettings extends Activity {
                     mRepetition = position;
                 }
                 Log.d(TAG, "mRepetition =" + mRepetition);
-                mParameterMananer.saveIntParameters(mParameterMananer.AUTO_SEARCHING_REPTITION, mRepetition);
+                mParameterManager.saveIntParameters(mParameterManager.AUTO_SEARCHING_REPTITION, mRepetition);
             }
 
             @Override
@@ -929,7 +928,7 @@ public class DtvkitDvbSettings extends Activity {
             }
         });
 
-        hour.setText(mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_HOUR));
+        hour.setText(mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_HOUR));
         hour.addTextChangedListener(new TextWatcher() {
             @Override
             public void onTextChanged(CharSequence s, int start, int before,int count) {
@@ -963,12 +962,12 @@ public class DtvkitDvbSettings extends Activity {
                     return;
                 int value = Integer.parseInt(mHour);
                 if (value < 24 && value >= 0)
-                    mParameterMananer.saveStringParameters(mParameterMananer.AUTO_SEARCHING_HOUR, mHour);
+                    mParameterManager.saveStringParameters(mParameterManager.AUTO_SEARCHING_HOUR, mHour);
             }
 
         });
 
-        minute.setText(mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_MINUTE));
+        minute.setText(mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_MINUTE));
 
         minute.addTextChangedListener(new TextWatcher() {
             @Override
@@ -1003,7 +1002,7 @@ public class DtvkitDvbSettings extends Activity {
                     return;
                 int value = Integer.parseInt(mMinute);
                 if (value < 60 && value >= 0)
-                    mParameterMananer.saveStringParameters(mParameterMananer.AUTO_SEARCHING_MINUTE, mMinute);
+                    mParameterManager.saveStringParameters(mParameterManager.AUTO_SEARCHING_MINUTE, mMinute);
             }
 
         });
@@ -1030,10 +1029,10 @@ public class DtvkitDvbSettings extends Activity {
     }
 
     private void updateAlarmTime() {
-        String hour = mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_HOUR);
-        String minute = mParameterMananer.getStringParameters(mParameterMananer.AUTO_SEARCHING_MINUTE);
-        int mode  = mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_MODE);
-        int repetition = mParameterMananer.getIntParameters(mParameterMananer.AUTO_SEARCHING_REPTITION);
+        String hour = mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_HOUR);
+        String minute = mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_MINUTE);
+        int mode  = mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_MODE);
+        int repetition = mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_REPTITION);
 
         Log.d(TAG, "mode:" + mode + "hour:" + hour + "minute = " + minute + "repetition =" + repetition);
         if (mode == 0) {
@@ -1084,8 +1083,12 @@ public class DtvkitDvbSettings extends Activity {
     private void updatingHbbtvCountryId() {
         boolean mHbbTvFeatherStatus = PropSettingManager.getBoolean("vendor.tv.dtv.hbbtv.enable", false);
         Log.d(TAG, "getFeatureSupportHbbTV: " + mHbbTvFeatherStatus);
-        if (mHbbTvFeatherStatus) {
-            HbbTvManager.getInstance().setHbbTVCountryID(mParameterMananer.getCurrentCountryIso3Name());
+        try {
+            if (mHbbTvFeatherStatus) {
+                HbbTvManager.getInstance().setHbbTVCountryID(mParameterManager.getCurrentCountryIso3Name());
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "updatingHbbTvCountryId Exception " + e.getMessage());
         }
     }
 }
