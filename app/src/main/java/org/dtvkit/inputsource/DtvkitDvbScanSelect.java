@@ -70,6 +70,7 @@ public class DtvkitDvbScanSelect extends Activity {
     public static final String SEARCH_FOUND_SERVICE_LIST = "service_list";
     public static final String SEARCH_FOUND_SERVICE_INFO = "service_info";
     public static final String SEARCH_FOUND_FIRST_SERVICE = "first_service";
+    public static final String SEARCH_FOUND_LCN_STATE = "lcn_state";
 
     private DataMananer mDataMananer;
     private Intent mIntent = null;

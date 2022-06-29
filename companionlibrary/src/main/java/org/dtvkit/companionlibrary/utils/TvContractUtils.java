@@ -67,9 +67,9 @@ public class TvContractUtils {
     private static final boolean DEBUG = false;
     private static final int BATCH_OPERATION_COUNT = 50;
 
-    private static final String[] USER_SETTING_FLAG_KEY = {Channel.KEY_SET_FAVOURITE, Channel.KEY_SET_HIDDEN, Channel.KEY_IS_FAVOURITE, Channel.KEY_FAVOURITE_INFO, Channel.KEY_HIDDEN,
+    private static final String[] USER_SETTING_FLAG_KEY = {Channel.KEY_SET_FAVOURITE, Channel.KEY_SET_HIDDEN, Channel.KEY_SET_DELETE, Channel.KEY_IS_FAVOURITE, Channel.KEY_FAVOURITE_INFO, Channel.KEY_HIDDEN,
                                                        Channel.KEY_SET_DISPLAYNAME, Channel.KEY_NEW_DISPLAYNAME, Channel.KEY_SET_DISPLAYNUMBER, Channel.KEY_NEW_DISPLAYNUMBER, Channel.KEY_RAW_DISPLAYNAME, Channel.KEY_RAW_DISPLAYNUMBER};
-    private static final String[] USER_SETTING_FLAG_DEFAULT = {"0", "0", "0", "", "false",
+    private static final String[] USER_SETTING_FLAG_DEFAULT = {"0", "0","0", "0", "", "false",
                                                           "0", "" ,"0", "","", ""};
 
     /**

@@ -70,6 +70,7 @@ public final class Channel {
     public static final String KEY_SET_FAVOURITE = "set_favourite";
     public static final String KEY_HIDDEN = "hidden";
     public static final String KEY_SET_HIDDEN = "set_hidden";
+    public static final String KEY_SET_DELETE = "set_delete";
     public static final String KEY_SET_DISPLAYNAME = "set_displayname";
     public static final String KEY_NEW_DISPLAYNAME = "new_displayname";
     public static final String KEY_SET_DISPLAYNUMBER = "set_displaynumber";

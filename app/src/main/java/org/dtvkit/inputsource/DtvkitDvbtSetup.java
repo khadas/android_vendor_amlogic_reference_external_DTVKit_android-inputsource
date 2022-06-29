@@ -267,6 +267,9 @@ public class DtvkitDvbtSetup extends Activity {
             }
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_LIST, serviceListJsonArray);
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_FIRST_SERVICE, firstServiceName);
+            if (mParameterMananer != null) {
+                intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_LCN_STATE, mParameterMananer.getAutomaticOrderingEnabled());
+            }
             Log.d(TAG, "finish firstServiceName = " + firstServiceName);
             setResult(RESULT_OK, intent);
         } else {
