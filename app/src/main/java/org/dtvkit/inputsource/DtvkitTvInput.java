@@ -1075,7 +1075,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
         synchronized (mTunerSessionLock) {
             mTunerSessions.put(session.mCurrentDtvkitTvInputSessionIndex, session);
-            Log.i(TAG, "addTunerSession index = " + session.mCurrentDtvkitTvInputSessionIndex);
+            Log.i(TAG, "addTunerSession " + session);
         }
     }
 
@@ -1085,7 +1085,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
         synchronized (mTunerSessionLock) {
             mTunerSessions.remove(session.mCurrentDtvkitTvInputSessionIndex);
-            Log.i(TAG, "removeTunerSession index = " + session.mCurrentDtvkitTvInputSessionIndex);
+            Log.i(TAG, "removeTunerSession " + session);
         }
     }
 
@@ -2778,7 +2778,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     public abstract class DtvkitTvInputSession extends Session {
-        protected final String TAG = this + "";
+        protected final String TAG = getClass().getSimpleName() + "@" + mDtvkitTvInputSessionCount;
         protected Channel mTunedChannel = null;
 
         private List<TvTrackInfo> mTunedTracks = null;
@@ -2867,8 +2867,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             outService = service;
             mIsPip = isPip;
             mSessionSemaphore = getControllerSemaphore();
-            Log.i(TAG, "created");
-            mCurrentDtvkitTvInputSessionIndex = ++mDtvkitTvInputSessionCount;
+            mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount++;
+            Log.i(TAG, "created " + this);
             mAudioSystemCmdManager = AudioSystemCmdManager.getInstance(getApplicationContext());
             mCaptioningManager =
                     (CaptioningManager) outService.getSystemService(Context.CAPTIONING_SERVICE);
@@ -3139,6 +3139,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected void onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
             if (!hasTunePermission()) {
                 tunePendingIfNeeded(SEMAPHORE_TIME_OUT);
+                return;
+            }
+            if (mSessionState == SessionState.RELEASING
+                || mSessionState == SessionState.RELEASED) {
+                Log.e(TAG, "Abort tune because of mSessionState:" + mSessionState);
                 return;
             }
             if (mSessionState == SessionState.NONE) {
@@ -5830,7 +5835,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public synchronized String toString() {
-            return getClass().getSimpleName() + "@" + mDtvkitTvInputSessionCount;
+            return "{ " + getClass().getSimpleName()
+                    + ", index=" + mCurrentDtvkitTvInputSessionIndex
+                    + ", id = " + Integer.toHexString(System.identityHashCode(this))
+                    + " }";
         }
     }
 
