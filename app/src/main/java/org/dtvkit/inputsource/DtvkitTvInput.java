@@ -4934,9 +4934,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                         break;
                     case MSG_UPDATE_TRACKINFO:
-                        if (mHbbTvManager != null) {
-                            runOnMainThread(() -> { mResourceOwnedByBr = mHbbTvManager.checkIsBroadcastOwnResource(); });
-                        }
+                        runOnMainThread(() -> {
+                            if (mHbbTvManager != null) {
+                                mResourceOwnedByBr = mHbbTvManager.checkIsBroadcastOwnResource();
+                            }
+                        });
+
                         if (!checkTrackInfoUpdate()) {
                             if (mHandlerThreadHandle != null) {
                                 mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
