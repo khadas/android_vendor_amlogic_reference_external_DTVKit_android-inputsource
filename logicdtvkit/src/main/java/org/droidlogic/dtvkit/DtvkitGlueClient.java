@@ -303,6 +303,11 @@ public class DtvkitGlueClient {
         mListener = Listener;
     }
 
+    public void removeSubtileListener(SubtitleListener Listener) {
+        if (mListener == Listener)
+            mListener = null;
+    }
+
     public void setPidFilterListener(PidFilterListener Listener) {
         mPidListener = Listener;
     }

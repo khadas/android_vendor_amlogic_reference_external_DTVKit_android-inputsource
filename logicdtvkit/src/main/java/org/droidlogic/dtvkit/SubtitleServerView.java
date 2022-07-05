@@ -202,7 +202,7 @@ public class SubtitleServerView extends View {
     }
 
     public void destroy() {
-        DtvkitGlueClient.getInstance().setSubtileListener(null);
+        DtvkitGlueClient.getInstance().removeSubtileListener(mSubListener);
         mHandler.removeCallbacksAndMessages(null);
         mHandler.post(() -> {
             if (overlay1 != null) {
