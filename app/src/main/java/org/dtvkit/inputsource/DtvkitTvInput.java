@@ -4039,6 +4039,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else {
                 if (mView.handleKeyDown(keyCode, event)) {
                     used = true;
+                } else if (keyCode == KeyEvent.KEYCODE_ZOOM_OUT) {
+                    used = true;
                 } else if (isTeletextNeedKeyCode(keyCode) && playerIsTeletextOn()) {
                     used = true;
                 } else {
@@ -4066,6 +4068,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 used = super.onKeyUp(keyCode, event);
             } else {
                 if (mView.handleKeyUp(keyCode, event)) {
+                    used = true;
+                } else if (keyCode == KeyEvent.KEYCODE_ZOOM_OUT) {
+                    if (playerIsTeletextOn()) {
+                        playerStopTeletext();
+                        notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
+                    } else {
+                        playerStartTeletext(-1);
+                        if (playerIsTeletextStarted()) {
+                            notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, playerGetSelectedTeleTextTrackId());
+                        }
+                    }
                     used = true;
                 } else if (isTeletextNeedKeyCode(keyCode) && playerIsTeletextOn()) {
                     dealTeletextKeyCode(keyCode);
@@ -7261,7 +7274,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.i(TAG, "playerGetSelectedTeleTextTrackId skip tele sub");
                         continue;
                     }
-                    trackId = "id=" + teletextStream.getInt("index") + "&type=6" + "&teletext=1&hearing=0&flag=TTX";//TYPE_DTV_TELETEXT_IMG
+                    trackId = "id=" + teletextStream.getInt("index") + "&type=6" + "&teletext=1&hearing=0&flag=none";//TYPE_DTV_TELETEXT_IMG
                     Log.i(TAG, "playerGetSelectedTeleTextTrackId trackId = " + trackId);
                     break;
                 }
