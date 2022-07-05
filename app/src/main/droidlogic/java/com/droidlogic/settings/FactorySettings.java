@@ -157,13 +157,16 @@ public class FactorySettings {
                 String signalType = isDvbs ? "DVB-S" : "full";
                 LocalBroadcastManager.getInstance(mContext).registerReceiver(syncReceiver,
                         new IntentFilter(EpgSyncJobService.ACTION_SYNC_STATUS_CHANGED));
-                EpgSyncJobService.cancelAllSyncRequests(mContext);
-                /*EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(mContext,
-                    mInput, true, new ComponentName(mContext, DtvkitEpgSync.class), new Bundle());*/
+
                 Bundle parameters = new Bundle();
                 parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
                 parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, signalType);
-                EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(mContext, mInput, false,new ComponentName(mContext, DtvkitEpgSync.class), parameters);
+
+                Intent intent = new Intent(mContext, com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+                intent.putExtra("inputId", mInput);
+                intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+                intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
+                mContext.startService(intent);
            }
         }
     }

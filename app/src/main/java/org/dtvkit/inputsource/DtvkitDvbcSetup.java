@@ -138,13 +138,15 @@ public class DtvkitDvbcSetup extends Activity {
 
         setSearchStatus("Updating guide");
         startMonitoringSync();
-        // By default, gets all channels and 1 hour of programs (DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS)
-        EpgSyncJobService.cancelAllSyncRequests(this);
 
         // If the intent that started this activity is from Live Channels app
         String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
         Log.i(TAG, String.format("inputId: %s", inputId));
-        EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
+
+        Intent intent = new Intent(this, com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+        intent.putExtra("inputId", inputId);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+        startService(intent);
     }
 
     private void startMonitoringSearch() {

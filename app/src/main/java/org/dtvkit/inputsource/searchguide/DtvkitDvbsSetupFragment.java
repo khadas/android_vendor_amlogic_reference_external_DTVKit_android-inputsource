@@ -736,14 +736,18 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         mStartSync = true;
         setSearchStatus("Updating guide");
         startMonitoringSync();
-        // By default, gets all channels and 1 hour of programs (DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS)
-        EpgSyncJobService.cancelAllSyncRequests(getActivity());
+
         Log.i(TAG, String.format("inputId: %s", inputId));
-        //EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
         Bundle parameters = new Bundle();
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "DVB-S");
-        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(getActivity(), inputId, (mFoundServiceNumber > 0), new ComponentName(getActivity(), DtvkitEpgSync.class), parameters);
+
+        Intent intent = new Intent(getActivity(), com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+        intent.putExtra("inputId", inputId);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, (mFoundServiceNumber > 0));
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
+        getActivity().startService(intent);
         DataProviderManager.putBooleanValue(getActivity(), ConstantManager.KEY_IS_SEARCHING, false);
     }
 

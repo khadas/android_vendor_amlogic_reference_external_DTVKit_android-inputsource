@@ -809,8 +809,6 @@ public class DtvkitIsdbtSetup extends Activity {
         setSearchStatus("Updating guide", "");
         setStrengthAndQualityStatus("","");
         startMonitoringSync();
-        // By default, gets all channels and 1 hour of programs (DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS)
-        EpgSyncJobService.cancelAllSyncRequests(this);
 
         // If the intent that started this activity is from Live Channels app
         String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
@@ -824,7 +822,13 @@ public class DtvkitIsdbtSetup extends Activity {
         }
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == searchMode ? EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO : EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "ISDB-T");
-        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, inputId, (mFoundServiceNumber > 0),new ComponentName(this, DtvkitEpgSync.class), parameters);
+
+        Intent intent = new Intent(this, com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+        intent.putExtra("inputId", inputId);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, (mFoundServiceNumber > 0));
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
+        startService(intent);
     }
 
     private void startMonitoringSearch() {

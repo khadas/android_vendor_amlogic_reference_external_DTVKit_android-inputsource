@@ -311,8 +311,10 @@ public class DtvkitSettingService extends Service {
     }
 
     private void updatingGuide() {
-        EpgSyncJobService.cancelAllSyncRequests(this);
-        EpgSyncJobService.requestImmediateSync(this, DTVKIT_INPUT_ID, true, new ComponentName(this, DtvkitEpgSync.class));
+        Intent intent = new Intent(this, com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+        intent.putExtra("inputId", DTVKIT_INPUT_ID);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+        startService(intent);
     }
 
     private boolean checkAndCreatPvrFolderInStorage(String storagePath) {
@@ -380,13 +382,18 @@ public class DtvkitSettingService extends Service {
             Log.d(TAG, "mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
             mFoundServiceNumber = mServiceList.length();
         }
-        EpgSyncJobService.cancelAllSyncRequests(this);
+
         Bundle parameters = new Bundle();
         if (needCheckLcn) {
             parameters.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_LCN_CONFLICT, false);
         }
-        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, DTVKIT_INPUT_ID, (mFoundServiceNumber > 0),
-            new ComponentName(this, DtvkitEpgSync.class), parameters);
+
+        Intent intent = new Intent(this, com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+        intent.putExtra("inputId", DTVKIT_INPUT_ID);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, (mFoundServiceNumber > 0));
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
+        startService(intent);
     }
 
     private int getFoundServiceNumber() {

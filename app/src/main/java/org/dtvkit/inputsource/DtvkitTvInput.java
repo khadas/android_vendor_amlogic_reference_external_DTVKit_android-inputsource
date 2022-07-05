@@ -50,6 +50,7 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.os.Process;
 import android.os.SystemClock;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
@@ -70,9 +71,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import android.support.annotation.NonNull;
-
 import com.amlogic.hbbtv.HbbTvManager;
 import com.droidlogic.app.AudioConfigManager;
 import com.droidlogic.app.AudioSystemCmdManager;
@@ -87,6 +86,7 @@ import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 import com.droidlogic.dtvkit.companionlibrary.model.Program;
 import com.droidlogic.dtvkit.companionlibrary.model.RecordedProgram;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
+import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.settings.ConvertSettingManager;
@@ -502,17 +502,23 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
             if (EpgSyncJobService.SYNC_FINISHED.equals(status)) {
-                sendEmptyMessageToInputThreadHandler(MSG_STOP_MONITOR_SYNCING);
+                String from = intent.getStringExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM);
                 DtvkitTvInputSession mainSession = getMainTunerSession();
-                if (mainSession != null) {
-                    Bundle bundle = new Bundle();
-                    if ("CiplusUpdateService".equals(mDynamicDbSyncTag)) {
-                        bundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED);
-                        mainSession.sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, bundle);
-                    } else {
+                Bundle bundle = new Bundle();
+                if (TextUtils.equals("DvbUpdatedChannel", from)) {
+                    sendEmptyMessageToInputThreadHandler(MSG_STOP_MONITOR_SYNCING);
+                    if (mainSession != null) {
                         mainSession.sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
                     }
+                } else if (TextUtils.equals("CiplusUpdateService", from)) {
+                    sendEmptyMessageToInputThreadHandler(MSG_STOP_MONITOR_SYNCING);
+                    if (TextUtils.equals(from, mDynamicDbSyncTag) && mainSession != null) {
+                        bundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED);
+                        mainSession.sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, bundle);
+                    }
                     mDynamicDbSyncTag = "";
+                } else {
+                    Log.d(TAG, "syncReceiver, ignore Msg is from:" + from);
                 }
             }
         }
@@ -727,13 +733,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private void updateDtvkitDatabase() {
         Log.i(TAG, "update Dtvkit Database start");
         checkAndUpdateLcn();
-        EpgSyncJobService.cancelAllSyncRequests(this);
-        ComponentName sync = new ComponentName(this, DtvkitEpgSync.class);
         Bundle parameters = new Bundle();
-        //parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
-        String inputId = TextUtils.isEmpty(mInputId) ? com.droidlogic.dtvkit.inputsource.service.DtvkitSettingService.DTVKIT_INPUT_ID : mInputId;
-        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, inputId, false,sync, parameters);
+        Intent intent = new Intent(this, DtvkitEpgSync.class);
+        intent.putExtra("inputId", mInputId);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, "updateDtvkitDatabase");
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
+        startService(intent);
     }
 
     private boolean sendEmptyMessageToInputThreadHandler(int what) {
@@ -4474,35 +4480,43 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 } else if (signal.equals("DvbUpdatedEventPeriods")) {
                     Log.i(TAG, "DvbUpdatedEventPeriods");
-                    ComponentName sync = new ComponentName(outService, DtvkitEpgSync.class);
                     checkAndUpdateLcn();
                     int dvbSource = getCurrentDvbSource();
                     EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
-                    EpgSyncJobService.requestImmediateSync(outService, mInputId, false, sync);
+                    Intent intent = new Intent(outService, DtvkitEpgSync.class);
+                    intent.putExtra("inputId", mInputId);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+                    startService(intent);
                 } else if (signal.equals("DvbUpdatedEventNow")) {
                     Log.i(TAG, "DvbUpdatedEventNow");
-                    ComponentName sync = new ComponentName(outService, DtvkitEpgSync.class);
                     checkAndUpdateLcn();
                     int dvbSource = getCurrentDvbSource();
                     EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
-                    EpgSyncJobService.requestImmediateSync(outService, mInputId, true, sync);
+                    Intent intent = new Intent(outService, DtvkitEpgSync.class);
+                    intent.putExtra("inputId", mInputId);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+                    startService(intent);
                 } else if (signal.equals("DvbUpdatedChannel")) {
                     Log.i(TAG, "DvbUpdatedChannel");
-                    ComponentName sync = new ComponentName(outService, DtvkitEpgSync.class);
                     checkAndUpdateLcn();
                     int dvbSource = getCurrentDvbSource();
                     EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
-                    EpgSyncJobService.requestImmediateSync(outService, mInputId, false, false, sync);
+                    Intent intent = new Intent(outService, DtvkitEpgSync.class);
+                    intent.putExtra("inputId", mInputId);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
+                    startService(intent);
                     sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);
                 } else if (signal.equals("CiplusUpdateService")) {
                     //update CiOpSearchRequest search result
                     Log.i(TAG, "CiplusUpdateService");
-                    EpgSyncJobService.cancelAllSyncRequests(outService);
-                    ComponentName sync = new ComponentName(outService, DtvkitEpgSync.class);
                     Bundle parameters = new Bundle();
-                    //parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
                     parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
-                    EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(outService, mInputId, false,sync, parameters);
+
+                    Intent intent = new Intent(outService, DtvkitEpgSync.class);
+                    intent.putExtra("inputId", mInputId);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
+                    startService(intent);
                     if (TextUtils.isEmpty(mDynamicDbSyncTag)) {
                         mDynamicDbSyncTag = signal;
                         sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);

@@ -16,6 +16,7 @@ import com.droidlogic.fragment.dialog.DialogCallBack;
 import com.droidlogic.fragment.dialog.DialogManager;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -1000,8 +1001,10 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         String inputId = getActivity().getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
                         if (inputId != null) {
                             Log.d(TAG, "KEY_REMOVE_SATELLITE sync inputId = " + inputId);
-                            ComponentName sync = new ComponentName(getActivity(), DtvkitEpgSync.class);
-                            EpgSyncJobService.requestImmediateSync(getActivity(), inputId, true, sync);
+                            Intent intent = new Intent(getActivity(), com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+                            intent.putExtra("inputId", inputId);
+                            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+                            getActivity().startService(intent);
                         } else {
                             Log.d(TAG, "KEY_REMOVE_SATELLITE empty inputId");
                         }
@@ -1067,8 +1070,10 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         String inputId = getActivity().getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
                         if (inputId != null) {
                             Log.d(TAG, "KEY_REMOVE_TRANSPONDER sync inputId = " + inputId);
-                            ComponentName sync = new ComponentName(getActivity(), DtvkitEpgSync.class);
-                            EpgSyncJobService.requestImmediateSync(getActivity(), inputId, true, sync);
+                            Intent intent = new Intent(getActivity(), com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+                            intent.putExtra("inputId", inputId);
+                            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+                            getActivity().startService(intent);
                         } else {
                             Log.d(TAG, "KEY_REMOVE_TRANSPONDER empty inputId");
                         }

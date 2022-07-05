@@ -193,12 +193,14 @@ public class DtvkitDvbSettings extends Activity {
     }
 
     private void updatingGuide() {
-        EpgSyncJobService.cancelAllSyncRequests(this);
         String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
         Log.i(TAG, String.format("inputId: %s", inputId));
         int dvbSource = mParameterManager.getCurrentDvbSource();
         EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
-        EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class));
+        Intent intent = new Intent(this, com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+        intent.putExtra("inputId", inputId);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+        startService(intent);
     }
 
     private String dvbSourceToChannelTypeString(int source) {

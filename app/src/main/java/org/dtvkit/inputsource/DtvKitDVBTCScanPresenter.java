@@ -509,10 +509,8 @@ public class DtvKitDVBTCScanPresenter {
         }
         startProviderSyncMonitor();
         Log.d(TAG, "updateChannelListAndCheckLcn mServiceNumber = " + mServiceNumber + "|needCheckLcn = " + needCheckLcn);
-        // By default, gets all channels and 1 hour of programs (DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS)
-        EpgSyncJobService.cancelAllSyncRequests(mContext);
+
         Log.i(TAG, String.format("inputId: %s", mInputId));
-        //EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
         Bundle parameters = new Bundle();
         if (needCheckLcn) {
             parameters.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_LCN_CONFLICT, false);
@@ -523,7 +521,13 @@ public class DtvKitDVBTCScanPresenter {
         }
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode ? EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO : EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, DVB_T == mDVBType ? "DVB-T" : "DVB-C");
-        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(mContext, mInputId, (mServiceNumber > 0), new ComponentName(mContext, DtvkitEpgSync.class), parameters);
+
+        Intent intent = new Intent(mContext, com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+        intent.putExtra("inputId", mInputId);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, (mServiceNumber > 0));
+        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
+        mContext.startService(intent);
         if (null != mUpdateScanView) {
             mUpdateScanView.updateScanStatus("Start save channel, please wait.");
         }
