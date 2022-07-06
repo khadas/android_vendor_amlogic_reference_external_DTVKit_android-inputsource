@@ -1634,9 +1634,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     inValidNumber++;
                     continue;
                 }
-                String title = recordings.getJSONObject(i).getString("service");
+                String title = recordings.getJSONObject(i).getString("name");
                 if (TextUtils.isEmpty(title)) {
-                    title = recordings.getJSONObject(i).getString("name");
+                    title = recordings.getJSONObject(i).getString("service");
                 }
 
                 RecordedProgram recording = new RecordedProgram.Builder()
@@ -2161,6 +2161,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             .setEndTimeUtcMillis(startRecordTimeMillis + recordingDurationMillis/*endRecordTimeMillis*/);//stream card may playback
                 } else {
                     builder = new RecordedProgram.Builder(program);
+                    String name = getRecordName(channel, program);
+                    builder.setTitle(name);
+                    renameRecord(name, recordingUri);
                 }
                 data = new InternalProviderData();
                 String currentPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
@@ -2335,6 +2338,40 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "doFinalReleaseByThread end  index = " + mCurrentRecordIndex);
             });
         }
+
+        public boolean renameRecord(String name, String dvbUri) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(dvbUri);
+                args.put(name);
+                DtvkitGlueClient.getInstance().request("Recording.renameRecording", args);
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+                return false;
+            }
+            return true;
+        }
+
+        private String getRecordName(Channel channel, Program program) {
+            String name = "";
+            if (channel != null) {
+                name = channel.getDisplayName();
+            }
+
+            if (program == null) {
+                program = getCurrentStreamProgram(mChannel, PropSettingManager.getCurrentStreamTime(true));
+            }
+
+            if (program != null) {
+                String title = program.getTitle();
+                if (title != null && title.length() > 0) {
+                    name = name +" [" + title + "]";
+                }
+            }
+
+            return name;
+        }
+
 
         private Program getProgram(Uri uri) {
             Program program = null;
