@@ -74,8 +74,8 @@ public class DtvkitGlueClient {
         //Log.d(TAG, "notifyPidFilterData received!!!");
         try {
             if (mPidListener != null) {
-                 mDirectBuffer.clear();
-                 mPidListener.onPidFilterData(mDirectBuffer);//ByteBuffer data
+                mDirectBuffer.clear();
+                mPidListener.onPidFilterData(mDirectBuffer);//ByteBuffer data
             }
         } catch (NullPointerException e) {
             Log.d(TAG, "HBBTV PidListener NULL!");

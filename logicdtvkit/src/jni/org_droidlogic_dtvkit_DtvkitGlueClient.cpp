@@ -75,6 +75,7 @@ static int teletext_region_id = 0;
 #define TT_EVENT_GO_TO_SUBTITLE 31
 #define TT_EVENT_SET_REGION_ID 32
 
+#define FMQ_QUEUE_SIZE 188
 
 static void postSubtitleDataEx(int type, int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, const char *data);
 static void clearSubtitleDataEx();
@@ -302,8 +303,7 @@ void  DTVKitClientJni::once_run(void)
          mInstance = new DTVKitClientJni();
 }
 
-static size_t QueueSize = 188;
-static uint8_t data[188] = {0};
+static uint8_t data[FMQ_QUEUE_SIZE] = {0};
 void*  DTVKitClientJni::pid_run(void *arg)
 {
     ALOGD("Enter pid_run");
@@ -329,36 +329,37 @@ void*  DTVKitClientJni::pid_run(void *arg)
     android::hardware::EventFlag::createEventFlag(fwAddr, &efGroup);
     assert(nullptr != efGroup);
 
-    ALOGD("fmq %p, efGroup %p\n", fmq, efGroup);
+    ALOGD("fmq %p, fwAddr %p, efGroup %p\n", fmq, fwAddr, efGroup);
 
     while (true) {
-            //ALOGD("Enter fmq loop");
             if (!gJNIReady) {
                 ALOGE("gJNIReady not ready!");
                 sleep(1);
                 continue;
             }
 
-            //size_t numMessagesMax = fmq->getQuantumCount();
-            //size_t size = fmq->getQuantumSize();
+            /*size_t numMessagesMax = fmq->getQuantumCount();
+            size_t size = fmq->getQuantumSize();
+            ALOGD("numMessages %lu,size %lu\n", numMessagesMax, size);*/
+
             size_t availToRead = fmq->availableToRead();
             //ALOGD("availToRead %d\n", availToRead);
             if (availToRead > 0) {
                 bool result = fmq->readBlocking(&data[0],
-                                 QueueSize,
+                                 FMQ_QUEUE_SIZE,
                                  static_cast<uint32_t>(kFmqNotFull),
                                  static_cast<uint32_t>(kFmqNotEmpty),
                                  5000000000 /* timeOutNanos */,
                                  efGroup);
                 if (!result) {
                     ALOGE("fmq read failed!");
+                    continue;
                 }
 
-                postPidFilterData(QueueSize, data);
-                //ALOGD("numMessages %lu,size %lu\n", numMessagesMax, size);
+                postPidFilterData(FMQ_QUEUE_SIZE, data);
            } else {
                 usleep(100*1000);//100ms
-            }
+           }
     }
 
 }
