@@ -2934,7 +2934,7 @@ public class ParameterMananer {
         return result;
     }
 
-    private void setTimeZone(int timeZone) {
+    public void setTimeZone(int timeZone) {
         JSONArray array = new JSONArray();
         try {
             array.put(timeZone);

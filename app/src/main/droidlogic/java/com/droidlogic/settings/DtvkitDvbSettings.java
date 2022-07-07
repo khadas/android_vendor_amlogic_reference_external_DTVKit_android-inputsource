@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 import com.droidlogic.app.SystemControlManager;
 import com.droidlogic.fragment.ParameterMananer;
@@ -81,6 +82,7 @@ public class DtvkitDvbSettings extends Activity {
 
     private FormatDialogCallBack mFormatDialogCallBack = null;
     private StorageStatusBroadcastReceiver mStorageStatusBroadcastReceiver = null;
+    private TimeZoneChangedBroadcastReceiver mTimeZoneChangedBroadcastReceiver = null;
     private String mCurrentFormattingDeviceId = null;
     private String mCurrentFormattingVolumeId = null;
     private PendingIntent mAlarmIntent = null;
@@ -151,6 +153,12 @@ public class DtvkitDvbSettings extends Activity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        registerTimeZoneChangedReceiver();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         needClearAudioLangSetting = false;
@@ -166,6 +174,12 @@ public class DtvkitDvbSettings extends Activity {
         if (needSyncChannels) {
             updatingGuide();
         }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unRegisterTimeZoneChangedReceiver();
     }
 
     @Override
@@ -775,6 +789,20 @@ public class DtvkitDvbSettings extends Activity {
         }
     }
 
+    private final class TimeZoneChangedBroadcastReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "onReceive " + intent.toURI());
+            if (intent != null) {
+                if (Intent.ACTION_TIMEZONE_CHANGED.equals(intent.getAction())) {
+                    int timeZone = TimeZone.getDefault().getOffset(System.currentTimeMillis());
+                    Log.i(TAG, "timeZone changed : " + timeZone);
+                    mParameterManager.setTimeZone(timeZone / 1000);
+                }
+            }
+        }
+    }
+
     private void registerStorageStatusReceiver() {
         try {
             if (mStorageStatusBroadcastReceiver == null) {
@@ -798,6 +826,31 @@ public class DtvkitDvbSettings extends Activity {
             Log.d(TAG, "unRegisterStorageStatusReceiver Exception " + e.getMessage());
         }
     }
+
+    private void registerTimeZoneChangedReceiver() {
+        try {
+            if (mTimeZoneChangedBroadcastReceiver == null) {
+                IntentFilter filter = new IntentFilter();
+                filter.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+                mTimeZoneChangedBroadcastReceiver = new TimeZoneChangedBroadcastReceiver();
+                registerReceiver(mTimeZoneChangedBroadcastReceiver, filter);
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "registerTimeZoneChangedReceiver Exception " + e.getMessage());
+        }
+    }
+
+    private void unRegisterTimeZoneChangedReceiver() {
+        try {
+            if (mTimeZoneChangedBroadcastReceiver != null) {
+                unregisterReceiver(mTimeZoneChangedBroadcastReceiver);
+                mTimeZoneChangedBroadcastReceiver = null;
+            }
+        } catch (Exception e) {
+
+        }
+    }
+
 
     private void showNetworkInfoConfirmDialog(final Context context, final JSONArray networkArray) {
         Log.d(TAG, "showNetworkInfoConfirmDialog networkArray = " + networkArray);
