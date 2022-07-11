@@ -43,6 +43,16 @@ enum {
     SUBTITLE_TUNE,
 };
 
+enum {
+    SUBTITLE_CTL_ATTACH = 100,
+    SUBTITLE_CTL_DETTACH,
+    SUBTITLE_CTL_DESTROY,
+    SUBTITLE_CTL_OPEN_USERDATA,
+    SUBTITLE_CTL_CLOSE_USERDATA,
+    SUBTITLE_CTL_SET_REGION_ID,
+    SUBTITLE_CTL_RESET_FOR_SEEK,
+};
+
 typedef struct datablock_s {
     int width;
     int height;
@@ -97,5 +107,39 @@ class SubtitleDataListenerImpl : public SubtitleListener {
         virtual void onServerDied();
         void onSubtitleUIEvent(int uiCmd, const std::vector<int> &params) {}
 };
+
+class SubtitleMessageHandler : public android::MessageHandler {
+    public:
+        SubtitleMessageHandler() {}
+        void setParcelData(parcel_t parcel);
+        void setParam(int    param);
+    protected:
+        virtual ~SubtitleMessageHandler() {}
+    private:
+        void handleMessage(const Message& message);
+        parcel_t parcel;
+        int param;
+};
+
+struct SubtitleLooperThread : public Thread {
+public:
+    SubtitleLooperThread(sp<Looper> looper)
+        : mLooper(looper) {
+    }
+
+    virtual bool threadLoop() {
+        if(mLooper.get() == nullptr)
+            return false;
+        int32_t ret = mLooper->pollOnce(-1);
+        return true;
+    }
+
+protected:
+    virtual ~SubtitleLooperThread() {}
+
+private:
+    sp<Looper> mLooper;
+};
+
 #endif/*__ORG_DTVKIT_INPUTSOURCE_CLIENT_H__*/
 
