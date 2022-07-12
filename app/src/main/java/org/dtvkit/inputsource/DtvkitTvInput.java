@@ -194,7 +194,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private enum PlayerState {
-        STOPPED, PLAYING
+        STOPPED, PLAYING, BLOCKED, SCRAMBLED,
     }
 
     private enum RecorderState {
@@ -3582,7 +3582,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
             if (clear) {
-                Log.w(TAG, "updateTrackAndSelect: clear Tracks because of locked or scrambled program");
+                Log.w(TAG, "updateTrackAndSelect: clear Tracks, because not playing status");
                 mTunedTracks = new ArrayList<>();
                 notifyTracksChanged(mTunedTracks);
                 return;
@@ -4334,6 +4334,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 msg.arg1 = 0;
                                 mMainHandle.sendMessageDelayed(msg, 0);
                             }
+                            playerState = PlayerState.BLOCKED;
                             notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", Rating));
                             break;
                         case "badsignal":
@@ -4419,11 +4420,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             }
                             break;
                         case "scambled":
-                            /*notify scambled*/
-                            Log.i(TAG, "** scambled **");
+                            Log.i(TAG, "** scrambled **");
+                            playerState = PlayerState.SCRAMBLED;
                             notifySessionEvent("signal_scrambled_service", null);
                             break;
                         case "not_running":
+                            Log.i(TAG, "** not_running **");
                             notifySessionEvent("signal_invalid_service", null);
                             break;
                         default:
@@ -4441,6 +4443,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             // clear tracks
                             msg.arg2 = 1;
                         } else {
+                            msg.arg2 = 0;
                             if (TextUtils.equals(type, "dvblive")) {
                                 msg.arg1 = 0;
                             } else if (TextUtils.equals(type, "dvbrecording")) {
@@ -4711,19 +4714,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 } else if (signal.equals("DvbUpdatedChannelData")) {
                     Log.i(TAG, "DvbUpdatedChannelData");
-                    List<TvTrackInfo> tracks = playerGetTracks(mTunedChannel, false);
-                    if (!tracks.equals(mTunedTracks)) {
-                        mTunedTracks = tracks;
-                        notifyTracksChanged(mTunedTracks);
-                    }
-
-                    int trackId = playerGetSelectedAudioTrack();
-                    Log.i(TAG, "audio track selected: " + trackId);
-                    mCurrentAudioTrackId = trackId;
-                    notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(trackId));
-                    initSubtitleOrTeletextIfNeed();
                     //check trackinfo update
                     if (mHandlerThreadHandle != null) {
+                        mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKS_AND_SELECT);
+                        Message msg = mHandlerThreadHandle.obtainMessage(MSG_UPDATE_TRACKS_AND_SELECT);
+                        if (playerState != PlayerState.PLAYING) {
+                            // clear tracks
+                            msg.arg2 = 1;
+                        } else {
+                            msg.arg2 = 0;
+                        }
+                        mHandlerThreadHandle.sendMessage(msg);
                         //mHandlerThreadHandle.removeMessages(MSG_UPDATE_TRACKINFO);
                         mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
                     }
