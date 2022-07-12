@@ -15,6 +15,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Parcelable;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -35,9 +36,11 @@ public class DtvkitSettingService extends Service {
     private static final String TAG = "DtvkitSettingService";
     private static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
     private static final int SYNC_FINISHED = 0x01;
-    private static final int SYNC_RUNNING = 0x02;
+    private static final int SYNC_RUNNING  = 0x02;
+    private static final int SYNC_ONSIGNAL = 0x03;
     public static final String EPGSYNC_STOPPED = "EPGSYNC_STOPPED";
     public static final String EPGSYNC_RUNNING = "EPGSYNC_RUNNING";
+    public static final String ONSIGNAL        = "ONSIGNAL";
     protected ParameterMananer mParameterManager;
     protected HbbTvUISetting mHbbTvUISetting;
 
@@ -46,6 +49,7 @@ public class DtvkitSettingService extends Service {
         super.onCreate();
         mParameterManager = new ParameterMananer(this, DtvkitGlueClient.getInstance());
         mHbbTvUISetting   = new HbbTvUISetting();
+        DtvkitGlueClient.getInstance().registerSignalHandler(mSignalHandler);
     }
 
     @Override
@@ -54,6 +58,19 @@ public class DtvkitSettingService extends Service {
         return new DtvkitSettingBinder();
     }
 
+    private DtvkitGlueClient.SignalHandler mSignalHandler= new DtvkitGlueClient.SignalHandler() {
+        @Override
+        public void onSignal(String signal, JSONObject data) {
+            //Log.d(TAG,"signal:"+signal+",json:"+data.toString());
+            Message mess = mHandler.obtainMessage(SYNC_ONSIGNAL, 0, 0, ONSIGNAL);
+            Bundle b = new Bundle();
+            b.putString("signal",  signal);
+            b.putString("data",  data.toString());
+            mess.setData(b);
+            boolean info = mHandler.sendMessage(mess);
+        }
+    };
+
     private RemoteCallbackList<IMGRCallbackListener> mListenerList = new RemoteCallbackList<>();
 
     private Handler mHandler = new Handler() {
@@ -61,11 +78,20 @@ public class DtvkitSettingService extends Service {
         public void handleMessage(Message msg){
             super.handleMessage(msg);
             //MGRMessage message = new MGRMessage(msg.what, msg.arg1, (String)(msg.obj));
-            String message = (String)(msg.obj);
+            String message = (String)(msg.obj);;
+            String signal = null;
+            String data   = null;
+            if (msg.what == SYNC_ONSIGNAL) {
+                Bundle b = msg.getData();
+                signal   = b.getString("signal");
+                data     = b.getString("data");
+            } else {
+                message = (String)(msg.obj);
+            }
             try{
                 int count = mListenerList.beginBroadcast();
                 for (int i = 0; i < count; i++) {
-                    mListenerList.getBroadcastItem(i).onRespond(message);
+                    mListenerList.getBroadcastItem(i).onRespond(message, signal, data);
                 }
                 mListenerList.finishBroadcast();
             } catch (RemoteException e){
@@ -265,6 +291,23 @@ public class DtvkitSettingService extends Service {
         public void renameRecord(String name, String uri) throws RemoteException {
             mParameterManager.renameRecord(name, uri);
         }
+
+        @Override
+        public String request(String resource, String arguments) {
+            JSONObject obj = null;
+            try {
+                JSONArray args = new JSONArray(arguments);
+                obj = DtvkitGlueClient.getInstance().request(resource, args);
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+                return "";
+            }
+            if (obj != null) {
+                return obj.toString();
+            } else {
+                return "";
+            }
+        }
     }
 
     private void updatingGuide() {
@@ -311,6 +354,7 @@ public class DtvkitSettingService extends Service {
     @Override
     public void onDestroy() {
         stopMonitoringSync();
+        DtvkitGlueClient.getInstance().unregisterSignalHandler(mSignalHandler);
         super.onDestroy();
     }
 

@@ -65,6 +65,8 @@ interface IDtvkitSetting {
 
     void renameRecord(String name, String uri);
 
+    String request(String resource, String arguments);
+
     void registerListener(IMGRCallbackListener listener);
 
     void unregisterListener(IMGRCallbackListener listener);
