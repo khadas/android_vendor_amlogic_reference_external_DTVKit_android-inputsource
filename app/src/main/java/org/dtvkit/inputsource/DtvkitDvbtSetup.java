@@ -1048,7 +1048,6 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private void stopSearch() {
-        mStartSearch = false;
         updateSearchButton(true);
         try {
             JSONArray args = new JSONArray();
@@ -1056,7 +1055,8 @@ public class DtvkitDvbtSetup extends Activity {
             DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
         } catch (Exception e) {
             setSearchStatus("Failed to finish search", e.getMessage());
-            return;
+        } finally {
+            mStartSearch = false;
         }
     }
 
