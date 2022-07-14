@@ -96,6 +96,7 @@ import com.google.common.collect.Lists;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.droidlogic.dtvkit.SubtitleServerView;
+import org.droidlogic.dtvkit.MhegOverlayView;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -1153,7 +1154,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private class DtvkitOverlayView extends FrameLayout {
-        private NativeOverlayView nativeOverlayView;
+        private MhegOverlayView nativeOverlayView;
         private CiMenuView ciOverlayView;
         private TextView mText;
         private ImageView mTuningImage;
@@ -1184,7 +1185,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             addView(mHbbTvFrameLayout);
             mSubServerView = new SubtitleServerView(getContext(), mainHandler);
             addView(mSubServerView);
-            nativeOverlayView = new NativeOverlayView(getContext());
+            nativeOverlayView = new MhegOverlayView(getContext(), mainHandler);
             addView(nativeOverlayView);
 
             if (enableCC) {
@@ -1742,103 +1743,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         Log.d(TAG, "recordings: db[" + recordingsInDB.size() + "] dtvkit[" + recordings.length() + "]");
         return updateRcordsFromDisk(recordingsInDB, recordings);
-    }
-
-    class NativeOverlayView extends View {
-        Bitmap overlay1 = null;
-        Rect src, dst;
-
-        Semaphore sem = new Semaphore(1);
-
-        private final DtvkitGlueClient.OverlayTarget mTarget =
-                (src_width, src_height, dst_x, dst_y, dst_width, dst_height, data) -> {
-                    if (src_width == 0 || src_height == 0) {
-                        if (dst_width == 9999) {
-                            // 9999 dst_width indicates the overlay should be cleared
-                            //sem.acquireUninterruptibly();
-                            //Canvas canvas = new Canvas(overlay1);
-                            //canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                            //sem.release();
-                        }
-                    } else {
-                        if (data.length == 0)
-                            return;
-                        sem.acquireUninterruptibly();
-                        if (overlay1 == null) {
-                            overlay1 = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
-                            //Canvas canvas = new Canvas(overlay1);
-                            //canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                        }
-                        Rect overlay_dst = new Rect(0, 0, overlay1.getWidth(), overlay1.getHeight());
-                        Bitmap region = Bitmap.createBitmap(data, 0, src_width, src_width, src_height,
-                                Bitmap.Config.ARGB_8888);
-                        if ((dst_width == 0)
-                                || (dst_width == 0)
-                                || (dst_width < (src_width + dst_x))
-                                || (dst_height < (src_height + dst_y))) {
-                            overlay_dst.left = dst_x;
-                            overlay_dst.top = dst_y;
-                            overlay_dst.right = overlay1.getWidth() - overlay_dst.left;
-                            overlay_dst.bottom = overlay1.getHeight() - overlay_dst.top;
-                        } else {
-                            if (dst_x > 0) {
-                                float scaleX = (float) (overlay1.getWidth()) / (float) (dst_width);
-                                overlay_dst.left = (int) (scaleX * dst_x);
-                                overlay_dst.right = (int) (scaleX * (src_width + dst_x));
-                            }
-                            if (dst_y > 0) {
-                                float scaleY = (float) (overlay1.getHeight()) / (float) (dst_height);
-                                overlay_dst.top = (int) (scaleY * dst_y);
-                                overlay_dst.bottom = (int) (scaleY * (src_height + dst_y));
-                            }
-                        }
-                        Canvas canvas = new Canvas(overlay1);
-                        canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                        canvas.drawBitmap(region, null, overlay_dst, null);
-                        region.recycle();
-                        sem.release();
-                        postInvalidate();
-                    }
-                };
-
-        public NativeOverlayView(Context context) {
-            super(context);
-            DtvkitGlueClient.getInstance().setOverlayTarget(mTarget);
-        }
-
-        public void setSize(int width, int height) {
-            dst = new Rect(0, 0, width, height);
-        }
-
-        public void setSize(int left, int top, int right, int bottom) {
-            dst = new Rect(left, top, right, bottom);
-        }
-
-        public void setOverlayTarget(DtvkitGlueClient.OverlayTarget target) {
-            sem.acquireUninterruptibly();
-            DtvkitGlueClient.getInstance().setOverlayTarget(target);
-            sem.release();
-        }
-
-        public void destroy() {
-            sem.acquireUninterruptibly();
-            DtvkitGlueClient.getInstance().setOverlayTarget(null);
-            if (overlay1 != null) {
-                overlay1.recycle();
-                overlay1 = null;
-            }
-            sem.release();
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            sem.acquireUninterruptibly();
-            super.onDraw(canvas);
-            if (overlay1 != null) {
-                canvas.drawBitmap(overlay1, src, dst, null);
-            }
-            sem.release();
-        }
     }
 
     @Override
@@ -2780,10 +2684,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             }
             if (mhegTune) {
-                mhegSuspend();
-                if (mhegGetNextTuneInfo(dvbUri) == 0) {
-                    notifyChannelRetuned(channelUri);
-                }
+                notifyChannelRetuned(channelUri);
+                //mhegSuspend();
+                //if (mhegGetNextTuneInfo(dvbUri) == 0) {
+                //    notifyChannelRetuned(channelUri);
+                //}
             }
 
             boolean mainMuteStatus = playerGetMute(); // must before stop
@@ -2825,7 +2730,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.i(TAG, "onFinish ignoreMheg:" + ignoreMheg + ", ignoreFcc:" + ignoreFcc);
             boolean doStop = stopTimeshiftIfNeeded();
             if (!ignoreMheg) {
-                mhegStop();
+                //mhegStop();
             }
 
             if (!ignoreFcc) {
@@ -4420,10 +4325,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 if (!isAv) {
                                     timeshiftAvailable.setNo(false);
                                 }
-                                Log.i(TAG, "starting mhegStart " + dvbUri);
-                                if (mHandlerThreadHandle != null) {
-                                    mHandlerThreadHandle.obtainMessage(MSG_START_MHEG5, 0/*mhegSsupend*/, 0, dvbUri).sendToTarget();
-                                }
+                                //Log.i(TAG, "starting mhegStart " + dvbUri);
+                                //if (mHandlerThreadHandle != null) {
+                                //    mHandlerThreadHandle.obtainMessage(MSG_START_MHEG5, 0/*mhegSsupend*/, 0, dvbUri).sendToTarget();
+                                //}
                             }
                             if (mTunedChannel != null) {
                                 if (TvContractUtils.getBooleanFromChannelInternalProviderData(
@@ -4869,17 +4774,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                           mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 1/*mhegTune*/, 0, retuneUri).sendToTarget();
                       }
                    }
-                   else
-                   {
+                   //else
+                   //{
                       //if we couldn't find the channel uri for some reason,
                       // try restarting MHEG on the new service anyway
                       //mhegSuspend();
                       //mhegStartService(dvbUri);
                       //dealt in message queue
-                      if (mHandlerThreadHandle != null) {
-                          mHandlerThreadHandle.obtainMessage(MSG_START_MHEG5, 1/*mhegSsupend*/, 0, dvbUri).sendToTarget();
-                      }
-                   }
+                      //if (mHandlerThreadHandle != null) {
+                      //    mHandlerThreadHandle.obtainMessage(MSG_START_MHEG5, 1/*mhegSsupend*/, 0, dvbUri).sendToTarget();
+                      //}
+                   //}
                 }
                 else if (signal.equals("RecordingDiskFull")) {
                     if (timeshiftRecorderState != RecorderState.STOPPED) {
@@ -4931,8 +4836,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_TIMESHIFT_PLAY_SET_PLAYBACKPARAMS = 36;
 
         //mheg5
-        protected static final int MSG_START_MHEG5 = 40;
-        protected static final int MSG_STOP_MHEG5 = 41;
+        //protected static final int MSG_START_MHEG5 = 40;
+        //protected static final int MSG_STOP_MHEG5 = 41;
 
         //ci plus update
         protected static final int MSG_CI_UPDATE_PROFILE_OVER = 50;
@@ -5097,6 +5002,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         PlaybackParams params = (PlaybackParams) msg.obj;
                         setTimeShiftSetPlaybackParams(params);
                         break;
+                    /*
                     case MSG_START_MHEG5:
                         String dvbUri = (String) msg.obj;
                         boolean mhegSuspendStatus = msg.arg1 == 1;
@@ -5105,6 +5011,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     case MSG_STOP_MHEG5:
                         mhegStop();
                         break;
+                    */
                     case MSG_CI_UPDATE_PROFILE_OVER:
                         Bundle updateEvent = new Bundle();
                         updateEvent.putString(ConstantManager.CI_PLUS_COMMAND,
@@ -5567,7 +5474,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                   which upset the normal av process following, so stop it first,
                   thus, mheg will not be valid since here to the next onTune.
                 */
-                mhegStop();
+                //mhegStop();
                 ret = playerPlayTimeshiftRecording(paused, current);
                 mIsTimeshiftingPlayed = ret;
             } else {
@@ -7582,31 +7489,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }
 
-    private void mhegSuspend() {
-        Log.e(TAG, "Mheg suspending");
-        try {
-            JSONArray args = new JSONArray();
-            DtvkitGlueClient.getInstance().request("Mheg.suspend", args);
-            Log.e(TAG, "Mheg suspended");
-        } catch (Exception e) {
-            Log.e(TAG, "mhegSuspend" + e.getMessage());
-        }
-        lastMhegUri = null;
-    }
-
-    private int mhegGetNextTuneInfo(String dvbUri) {
-        int quiet = -1;
-        try {
-            JSONArray args = new JSONArray();
-            args.put(dvbUri);
-            quiet = DtvkitGlueClient.getInstance().request("Mheg.getTuneInfo", args).getInt("data");
-            Log.e(TAG, "Tune info: " + quiet);
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-        }
-        return quiet;
-    }
-
     private JSONObject playerGetStatus() {
         return playerGetStatus(INDEX_FOR_MAIN);
     }
@@ -7796,51 +7678,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
         return state;
-    }
-
-    private void startMheg(String dvbUri, boolean mhegSuspend) {
-        Log.d(TAG, "Mheg dvbUri =" + dvbUri + "Mheg lastDvbUri = " + lastMhegUri);
-        if (dvbUri.equals(lastMhegUri)) {
-            Log.d(TAG, "startMheg mMhegStarted and mheg dvbUri is the same!!");
-            return;
-        } else if (lastMhegUri != null) {
-            mhegStop();
-            Log.d(TAG, "mheg stop in start mheg function");
-        }
-        if (mhegSuspend) {
-            mhegSuspend();
-        }
-        if (mhegStartService(dvbUri) != -1) {
-            lastMhegUri = dvbUri;
-            Log.d(TAG, "startMheg mhegStarted");
-        } else {
-            lastMhegUri = null;
-            Log.d(TAG, "startMheg mheg failed to start");
-        }
-    }
-
-    private int mhegStartService(String dvbUri) {
-        int quiet = -1;
-        try {
-            JSONArray args = new JSONArray();
-            args.put(dvbUri);
-            quiet = DtvkitGlueClient.getInstance().request("Mheg.start", args).getInt("data");
-            Log.d(TAG, "Mheg started");
-        } catch (Exception e) {
-            Log.i(TAG, "mhegStartService Exception = " + e.getMessage());
-        }
-        return quiet;
-    }
-
-    private void mhegStop() {
-        try {
-            JSONArray args = new JSONArray();
-            DtvkitGlueClient.getInstance().request("Mheg.stop", args);
-            Log.d(TAG, "Mheg stopped");
-        } catch (Exception e) {
-            Log.i(TAG, "mhegStop Exception = " + e.getMessage());
-        }
-        lastMhegUri = null;
     }
 
     private boolean checkActiveRecording(JSONObject recordingStatus) {

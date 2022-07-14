@@ -308,6 +308,11 @@ public class DtvkitGlueClient {
             mListener = null;
     }
 
+    public void removeOverlayTarget(OverlayTarget target) {
+        if (mTarget == target)
+            mTarget = null;
+    }
+
     public void setPidFilterListener(PidFilterListener Listener) {
         mPidListener = Listener;
     }
