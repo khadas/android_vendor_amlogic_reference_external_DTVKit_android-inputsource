@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/common_background">
+
+    <TextView
+        android:id="@+id/fvp_scan_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:text="scan_status" />
+
+    <TextView
+        android:id="@+id/fvp_digital_channel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/fvp_scan_status"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:text="Digital channels:" />
+
+    <TextView
+        android:id="@+id/fvp_digital_channel_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/fvp_digital_channel"
+        android:layout_marginLeft="@dimen/px_10.0"
+        android:layout_below="@id/fvp_scan_status"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:text="0" />
+
+    <TextView
+        android:id="@+id/fvp_ip_channel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/fvp_digital_channel_number"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:text="IP channels:" />
+
+    <TextView
+        android:id="@+id/fvp_ip_channel_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/fvp_digital_channel_number"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:layout_toRightOf="@id/fvp_ip_channel"
+        android:layout_marginLeft="@dimen/px_10.0"
+        android:text="0" />
+
+    <VideoView
+        android:id="@+id/fvp_video_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/fvp_scan_progress"
+        android:layout_below="@id/fvp_ip_channel"
+        android:layout_centerHorizontal="true"
+        android:layout_marginLeft="@dimen/px_400.0"
+        android:layout_marginTop="@dimen/px_50.0"
+        android:layout_marginRight="@dimen/px_400.0"
+        android:layout_marginBottom="@dimen/px_50.0"/>
+
+    <ProgressBar
+        android:id="@+id/fvp_scan_progress"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="@dimen/ut_scan_progress_width"
+        android:layout_height="@dimen/ut_scan_progress_height"
+        android:progressDrawable="@drawable/tv_scan_progress"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="@dimen/px_50.0"
+        android:progress="0"/>
+
+    <TextView
+        android:id="@+id/fvp_scan_progress_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/fvp_scan_progress"
+        android:layout_marginLeft="@dimen/px_15.0"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="@dimen/px_50.0"
+        android:text="0" />
+
+</RelativeLayout>

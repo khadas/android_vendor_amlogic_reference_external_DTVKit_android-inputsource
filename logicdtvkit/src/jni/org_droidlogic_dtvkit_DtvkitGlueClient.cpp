@@ -685,6 +685,7 @@ static void nativeUnCrypt(JNIEnv *env, jclass clazz, jstring src, jstring dest) 
 
     if (handle == nullptr) {
         ALOGE(" nativeUnCrypt error! cannot open uncrypto lib");
+        return;
     }
 
     typedef void (*fnFontRelease)(const char*, const char*);
