@@ -471,6 +471,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 mainSession.sendBundleToAppByTif(action, request);
                             }
                             break;
+                        case ConstantManager.VALUE_CI_PLUS_COMMAND_ECI_CONTENT_PROTECTION:
+                            //eci content protection
+                            //am broadcast -a "ci_plus_info" --es command "eci_content_protection" --es "content_protection" "content_protection"
+                            if (mainSession != null) {
+                                Bundle request = new Bundle();
+                                request.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_ECI_CONTENT_PROTECTION);
+                                request.putBoolean("is_content_protection", intent.getStringExtra("content_protection").equals("content_protection"));
+                                mainSession.sendBundleToAppByTif(action, request);
+                            }
+                            break;
                         default:
                             break;
                     }
@@ -4647,7 +4657,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.d(TAG, "IgnoreUserInput Exception = " + e.getMessage());
                     }
                 } else if (signal.equals("PvrPlaybackStatus")
-                        || signal.equals("content_protection")
                         || signal.equals("playback_camid_mismatch")
                         || signal.equals("playback_license_timeout")
                         || signal.equals("playback_license_received_after_timeout")) {
@@ -4656,6 +4665,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     playbackBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_PVRPLAYBACK_STATUS);
                     playbackBundle.putString("playback", data.optString("playback", ""));
                     playbackBundle.putInt("errcode", data.optInt("errcode", 0));
+                    sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
+                } else if (signal.equals("content_protection")
+                        || signal.equals("no_content_protection")) {
+                    Bundle playbackBundle = new Bundle();
+                    playbackBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_ECI_CONTENT_PROTECTION);
+                    playbackBundle.putBoolean("is_content_protection", signal.equals("content_protection"));
                     sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
                 } else if (signal.equals("trick_limit")) {
                     //Ciplus notify that can't FF/FB when PVR play
