@@ -4408,9 +4408,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 }
                             }
                             if (mTunedChannel != null) {
-                                if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
-                                    notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
-                                } else if (TvContractUtils.getBooleanFromChannelInternalProviderData(
+                                if (TvContractUtils.getBooleanFromChannelInternalProviderData(
                                         mTunedChannel, Channel.KEY_IS_DATA_SERVICE, false)) {
                                     if (!isAv) {
                                         Log.d(TAG, "data_service isAv=false can not play well!");
