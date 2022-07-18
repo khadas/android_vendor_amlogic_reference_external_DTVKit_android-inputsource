@@ -124,6 +124,7 @@ public class DtvkitDvbtSetup extends Activity {
             if (mStartSearch) {
                 //onSearchFinished();
                 sendFinishSearch(false);
+                mStartSync = true;
                 return true;
             } else {
                 stopMonitoringSearch();

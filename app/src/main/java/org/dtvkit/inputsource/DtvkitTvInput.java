@@ -3240,7 +3240,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.w(TAG, "onTuneByHandlerThreadHandle: targechannel not exist,"
                             + "we will tune to the first channel and notice livetv do refresh.");
                     sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
-                    return;
                 }
             }
 
