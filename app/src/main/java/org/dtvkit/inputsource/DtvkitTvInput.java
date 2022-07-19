@@ -3575,10 +3575,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.d(TAG, "initSubtitleOrTeletextIfNeed isSubOn = " + isSubOn
                     + ", isTeleOn = " + isTeleOn + ", subTrackId = " + subTrackId
                     + ", teleTrackId = " + teleTrackId);
-            if (isSubOn) {
-                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, subTrackId);
-            } else if (isTeleOn) {
-                //notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, teleTrackId);//marked it, because dvbcore don't keep teletext on/off status;
+            if (isTeleOn) {
+                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, teleTrackId);
+            } else if (isSubOn) {
+                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, subTrackId);;
             } else {
                 notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
             }
