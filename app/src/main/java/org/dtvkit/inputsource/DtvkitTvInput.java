@@ -1959,6 +1959,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             mChannel = uri;
             Channel channel = getChannel(uri);
+            PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+            if (!powerManager.isInteractive()) {
+                //In standby mode, schedule recording on other source(for example HDMI), need to call this interface
+                //Otherwise, all interfaces of Dvb cannot return, and an ANR exception occurs.
+                DvbRequestDtvDevice();
+            }
             if (recordingCheckAvailability(getChannelInternalDvbUri(channel))) {
                 Log.i(TAG, "recording path available");
                 StringBuffer tuneResponse = new StringBuffer();
@@ -7714,6 +7720,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
         return state;
+    }
+
+    private void DvbRequestDtvDevice() {
+        try {
+            JSONArray args = new JSONArray();
+            args.put("");
+            DtvkitGlueClient.getInstance().request("Dvb.requestDtvDevice", args);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
     }
 
     private boolean checkActiveRecording(JSONObject recordingStatus) {
