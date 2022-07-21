@@ -123,6 +123,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.stream.Collectors;
 
 public class DtvkitTvInput extends TvInputService implements SystemControlEvent.DisplayModeListener {
     private static final String TAG = "DtvkitTvInput";
@@ -1630,7 +1631,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.w(TAG, e.getMessage());
         }
 
+        Map<Long, String> currentActiveRecordings = null;
+        if (mRecordingStarted) {
+            currentActiveRecordings = filterCurrentActiveRecording(recordingGetActiveRecordings());
+        }
         for (long id : recordingsInDB) {
+            if (null != currentActiveRecordings) {
+                if (currentActiveRecordings.containsKey(id)) {
+                    Log.d(TAG, "active record not delete id = " + id);
+                    continue;
+                }
+            }
             ops.add(ContentProviderOperation.newDelete(
                     TvContract.buildRecordedProgramUri(id))
                     .build());
@@ -1643,6 +1654,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.e(TAG, "skip invalid length," + recordings.getJSONObject(i).getString("uri"));
                     inValidNumber++;
                     continue;
+                }
+                if (null != currentActiveRecordings) {
+                    String uri = recordings.getJSONObject(i).getString("uri");
+                    if (currentActiveRecordings.containsValue(uri)) {
+                        Log.d(TAG, "active record not insert uri = " + uri);
+                        continue;
+                    }
                 }
                 String title = recordings.getJSONObject(i).getString("name");
                 if (TextUtils.isEmpty(title)) {
@@ -2080,11 +2098,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Program program = getProgram(uri);
             if (program != null) {
                 startRecordTimeMillis = program.getStartTimeUtcMillis();
-                startRecordSystemTimeMillis = System.currentTimeMillis();
+                startRecordSystemTimeMillis = SystemClock.uptimeMillis();
                 dvbUri = getProgramInternalDvbUri(program);
             } else {
                 startRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);
-                startRecordSystemTimeMillis = System.currentTimeMillis();
+                startRecordSystemTimeMillis = SystemClock.uptimeMillis();
                 dvbUri = getChannelInternalDvbUri(getChannel(mChannel));
                 durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
             }
@@ -2136,7 +2154,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void updateRecordingToDb(boolean insert, boolean check, Object obj) {
             endRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);
-            endRecordSystemTimeMillis = System.currentTimeMillis();
+            endRecordSystemTimeMillis = SystemClock.uptimeMillis();
             Log.d(TAG, "updateRecordingToDb:" + recordingUri);
             if (recordingUri == null) {
                 return;
@@ -7978,6 +7996,23 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
         return checkedTrue;
+    }
+
+    private Map<Long, String> filterCurrentActiveRecording(JSONArray activeRecordings) {
+        if ((null == activeRecordings) || (0 == activeRecordings.length()) || (0 == mCachedRecordingsPrograms.size()) ) {
+            Log.d(TAG, "filterCurrentActiveRecording no active recording" );
+            return null;
+        }
+        //filter active Recording
+        Map<Long, String> currentRecordingMap = mCachedRecordingsPrograms.entrySet().stream().filter(map->{
+            return checkActiveRecordings(activeRecordings,
+                (JSONObject activeRecording)->{return TextUtils.equals(activeRecording.optString("uri"), map.getValue());});})
+                    .collect(Collectors.toMap(p->p.getKey(), p->p.getValue()));
+        Log.d(TAG, "filterCurrentActiveRecording currentRecordingMap : " + currentRecordingMap.toString());
+        if (0 == currentRecordingMap.size()) {
+            return null;
+        }
+        return currentRecordingMap;
     }
 
     private boolean recordingIsRecordingPathActive(JSONObject recordingStatus, int path) {
