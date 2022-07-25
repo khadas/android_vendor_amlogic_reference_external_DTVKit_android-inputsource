@@ -795,7 +795,7 @@ public class DtvkitDvbSettings extends Activity {
             Log.d(TAG, "onReceive " + intent.toURI());
             if (intent != null) {
                 if (Intent.ACTION_TIMEZONE_CHANGED.equals(intent.getAction())) {
-                    int timeZone = TimeZone.getDefault().getOffset(System.currentTimeMillis());
+                    int timeZone = TimeZone.getDefault().getRawOffset();
                     Log.i(TAG, "timeZone changed : " + timeZone);
                     mParameterManager.setTimeZone(timeZone / 1000);
                 }
