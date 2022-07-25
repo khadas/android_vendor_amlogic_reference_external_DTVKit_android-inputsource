@@ -123,7 +123,7 @@ public class CiMenuView extends LinearLayout {
                                 case ConstantManager.VALUE_CIPLUS_MMI_CLOSE:
                                     //am broadcast -a ci_menu_info --es command "ci_menu_mmi_close"
                                     if (isMenuVisible) {
-                                        exitCiMenu();
+                                        closeCiPlusMenu();
                                     }
                                     break;
                                 default:
@@ -157,25 +157,13 @@ public class CiMenuView extends LinearLayout {
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
         public void onSignal(String signal, JSONObject data) {
-            if (signal.equals("CiModuleInsert")) {
+            if (signal.equals("CIPLUS_CARD_INSERT")) {
                 clearPreviousMenu();
                 menuCloseHandler("Ci Module is inserted", EXIT_TO_QUIT);
                 setMenuVisible();
                 Log.i(TAG, "Ci Menu: OnSignal " + signal);
             }
-            else if (signal.equals("CiOpenModule")) {
-                clearPreviousMenu();
-                Log.i(TAG, "Ci Menu: OnSignal " + signal);
-                signalTriggered = true;
-            }
-            else if (signal.equals("CiCloseModule")) {
-                Log.i(TAG, "Ci Menu: OnSignal " + signal);
-                clearPreviousMenu();
-                signalTriggered = true;
-                menuCloseHandler("Ci Module closed by HOST", EXIT_TO_QUIT);
-                setMenuInvisible();
-            }
-            else if (signal.equals("CiRemoveModule")) {
+            else if (signal.equals("CIPLUS_CARD_REMOVE")) {
                 Log.i(TAG, "Ci Menu: OnSignal " + signal);
                 clearPreviousMenu();
                 signalTriggered = true;
@@ -195,7 +183,7 @@ public class CiMenuView extends LinearLayout {
                 new CiMmiRequestMenu(signal, data);
             } else if (signal.equals("CIPLUS_MMI_CLOSE")) {
                 if (isMenuVisible) {
-                    exitCiMenu();
+                    closeCiPlusMenu();
                 }
             }
         }
@@ -480,7 +468,7 @@ public class CiMenuView extends LinearLayout {
         boolean used = false;
 
         if (isMenuVisible) {
-            exitCiMenu();
+            closeCiPlusMenu();
             used = true;
         }
         return used;
@@ -531,7 +519,7 @@ public class CiMenuView extends LinearLayout {
         return used;
     }
 
-    private boolean enterCiMenu() {
+    private boolean enterCiPlusMenu() {
         boolean result = false;
         try {
             JSONObject obj = DtvkitGlueClient.getInstance().request("CIPlus.enterMMI", new JSONArray());
@@ -549,7 +537,7 @@ public class CiMenuView extends LinearLayout {
 
         setMenuVisible();
 
-        if (enterCiMenu() == false) {
+        if (enterCiPlusMenu() == false) {
             setMenuTitleText("Ci Module not detected");
             setDivideLineVisible(false);
             setMenuSubTitleText("",false);
@@ -564,7 +552,7 @@ public class CiMenuView extends LinearLayout {
         }
     }
 
-    private void exitCiMenu() {
+    private void closeCiPlusMenu() {
         try {
             JSONObject obj = DtvkitGlueClient.getInstance().request("CIPlus.closeMMI", new JSONArray());
         } catch (Exception ignore) {

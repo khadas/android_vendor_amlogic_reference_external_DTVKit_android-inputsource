@@ -4523,7 +4523,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         channelBundle.putInt(ConstantManager.VALUE_CI_PLUS_TUNE_QUIETLY, 0);
                         sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, channelBundle);
                     }
-                } else if (signal.equals("CiOpSearchRequest")) {
+                } else if (signal.equals("CIPLUS_PROFILE_SCAN_REQUIRED ")) {
                     //tell app to search related module
                     try {
                         int module = data.getInt("data");
@@ -4542,13 +4542,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     } catch (Exception e) {
                         Log.e(TAG, "CiOpSearchRequest Exception = " + e.getMessage());
                     }
-                } else if (signal.equals("CiOpSearchFinished")) {
+                } else if (signal.equals("CIPLUS_PROFILE_SCAN_PROGRESS")) {
                     // only a status and skip it for the moment
                     try {
-                        Log.d(TAG, "Ci operator search has finished");
-                        Bundle finishBundle = new Bundle();
-                        finishBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_FINISHED);
-                        sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, finishBundle);
+                        int status = data.getInt("value");
+                        if (status == 3) {
+                            Log.d(TAG, "Ci operator search has finished");
+                            Bundle finishBundle = new Bundle();
+                            finishBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_FINISHED);
+                            sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, finishBundle);
+                        }
                     } catch (Exception e) {
                         Log.e(TAG, "CiOpSearchFinished Exception = " + e.getMessage());
                     }
@@ -7002,6 +7005,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     //status has four value: enter exit play
+    //notifyCiProfileEvent has been abandoned
     private boolean playerNotifyCiProfileEvent(String action, String ciNumber, String profileName, String profileVersion) {
         boolean result;
         try {
@@ -7025,7 +7029,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         try {
             JSONArray args = new JSONArray();
             args.put(module);
-            JSONObject resp = DtvkitGlueClient.getInstance().request("Player.doOperatorSearch", args);
+            JSONObject resp = DtvkitGlueClient.getInstance().request("CIPlus.startOperatorProfileSearch", args);
             if (resp != null) {
                 result = resp.optBoolean("data");
             }
