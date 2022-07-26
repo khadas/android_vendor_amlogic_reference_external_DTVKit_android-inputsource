@@ -463,10 +463,10 @@ public class DtvkitDvbtSetup extends Activity {
                 if (autoScanTypePos < 2) {
                     visibility = View.VISIBLE;
                 }
-                dvbc_mode_containner.setVisibility(visibility);
+                dvbc_mode_containner.setVisibility(View.GONE);
                 dvbc_mode_spinner.setSelection(getResources().getStringArray(R.array.dvbc_mode_entries).length - 1);
                 dvbc_networkid_containner.setVisibility(visibility);
-                dvbc_symbol_containner.setVisibility(visibility);
+                dvbc_symbol_containner.setVisibility(View.GONE);
                 dvbc_frequency_containner.setVisibility(visibility);
             }
             checkBoxLcn.setVisibility(View.VISIBLE);
