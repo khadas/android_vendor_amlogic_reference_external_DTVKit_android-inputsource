@@ -188,11 +188,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         Intent intent = new Intent(getIntent());
         final String pvrStatus = intent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
 
-        int dvbSource = mDataPresenter.getParameterManager().getCurrentDvbSource();
-        if (dvbSource != currentDvbSource) {
-            mDataPresenter.getParameterManager().setCurrentDvbSource(currentDvbSource);
-        }
-
+        mDataPresenter.getParameterManager().setCurrentDvbSource(currentDvbSource);
         int requestCode = 0;
         String className = null;
         switch (currentDvbSource) {
