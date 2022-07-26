@@ -152,6 +152,7 @@ public class ParameterMananer {
     public static final String KEY_SET_DAYLIGHT_SAVING_MODE = "key_set_daylight_saving_mode";
     public static final String KEY_SET_TIME_ZONE = "key_set_time_zone";
     public static final String KEY_GET_TIME_ZONE = "key_get_time_zone";
+    public static final String KEY_SET_SUBTITLES_ENABLED = "key_set_subtitles_enabled";
 
     //default value that is save by index
     public static final int KEY_SATALLITE_DEFAULT_VALUE_INDEX = 0;
@@ -2330,6 +2331,10 @@ public class ParameterMananer {
             case KEY_SET_TIME_ZONE:
                 setTimeZone(Integer.parseInt(newJsonValues));
                 break;
+            case KEY_SET_SUBTITLES_ENABLED:
+                Log.i(TAG,"KEY_SET_SUBTITLES_ENABLED");
+                setSubtitlesEnabled(Boolean.valueOf(newJsonValues));
+                break;
             default:
                 break;
         }
@@ -2960,5 +2965,9 @@ public class ParameterMananer {
         } catch (Exception e) {
             Log.i(TAG,"setTimeZone fail");
         }
+    }
+
+    private void setSubtitlesEnabled(boolean enabled) {
+        playerSetSubtitlesOn(enabled, 0);
     }
 }

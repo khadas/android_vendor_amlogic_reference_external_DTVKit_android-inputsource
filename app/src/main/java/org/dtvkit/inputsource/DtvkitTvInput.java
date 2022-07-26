@@ -3377,7 +3377,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         return result;
                     }
                 }
-                if (mCaptioningManager != null && mCaptioningManager.isEnabled()
+                if ((!getFeatureSupportCaptioningManager()
+                        || (mCaptioningManager != null && mCaptioningManager.isEnabled()))
                         && selectSubtitleOrTeletext(isTele, subType, trackId)) {
                     notifyTrackSelected(type, sourceTrackId);
                     if (mHbbTvManager != null) {
@@ -3520,7 +3521,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 notifyTracksChanged(mTunedTracks);
                 return;
             }
-            if (retuneSubtile && mCaptioningManager != null && mCaptioningManager.isEnabled()) {
+            if (retuneSubtile && (!getFeatureSupportCaptioningManager()
+                    || (mCaptioningManager != null && mCaptioningManager.isEnabled()))) {
                 playerSetSubtitlesOn(true);
                 if (isDvrPlaying == 1) {
                     dvrSubtitleFlag = 1;
