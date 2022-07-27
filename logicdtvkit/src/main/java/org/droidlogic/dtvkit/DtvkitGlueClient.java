@@ -16,6 +16,7 @@ import org.json.JSONObject;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 
 public class DtvkitGlueClient {
@@ -30,7 +31,7 @@ public class DtvkitGlueClient {
     private Handler mMainHandler = null;
 
     private static DtvkitGlueClient mSingleton = null;
-    private final ArrayList<Pair<Integer, SignalHandler>> mHandlers = new ArrayList<>();
+    private final CopyOnWriteArrayList<Pair<Integer, SignalHandler>> mHandlers = new CopyOnWriteArrayList<>();
     // Notification object used to listen to the start of the rpcserver daemon.
     //private final ServiceNotification mServiceNotification = new ServiceNotification();
     //private static final int DTVKITSERVER_DEATH_COOKIE = 1000;
@@ -265,24 +266,9 @@ public class DtvkitGlueClient {
         return mSingleton;
     }
 
-    private void registerSignalHandlerUnlock(SignalHandler handler, int id) {
-        mHandlers.add(new Pair<Integer, SignalHandler>(id, handler));
-    }
-
-    private void unregisterSignalHandlerUnlock(SignalHandler handler) {
-        Iterator<Pair<Integer,SignalHandler>> it = mHandlers.iterator();
-        while (it.hasNext()) {
-            Pair<Integer, SignalHandler> pair = it.next();
-            if (pair.second == handler)
-                it.remove();
-        }
-    }
-
     public void registerSignalHandler(SignalHandler handler, int id) {
-        synchronized (mHandlers) {
-            unregisterSignalHandlerUnlock(handler);
-            registerSignalHandlerUnlock(handler, id);
-        }
+        mHandlers.removeIf(pair -> pair.second == handler);
+        mHandlers.add(new Pair<>(id, handler));
     }
 
     public void registerSignalHandler(SignalHandler handler) {
@@ -290,9 +276,7 @@ public class DtvkitGlueClient {
     }
 
     public void unregisterSignalHandler(SignalHandler handler) {
-        synchronized (mHandlers) {
-            unregisterSignalHandlerUnlock(handler);
-        }
+        mHandlers.removeIf(pair -> pair.second == handler);
     }
 
     public void setOverlayTarget(OverlayTarget target) {
