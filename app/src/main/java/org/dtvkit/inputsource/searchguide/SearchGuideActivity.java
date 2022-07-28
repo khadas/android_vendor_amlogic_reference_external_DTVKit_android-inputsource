@@ -232,8 +232,8 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 || currentDvbSource == ParameterMananer.SIGNAL_ISDBT) {
             intent.putExtra(DataMananer.KEY_IS_DVBT, true);
         }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        finish();
+        //intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        //finish();
         startActivityForResult(intent, requestCode);
     }
 
@@ -258,7 +258,6 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
             case REQUEST_CODE_START_ISDBT_ACTIVITY:
                 if (resultCode == RESULT_OK) {
                     setResult(RESULT_OK, data);
-                    finish();
                 } else {
                     setResult(RESULT_CANCELED);
                 }
@@ -267,6 +266,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 Log.d(TAG, "onActivityResult other request");
                 break;
         }
+        finish();
     }
 
     @Override
