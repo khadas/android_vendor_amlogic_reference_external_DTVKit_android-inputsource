@@ -3943,7 +3943,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     long length = e_t_l[2];
                     currentPosition = e_t_l[0];
                     if ((length - currentPosition) < 1000) {
-                        currentPosition = recordedProgram.getRecordingDurationMillis();
+                        currentPosition = length;//use length if recorder length - current play position < 1s
                     }
                     comments = "playing back record program.";
                 }
