@@ -134,6 +134,8 @@ public class ConstantManager {
     public static final String ACTION_HBBTV_APPLICATION_RUNNING = "hbbtv_running";
     //search
     public static final String KEY_IS_SEARCHING = "is_channel_searching";
+    //fvp
+    public static final String ACTION_START_FVP_APP = "action_start_fvp_app";
 
     public static final Map<String, String> PI_TO_VIDEO_FORMAT_MAP = new HashMap<>();
     static {

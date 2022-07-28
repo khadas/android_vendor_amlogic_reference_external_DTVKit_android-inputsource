@@ -3850,6 +3850,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 }
                 onUnblockContent(TvContentRating.createRating("com.android.tv", "DVB", "DVB_0"));
+            } else if (TextUtils.equals(ConstantManager.ACTION_START_FVP_APP, action) && null != data) {
+                String appUrl = data.getString("app_url");
+                Log.d(TAG, "ACTION_START_FVP_APP appUrl = " + appUrl);
+                if (null != mHbbTvManager && null != appUrl) {
+                    mHbbTvManager.loadUrlApplication(appUrl);
+                } else {
+                    Log.e(TAG, "ACTION_START_FVP_APP error  HbbTvManager is null");
+                }
             }
         }
 
