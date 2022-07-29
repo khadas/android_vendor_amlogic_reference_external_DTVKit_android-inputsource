@@ -104,7 +104,8 @@ public class DtvkitDvbtSetup extends Activity {
         @Override
         public void onReceive(Context context, final Intent intent) {
             String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
-            if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
+            if (status.equals(EpgSyncJobService.SYNC_FINISHED)
+                    || status.equals(EpgSyncJobService.SYNC_ERROR)) {
                 setSearchStatus("Finished", "");
                 setStrengthAndQualityStatus("","");
                 mStartSync = false;

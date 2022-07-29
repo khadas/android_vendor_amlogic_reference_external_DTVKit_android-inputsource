@@ -126,7 +126,8 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         @Override
         public void onReceive(Context context, final Intent intent) {
             String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
-            if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
+            if (status.equals(EpgSyncJobService.SYNC_FINISHED)
+                    || status.equals(EpgSyncJobService.SYNC_ERROR)) {
                 updateSearchUi(true, true, "Finished");
                 mStartSync = false;
                 finish();
