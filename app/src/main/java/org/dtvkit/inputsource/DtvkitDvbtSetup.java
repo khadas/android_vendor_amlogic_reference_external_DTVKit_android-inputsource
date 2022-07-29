@@ -813,7 +813,7 @@ public class DtvkitDvbtSetup extends Activity {
         array.put(scanType);
         array.put(operator);
         array.put(true);//retune, clear db
-        array.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
+        array.put(DataMananer.VALUE_DVBC_MODE_LIST[isAutoSearch() ? 5 : mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
         if (mDvbcNitAutoEdit != null) {
             array.put(mDvbcNitAutoEdit.getValue());
         } else {
