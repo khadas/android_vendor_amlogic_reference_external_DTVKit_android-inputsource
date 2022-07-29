@@ -22,7 +22,7 @@
      <color name="color_text_prompt">#FF808080</color>
      <color name="transparent">#00000000</color>
 
-    <!-- pin dialiog -->
+    <!-- pin dialog -->
     <color name="pin_dialog_text_color">#C0EEEEEE</color>
     <color name="pin_dialog_background">#24252B</color>
     <color name="pin_number_picker_focused_background">#007AC3</color>

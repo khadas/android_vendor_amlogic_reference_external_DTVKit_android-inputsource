@@ -9,7 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.fragment.dialog.DialogManager;
 
 import com.droidlogic.dtvkit.inputsource.searchguide.OnNextListener;
@@ -21,14 +21,14 @@ public abstract class SearchStageFragment extends Fragment {
     private String mTitle = "";
     private OnNextListener mListener;
     private boolean canBackToPrevious = true;
-    private ParameterMananer mParameterManager;
+    private ParameterManager mParameterManager;
     private DialogManager mDialogManager;
     private boolean isM7Spec = false;
 
-    public final static int ACTIVITY_LIFECYCLE_ONSTART = 1;
-    public final static int ACTIVITY_LIFECYCLE_ONRESUME = 2;
-    public final static int ACTIVITY_LIFECYCLE_ONPAUSE = 3;
-    public final static int ACTIVITY_LIFECYCLE_ONSTOP = 4;
+    public final static int ACTIVITY_LIFECYCLE_ON_START = 1;
+    public final static int ACTIVITY_LIFECYCLE_ON_RESUME = 2;
+    public final static int ACTIVITY_LIFECYCLE_ON_PAUSE = 3;
+    public final static int ACTIVITY_LIFECYCLE_ON_STOP = 4;
 
     public String getTitle() {
         return mTitle;
@@ -126,11 +126,11 @@ public abstract class SearchStageFragment extends Fragment {
         mDialogManager = dialogManager;
     }
 
-    public ParameterMananer getParameterManager() {
+    public ParameterManager getParameterManager() {
         return mParameterManager;
     }
 
-    public void setParameterManager(ParameterMananer parameterManager) {
+    public void setParameterManager(ParameterManager parameterManager) {
         mParameterManager = parameterManager;
     }
 

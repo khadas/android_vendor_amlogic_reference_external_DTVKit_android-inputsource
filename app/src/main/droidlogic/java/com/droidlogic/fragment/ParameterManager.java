@@ -24,37 +24,36 @@ import android.util.Log;
 import android.os.Build.VERSION;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
-import com.droidlogic.dtvkit.inputsource.DataMananer;
+import com.droidlogic.dtvkit.inputsource.DataManager;
 import com.droidlogic.dtvkit.inputsource.ISO639Data;
 import com.droidlogic.dtvkit.inputsource.TargetRegionManager;
 
 import com.droidlogic.app.DataProviderManager;
-import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 
-public class ParameterMananer {
+public class ParameterManager {
 
-    private static final String TAG = "ParameterMananer";
-    private static final boolean DEBUG = PropSettingManager.getBoolean("vendor.sys.tv.debug.ParameterMananer", false);
+    private static final String TAG = "ParameterManager";
+    private static final boolean DEBUG = PropSettingManager.getBoolean("vendor.sys.tv.debug.ParameterManager", false);
     private Context mContext;
     private DtvkitGlueClient mDtvkitGlueClient;
-    private DataMananer mDataMananer;
+    private DataManager mDataManager;
     private DvbsParameterManager mDvbsParaManager;
 
-    public static final String ITEM_SATALLITE              = "satellite";
+    public static final String ITEM_SATELLITE              = "satellite";
     public static final String ITEM_TRANSPONDER            = "transponder";
     public static final String ITEM_LNB                    = "lnb";
     public static final String ITEM_DIRECTION              = "left";
-    public static final String ITEM_SATALLITE_OPTION       = "satallite_option";
-    public static final String ITEM_TRANSPONDER_OPTION     = "tansponder_option";
+    public static final String ITEM_SATELLITE_OPTION       = "satellite_option";
+    public static final String ITEM_TRANSPONDER_OPTION     = "transponder_option";
     public static final String ITEM_OPTION                 = "option";
 
-    public static final String SAVE_SATELITE_POSITION = "satellite_position";
+    public static final String SAVE_SATELLITE_POSITION = "satellite_position";
     public static final String SAVE_TRANSPONDER_POSITION = "transponder_position";
     public static final String SAVE_CURRENT_LIST_TYPE = "current_list_type";
 
     public static final String KEY_SATELLITES = "key_satellites";
-    public static final String KEY_SATALLITE = "key_satallite";
+    public static final String KEY_SATELLITE = "key_satellite";
     public static final String KEY_TRANSPONDER = "key_transponder";
     public static final String KEY_CURRENT_TYPE = "key_current_type";
     public static final String KEY_CURRENT_DIRECTION = "key_current_direction";
@@ -92,7 +91,7 @@ public class ParameterMananer {
     public static final String KEY_DISEQC1_2_DISH_MOVE_TO_POSITION = "key_dish_move_to_position";
     public static final String KEY_DISEQC1_3_LOCATION_STRING = "key_diseqc_location";
 
-    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATALLITE, KEY_TRANSPONDER,
+    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATELLITE, KEY_TRANSPONDER,
             KEY_LNB_TYPE, KEY_UNICABLE_SWITCH/*KEY_UNICABLE*/, KEY_LNB_POWER,
             KEY_22_KHZ, KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
     public static final String KEY_LNB_CUSTOM = "key_lnb_custom";
@@ -107,7 +106,7 @@ public class ParameterMananer {
     public static final int VALUE_LNB_CUSTOM_MIN = 0;
     public static final int VALUE_LNB_CUSTOM_MAX = 11750;
     //default value
-    public static final String KEY_SATALLITE_DEFAULT_VALUE = "null";
+    public static final String KEY_SATELLITE_DEFAULT_VALUE = "null";
     public static final String KEY_TRANSPONDER_DEFAULT_VALUE = "null";
     public static final String KEY_LNB_TYPE_DEFAULT_VALUE = "9750/10600";
     public static final String KEY_LNB_TYPE_DEFAULT_SINGLE_VALUE = "9750";
@@ -135,7 +134,7 @@ public class ParameterMananer {
 
     public static final String SECURITY_PASSWORD  = "security_password";
     public static final String TV_KEY_DTVKIT_SYSTEM = "tv_dtvkit_system";
-    public static final String KEY_LASTWAHTCHED_CHANNELID = "key_lastwatched_channelid";
+    public static final String KEY_LAST_WATCHED_CHANNEL_ID = "key_last_watched_channel_id";
     public static final String KEY_ACTIVE_RECORD_COUNT = "key_active_record_count";
     public static final String KEY_RESET_DEFAULT_AUDIO_STREAM = "key_reset_default_audio_stream";
     public static final String KEY_SET_CHANNEL_BLOCKED = "key_set_channel_blocked";
@@ -144,7 +143,7 @@ public class ParameterMananer {
     public static final String KEY_SET_GET_SPOKEN_SUBTITLE_ON = "key_set_get_set_spoken_subtitle_on";
     public static final String KEY_GET_CURRENT_COUNTRY_NAME = "key_get_country_name";
     public static final String KEY_SET_PIN_CODE_TO_CAM = "key_set_pin_code_to_cam";
-    public static final String KEY_REMOVE_OPERATOR_PROFILE_BYCAMID = "key_remove_operator_profile_byCamid";
+    public static final String KEY_REMOVE_OPERATOR_PROFILE_BY_CAM_ID = "key_remove_operator_profile_by_cam_id";
     public static final String KEY_LINK_BARKER_CHANNEL = "key_link_baker_channel";
     public static final String KEY_LEAVE_BARKER_CHANNEL = "key_leave_baker_channel";
     public static final String KEY_GET_PLATFORM_PROPERTY = "key_get_platform_property";
@@ -155,7 +154,7 @@ public class ParameterMananer {
     public static final String KEY_SET_SUBTITLES_ENABLED = "key_set_subtitles_enabled";
 
     //default value that is save by index
-    public static final int KEY_SATALLITE_DEFAULT_VALUE_INDEX = 0;
+    public static final int KEY_SATELLITE_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_TRANSPONDER_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_LNB_TYPE_DEFAULT_INDEX_INDEX = 1;
     //unicable
@@ -203,11 +202,11 @@ public class ParameterMananer {
     public static final String AUTO_SEARCHING_MODE       = "auto_searching_mode";
     public static final String AUTO_SEARCHING_HOUR       = "auto_searching_hour";
     public static final String AUTO_SEARCHING_MINUTE     = "auto_searching_minute";
-    public static final String AUTO_SEARCHING_REPTITION  = "auto_searching_reptition";
-    public static final String AUTO_SEARCHING_SIGNALTYPE = "channel_signal_type";
+    public static final String AUTO_SEARCHING_REPETITION  = "auto_searching_repetition";
+    public static final String AUTO_SEARCHING_SIGNAL_TYPE = "channel_signal_type";
 
     //defines related to LiveTv
-    public static final String TV_CURRENT_INPUTID = "tv_current_inputid";
+    public static final String TV_CURRENT_INPUT_ID = "tv_current_inputid";
     public static final String TV_ADTV_KEY = "ADTVInputService";
     public static final String TV_AV1_KEY = "AV1InputService";
     public static final String TV_AV2_KEY = "AV2InputService";
@@ -218,10 +217,10 @@ public class ParameterMananer {
     public static final int TV_SIG_SCRAMBLED = 4;
     public static final int TV_SIG_CHANNEL_LOCKED = 5;
 
-    public ParameterMananer(Context context, DtvkitGlueClient client) {
+    public ParameterManager(Context context, DtvkitGlueClient client) {
         this.mContext = context;
         this.mDtvkitGlueClient = client;
-        this.mDataMananer = new DataMananer(context);
+        this.mDataManager = new DataManager(context);
         this.mDvbsParaManager = DvbsParameterManager.getInstance(context);
     }
 
@@ -314,7 +313,7 @@ public class ParameterMananer {
                 defValue = VALUE_LNB_CUSTOM_MAX;
                 break;
             case AUTO_SEARCHING_MODE:
-            case AUTO_SEARCHING_REPTITION:
+            case AUTO_SEARCHING_REPETITION:
                 defValue = 0;
                 break;
             default:
@@ -343,13 +342,13 @@ public class ParameterMananer {
         }
         switch (key) {
             case KEY_CURRENT_TYPE:
-                defValue = ITEM_SATALLITE;
+                defValue = ITEM_SATELLITE;
                 break;
             case KEY_CURRENT_DIRECTION:
                 defValue = ITEM_DIRECTION;
                 break;
-            case KEY_SATALLITE:
-                defValue = KEY_SATALLITE_DEFAULT_VALUE;//ALL_SATALLITE[0];
+            case KEY_SATELLITE:
+                defValue = KEY_SATELLITE_DEFAULT_VALUE;//ALL_SATELLITE[0];
                 break;
             case KEY_TRANSPONDER:
                 defValue = KEY_TRANSPONDER_DEFAULT_VALUE;//ALL_TRANSPONDER[0];
@@ -480,24 +479,24 @@ public class ParameterMananer {
     }
 
     public void dishMove(int direction, int step) {
-        String derection = null;
+        String moveDirection = null;
         switch (direction) {
             case 0:
-                derection = "east";
+                moveDirection = "east";
                 break;
             case 1:
-                derection = "center";
+                moveDirection = "center";
                 break;
             case 2:
-                derection = "west";
+                moveDirection = "west";
                 break;
             default:
-                derection = "center";
+                moveDirection = "center";
                 break;
         }
         try {
             JSONArray args1 = new JSONArray();
-            args1.put(derection);
+            args1.put(moveDirection);
             args1.put(step);
             JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.dishMove", args1);
             if (resultObj != null) {
@@ -509,7 +508,7 @@ public class ParameterMananer {
             Log.d(TAG, "dishMove Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
-        Log.d(TAG, "dishMove " + derection + "->" + step);
+        Log.d(TAG, "dishMove " + moveDirection + "->" + step);
     }
 
     public void stopDishMove() {
@@ -658,7 +657,7 @@ public class ParameterMananer {
 
     private JSONArray generateOrderedJSONArray(JSONObject obj) {
         JSONArray result = null;
-        final String[] ALLKEY = {"name", "east", "long_pos", "unicable", "unicable_chan", "unicable_if", "unicable_position_b",
+        final String[] allKey = {"name", "east", "long_pos", "unicable", "unicable_chan", "unicable_if", "unicable_position_b",
                                  "tone_burst", "c_switch", "u_switch", "motor_switch", "dish_pos", "lnb_type",
                                  "low_min_freq", "low_max_freq", "low_local_oscillator_frequency", "low_lnb_voltage", "low_tone_22k",
                                  "high_min_freq", "high_max_freq", "high_local_oscillator_frequency", "high_lnb_voltage", "high_tone_22k",
@@ -666,12 +665,12 @@ public class ParameterMananer {
         if (obj != null && obj.length() > 0) {
             Object temp = null;
             try {
-                for (int i = 0; i < ALLKEY.length; i++) {
-                    temp = obj.get(ALLKEY[i]);
+                for (int i = 0; i < allKey.length; i++) {
+                    temp = obj.get(allKey[i]);
                     if (result == null) {
                         result = new JSONArray();
                     }
-                    //Log.d(TAG, "generateOrderedJSONArray " + ALLKEY[i] + ":" + temp);
+                    //Log.d(TAG, "generateOrderedJSONArray " + allKey[i] + ":" + temp);
                     result.put(temp);
                 }
             } catch (Exception e) {
@@ -742,7 +741,7 @@ public class ParameterMananer {
     public List<String> getCountryDisplayList() {
         List<String> result = new ArrayList<String>();
         try {
-            JSONObject resultObj = getCountrys();
+            JSONObject resultObj = getCountries();
             Locale[] allLocale = Locale.getAvailableLocales();
             JSONArray data = null;
             if (resultObj != null) {
@@ -787,7 +786,7 @@ public class ParameterMananer {
     public List<Integer> getCountryCodeList() {
         List<Integer> result = new ArrayList<Integer>();
         try {
-            JSONObject resultObj = getCountrys();
+            JSONObject resultObj = getCountries();
             JSONArray data = null;
             if (resultObj != null) {
                 data = (JSONArray)resultObj.get("data");
@@ -819,18 +818,18 @@ public class ParameterMananer {
         return result;
     }
 
-    private JSONObject getCountrys() {
+    private JSONObject getCountries() {
         JSONObject resultObj = null;
         try {
             JSONArray args1 = new JSONArray();
             resultObj = DtvkitGlueClient.getInstance().request("Dvb.getCountrys", args1);
             if (resultObj != null) {
-                Log.d(TAG, "getCountrys resultObj:" + resultObj.toString());
+                Log.d(TAG, "getCountries resultObj:" + resultObj.toString());
             } else {
-                Log.d(TAG, "getCountrys then get null");
+                Log.d(TAG, "getCountries then get null");
             }
         } catch (Exception e) {
-            Log.d(TAG, "getCountrys Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            Log.d(TAG, "getCountries Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
         return resultObj;
@@ -926,7 +925,7 @@ public class ParameterMananer {
     public JSONObject setCountryCodeByIndex(int index) {
         JSONObject resultObj = null;
         try {
-            resultObj = getCountrys();
+            resultObj = getCountries();
             JSONArray data = null;
             if (resultObj != null) {
                 data = (JSONArray)resultObj.get("data");
@@ -950,9 +949,9 @@ public class ParameterMananer {
 
     public int getCurrentCountryIndex() {
         int result = 0;
-        int currentcountrycode = getCurrentCountryCode();
+        int currentCountryCode = getCurrentCountryCode();
         try {
-            JSONObject resultObj = getCountrys();
+            JSONObject resultObj = getCountries();
             JSONArray data = null;
             if (resultObj != null) {
                 data = (JSONArray)resultObj.get("data");
@@ -961,7 +960,7 @@ public class ParameterMananer {
                 }
                 for (int i = 0; i < data.length(); i++) {
                     int countryCode = (int)(((JSONObject)(data.get(i))).get("country_code"));
-                    if (countryCode == currentcountrycode) {
+                    if (countryCode == currentCountryCode) {
                         result = i;
                         break;
                     }
@@ -979,9 +978,9 @@ public class ParameterMananer {
 
     public String getCurrentCountryIso3Name() {
         String result = null;
-        int currentcountrycode = getCurrentCountryCode();
+        int currentCountryCode = getCurrentCountryCode();
         try {
-            JSONObject resultObj = getCountrys();
+            JSONObject resultObj = getCountries();
             JSONArray data = null;
             if (resultObj != null) {
                 data = (JSONArray)resultObj.get("data");
@@ -990,7 +989,7 @@ public class ParameterMananer {
                 }
                 for (int i = 0; i < data.length(); i++) {
                     int countryCode = (int)(((JSONObject)(data.get(i))).get("country_code"));
-                    if (countryCode == currentcountrycode) {
+                    if (countryCode == currentCountryCode) {
                         result = (String)(((JSONObject)(data.get(i))).get("country_name"));;
                         break;
                     }
@@ -1009,7 +1008,7 @@ public class ParameterMananer {
         int countrycode = 0;
         JSONObject resultObj = null;
         try {
-            resultObj = getCountrys();
+            resultObj = getCountries();
             JSONArray data = null;
             if (resultObj != null) {
                 data = (JSONArray)resultObj.get("data");
@@ -1883,7 +1882,7 @@ public class ParameterMananer {
         return result;
     }
 
-    public boolean needConfirmNetWorkInfomation(JSONArray array) {
+    public boolean needConfirmNetWorkInformation(JSONArray array) {
         boolean result = false;
         final String NORWAY_ISO3_NAME = "nor";
         String currentCountryName = getCurrentCountryIso3Name();
@@ -2026,7 +2025,7 @@ public class ParameterMananer {
     */
     public JSONArray getConflictLcn() {
         JSONArray result = null;
-        if (PropSettingManager.getBoolean("vendor.sys.tv.debug.conflictlcn", false)) {
+        if (PropSettingManager.getBoolean("vendor.sys.tv.debug.conflict_lcn", false)) {
             result = creatTestConflictLcn();
             return result;
         }
@@ -2072,7 +2071,7 @@ public class ParameterMananer {
         return result;
     }
 
-    public boolean needConfirmLcnInfomation(JSONArray array) {
+    public boolean needConfirmLcnInformation(JSONArray array) {
         boolean result = false;
         final String ITALY_ISO3_NAME = "ita";
         String currentCountryName = getCurrentCountryIso3Name();
@@ -2265,14 +2264,14 @@ public class ParameterMananer {
         }
 
         switch (key) {
-            case KEY_LASTWAHTCHED_CHANNELID:
+            case KEY_LAST_WATCHED_CHANNEL_ID:
                 result = "" + getChannelIdForSource();
                 break;
             case KEY_ACTIVE_RECORD_COUNT:
                 result = String.valueOf(recordingGetNumActiveRecordings());
                 break;
             case KEY_SET_GET_SPOKEN_SUBTITLE_ON:
-                if (playergetSpokenSubtitleOn()) {
+                if (playerGetSpokenSubtitleOn()) {
                     result = "on";
                 } else {
                     result = "off";
@@ -2308,7 +2307,7 @@ public class ParameterMananer {
                 resetToDefaultAudioStream();
                 break;
             case KEY_SET_GET_SPOKEN_SUBTITLE_ON:
-                playersetSpokenSubtitleOn(newJsonValues.equals("on") ? true : false);
+                playerSetSpokenSubtitleOn(newJsonValues.equals("on") ? true : false);
                 break;
             case KEY_SET_DVB_SOURCE:
                 setCurrentDvbSource(dvbSourceToInt(newJsonValues));
@@ -2316,8 +2315,8 @@ public class ParameterMananer {
             case KEY_SET_PIN_CODE_TO_CAM:
                 setPinCodeToCam(newJsonValues);
                 break;
-            case KEY_REMOVE_OPERATOR_PROFILE_BYCAMID:
-                removeOperatorProfileByCamid(newJsonValues);
+            case KEY_REMOVE_OPERATOR_PROFILE_BY_CAM_ID:
+                removeOperatorProfileByCamId(newJsonValues);
                 break;
             case KEY_LINK_BARKER_CHANNEL:
                 linkBarkerChannel();
@@ -2516,14 +2515,14 @@ public class ParameterMananer {
         } catch (Exception e) {
             Log.e(TAG, "restSatellites = " + e.getMessage());
         }
-        mDataMananer.saveIntParameters(DataMananer.KEY_SEARCH_MODE, 0);
+        mDataManager.saveIntParameters(DataManager.KEY_SEARCH_MODE, 0);
 
         return result;
     }
 
     public boolean restoreToDefault() {
         boolean result = false;
-        String defaultCountry = "deu"; //todo: not defined in trunk, so use german here
+        String defaultCountry = "deu"; //todo: not defined in trunk, so use German here
         try {
             result = DtvkitGlueClient.getInstance().request("Dvb.resetoreDefault", new JSONArray()).getBoolean("data");
             if (result) {
@@ -2532,7 +2531,7 @@ public class ParameterMananer {
                 args.put(ConstantManager.DTVKIT_LNBS_DATA);
                 args.put(ConstantManager.DTVKIT_LOCATION_DATA);
                 result = DtvkitGlueClient.getInstance().request("Dvbs.resetSatellites", args).getBoolean("data");
-                mDataMananer.saveIntParameters(DataMananer.DTVKIT_IMPORT_SATELLITE_FLAG, 0);
+                mDataManager.saveIntParameters(DataManager.DTVKIT_IMPORT_SATELLITE_FLAG, 0);
             }
             if (result) {
                 JSONArray args = new JSONArray();
@@ -2546,11 +2545,11 @@ public class ParameterMananer {
             Log.e(TAG, "restoreToDefault = " + e.getMessage());
         }
         if (result) {
-            if (!DataMananer.PVR_DEFAULT_PATH.equals(getStringParameters(KEY_PVR_RECORD_PATH)))
-                saveStringParameters(KEY_PVR_RECORD_PATH, DataMananer.PVR_DEFAULT_PATH);
+            if (!DataManager.PVR_DEFAULT_PATH.equals(getStringParameters(KEY_PVR_RECORD_PATH)))
+                saveStringParameters(KEY_PVR_RECORD_PATH, DataManager.PVR_DEFAULT_PATH);
             if (getIntParameters(AUTO_SEARCHING_MODE) != 0)
                 saveIntParameters(AUTO_SEARCHING_MODE, 0);
-            saveStringParameters(DataMananer.KEY_SATALLITE, DataMananer.KEY_SATALLITE_DEFAULT_VALUE);
+            saveStringParameters(DataManager.KEY_SATELLITE, DataManager.KEY_SATELLITE_DEFAULT_VALUE);
         }
 
         return result;
@@ -2605,8 +2604,8 @@ public class ParameterMananer {
     }
 
     //currently dtvkit can't with atv and av as they need to use same adc module in android r
-    public boolean isTunerInputConflictwithDtvKit() {
-        String currentPlayingInput = getStringParameters(TV_CURRENT_INPUTID);
+    public boolean isTunerInputConflictWithDtvKit() {
+        String currentPlayingInput = getStringParameters(TV_CURRENT_INPUT_ID);
         if (currentPlayingInput != null && VERSION.SDK_INT == 30 &&
                 (currentPlayingInput.contains(TV_ADTV_KEY) ||
                 currentPlayingInput.contains(TV_AV1_KEY) ||
@@ -2634,7 +2633,7 @@ public class ParameterMananer {
     }
 
     public int getCurrentDvbSource() {
-        int source = ParameterMananer.SIGNAL_COFDM;
+        int source = ParameterManager.SIGNAL_COFDM;
         try {
             JSONObject sourceReq = DtvkitGlueClient.getInstance().request("Dvb.GetDvbSource", new JSONArray());
             if (sourceReq != null) {
@@ -2766,7 +2765,7 @@ public class ParameterMananer {
         return 0;
     }
 
-    private boolean playersetSpokenSubtitleOn(boolean on) {
+    private boolean playerSetSpokenSubtitleOn(boolean on) {
         try {
             JSONArray args = new JSONArray();
             args.put(0);
@@ -2779,7 +2778,7 @@ public class ParameterMananer {
         return true;
     }
 
-    private boolean playergetSpokenSubtitleOn() {
+    private boolean playerGetSpokenSubtitleOn() {
         boolean result = false;
         try {
             JSONArray args = new JSONArray();
@@ -2801,10 +2800,10 @@ public class ParameterMananer {
         }
     }
 
-    public void removeOperatorProfileByCamid(String cicamId) {
+    public void removeOperatorProfileByCamId(String camId) {
         try {
             JSONArray args = new JSONArray();
-            args.put(cicamId);
+            args.put(camId);
             DtvkitGlueClient.getInstance().request("Dvb.RemoveOperatorProfileByCamid", args);
         } catch (Exception e) {
         }
@@ -2831,7 +2830,7 @@ public class ParameterMananer {
         try {
             array.put(source);
             DtvkitGlueClient.getInstance().request("Dvb.SetDvbSource", array);
-            saveStringParameters(ParameterMananer.TV_KEY_DTVKIT_SYSTEM,
+            saveStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM,
                     dvbSourceToString(source));
             EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(source));
         } catch (Exception e) {
@@ -2842,16 +2841,16 @@ public class ParameterMananer {
         String result = "TYPE_DVB_T";
 
         switch (source) {
-            case ParameterMananer.SIGNAL_COFDM:
+            case ParameterManager.SIGNAL_COFDM:
                 result = "TYPE_DVB_T";
                 break;
-            case ParameterMananer.SIGNAL_QAM:
+            case ParameterManager.SIGNAL_QAM:
                 result = "TYPE_DVB_C";
                 break;
-            case ParameterMananer.SIGNAL_QPSK:
+            case ParameterManager.SIGNAL_QPSK:
                 result = "TYPE_DVB_S";
                 break;
-            case ParameterMananer.SIGNAL_ISDBT:
+            case ParameterManager.SIGNAL_ISDBT:
                 result = "TYPE_ISDB_T";
                 break;
             default:
@@ -2864,16 +2863,16 @@ public class ParameterMananer {
         String result = "DVB-T";
 
         switch (source) {
-            case ParameterMananer.SIGNAL_COFDM:
+            case ParameterManager.SIGNAL_COFDM:
                 result = "DVB-T";
                 break;
-            case ParameterMananer.SIGNAL_QAM:
+            case ParameterManager.SIGNAL_QAM:
                 result = "DVB-C";
                 break;
-            case ParameterMananer.SIGNAL_QPSK:
+            case ParameterManager.SIGNAL_QPSK:
                 result = "DVB-S";
                 break;
-            case ParameterMananer.SIGNAL_ISDBT:
+            case ParameterManager.SIGNAL_ISDBT:
                 result = "ISDB-T";
                 break;
             default:
@@ -2886,19 +2885,19 @@ public class ParameterMananer {
         int source = 0;
         switch (sourceName) {
             case "TYPE_DVB_C":
-                source = ParameterMananer.SIGNAL_QAM;
+                source = ParameterManager.SIGNAL_QAM;
                 break;
             case "TYPE_DVB_T":
             case "TYPE_DVB_T2":
-                source = ParameterMananer.SIGNAL_COFDM;
+                source = ParameterManager.SIGNAL_COFDM;
                 break;
             case "TYPE_DVB_S":
             case "TYPE_DVB_S2":
-                source = ParameterMananer.SIGNAL_QPSK;
+                source = ParameterManager.SIGNAL_QPSK;
                 break;
             case "ISDB-T":
             case "TYPE_ISDB_T":
-                source = ParameterMananer.SIGNAL_ISDBT;
+                source = ParameterManager.SIGNAL_ISDBT;
                 break;
         }
         return source;

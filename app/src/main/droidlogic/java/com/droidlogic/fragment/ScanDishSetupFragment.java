@@ -49,12 +49,12 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
     private LinkedList<ItemDetail> mItemDetailItem = new LinkedList<ItemDetail>();
     private LinkedList<ItemDetail> mItemDetailOption = new LinkedList<ItemDetail>();
     private LinkedList<ItemDetail> mItemDetailSatellites = new LinkedList<ItemDetail>();
-    private String mCurrentListType = ParameterMananer.ITEM_LNB;
+    private String mCurrentListType = ParameterManager.ITEM_LNB;
     private String mCurrentListFocus = ItemListView.LIST_LEFT;
-    private ParameterMananer mParameterManager;
-    private LinearLayout mSatelliteQuickkey;
-    private LinearLayout mSatelliteQuickkey1;
-    private LinearLayout mSatelliteQuickkey2;
+    private ParameterManager mParameterManager;
+    private LinearLayout mSatelliteQuickKey;
+    private LinearLayout mSatelliteQuickKey1;
+    private LinearLayout mSatelliteQuickKey2;
     private TextView mItemTitleTextView;
     private TextView mItemTitleTextView2;
     private TextView mOptionTitleItemTextView;
@@ -165,23 +165,23 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         Log.d(TAG, "onCreateView");
         mParameterManager = getParameterManager();
         mDialogManager = getDialogManager();
-        String currentlist = ParameterMananer.ITEM_LNB;
+        String currentList = ParameterManager.ITEM_LNB;
         View rootView = inflater.inflate(R.layout.fragment_dish_setup, container, false);
-        mSatelliteQuickkey1 = (LinearLayout) rootView.findViewById(R.id.function_key1);
-        mSatelliteQuickkey2 = (LinearLayout) rootView.findViewById(R.id.function_key2);
+        mSatelliteQuickKey1 = (LinearLayout) rootView.findViewById(R.id.function_key1);
+        mSatelliteQuickKey2 = (LinearLayout) rootView.findViewById(R.id.function_key2);
         creatFour1();
         creatFour2();
 
         mStrengthContainer = (LinearLayout) rootView.findViewById(R.id.strength_container);
         mQualityContainer = (LinearLayout) rootView.findViewById(R.id.quality_container);
-        mStrengthProgressBar = (ProgressBar)rootView.findViewById(R.id.strength_progressbar);
-        mQualityProgressBar = (ProgressBar)rootView.findViewById(R.id.quality_progressbar);
+        mStrengthProgressBar = (ProgressBar)rootView.findViewById(R.id.proBar_strength);
+        mQualityProgressBar = (ProgressBar)rootView.findViewById(R.id.proBar_quality);
         mStrengthTextView = (TextView)rootView.findViewById(R.id.strength_percent);
         mQualityTextView = (TextView)rootView.findViewById(R.id.quality_percent);
 
-        mListViewItem = (ItemListView) rootView.findViewById(R.id.listview_item);
-        mListViewOption = (ItemListView) rootView.findViewById(R.id.listview_option);
-        mListSatellites = (ItemListView) rootView.findViewById(R.id.listview_item2);
+        mListViewItem = (ItemListView) rootView.findViewById(R.id.lv_item);
+        mListViewOption = (ItemListView) rootView.findViewById(R.id.lv_option);
+        mListSatellites = (ItemListView) rootView.findViewById(R.id.lv_item2);
         mItemDetailItem.addAll(mParameterManager.getDvbsParaManager().getLnbNameList());
         String dPosition = mParameterManager.getDvbsParaManager().getLnbIdList().get(0).getFirstText();
         mParameterManager.getDvbsParaManager().setCurrentLnbId(dPosition);
@@ -193,8 +193,8 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         mListViewItem.setSelection(0);
         mListSatellites.setAdapter(mItemAdapterSatellites);
 
-        mItemTitleTextView = (TextView) rootView.findViewById(R.id.listview_item_title);
-        mItemTitleTextView2 = (TextView) rootView.findViewById(R.id.listview_item_title2);
+        mItemTitleTextView = (TextView) rootView.findViewById(R.id.tv_item_title);
+        mItemTitleTextView2 = (TextView) rootView.findViewById(R.id.tv_item_title2);
         mItemTitleTextView.setText(R.string.list_type_lnb);
         mItemTitleTextView2.setText(getActivity().getResources().getString(R.string.list_type_satellite) + "(LNB" + dPosition + ")");
 
@@ -224,7 +224,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         mListViewOption.setListType(ItemListView.ITEM_OPTION);
         mListViewOption.setDataCallBack(mSingleSelectDialogCallBack);
 
-        if ((TextUtils.equals(currentlist, ItemListView.ITEM_LNB) && mItemDetailItem.size() > 0)) {
+        if ((TextUtils.equals(currentList, ItemListView.ITEM_LNB) && mItemDetailItem.size() > 0)) {
             mListViewItem.requestFocus();
             mListViewOption.cleanChoosed();
             mListSatellites.cleanChoosed();
@@ -300,56 +300,56 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
     public void onDestroy() {
         super.onDestroy();
         //releaseHandler();
-        //mParameterMananer.stopTuneAction();
+        //mParameterManager.stopTuneAction();
         Log.d(TAG, "onDestroy");
     }
 
-    private void changeSatelliteQuickkeyLayout() {
-        mSatelliteQuickkey.removeAllViews();
-        mSatelliteQuickkey.addView(mSatelliteQuickkey1);
-        mSatelliteQuickkey.addView(mSatelliteQuickkey2);
+    private void changeSatelliteQuickKeyLayout() {
+        mSatelliteQuickKey.removeAllViews();
+        mSatelliteQuickKey.addView(mSatelliteQuickKey1);
+        mSatelliteQuickKey.addView(mSatelliteQuickKey2);
     }
 
     private void creatFour1() {
         LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = (View) inflater.inflate(R.layout.four_display1, null);
-        mSatelliteQuickkey1.removeAllViews();
-        mSatelliteQuickkey1.addView(view);
+        mSatelliteQuickKey1.removeAllViews();
+        mSatelliteQuickKey1.addView(view);
     }
 
     private void creatFour2() {
         LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = (View) inflater.inflate(R.layout.four_display2, null);
-        mSatelliteQuickkey2.removeAllViews();
-        mSatelliteQuickkey2.addView(view);
+        mSatelliteQuickKey2.removeAllViews();
+        mSatelliteQuickKey2.addView(view);
     }
 
-    private void creatConfirmandExit1() {
+    private void createConfirmAndExit1() {
         LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = (View) inflater.inflate(R.layout.confirm_exit_display, null);
-        mSatelliteQuickkey1.removeAllViews();
-        mSatelliteQuickkey1.addView(view);
+        mSatelliteQuickKey1.removeAllViews();
+        mSatelliteQuickKey1.addView(view);
     }
 
-    private void creatSatelliteandScan2() {
+    private void createSatelliteAndScan2() {
         LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = (View) inflater.inflate(R.layout.satellite_scan_display, null);
-        mSatelliteQuickkey2.removeAllViews();
-        mSatelliteQuickkey2.addView(view);
+        mSatelliteQuickKey2.removeAllViews();
+        mSatelliteQuickKey2.addView(view);
     }
 
-    private void creatSetlimitandSetlocation1() {
+    private void createSetLimitAndSetLocation1() {
         LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = (View) inflater.inflate(R.layout.limit_location_display, null);
-        mSatelliteQuickkey1.removeAllViews();
-        mSatelliteQuickkey1.addView(view);
+        mSatelliteQuickKey1.removeAllViews();
+        mSatelliteQuickKey1.addView(view);
     }
 
-    private void creatEditandExit2() {
+    private void creatEditAndExit2() {
         LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = (View) inflater.inflate(R.layout.edit_exit_wheel_display, null);
-        mSatelliteQuickkey2.removeAllViews();
-        mSatelliteQuickkey2.addView(view);
+        mSatelliteQuickKey2.removeAllViews();
+        mSatelliteQuickKey2.addView(view);
     }
 
     private void initStrengthQualityUpdate() {
@@ -379,11 +379,11 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
             Log.d(TAG, "onStatusChange parameterKey = " + parameterKey + ", data = " + data);
             String lnb = mParameterManager.getDvbsParaManager().getCurrentLnbId();
             switch (parameterKey) {
-                case ParameterMananer.KEY_SATALLITE:
-                case ParameterMananer.KEY_TRANSPONDER: {
+                case ParameterManager.KEY_SATELLITE:
+                case ParameterManager.KEY_TRANSPONDER: {
                     int position = data.getInt("position");
                     if ("selected".equals(data.getString("action"))) {
-                        if (parameterKey == ParameterMananer.KEY_SATALLITE) {
+                        if (parameterKey == ParameterManager.KEY_SATELLITE) {
                             List<String> sates = mParameterManager.getDvbsParaManager().getSatelliteNameListSelected();
                             String testSatellite = mParameterManager.getDvbsParaManager().getCurrentSatellite();
                             if (!testSatellite.equals(sates.get(position))) {
@@ -395,7 +395,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                             String testTp = mParameterManager.getDvbsParaManager().getCurrentTransponder();
                             if (!testTp.equals(tps.get(position).getFirstText())) {
                                 //if support multi-tp
-                                //mParameterMananer.getDvbsParaManager().setCurrentTransponder(tps.get(position).getFirstText());
+                                //mParameterManager.getDvbsParaManager().setCurrentTransponder(tps.get(position).getFirstText());
                                 //else support single-tp
                                 mParameterManager.getDvbsParaManager().selectSingleTransponder(tps.get(position).getFirstText(), true);
                                 startTune();
@@ -409,7 +409,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
                     break;
                 }
-                case ParameterMananer.KEY_LNB_TYPE:
+                case ParameterManager.KEY_LNB_TYPE:
                     if (data != null && "selected".equals(data.getString("action"))) {
                         int pos = data.getInt("position");
                         int lnbType = 0;
@@ -437,7 +437,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                             mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
                         }
                         if (pos == 3) {
-                            mCurrentSubCustomDialog = mDialogManager.buildLnbCustomedItemDialog(mSingleSelectDialogCallBack);
+                            mCurrentSubCustomDialog = mDialogManager.buildLnbCustomItemDialog(mSingleSelectDialogCallBack);
                             if (mCurrentSubCustomDialog != null) {
                                 mCurrentSubCustomDialog.showDialog();
                             }
@@ -446,12 +446,12 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         startTune();
                     }
                     break;
-                case ParameterMananer.KEY_LNB_CUSTOM:
+                case ParameterManager.KEY_LNB_CUSTOM:
                     if (data != null && "onClick".equals(data.getString("action"))) {
                         if ("ok".equals(data.getString("button"))) {
                             Log.d(TAG, "ok in clicked");
-                            int lowLocal = data.getInt("lowlocal");
-                            int highLocal = data.getInt("highlocal");
+                            int lowLocal = data.getInt("lowLocal");
+                            int highLocal = data.getInt("highLocal");
                             mParameterManager.getDvbsParaManager()
                                     .getLnbWrap().getLnbById(lnb).getLnbInfo()
                                     .updateLnbTypeFreq(lowLocal, highLocal);
@@ -462,7 +462,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
                     }
                     break;
-                case ParameterMananer.KEY_UNICABLE: {
+                case ParameterManager.KEY_UNICABLE: {
                     int unicable_position = data.getInt("position");
                     boolean isLeftAction = "left".equals(data.getString("action"));
                     boolean isRightAction = "right".equals(data.getString("action"));
@@ -540,9 +540,9 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
                     break;
                 }
-                case ParameterMananer.KEY_UB_FREQUENCY:
+                case ParameterManager.KEY_UB_FREQUENCY:
                     break;
-                case ParameterMananer.KEY_LNB_POWER: {
+                case ParameterManager.KEY_LNB_POWER: {
                     int position = data.getInt("position");
                     if ("selected".equals(data.getString("action"))) {
                         mParameterManager.getDvbsParaManager()
@@ -557,7 +557,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     }
                     break;
                 }
-                case ParameterMananer.KEY_22_KHZ: {
+                case ParameterManager.KEY_22_KHZ: {
                     int position = data.getInt("position");
                     if ("selected".equals(data.getString("action"))) {
                         mParameterManager.getDvbsParaManager()
@@ -572,7 +572,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     }
                     break;
                 }
-                case ParameterMananer.KEY_TONE_BURST: {
+                case ParameterManager.KEY_TONE_BURST: {
                     int position = data.getInt("position");
                     if ("selected".equals(data.getString("action"))) {
                         if (position > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST.length - 1)) {
@@ -590,7 +590,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     }
                     break;
                 }
-                case ParameterMananer.KEY_DISEQC1_0: {
+                case ParameterManager.KEY_DISEQC1_0: {
                     int position = data.getInt("position");
                     if ("selected".equals(data.getString("action"))) {
                         if (position > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_0_LIST.length - 1)) {
@@ -598,7 +598,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         }
                         mParameterManager.getDvbsParaManager()
                                 .getLnbWrap().getLnbById(lnb)
-                                .editCswitch(position);
+                                .editCSwitch(position);
                         if (mCurrentCustomDialog != null) {
                             mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(),
                                     mCurrentCustomDialog.getDialogKey(), position);
@@ -608,7 +608,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     }
                     break;
                 }
-                case ParameterMananer.KEY_DISEQC1_1: {
+                case ParameterManager.KEY_DISEQC1_1: {
                     int position = data.getInt("position");
                     if ("selected".equals(data.getString("action"))) {
                         if (position > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_1_LIST.length - 1)) {
@@ -616,7 +616,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         }
                         mParameterManager.getDvbsParaManager()
                                 .getLnbWrap().getLnbById(lnb)
-                                .editUswitch(position);
+                                .editUSwitch(position);
                         if (mCurrentCustomDialog != null) {
                             mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(),
                                     mCurrentCustomDialog.getDialogKey(), position);
@@ -626,7 +626,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     }
                     break;
                 }
-                case ParameterMananer.KEY_MOTOR:
+                case ParameterManager.KEY_MOTOR:
                     if (data != null && "selected".equals(data.getString("action"))) {
                         boolean isDiseqc1_3 = false;
                         mParameterManager.getDvbsParaManager().getLnbWrap().getLnbById(lnb).editMotor(data.getInt("position"));
@@ -649,16 +649,16 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         startTune();
                     }
                     break;
-                case ParameterMananer.KEY_DISEQC1_2: {
+                case ParameterManager.KEY_DISEQC1_2: {
                     int motor = mParameterManager.getDvbsParaManager().getLnbWrap().getLnbById(lnb).getMotor();
                     boolean isDiseqc1_3 = (motor == 2);
                     if (data != null && "selected".equals(data.getString("action"))) {
                         int diseqc1_2_position = data.getInt("position");
                         switch (diseqc1_2_position) {
-                            case 3://dish limts east
+                            case 3://dish limits east
                                 mParameterManager.setDishELimits();
                                 break;
-                            case 4://dish limts west
+                            case 4://dish limits west
                                 mParameterManager.setDishWLimits();
                                 break;
                             case 7: /*move*/ {
@@ -690,11 +690,11 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         }
                     } else if (data != null && ("left".equals(data.getString("action")) || "right".equals(data.getString("action")))) {
                         int position = data.getInt("position");
-                        boolean needbreak = false;
+                        boolean needBreak = false;
                         switch (position) {
                             case 0: /*satellite*/ {
-                                List<String> satelist = mParameterManager.getDvbsParaManager().getSatelliteNameListSelected();
-                                int indexMax = satelist.size() - 1;
+                                List<String> satelliteList = mParameterManager.getDvbsParaManager().getSatelliteNameListSelected();
+                                int indexMax = satelliteList.size() - 1;
                                 int sateIndex = mParameterManager.getDvbsParaManager().getCurrentSatelliteIndex(true);
                                 if ("left".equals(data.getString("action"))) {
                                     if (sateIndex != 0) {
@@ -709,9 +709,9 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                         sateIndex = 0;
                                     }
                                 }
-                                mParameterManager.getDvbsParaManager().setCurrentSatellite(satelist.get(sateIndex));
+                                mParameterManager.getDvbsParaManager().setCurrentSatellite(satelliteList.get(sateIndex));
                                 int dish_Pos = mParameterManager.getDvbsParaManager()
-                                        .getSatelliteWrap().getSatelliteByName(satelist.get(sateIndex)).getDishPos();
+                                        .getSatelliteWrap().getSatelliteByName(satelliteList.get(sateIndex)).getDishPos();
                                 mParameterManager.getDvbsParaManager().setCurrentDiseqcValue("dish_pos", dish_Pos);
                                 mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
                                 startTune();
@@ -720,74 +720,74 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                             case 1: /*transponder*/ {
                                 String sateName =  mParameterManager.getDvbsParaManager().getCurrentSatellite();
                                 LinkedList<ItemDetail> tps = mParameterManager.getDvbsParaManager().getTransponderList(sateName);
-                                int tpIndx = mParameterManager.getDvbsParaManager().getCurrentTransponderIndex();
+                                int tpIndex = mParameterManager.getDvbsParaManager().getCurrentTransponderIndex();
                                 int indexMax = tps.size() - 1;
                                 if ("left".equals(data.getString("action"))) {
-                                    if (tpIndx != 0) {
-                                        tpIndx = tpIndx - 1;
+                                    if (tpIndex != 0) {
+                                        tpIndex = tpIndex - 1;
                                     } else {
-                                        tpIndx = indexMax;
+                                        tpIndex = indexMax;
                                     }
                                 } else {
-                                    if (tpIndx < indexMax) {
-                                        tpIndx = tpIndx + 1;
+                                    if (tpIndex < indexMax) {
+                                        tpIndex = tpIndex + 1;
                                     } else {
-                                        tpIndx = 0;
+                                        tpIndex = 0;
                                     }
                                 }
                                 //if support multi-tp
-                                //mParameterMananer.getDvbsParaManager().setCurrentTransponder(tps.get(tpIndx).getFirstText());
+                                //mParameterManager.getDvbsParaManager().setCurrentTransponder(tps.get(tpIndex).getFirstText());
                                 //else support single-tp
-                                mParameterManager.getDvbsParaManager().selectSingleTransponder(tps.get(tpIndx).getFirstText(), true);
+                                mParameterManager.getDvbsParaManager().selectSingleTransponder(tps.get(tpIndex).getFirstText(), true);
                                 mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
                                 startTune();
                                 break;
                             }
-                            case 2: /*dish limts status*/ {
-                                int limitState = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("dishlimit_state");
+                            case 2: /*dish limits status*/ {
+                                int limitState = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("dish_limit_state");
                                 if (limitState > 0) {
                                     limitState = 0;
                                 } else {
                                     limitState = 1;
                                 }
-                                mParameterManager.getDvbsParaManager().setCurrentDiseqcValue("dishlimit_state", limitState);
+                                mParameterManager.getDvbsParaManager().setCurrentDiseqcValue("dish_limit_state", limitState);
                                 mParameterManager.enableDishLimits(limitState == 1);
                                 break;
                             }
                             case 5: /*dish move direction*/ {
-                                int directionvalue = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("dish_dir");
+                                int directionValue = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("dish_dir");
                                 if ("left".equals(data.getString("action"))) {
-                                    if (directionvalue != 0) {
-                                        directionvalue = directionvalue - 1;
+                                    if (directionValue != 0) {
+                                        directionValue = directionValue - 1;
                                     } else {
-                                        directionvalue = 2;
+                                        directionValue = 2;
                                     }
                                 } else {
-                                    if (directionvalue < 2) {
-                                        directionvalue = directionvalue + 1;
+                                    if (directionValue < 2) {
+                                        directionValue = directionValue + 1;
                                     } else {
-                                        directionvalue = 0;
+                                        directionValue = 0;
                                     }
                                 }
-                                mParameterManager.getDvbsParaManager().setCurrentDiseqcValue("dish_dir", directionvalue);
+                                mParameterManager.getDvbsParaManager().setCurrentDiseqcValue("dish_dir", directionValue);
                                 break;
                             }
                             case 6: /*dish move step*/ {
-                                int stepvalue = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("dish_step");
+                                int stepValue = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("dish_step");
                                 if ("left".equals(data.getString("action"))) {
-                                    if (stepvalue != 0) {
-                                        stepvalue = stepvalue - 1;
+                                    if (stepValue != 0) {
+                                        stepValue = stepValue - 1;
                                     } else {
-                                        stepvalue = 127;
+                                        stepValue = 127;
                                     }
                                 } else {
-                                    if (stepvalue < 127) {
-                                        stepvalue = stepvalue + 1;
+                                    if (stepValue < 127) {
+                                        stepValue = stepValue + 1;
                                     } else {
-                                        stepvalue = 0;
+                                        stepValue = 0;
                                     }
                                 }
-                                mParameterManager.getDvbsParaManager().setCurrentDiseqcValue("dish_step", stepvalue);
+                                mParameterManager.getDvbsParaManager().setCurrentDiseqcValue("dish_step", stepValue);
                                 break;
                             }
                             case 10: /* location city */ {
@@ -824,7 +824,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                                 .getLocationInfoByIndex(index).isLongitudeEast();
                                         int locationLongitude = mParameterManager.getDvbsParaManager().getLnbWrap()
                                                 .getLocationInfoByIndex(index).getLongitude();
-                                        boolean localtionIsNorth = mParameterManager.getDvbsParaManager().getLnbWrap()
+                                        boolean locationIsNorth = mParameterManager.getDvbsParaManager().getLnbWrap()
                                                 .getLocationInfoByIndex(index).isLatitudeNorth();
                                         int locationLatitude = mParameterManager.getDvbsParaManager().getLnbWrap()
                                                 .getLocationInfoByIndex(index).getLatitude();
@@ -850,19 +850,19 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                             if (position == 12) locationLongitude = value;
                                             else locationLatitude = value;
                                         } else if (position == 13) {
-                                            localtionIsNorth = !localtionIsNorth;
+                                            locationIsNorth = !locationIsNorth;
                                         }
                                         mParameterManager.getDvbsParaManager().getLnbWrap().editManualLocation
-                                                (locationIsEast, locationLongitude, localtionIsNorth, locationLatitude);
+                                                (locationIsEast, locationLongitude, locationIsNorth, locationLatitude);
                                     }
                                 }
                                 break;
                             }
                             default:
-                                needbreak = true;
+                                needBreak = true;
                                 break;
                         }
-                        if (!needbreak && mCurrentSubCustomDialog != null && mCurrentSubCustomDialog.isShowing()) {
+                        if (!needBreak && mCurrentSubCustomDialog != null && mCurrentSubCustomDialog.isShowing()) {
                             mCurrentSubCustomDialog.updateDiseqc1_2_Dialog(isDiseqc1_3);
                         } else {
                             Log.d(TAG, "mCurrentSubCustomDialog null or need break or not displayed");
@@ -870,17 +870,17 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     }
                     break;
                 }
-                case ParameterMananer.KEY_FUNCTION:
+                case ParameterManager.KEY_FUNCTION:
                     if (data != null) {
                         String action = data.getString("action");
-                        String listtype = data.getString("listtype");
+                        String listType = data.getString("listType");
                         switch (action) {
                             case "add": {
-                                if (ItemListView.ITEM_SATALLITE.equals(data.getString("listtype"))) {
+                                if (ItemListView.ITEM_SATELLITE.equals(data.getString("listType"))) {
                                     mCurrentCustomDialog = mDialogManager.buildAddSatelliteDialogDialog(null, mSingleSelectDialogCallBack);
-                                } else if (ItemListView.ITEM_TRANSPONDER.equals(data.getString("listtype"))) {
+                                } else if (ItemListView.ITEM_TRANSPONDER.equals(data.getString("listType"))) {
                                     mCurrentCustomDialog = mDialogManager.buildAddTransponderDialogDialog(null, mSingleSelectDialogCallBack);
-                                } else if (ItemListView.ITEM_LNB.equals(data.getString("listtype"))) {
+                                } else if (ItemListView.ITEM_LNB.equals(data.getString("listType"))) {
                                     mParameterManager.getDvbsParaManager().getLnbWrap().addEmptyLnb();
                                     mItemAdapterItem.reFill(mParameterManager.getDvbsParaManager().getLnbNameList());
                                     mCurrentCustomDialog = null;
@@ -894,13 +894,13 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                 break;
                             }
                             case "edit":
-                                if (ItemListView.ITEM_SATALLITE.equals(data.getString("listtype"))) {
+                                if (ItemListView.ITEM_SATELLITE.equals(data.getString("listType"))) {
                                     mCurrentCustomDialog = mDialogManager.buildAddSatelliteDialogDialog(data.getString("parameter"), mSingleSelectDialogCallBack);
-                                } else if (ItemListView.ITEM_TRANSPONDER.equals(data.getString("listtype"))) {
+                                } else if (ItemListView.ITEM_TRANSPONDER.equals(data.getString("listType"))) {
                                     mCurrentCustomDialog = mDialogManager.buildAddTransponderDialogDialog(data.getString("parameter"), mSingleSelectDialogCallBack);
                                 } else {
                                     //lnb list
-                                    switchtoRightList();
+                                    switchToRightList();
                                     mCurrentCustomDialog = null;
                                 }
                                 if (mCurrentCustomDialog != null) {
@@ -908,11 +908,11 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                 }
                                 break;
                             case "delete":
-                                if (ItemListView.ITEM_SATALLITE.equals(data.getString("listtype"))) {
+                                if (ItemListView.ITEM_SATELLITE.equals(data.getString("listType"))) {
                                     mCurrentCustomDialog = mDialogManager.buildRemoveSatelliteDialogDialog(data.getString("parameter"), mSingleSelectDialogCallBack);
-                                } else if (ItemListView.ITEM_TRANSPONDER.equals(data.getString("listtype"))) {
+                                } else if (ItemListView.ITEM_TRANSPONDER.equals(data.getString("listType"))) {
                                     mCurrentCustomDialog = mDialogManager.buildRemoveTransponderDialogDialog(data.getString("parameter"), mSingleSelectDialogCallBack);
-                                } else if (ItemListView.ITEM_LNB.equals(data.getString("listtype"))) {
+                                } else if (ItemListView.ITEM_LNB.equals(data.getString("listType"))) {
                                     if (mParameterManager.getDvbsParaManager().getLnbIdList().size() < 2) {
                                         Toast.makeText(getContext(), "Cannot remove all lnbs", Toast.LENGTH_SHORT).show();
                                         break;
@@ -945,9 +945,9 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                     mItemAdapterItem.reFill(mParameterManager.getDvbsParaManager().getLnbNameList());
                                     mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
                                     if (!isTransponder) {
-                                        mParameterManager.getDvbsParaManager().setCurrentListType(ParameterMananer.ITEM_SATALLITE);
+                                        mParameterManager.getDvbsParaManager().setCurrentListType(ParameterManager.ITEM_SATELLITE);
                                     } else {
-                                        mParameterManager.getDvbsParaManager().setCurrentListType(ParameterMananer.ITEM_TRANSPONDER);
+                                        mParameterManager.getDvbsParaManager().setCurrentListType(ParameterManager.ITEM_TRANSPONDER);
                                     }
                                     mItemAdapterSatellites.reFill(mParameterManager.getDvbsParaManager().getCurrentItemList());
                                 } else {
@@ -966,23 +966,23 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         }
                     }
                     break;
-                case ParameterMananer.KEY_ADD_SATELLITE:
+                case ParameterManager.KEY_ADD_SATELLITE:
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String name_add = data.getString("value1");
-                        boolean iseast_add = data.getBoolean("value2", true);
+                        boolean is_east_add = data.getBoolean("value2", true);
                         int position_add = Integer.valueOf(data.getString("value3"));
-                        mParameterManager.getDvbsParaManager().getSatelliteWrap().addSatellite(name_add, iseast_add, position_add);
+                        mParameterManager.getDvbsParaManager().getSatelliteWrap().addSatellite(name_add, is_east_add, position_add);
                         mItemAdapterSatellites.reFill(mParameterManager.getDvbsParaManager().getSatelliteNameList());
-                        // switchtoLeftList();
+                        // switchToLeftList();
                     }
                     break;
-                case ParameterMananer.KEY_EDIT_SATELLITE:
+                case ParameterManager.KEY_EDIT_SATELLITE:
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String new_name_edit = data.getString("value1");
-                        boolean iseast_edit = data.getBoolean("value2", true);
+                        boolean is_east_edit = data.getBoolean("value2", true);
                         int position_edit = Integer.valueOf(data.getString("value3"));
                         String old_name_edit = data.getString("value4");
-                        mParameterManager.getDvbsParaManager().getSatelliteWrap().editSatellite(old_name_edit, new_name_edit, iseast_edit, position_edit);
+                        mParameterManager.getDvbsParaManager().getSatelliteWrap().editSatellite(old_name_edit, new_name_edit, is_east_edit, position_edit);
                         if (old_name_edit.equals(mParameterManager.getDvbsParaManager().getCurrentSatellite())) {
                             mParameterManager.getDvbsParaManager().setCurrentSatellite(new_name_edit);
                             mItemAdapterSatellites.reFill(mParameterManager.getDvbsParaManager().getSatelliteNameList());
@@ -993,7 +993,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         }
                     }
                     break;
-                case ParameterMananer.KEY_REMOVE_SATELLITE:{
+                case ParameterManager.KEY_REMOVE_SATELLITE:{
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String name_remove = data.getString("value1");
                         mParameterManager.getDvbsParaManager().getSatelliteWrap().removeSatellite(name_remove);
@@ -1005,7 +1005,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         } else {
                             Log.d(TAG, "KEY_REMOVE_SATELLITE empty inputId");
                         }
-                        //Log.d(TAG, "KEY_REMOVE_SATELLITE = " + mParameterMananer.getCurrentSatellite());
+                        //Log.d(TAG, "KEY_REMOVE_SATELLITE = " + mParameterManager.getCurrentSatellite());
                         if (TextUtils.equals(name_remove, mParameterManager.getDvbsParaManager().getCurrentSatellite())) {
                             mParameterManager.getDvbsParaManager().setCurrentSatellite("");
                             mParameterManager.getDvbsParaManager().setCurrentTransponder("");
@@ -1021,8 +1021,8 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     }
                     break;
                 }
-                case ParameterMananer.KEY_ADD_TRANSPONDER:
-                case ParameterMananer.KEY_EDIT_TRANSPONDER:
+                case ParameterManager.KEY_ADD_TRANSPONDER:
+                case ParameterManager.KEY_EDIT_TRANSPONDER:
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String name_edit_t = data.getString("satellite");
                         String oldName = data.getString("oldName");
@@ -1032,7 +1032,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         int new_symbol_edit_t = data.getInt("symbol");
                         String new_fec_edit_t = data.getString("fec");
                         String new_modulation_edit_t = data.getString("modulation");
-                        if (parameterKey == ParameterMananer.KEY_ADD_TRANSPONDER) {
+                        if (parameterKey == ParameterManager.KEY_ADD_TRANSPONDER) {
                             mParameterManager.getDvbsParaManager().getSatelliteWrap()
                                     .addTransponder(name_edit_t, new_frequency_edit_t,
                                             new_polarity_edit_t, new_symbol_edit_t, isDvbs2,
@@ -1045,7 +1045,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                             String testTransponder = mParameterManager.getDvbsParaManager().getCurrentTransponder();
                             if (testTransponder.equals(oldName)) {
                                 //if support multi-tp
-                                //mParameterMananer.getDvbsParaManager()
+                                //mParameterManager.getDvbsParaManager()
                                 //        .setCurrentTransponder(new_frequency_edit_t + new_polarity_edit_t + new_symbol_edit_t);
                                 //else support single-tp
                                 mParameterManager.getDvbsParaManager()
@@ -1058,7 +1058,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         mItemAdapterSatellites.reFill(mParameterManager.getDvbsParaManager().getCurrentItemList());
                     }
                     break;
-                case ParameterMananer.KEY_REMOVE_TRANSPONDER:{
+                case ParameterManager.KEY_REMOVE_TRANSPONDER:{
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String sateName_remove_t = data.getString("satellite");
                         String tpName_remove_t = data.getString("transponder");
@@ -1083,7 +1083,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                             stopTune();
                         }
                         mItemAdapterSatellites.reFill(mParameterManager.getDvbsParaManager().getCurrentItemList());
-                        //mItemAdapterItem.reFill(mParameterMananer.getDvbsParaManager().getLnbNameList());
+                        //mItemAdapterItem.reFill(mParameterManager.getDvbsParaManager().getLnbNameList());
                     }
                     break;
                 }
@@ -1132,7 +1132,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         }
     }
 
-    private void switchtoLeftList() {
+    private void switchToLeftList() {
         if (ItemListView.LIST_RIGHT.equals(mCurrentListFocus)) {
             mCurrentListFocus = ItemListView.LIST_MIDDLE;
         } else if (ItemListView.LIST_MIDDLE.equals(mCurrentListFocus)) {
@@ -1152,7 +1152,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         }
     }
 
-    private void switchtoRightList() {
+    private void switchToRightList() {
         if (ItemListView.LIST_LEFT.equals(mCurrentListFocus)) {
             mCurrentListFocus = ItemListView.LIST_RIGHT;
         } else if (ItemListView.LIST_MIDDLE.equals(mCurrentListFocus)) {
@@ -1163,8 +1163,8 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
             mListSatellites.cleanChoosed();
             mListViewOption.requestFocus();
             mListViewOption.setChoosed(mListViewOption.getSelectedView());
-            creatConfirmandExit1();
-            creatSatelliteandScan2();
+            createConfirmAndExit1();
+            createSatelliteAndScan2();
             mParameterManager.getDvbsParaManager().setCurrentListDirection("right");
         }
     }
@@ -1175,43 +1175,43 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         public void onListItemSelected(int position, String type, boolean selected) {
             Log.d(TAG, "onListItemSelected position = " + position + ", type = " + type + ", selected = " + selected);
             if (ItemListView.LIST_LEFT.equals(mCurrentListFocus)) {
-                String listtype = mParameterManager.getDvbsParaManager().getCurrentListType();
-                /*if (ItemListView.ITEM_SATALLITE.equals(listtype)) {
-                    LinkedList<ItemDetail> sateAllList = mParameterMananer.getDvbsParaManager().getSatelliteNameList();
-                    String testSatellite = mParameterMananer.getDvbsParaManager().getCurrentSatellite();
+                String listType = mParameterManager.getDvbsParaManager().getCurrentListType();
+                /*if (ItemListView.ITEM_SATELLITE.equals(listType)) {
+                    LinkedList<ItemDetail> sateAllList = mParameterManager.getDvbsParaManager().getSatelliteNameList();
+                    String testSatellite = mParameterManager.getDvbsParaManager().getCurrentSatellite();
                     String selectedSatellite = "";
                     if (sateAllList != null && sateAllList.size() > 0) {
                         selectedSatellite = sateAllList.get(position).getFirstText();
                     }
                     if (selectedSatellite != null || !(selectedSatellite.isEmpty())) {
-                        String lnb = mParameterMananer.getDvbsParaManager().getCurrentLnbId();
-                        mParameterMananer.getDvbsParaManager().getSatelliteWrap().getSatelliteByName(selectedSatellite).boundLnb(lnb, selected);
+                        String lnb = mParameterManager.getDvbsParaManager().getCurrentLnbId();
+                        mParameterManager.getDvbsParaManager().getSatelliteWrap().getSatelliteByName(selectedSatellite).boundLnb(lnb, selected);
                         if (selectedSatellite.equals(testSatellite) && selected == false) {
-                            mParameterMananer.getDvbsParaManager().setCurrentSatellite("");
-                            mParameterMananer.getDvbsParaManager().setCurrentTransponder("");
+                            mParameterManager.getDvbsParaManager().setCurrentSatellite("");
+                            mParameterManager.getDvbsParaManager().setCurrentTransponder("");
                         }
                     }
-                } else if (ParameterMananer.ITEM_TRANSPONDER.equals(listtype)) {
-                    LinkedList<ItemDetail> tps = mParameterMananer.getDvbsParaManager().getTransponderList();
+                } else if (ParameterManager.ITEM_TRANSPONDER.equals(listType)) {
+                    LinkedList<ItemDetail> tps = mParameterManager.getDvbsParaManager().getTransponderList();
                     String selectTp = "";
                     if (tps != null && tps.size() > 0) {
                         selectTp = tps.get(position).getFirstText();
                     }
                     if (selectTp != null || !(selectTp.isEmpty())) {
                         //if UI support multi-tp
-                        //String sateName = mParameterMananer.getDvbsParaManager().getCurrentSatellite();
-                        //mParameterMananer.getDvbsParaManager().getSatelliteWrap().selectTransponder(sateName, selectTp, selected);
+                        //String sateName = mParameterManager.getDvbsParaManager().getCurrentSatellite();
+                        //mParameterManager.getDvbsParaManager().getSatelliteWrap().selectTransponder(sateName, selectTp, selected);
                         //else support single tp
-                        mParameterMananer.getDvbsParaManager().selectSingleTransponder(selectTp, selected);
+                        mParameterManager.getDvbsParaManager().selectSingleTransponder(selectTp, selected);
                         startTune();
                     }
-                } else if (ParameterMananer.ITEM_LNB.equals(listtype)) {
-                    LinkedList<ItemDetail> lnbList = mParameterMananer.getDvbsParaManager().getLnbIdList();
-                    String currentLnb = mParameterMananer.getDvbsParaManager().getCurrentLnbId();
+                } else if (ParameterManager.ITEM_LNB.equals(listType)) {
+                    LinkedList<ItemDetail> lnbList = mParameterManager.getDvbsParaManager().getLnbIdList();
+                    String currentLnb = mParameterManager.getDvbsParaManager().getCurrentLnbId();
                     if (lnbList != null && lnbList.size() > 0) {
                         String selectedLnb = lnbList.get(position).getFirstText();
                         if (!currentLnb.equals(selectedLnb)) {
-                            mParameterMananer.getDvbsParaManager().setCurrentLnbId(selectedLnb);
+                            mParameterManager.getDvbsParaManager().setCurrentLnbId(selectedLnb);
                             startTune();
                         }
                     }
@@ -1237,10 +1237,10 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
 
             } else if (ItemListView.LIST_RIGHT.equals(mCurrentListFocus)) {
                 /*if (position == 0) {
-                    String listtype = ParameterMananer.ITEM_SATALLITE;
-                    mItemAdapterItem.reFill(mParameterMananer.getDvbsParaManager().getCurrentItemList());
+                    String listType = ParameterManager.ITEM_SATELLITE;
+                    mItemAdapterItem.reFill(mParameterManager.getDvbsParaManager().getCurrentItemList());
 
-                    mListViewItem.switchListToType(listtype);
+                    mListViewItem.switchListToType(listType);
                     return;
                 }*/
                 String lnb = mParameterManager.getDvbsParaManager().getCurrentLnbId();
@@ -1255,9 +1255,9 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                 }
                 mListSatellites.setListType(ItemListView.ITEM_OPTION);
             } else if (ItemListView.LIST_MIDDLE.equals(mCurrentListFocus)) {
-                String listtype = mParameterManager.getDvbsParaManager().getCurrentListType();
-                if (ItemListView.ITEM_SATALLITE.equals(listtype)) {
-                    mListSatellites.setListType(ItemListView.ITEM_SATALLITE);
+                String listType = mParameterManager.getDvbsParaManager().getCurrentListType();
+                if (ItemListView.ITEM_SATELLITE.equals(listType)) {
+                    mListSatellites.setListType(ItemListView.ITEM_SATELLITE);
                     LinkedList<ItemDetail> sateAllList = mParameterManager.getDvbsParaManager().getSatelliteNameList();
                     String testSatellite = mParameterManager.getDvbsParaManager().getCurrentSatellite();
                     String selectedSatellite = "";
@@ -1272,7 +1272,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                             mParameterManager.getDvbsParaManager().setCurrentTransponder("");
                         }
                     }
-                } else if (ParameterMananer.ITEM_TRANSPONDER.equals(listtype)) {
+                } else if (ParameterManager.ITEM_TRANSPONDER.equals(listType)) {
                     mListSatellites.setListType(ItemListView.ITEM_TRANSPONDER);
                     LinkedList<ItemDetail> tps = mParameterManager.getDvbsParaManager().getTransponderList();
                     String selectTp = "";
@@ -1281,8 +1281,8 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     }
                     if (selectTp != null || !(selectTp.isEmpty())) {
                         //if UI support multi-tp
-                        //String sateName = mParameterMananer.getDvbsParaManager().getCurrentSatellite();
-                        //mParameterMananer.getDvbsParaManager().getSatelliteWrap().selectTransponder(sateName, selectTp, selected);
+                        //String sateName = mParameterManager.getDvbsParaManager().getCurrentSatellite();
+                        //mParameterManager.getDvbsParaManager().getSatelliteWrap().selectTransponder(sateName, selectTp, selected);
                         //else support single tp
                         mParameterManager.getDvbsParaManager().selectSingleTransponder(selectTp, selected);
                         startTune();
@@ -1298,13 +1298,13 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
 
         @Override
         public void onListItemFocused(View parent, int position, String type) {
-            Log.d(TAG, "onListItemFocused position = " + position + ", type = " + type + ", mfocuse= " + mCurrentListFocus);
+            Log.d(TAG, "onListItemFocused position = " + position + ", type = " + type + ", focus= " + mCurrentListFocus);
             /*if (ItemListView.LIST_LEFT.equals(mCurrentListFocus) && ItemListView.isRightList(type)) {
                 mListViewOption.cleanChoosed();
             }*/
             boolean isOptionType = ItemListView.ITEM_OPTION.equals(type);
             if (ItemListView.LIST_LEFT.equals(mCurrentListFocus)) {
-                mParameterManager.getDvbsParaManager().setCurrentListType(ParameterMananer.ITEM_LNB);
+                mParameterManager.getDvbsParaManager().setCurrentListType(ParameterManager.ITEM_LNB);
                 mItemDetailOption.clear();
                 mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
                 if (mItemAdapterOption.getCount() > 0) {
@@ -1324,14 +1324,14 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                 }
             } else if (ItemListView.LIST_RIGHT.equals(mCurrentListFocus)) {
                 /*mListViewItem.cleanChoosed();
-                if (isOptionType && position > 0 && !(ParameterMananer.ITEM_LNB.equals(mCurrentListType))) {
-                    String listtype = ParameterMananer.ITEM_LNB;
-                    mItemAdapterItem.reFill(mParameterMananer.getDvbsParaManager().getCurrentItemList());
-                    mListViewItem.switchListToType(listtype);
+                if (isOptionType && position > 0 && !(ParameterManager.ITEM_LNB.equals(mCurrentListType))) {
+                    String listType = ParameterManager.ITEM_LNB;
+                    mItemAdapterItem.reFill(mParameterManager.getDvbsParaManager().getCurrentItemList());
+                    mListViewItem.switchListToType(listType);
                 }*/
             } else if (ItemListView.LIST_MIDDLE.equals(mCurrentListFocus)) {
                 mParameterManager.getDvbsParaManager().setCurrentListDirection("middle");
-                 //mParameterMananer.getDvbsParaManager().setCurrentListType(ParameterMananer.ITEM_SATALLITE);
+                 //mParameterManager.getDvbsParaManager().setCurrentListType(ParameterManager.ITEM_SATELLITE);
             }
         }
     };
@@ -1344,7 +1344,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
             if (direction != null) {
                 mCurrentListFocus = direction;
             }
-            String listtype = mParameterManager.getDvbsParaManager().getCurrentListType();
+            String listType = mParameterManager.getDvbsParaManager().getCurrentListType();
             if (ItemListView.LIST_LEFT.equals(mCurrentListFocus)) {
                 mListViewOption.cleanChoosed();
                 mListSatellites.cleanChoosed();
@@ -1361,8 +1361,8 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                 mListSatellites.cleanChoosed();
                 mListViewOption.requestFocus();
                 mListViewOption.setChoosed(mListViewOption.getSelectedView());
-                creatConfirmandExit1();
-                creatSatelliteandScan2();
+                createConfirmAndExit1();
+                createSatelliteAndScan2();
                 mParameterManager.getDvbsParaManager().setCurrentListDirection("right");
                 mListSatellites.setListType(ItemListView.ITEM_OPTION);
             } else if (ItemListView.LIST_MIDDLE.equals(mCurrentListFocus)) {
@@ -1373,34 +1373,34 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                 creatFour1();
                 creatFour2();
                 mParameterManager.getDvbsParaManager().setCurrentListDirection("middle");
-                if (ItemListView.ITEM_SATALLITE.equals(listtype) || ItemListView.ITEM_LNB.equals(listtype)) {
-                    mListSatellites.setListType(ItemListView.ITEM_SATALLITE);
-                    mParameterManager.getDvbsParaManager().setCurrentListType(ParameterMananer.ITEM_SATALLITE);
-                } else if (ParameterMananer.ITEM_TRANSPONDER.equals(listtype)) {
+                if (ItemListView.ITEM_SATELLITE.equals(listType) || ItemListView.ITEM_LNB.equals(listType)) {
+                    mListSatellites.setListType(ItemListView.ITEM_SATELLITE);
+                    mParameterManager.getDvbsParaManager().setCurrentListType(ParameterManager.ITEM_SATELLITE);
+                } else if (ParameterManager.ITEM_TRANSPONDER.equals(listType)) {
                     mListSatellites.setListType(ItemListView.ITEM_TRANSPONDER);
-                    mParameterManager.getDvbsParaManager().setCurrentListType(ParameterMananer.ITEM_TRANSPONDER);
+                    mParameterManager.getDvbsParaManager().setCurrentListType(ParameterManager.ITEM_TRANSPONDER);
                 }
             }
-            if (ParameterMananer.ITEM_SATALLITE.equals(listtype)) {
-                //mListViewItem.setSelection(mParameterMananer.getDvbsParaManager().getCurrentSatelliteIndex());
-            } else if (ParameterMananer.ITEM_TRANSPONDER.equals(listtype)) {
-                //mListViewItem.setSelection(mParameterMananer.getDvbsParaManager().getCurrentTransponderIndex());
+            if (ParameterManager.ITEM_SATELLITE.equals(listType)) {
+                //mListViewItem.setSelection(mParameterManager.getDvbsParaManager().getCurrentSatelliteIndex());
+            } else if (ParameterManager.ITEM_TRANSPONDER.equals(listType)) {
+                //mListViewItem.setSelection(mParameterManager.getDvbsParaManager().getCurrentTransponderIndex());
             }
         }
     };
 
     ListTypeSwitchedListener mListTypeSwitchedListener = new ListTypeSwitchedListener() {
         @Override
-        public void onListTypeSwitched(String listtype) {
-            Log.d(TAG, "onListTypeSwitched listtype = " + listtype);
+        public void onListTypeSwitched(String listType) {
+            Log.d(TAG, "onListTypeSwitched listType = " + listType);
 
-            mCurrentListType = listtype;
+            mCurrentListType = listType;
             mParameterManager.getDvbsParaManager().setCurrentListType(mCurrentListType);
             mItemAdapterSatellites.reFill(mParameterManager.getDvbsParaManager().getCurrentItemList());
             mListSatellites.setAdapter(mItemAdapterSatellites);
             mListSatellites.cleanChoosed();
             int position = 0;
-            if (ItemListView.ITEM_SATALLITE.equals(listtype)) {
+            if (ItemListView.ITEM_SATELLITE.equals(listType)) {
                 isTransponder = false;
                 position = mParameterManager.getDvbsParaManager().getCurrentSatelliteIndex();
                 String lnbKey = mParameterManager.getDvbsParaManager().getCurrentLnbId();
@@ -1408,7 +1408,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                 String text = itemText + "(LNB" + lnbKey + ")";
                 mItemTitleTextView2.setText(text);
 
-            } else if (ItemListView.ITEM_TRANSPONDER.equals(listtype)) {
+            } else if (ItemListView.ITEM_TRANSPONDER.equals(listType)) {
                 isTransponder = true;
                 String lnbKey = mParameterManager.getDvbsParaManager().getCurrentLnbId();
                 String sate = mParameterManager.getDvbsParaManager().getCurrentSatellite();
@@ -1418,10 +1418,10 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                 mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
                 startTune();
             } else {
-                //position = mParameterMananer.getDvbsParaManager().getCurrentLnbIndex();
+                //position = mParameterManager.getDvbsParaManager().getCurrentLnbIndex();
                 //mItemTitleTextView.setText(R.string.list_type_lnb);
-                //mParameterMananer.getDvbsParaManager().setCurrentSatellite("");
-                //mParameterMananer.getDvbsParaManager().setCurrentTransponder("");
+                //mParameterManager.getDvbsParaManager().setCurrentSatellite("");
+                //mParameterManager.getDvbsParaManager().setCurrentTransponder("");
             }
             if (ItemListView.LIST_MIDDLE.equals(mCurrentListFocus)) {
                 mListSatellites.setSelection(position);

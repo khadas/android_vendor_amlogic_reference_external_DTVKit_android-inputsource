@@ -64,8 +64,8 @@ public class SimpleListFragment extends com.droidlogic.dtvkit.inputsource.search
         mList.setGravity(Gravity.CENTER_VERTICAL);
 //        mList.setOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
 //            @Override
-//            public void onChildViewHolderSelected(RecyclerView parent, RecyclerView.ViewHolder child, int position, int subposition) {
-//                super.onChildViewHolderSelected(parent, child, position, subposition);
+//            public void onChildViewHolderSelected(RecyclerView parent, RecyclerView.ViewHolder child, int position, int subPosition) {
+//                super.onChildViewHolderSelected(parent, child, position, subPosition);
 //                if (child != null) {
 //                    Toast.makeText(view.getContext(), child.itemView.toString() + " selected", Toast.LENGTH_SHORT).show();
 //                }

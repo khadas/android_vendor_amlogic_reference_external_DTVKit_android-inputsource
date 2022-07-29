@@ -25,18 +25,18 @@ public class PropSettingManager {
     public static final String PVR_RECORD_MODE_CHANNEL = "0";
     public static final String PVR_RECORD_MODE_FREQUENCY = "1";
     //add to match new tv app in android r
-    public static final String MATCH_NEW_TVAPP_ENABLE = "vendor.sys.tv.new.tvapp";
+    public static final String MATCH_NEW_TV_APP_ENABLE = "vendor.sys.tv.new.tv_app";
     public static final String CAPTIONING_MANAGER_ENABLE = "vendor.sys.tv.captioning_manager_enable";
-    public static final String MANUAL_TIMESHIFT_ENABLE = "vendor.sys.tv.maunal_timeshift_enable";
+    public static final String MANUAL_TIMESHIFT_ENABLE = "vendor.sys.tv.manual_timeshift_enable";
     public static final String ACTON_CONTROL_TIMESHIFT = "action_control_timeshift";
     public static final String VALUE_CONTROL_TIMESHIFT = "value_control_timeshift";
     public static final String VALUE_TIMESHIFT_DURATION = "value_timeshift_duration";
-    public static final String VALUE_TIMESHIFT_START_MODE = "value_timeshift_startmode";
+    public static final String VALUE_TIMESHIFT_START_MODE = "value_timeshift_start_mode";
     //ci simulate test define
     public static final String CI_PROFILE_ADD_TEST = "vendor.sys.tv.add.profile";
     public static final String CI_PROFILE_TEST = "vendor.sys.tv.test.profile";
     public static final String CI_PROFILE_SEARCH_TEST = "vendor.sys.tv.test.search";
-    public static final String CI_MENU_ITEM_TEST = "vendor.sys.tv.test.ciitem";
+    public static final String CI_MENU_ITEM_TEST = "vendor.sys.tv.test.ci_item";
 
     public static String getProp(String key) {
         String result = null;
@@ -124,17 +124,17 @@ public class PropSettingManager {
         return result;
     }
 
-    public static long getCurrentStreamTime(boolean streamtime) {
+    public static long getCurrentStreamTime(boolean streamTime) {
         long result = System.currentTimeMillis();
-        if (streamtime) {
+        if (streamTime) {
             result = result + getLong(TV_STREAM_TIME, 0);
         }
         return result;
     }
 
-    public static long getCurrentPipStreamTime(boolean streamtime) {
+    public static long getCurrentPipStreamTime(boolean streamTime) {
         long result = System.currentTimeMillis();
-        if (streamtime) {
+        if (streamTime) {
             result = result + getLong(TV_PIP_STREAM_TIME, 0);
         }
         return result;

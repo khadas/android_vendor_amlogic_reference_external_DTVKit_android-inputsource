@@ -1,4 +1,4 @@
-package com.droidlogic.readdbfile;
+package com.droidlogic.readdb;
 
 import android.app.Activity;
 import android.database.Cursor;
@@ -15,8 +15,8 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.droidlogic.readdbfile.Sqlite.SqliteManager;
-import com.droidlogic.readdbfile.Sqlite.TvData;
+import com.droidlogic.readdb.Sqlite.SqliteManager;
+import com.droidlogic.readdb.Sqlite.TvData;
 
 import com.droidlogic.dtvkit.inputsource.R;
 
@@ -110,7 +110,7 @@ public class ReadDbActivity extends Activity {
                     referent.deleteTvChannels();
                     break;
                 case MSG_PROGRAM_ADD:
-                    referent.dealTvProgramslUpdate();
+                    referent.dealTvProgramsUpdate();
                     break;
                 case MSG_PROGRAM_REMOVE:
                     referent.deleteTvPrograms();
@@ -147,8 +147,8 @@ public class ReadDbActivity extends Activity {
         }
     }
 
-    private void dealTvProgramslUpdate() {
-        Log.d(TAG, "dealTvProgramslUpdate start");
+    private void dealTvProgramsUpdate() {
+        Log.d(TAG, "dealTvProgramsUpdate start");
         Cursor cursor = mSqliteManager.queryData(TvData.PATH_PROGRAM, TvData.PROGRAM_BASE_COLUMNS, null, null);
         TvData.TvProgram tvProgram = mTvData.getTvProgram();
         List<TvData.TvProgram> programs = new ArrayList<>();
@@ -160,7 +160,7 @@ public class ReadDbActivity extends Activity {
         if (programs != null && programs.size() > 0) {
             mTvData.syncTvPrograms(programs);
         }
-        Log.d(TAG, "dealTvProgramslUpdate end " + programs.size());
+        Log.d(TAG, "dealTvProgramsUpdate end " + programs.size());
     }
 
     private void deleteTvPrograms() {

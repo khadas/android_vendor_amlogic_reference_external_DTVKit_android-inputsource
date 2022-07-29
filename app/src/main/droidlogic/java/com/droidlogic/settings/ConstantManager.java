@@ -65,7 +65,7 @@ public class ConstantManager {
     public static final String CONSTANT_FRENCH = "french";
     public static final String CONSTANT_NAR_VALUE = "Narrative";
 
-    //add for trackinfo
+    //add for trackInfo
     public static final String SYS_VIDEO_DECODE_PATH = "/sys/class/vdec/vdec_status";
     public static final String SYS_VIDEO_DECODE_VIDEO_WIDTH_PREFIX = "frame width :";
     public static final String SYS_VIDEO_DECODE_VIDEO_WIDTH_SUFFIX = "frame height";
@@ -107,7 +107,7 @@ public class ConstantManager {
     public static final String VALUE_CI_PLUS_COMMAND_HOST_CONTROL = "host_control";
     public static final String VALUE_CI_PLUS_COMMAND_IGNORE_INPUT = "ignore_input";
     public static final String VALUE_CI_PLUS_COMMAND_RECEIVE_INPUT = "receive_input";
-    public static final String VALUE_CI_PLUS_COMMAND_PVRPLAYBACK_STATUS = "PvrPlaybackStatus";
+    public static final String VALUE_CI_PLUS_COMMAND_PVR_PLAYBACK_STATUS = "PvrPlaybackStatus";
     public static final String VALUE_CI_PLUS_COMMAND_TRICK_LIMIT = "trick_limit";
     public static final String VALUE_CI_PLUS_COMMAND_DO_PVR_LIMITED = "DoPVRLimited";
     public static final String VALUE_CI_PLUS_COMMAND_ECI_CONTENT_PROTECTION = "eci_content_protection";
@@ -148,7 +148,7 @@ public class ConstantManager {
 
     public static final String CONSTANT_FORMAT_PROGRESSIVE = "progressive";
     public static final String CONSTANT_FORMAT_INTERLACE = "interlace";
-    public static final String CONSTANT_FORMAT_COMRPESSED = "Compressed";
+    public static final String CONSTANT_FORMAT_COMPRESSED = "Compressed";
 
     public static final String SYS_WIDTH_PATH = "/sys/class/video/frame_width";
     public static final String SYS_HEIGHT_PATH = "/sys/class/video/frame_height";
@@ -166,7 +166,7 @@ public class ConstantManager {
     public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_221_1 = 0x23;
     public static final int ADB_SUBTITLE_TYPE_DVB_HARD_HEARING_HD = 0x24;
 
-    //add define for telextet type
+    //add define for teletext type
     public static final int ADB_TELETEXT_TYPE_INITIAL = 0x01;
     public static final int ADB_TELETEXT_TYPE_SUBTITLE = 0x02;
     public static final int ADB_TELETEXT_TYPE_ADDITIONAL_INFO = 0x03;
@@ -192,7 +192,7 @@ public class ConstantManager {
         }
     }
 
-    public static class PidDscendComparator implements Comparator<TvTrackInfo> {
+    public static class PidDescendComparator implements Comparator<TvTrackInfo> {
         public int compare(TvTrackInfo o1, TvTrackInfo o2) {
             Integer pid1 = new Integer(o1.getExtra().getInt("pid", 0));
             Integer pid2 = new Integer(o2.getExtra().getInt("pid", 0));

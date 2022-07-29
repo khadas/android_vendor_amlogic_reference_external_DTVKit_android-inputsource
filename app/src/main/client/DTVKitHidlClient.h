@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *  @author   junchao.yuan
+ *  @author   JC.yuan@amlogic.com
  *  @version  1.0
  *  @date     2019/3/29
  *  @par function description:
@@ -63,13 +63,13 @@ typedef struct s_dvb_subt_info
 {
    int cpage;
    int apage;
-} dvbsubtitleinfo_t;
+} dvb_subtitle_info_t;
 
 typedef struct s_teletext_subt
 {
    int magazine;
    int page;
-} teletextinfo_t;
+} teletext_info_t;
 
 typedef struct parcel_s {
     int msgType;
@@ -77,14 +77,14 @@ typedef struct parcel_s {
     std::vector<std::string> bodyString;
     hidl_memory mem;
 
-    //to subtitleserver subitlte info
+    //to subtitleserver subtitle info
     int funname;
     int is_dvb_subt;
     int pid;
     int subt_type;//1:dvb; 2: teletext; 3:scte27
     int demux_num;
-    dvbsubtitleinfo_t subt;
-    teletextinfo_t ttxt;
+    dvb_subtitle_info_t subt;
+    teletext_info_t ttxt;
     int event_type; // teletext event type;
 } parcel_t;
 

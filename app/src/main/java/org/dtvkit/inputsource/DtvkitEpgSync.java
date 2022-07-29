@@ -13,7 +13,7 @@ import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 import com.droidlogic.dtvkit.companionlibrary.model.Program;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.settings.PropSettingManager;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -30,8 +30,8 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     public static final int SIGNAL_QAM   = 4; // digital cable
     public static final int SIGNAL_ISDBT  = 5;
     public static final int SIGNAL_ANALOG = 8;
-    private ParameterMananer mParameterMananer = new ParameterMananer(mContext, DtvkitGlueClient.getInstance());
-    private boolean mIsUK = "gbr".equals(mParameterMananer.getCurrentCountryIso3Name());
+    private ParameterManager mParameterManager = new ParameterManager(mContext, DtvkitGlueClient.getInstance());
+    private boolean mIsUK = "gbr".equals(mParameterManager.getCurrentCountryIso3Name());
 
     @Override
     public List<Channel> getChannels(boolean syncCurrent) {
@@ -102,10 +102,10 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 satellite.put("satellite_info_name", service.getString("sate_name"));
                 data.put("satellite_info", satellite.toString());
                 JSONObject transponder = new JSONObject();
-                String tranponderDisplay = service.getString("transponder");
-                transponder.put("transponder_info_display_name", tranponderDisplay);
-                if (tranponderDisplay != null) {
-                    String[] splitTransponder = tranponderDisplay.split("/");
+                String transponderDisplay = service.getString("transponder");
+                transponder.put("transponder_info_display_name", transponderDisplay);
+                if (transponderDisplay != null) {
+                    String[] splitTransponder = transponderDisplay.split("/");
                     if (splitTransponder != null && splitTransponder.length == 3) {
                         transponder.put("transponder_info_satellite_name", service.getString("sate_name"));
                         transponder.put("transponder_info_frequency", splitTransponder[0]);
@@ -521,25 +521,25 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
     private TvContentRating[] parseParentalRatings(int parentalRating, String title)
     {
-        TvContentRating ratings_arry[];
+        TvContentRating ratings_array[];
         String ratingSystemDefinition = "DVB";
         String ratingDomain = "com.android.tv";
         String DVB_ContentRating[] = {"DVB_4", "DVB_5", "DVB_6", "DVB_7", "DVB_8", "DVB_9", "DVB_10", "DVB_11", "DVB_12", "DVB_13", "DVB_14", "DVB_15", "DVB_16", "DVB_17", "DVB_18"};
 
-        ratings_arry = new TvContentRating[1];
+        ratings_array = new TvContentRating[1];
         parentalRating += 3; //minimum age = rating + 3 years
         Log.d(TAG, "parseParentalRatings parentalRating:"+ parentalRating + ", title = " + title);
         if (parentalRating >= 4 && parentalRating <= 18) {
             TvContentRating r = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, DVB_ContentRating[parentalRating-4], (String) null);
             if (r != null) {
-                ratings_arry[0] = r;
+                ratings_array[0] = r;
                 Log.d(TAG, "parse ratings add rating:"+r.flattenToString()  + ", title = " + title);
             }
         }else {
-            ratings_arry = null;
+            ratings_array = null;
         }
 
-        return ratings_arry;
+        return ratings_array;
     }
 
     private boolean tryToPutStringToInternalProviderData(InternalProviderData data, String key1, JSONObject obj, String key2) {

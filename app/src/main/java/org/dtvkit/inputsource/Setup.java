@@ -11,7 +11,7 @@ public class Setup extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.setup);
 
-        findViewById(R.id.cablemanualsearch).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.btn_cable_manual_search).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 startActivity(new Intent(getApplicationContext(), DtvkitDvbcSetup.class));
@@ -19,7 +19,7 @@ public class Setup extends Activity {
             }
         });
 
-        findViewById(R.id.satellitemanualsearch).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.btn_satellite_manual_search).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 startActivity(new Intent(getApplicationContext(), DtvkitDvbsSetup.class));
@@ -27,7 +27,7 @@ public class Setup extends Activity {
             }
         });
 
-        findViewById(R.id.terrestrialautosearch).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.btn_terrestrial_auto_search).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 startActivity(new Intent(getApplicationContext(), DtvkitDvbtSetup.class));

@@ -23,7 +23,7 @@ public class ScanMainActivity extends Activity {
         //requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_main);
         mScanFragmentManager = new ScanFragmentManager(this);
-        ParameterMananer parameterManager = new ParameterMananer(this, DtvkitGlueClient.getInstance());
+        ParameterManager parameterManager = new ParameterManager(this, DtvkitGlueClient.getInstance());
         DialogManager dialogManager = new DialogManager(this, parameterManager);
 
         ScanDishSetupFragment mainFragment = new ScanDishSetupFragment();

@@ -1,4 +1,4 @@
-package com.droidlogic.readdbfile.Sqlite;
+package com.droidlogic.readdb.Sqlite;
 
 import android.content.ContentValues;
 import android.database.Cursor;

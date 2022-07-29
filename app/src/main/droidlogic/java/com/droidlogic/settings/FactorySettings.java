@@ -24,12 +24,12 @@ import java.util.List;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.dtvkit.inputsource.R;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 
 public class FactorySettings {
     private static final String TAG = "FactorySettings";
     private Context mContext;
-    private ParameterMananer mParameterManager = null;
+    private ParameterManager mParameterManager = null;
     private String mInput = null;
     private FactorySettingsCallback mCallback;
     private TextView textView_Message;
@@ -49,7 +49,7 @@ public class FactorySettings {
     /**
      * @param context Need ActivityContext
      */
-    public FactorySettings(final Context context, ParameterMananer parameter,
+    public FactorySettings(final Context context, ParameterManager parameter,
                                String input_id, FactorySettingsCallback callback) {
         mContext = context;
         mParameterManager = parameter;
@@ -75,7 +75,7 @@ public class FactorySettings {
                         ret = doImportChannels();
                         if (ret) {
                             Message message = mThreadHandler.obtainMessage(MSG_SYNC);
-                            message.arg1 = 0;//isrestore
+                            message.arg1 = 0;//is restore
                             mThreadHandler.sendMessageDelayed(message, 100);
                         } else {
                             Message message = mThreadHandler.obtainMessage(MSG_FINISH);
@@ -102,7 +102,7 @@ public class FactorySettings {
                         ret = doRestoreDefaults();
                         if (ret) {
                             Message message = mThreadHandler.obtainMessage(MSG_SYNC);
-                            message.arg1 = 1;//isrestore
+                            message.arg1 = 1;//is restore
                             mThreadHandler.sendMessageDelayed(message, 100);
                         } else {
                             Message message = mThreadHandler.obtainMessage(MSG_FINISH);
@@ -228,7 +228,7 @@ public class FactorySettings {
         importSatellites.setOnClickListener(listener);
         restoreToDefault.setOnClickListener(listener);
         exportChannels.requestFocus();
-        if (mParameterManager.getCurrentDvbSource() != ParameterMananer.SIGNAL_QPSK) {
+        if (mParameterManager.getCurrentDvbSource() != ParameterManager.SIGNAL_QPSK) {
             restoreToDefault.setVisibility(View.GONE);
         }
 

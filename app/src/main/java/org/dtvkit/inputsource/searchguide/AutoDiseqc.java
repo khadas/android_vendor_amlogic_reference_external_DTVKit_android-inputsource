@@ -40,7 +40,7 @@ public class AutoDiseqc extends SearchStageFragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.search_autodiseqc, container, false);
+        View view = inflater.inflate(R.layout.search_auto_diseqc, container, false);
         TextView titleView = (TextView) view.findViewById(R.id.main_title);
         titleView.setText(getTitle());
         mContinueBt = (Button) view.findViewById(R.id.bt_continue);

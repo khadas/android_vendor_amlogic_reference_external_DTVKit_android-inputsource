@@ -9,7 +9,6 @@
     android:orientation="horizontal">
 
     <android.support.constraint.ConstraintLayout
-        android:id="@+id/clt_tune_content"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/px_260.0"
@@ -25,7 +24,7 @@
             android:ellipsize="end"
             android:fontFamily="sans-serif-light"
             android:maxLines="@integer/ut_scan_title_max_lines"
-            android:text="@string/public_dvb_search"
+            android:text="@string/strSearchDvbsDescription"
             android:textColor="@color/ut_scan_title_text"
             android:textSize="@dimen/ut_scan_title_text_size"
             android:textStyle="bold"
@@ -33,7 +32,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <ProgressBar
-            android:id="@+id/searchprogress"
+            android:id="@+id/proBar_search_progress"
             style="@android:style/Widget.ProgressBar.Horizontal"
             android:layout_width="@dimen/ut_scan_progress_width"
             android:layout_height="@dimen/ut_scan_progress_height"
@@ -43,7 +42,7 @@
             app:layout_constraintTop_toBottomOf="@id/dvb_search" />
 
         <TextView
-            android:id="@+id/searchstatus"
+            android:id="@+id/tv_search_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/ut_scan_description_margin_top"
@@ -53,7 +52,7 @@
             android:textColor="@color/ut_scan_description_text"
             android:textSize="@dimen/ut_scan_description_text_size"
             app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/searchprogress" />
+            app:layout_constraintTop_toBottomOf="@id/proBar_search_progress" />
 
         <LinearLayout
             android:id="@+id/channel_holder"
@@ -64,7 +63,7 @@
             android:orientation="horizontal"
             android:visibility="gone"
             app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/searchstatus"
+            app:layout_constraintTop_toBottomOf="@id/tv_search_status"
             tools:visibility="visible">
 
             <TextView
@@ -72,9 +71,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:maxLines="1"
-                android:textColor="@color/ut_scan_description_text"
+                android:textColor="#80FFFFFF"
                 android:textSize="18sp"
-                tools:text="Searching (41%)" />
+                tools:text="Strength:0%" />
 
         </LinearLayout>
 
@@ -88,14 +87,27 @@
             app:layout_constraintTop_toBottomOf="@id/channel_holder" />
 
         <CheckBox
-            android:id="@+id/lcnonoff"
+            android:id="@+id/clear_old"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/px_24.0"
-            android:text="@string/strLcnOnOff"
+            android:text="@string/strClearOld"
             android:visibility="gone"
             app:layout_constraintLeft_toLeftOf="@id/dvb_search"
             app:layout_constraintTop_toBottomOf="@id/network"
+            tools:visibility="visible" />
+        <!-- hide for  the moment -->
+
+        <CheckBox
+            android:id="@+id/dvbs2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/px_24.0"
+            android:nextFocusDown="@+id/search_mode"
+            android:text="@string/strDVBS2"
+            android:visibility="gone"
+            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
+            app:layout_constraintTop_toBottomOf="@id/clear_old"
             tools:visibility="visible" />
 
         <TextView
@@ -110,7 +122,7 @@
             android:textSize="@dimen/ut_scan_button_text_size"
             android:textStyle="bold"
             app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/lcnonoff" />
+            app:layout_constraintTop_toBottomOf="@id/dvbs2" />
 
         <LinearLayout
             android:id="@+id/mode_option_content"
@@ -119,141 +131,93 @@
             android:layout_marginTop="@dimen/ut_scan_description_margin_top"
             android:orientation="horizontal"
             app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/mode_option"
-            tools:visibility="visible">
+            app:layout_constraintTop_toBottomOf="@id/mode_option">
 
             <LinearLayout
-                android:id="@+id/public_search_mode_containner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/public_search_mode_text"
+                    android:id="@+id/search_mode_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:accessibilityLiveRegion="polite"
                     android:fontFamily="sans-serif"
-                    android:text="@string/public_search_mode"
+                    android:text="@string/strSearchMode"
                     android:textColor="@color/ut_scan_description_text"
                     android:textSize="@dimen/ut_scan_description_text_size" />
 
                 <Spinner
-                    android:id="@+id/public_search_mode_spinner"
+                    android:id="@+id/search_mode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/px_15.0"
-                    android:entries="@array/public_search_mode_entries"
+                    android:entries="@array/search_mode_entries"
                     android:fontFamily="sans-serif" />
+
+                <LinearLayout
+                    android:id="@+id/blind_frequency_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/px_15.0"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/start_freq"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="Start Frequency:" />
+
+                        <EditText
+                            android:id="@+id/edit_start_freq"
+                            android:layout_width="100dp"
+                            android:layout_height="wrap_content"
+                            android:ems="10"
+                            android:gravity="center"
+                            android:hint="MHz"
+                            android:inputType="number" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/end_freq"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:hint="MHz"
+                            android:text="End Frequency:" />
+
+                        <EditText
+                            android:id="@+id/edit_end_freq"
+                            android:layout_width="100dp"
+                            android:layout_height="wrap_content"
+                            android:ems="10"
+                            android:gravity="center"
+                            android:hint="MHz"
+                            android:inputType="number" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/frequency_channel_container"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/frequency_channel_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:accessibilityLiveRegion="polite"
-                    android:fontFamily="sans-serif"
-                    android:text="@string/search_method"
-                    android:textColor="@color/ut_scan_description_text"
-                    android:textSize="@dimen/ut_scan_description_text_size" />
-
-                <Spinner
-                    android:id="@+id/frequency_channel_spinner"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/px_15.0"
-                    android:entries="@array/public_search_method_entries"
-                    android:fontFamily="sans-serif" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/dvbt_bandwidth_containner"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/dvbt_bandwidth_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:accessibilityLiveRegion="polite"
-                    android:fontFamily="sans-serif"
-                    android:text="@string/dvbt_search_bandwidth"
-                    android:textColor="@color/ut_scan_description_text"
-                    android:textSize="@dimen/ut_scan_description_text_size" />
-
-                <Spinner
-                    android:id="@+id/dvbt_bandwidth_spinner"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/px_15.0"
-                    android:entries="@array/dvbt_bandwidth_entries"
-                    android:fontFamily="sans-serif" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/dvbt_mode_containner"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/dvbt_mode_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:accessibilityLiveRegion="polite"
-                    android:fontFamily="sans-serif"
-                    android:text="@string/dvbt_search_mode"
-                    android:textColor="@color/ut_scan_description_text"
-                    android:textSize="@dimen/ut_scan_description_text_size" />
-
-                <Spinner
-                    android:id="@+id/dvbt_mode_spinner"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/px_15.0"
-                    android:entries="@array/dvbt_mode_entries"
-                    android:fontFamily="sans-serif" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/dvbt_type_containner"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/dvbt_type_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:accessibilityLiveRegion="polite"
-                    android:fontFamily="sans-serif"
-                    android:text="@string/dvbt_search_type"
-                    android:textColor="@color/ut_scan_description_text"
-                    android:textSize="@dimen/ut_scan_description_text_size" />
-
-                <Spinner
-                    android:id="@+id/dvbt_type_spinner"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/px_15.0"
-                    android:entries="@array/dvbt_type_entries"
-                    android:fontFamily="sans-serif" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/dvbc_operator_containner"
+                android:id="@+id/fec_mode_container"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -261,25 +225,28 @@
                 tools:visibility="visible">
 
                 <TextView
+                    android:id="@+id/fec_mode_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:accessibilityLiveRegion="polite"
                     android:fontFamily="sans-serif"
-                    android:text="@string/strOperator"
+                    android:paddingRight="@dimen/px_22.0"
+                    android:text="@string/strFecMode"
                     android:textColor="@color/ut_scan_description_text"
                     android:textSize="@dimen/ut_scan_description_text_size" />
 
                 <Spinner
-                    android:id="@+id/dvbc_operator_spinner"
+                    android:id="@+id/fec_mode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/px_15.0"
+                    android:entries="@array/fec_mode_entries"
                     android:fontFamily="sans-serif" />
 
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/dvbc_autoscantype_containner"
+                android:id="@+id/modulation_mode_container"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -287,204 +254,73 @@
                 tools:visibility="visible">
 
                 <TextView
+                    android:id="@+id/modulation_mode_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:accessibilityLiveRegion="polite"
                     android:fontFamily="sans-serif"
-                    android:text="@string/strDvbcAutoScanType"
+                    android:paddingRight="@dimen/px_22.0"
+                    android:text="@string/strModulationMode"
                     android:textColor="@color/ut_scan_description_text"
                     android:textSize="@dimen/ut_scan_description_text_size" />
 
                 <Spinner
-                    android:id="@+id/dvbc_autoscantype_spinner"
+                    android:id="@+id/modulation_mode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/px_15.0"
-                    android:entries="@array/dvbc_scantype_entries"
+                    android:entries="@array/modulation_mode_entries"
                     android:fontFamily="sans-serif" />
 
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/dvbc_mode_containner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/dvbc_mode_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:accessibilityLiveRegion="polite"
                     android:fontFamily="sans-serif"
-                    android:text="@string/dvbc_search_mode"
+                    android:text="@string/strChannelType"
                     android:textColor="@color/ut_scan_description_text"
                     android:textSize="@dimen/ut_scan_description_text_size" />
 
                 <Spinner
-                    android:id="@+id/dvbc_mode_spinner"
+                    android:id="@+id/channel_type"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/px_15.0"
-                    android:entries="@array/dvbc_mode_entries"
+                    android:entries="@array/dvbs_channel_type"
                     android:fontFamily="sans-serif" />
 
             </LinearLayout>
 
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/dvbc_newtworkid_containner"
-            android:layout_width="wrap_content"
-            android:layout_height="50dp"
-            android:gravity="bottom"
-            android:orientation="horizontal"
-            android:visibility="gone"
-            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/mode_option_content"
-            tools:visibility="visible">
-
-            <TextView
-                android:layout_width="130dp"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="5dp"
-                android:accessibilityLiveRegion="polite"
-                android:fontFamily="sans-serif"
-                android:gravity="bottom"
-                android:text="@string/strDvbcNetworkId"
-                android:textColor="@color/ut_scan_description_text"
-                android:textSize="@dimen/ut_scan_description_text_size" />
-
-            <EditText
-                android:id="@+id/dvbc_networkid_edit"
-                android:layout_width="300dp"
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:ems="10"
-                android:gravity="center"
-                android:inputType="number" />
+                android:orientation="vertical">
 
-        </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFamily="sans-serif"
+                    android:text="@string/strServiceType"
+                    android:textColor="@color/ut_scan_description_text"
+                    android:textSize="@dimen/ut_scan_description_text_size" />
 
-        <LinearLayout
-            android:id="@+id/dvbc_freqency_containner"
-            android:layout_width="wrap_content"
-            android:layout_height="50dp"
-            android:gravity="bottom"
-            android:orientation="horizontal"
-            android:visibility="gone"
-            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/dvbc_newtworkid_containner"
-            tools:visibility="visible">
+                <Spinner
+                    android:id="@+id/service_type"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/px_15.0"
+                    android:entries="@array/dvbs_service_type"
+                    android:fontFamily="sans-serif" />
 
-            <TextView
-                android:layout_width="130dp"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="5dp"
-                android:accessibilityLiveRegion="polite"
-                android:fontFamily="sans-serif"
-                android:gravity="bottom"
-                android:text="@string/search_frequency"
-                android:textColor="@color/ut_scan_description_text"
-                android:textSize="@dimen/ut_scan_description_text_size" />
-
-            <EditText
-                android:id="@+id/dvbc_freqency_edit"
-                android:layout_width="300dp"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:gravity="center"
-                android:inputType="numberDecimal" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/dvbc_symbol_containner"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:gravity="bottom"
-            android:orientation="horizontal"
-            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/dvbc_freqency_containner">
-
-            <TextView
-                android:id="@+id/dvbc_symbol_text"
-                android:layout_width="130dp"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="5dp"
-                android:accessibilityLiveRegion="polite"
-                android:fontFamily="sans-serif"
-                android:gravity="bottom"
-                android:text="@string/dvbt_search_symbol_rate"
-                android:textColor="@color/ut_scan_description_text"
-                android:textSize="@dimen/ut_scan_description_text_size" />
-
-            <EditText
-                android:id="@+id/dvbc_symbol_edit"
-                android:layout_width="300dp"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:gravity="center"
-                android:inputType="number" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/public_typein_containner"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:gravity="bottom"
-            android:orientation="horizontal"
-            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/dvbc_symbol_containner">
-
-            <TextView
-                android:id="@+id/public_typein_text"
-                android:layout_width="130dp"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="5dp"
-                android:accessibilityLiveRegion="polite"
-                android:fontFamily="sans-serif"
-                android:gravity="bottom"
-                android:text=""
-                android:textColor="@color/ut_scan_description_text"
-                android:textSize="@dimen/ut_scan_description_text_size"
-                tools:text="public_typein_text:" />
-
-            <EditText
-                android:id="@+id/public_typein_edit"
-                android:layout_width="300dp"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:gravity="center"
-                android:hint="@string/search_frequency_hint"
-                android:inputType="numberDecimal" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/public_search_channel_containner"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:gravity="bottom"
-            android:orientation="horizontal"
-            app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/public_typein_containner">
-
-            <TextView
-                android:id="@+id/public_search_channel_text"
-                android:layout_width="130dp"
-                android:layout_height="wrap_content"
-                android:accessibilityLiveRegion="polite"
-                android:fontFamily="sans-serif"
-                android:text="@string/public_search_channel_name"
-                android:textColor="@color/ut_scan_description_text"
-                android:textSize="@dimen/ut_scan_description_text_size" />
-
-            <Spinner
-                android:id="@+id/public_search_channel_spinner"
-                android:layout_width="300dp"
-                android:layout_height="wrap_content"
-                android:gravity="center" />
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -494,7 +330,7 @@
             android:layout_marginTop="5dp"
             android:orientation="horizontal"
             app:layout_constraintLeft_toLeftOf="@id/dvb_search"
-            app:layout_constraintTop_toBottomOf="@id/public_search_channel_containner">
+            app:layout_constraintTop_toBottomOf="@id/mode_option_content">
 
             <Button
                 android:id="@+id/option_set_btn"
@@ -513,7 +349,43 @@
                 android:textSize="@dimen/ut_scan_button_text_size" />
 
             <Button
-                android:id="@+id/terrestrialstartsearch"
+                android:id="@+id/import_satellite"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/ut_scan_button_height"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:fontFamily="sans-serif-condensed"
+                android:paddingLeft="@dimen/ut_scan_button_padding"
+                android:paddingRight="@dimen/ut_scan_button_padding"
+                android:text="@string/strImportSatellite"
+                android:textAllCaps="false"
+                android:textColor="@color/ut_scan_button_text"
+                android:textSize="@dimen/ut_scan_button_text_size"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <Button
+                android:id="@+id/setup"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/ut_scan_button_height"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="@dimen/ut_scan_button_margin_top"
+                android:background="@drawable/selector_button"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:fontFamily="sans-serif-condensed"
+                android:paddingLeft="@dimen/ut_scan_button_padding"
+                android:paddingRight="@dimen/ut_scan_button_padding"
+                android:text="@string/strSetUp"
+                android:textAllCaps="false"
+                android:textColor="@color/ut_scan_button_text"
+                android:textSize="@dimen/ut_scan_button_text_size" />
+
+            <Button
+                android:id="@+id/btn_start_search"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/ut_scan_button_height"
                 android:layout_marginLeft="5dp"
@@ -530,10 +402,10 @@
                 android:textSize="@dimen/ut_scan_button_text_size" />
 
             <Button
-                android:id="@+id/terrestrialstopsearch"
+                android:id="@+id/stop_search"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/ut_scan_button_height"
-                android:layout_marginLeft="@dimen/ut_scan_icon_margin_right"
+                android:layout_marginLeft="5dp"
                 android:layout_marginTop="@dimen/ut_scan_button_margin_top"
                 android:background="@drawable/selector_button"
                 android:elevation="10dp"
@@ -545,7 +417,8 @@
                 android:textAllCaps="false"
                 android:textColor="@color/ut_scan_button_text"
                 android:textSize="@dimen/ut_scan_button_text_size"
-                android:visibility="gone" />
+                android:visibility="gone"
+                tools:visibility="visible" />
 
         </LinearLayout>
 
@@ -554,7 +427,7 @@
             android:layout_height="wrap_content"
             android:src="@drawable/tv_antenna"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintLeft_toRightOf="@+id/searchprogress"
+            app:layout_constraintLeft_toRightOf="@+id/proBar_search_progress"
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 

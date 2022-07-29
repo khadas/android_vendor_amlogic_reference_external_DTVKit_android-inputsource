@@ -29,23 +29,23 @@ public class SatelliteWrap {
     }
 
     public List<Satellite> getSatelliteList() {
-        List<Satellite> satelist =  new ArrayList<Satellite>();
+        List<Satellite> satelliteList =  new ArrayList<Satellite>();
         try {
-            JSONObject jsates = mDtvkitGlueClient.request("Dvbs.getSatellites", new JSONArray());
-            if (jsates != null) {
-                JSONArray sate_array = (JSONArray)(jsates.get("data"));
+            JSONObject jsonObject = mDtvkitGlueClient.request("Dvbs.getSatellites", new JSONArray());
+            if (jsonObject != null) {
+                JSONArray sate_array = (JSONArray)(jsonObject.get("data"));
                 if (sate_array != null) {
                     for (int i = 0; i < sate_array.length(); i ++) {
-                        JSONObject jsate = (JSONObject)(sate_array.get(i));
+                        JSONObject sate = (JSONObject)(sate_array.get(i));
                         Satellite satellite = new Satellite();
-                        satellite.parseFromJson(jsate);
-                        satelist.add(satellite);
+                        satellite.parseFromJson(sate);
+                        satelliteList.add(satellite);
                     }
                 }
             }
         } catch (Exception e) {
         }
-        return satelist;
+        return satelliteList;
     }
 
     public Satellite getSatelliteByName(String name) {
@@ -55,9 +55,9 @@ public class SatelliteWrap {
             array.put(name);
             JSONObject obj = mDtvkitGlueClient.request("Dvbs.getSatelliteInfoByName", array);
             if (obj != null) {
-                JSONObject jsate = (JSONObject)(obj.get("data"));
-                if (jsate != null) {
-                    satellite.parseFromJson(jsate);
+                JSONObject sate = (JSONObject)(obj.get("data"));
+                if (sate != null) {
+                    satellite.parseFromJson(sate);
                 }
             }
         } catch (Exception e) {
@@ -111,7 +111,7 @@ public class SatelliteWrap {
             JSONArray array = new JSONArray();
             array.put(sate.getName());
             array.put(sate.getName());
-            array.put(sate.getDrirection());
+            array.put(sate.getDirection());
             array.put(sate.getLongitude());
             array.put(dishPos);
             array.put("" + sate.getLinkedLnb());
@@ -133,13 +133,13 @@ public class SatelliteWrap {
         }
     }
 
-    public void editSatellite(String old_name_edit, String new_name_edit, boolean iseast_edit, int position_edit) {
+    public void editSatellite(String old_name_edit, String new_name_edit, boolean isEast_edit, int position_edit) {
         Satellite sate = getSatelliteByName(old_name_edit);
         try {
             JSONArray array = new JSONArray();
             array.put(old_name_edit);
             array.put(new_name_edit);
-            array.put(iseast_edit);
+            array.put(isEast_edit);
             array.put(position_edit);
             array.put(sate.dishPos);
             array.put("" + sate.linkedLnb);
@@ -150,7 +150,7 @@ public class SatelliteWrap {
 
     public void addTransponder(String sateName, int freq,
                                 String polarity, int symbole, boolean isDvbs2,
-                                String modulation, String fec, String invertion) {
+                                String modulation, String fec, String inversion) {
         try {
             JSONArray array = new JSONArray();
             array.put(sateName);
@@ -160,7 +160,7 @@ public class SatelliteWrap {
             array.put(isDvbs2 ? "DVBS2" : "DVBS");
             array.put(TextUtils.isEmpty(modulation) ? "auto" : modulation.toLowerCase());
             array.put(TextUtils.isEmpty(fec) ? "auto" : fec.toLowerCase());
-            array.put(TextUtils.isEmpty(invertion) ? "auto" : invertion.toLowerCase());
+            array.put(TextUtils.isEmpty(inversion) ? "auto" : inversion.toLowerCase());
             mDtvkitGlueClient.request("Dvbs.addTransponder", array);
         } catch (Exception e) {
         }
@@ -168,7 +168,7 @@ public class SatelliteWrap {
 
     public void editTransponder(String sateName, String oldTpName, int freq,
                                 String polarity, int symbole, boolean isDvbs2,
-                                String modulation, String fec, String invertion) {
+                                String modulation, String fec, String inversion) {
         try {
             JSONArray array = new JSONArray();
             array.put(sateName);
@@ -179,7 +179,7 @@ public class SatelliteWrap {
             array.put(isDvbs2 ? "DVBS2" : "DVBS");
             array.put(TextUtils.isEmpty(modulation) ? "auto" : modulation.toLowerCase());
             array.put(TextUtils.isEmpty(fec) ? "auto" : fec.toLowerCase());
-            array.put(TextUtils.isEmpty(invertion) ? "auto" : invertion.toLowerCase());
+            array.put(TextUtils.isEmpty(inversion) ? "auto" : inversion.toLowerCase());
             mDtvkitGlueClient.request("Dvbs.editTransponder", array);
         } catch (Exception e) {
         }
@@ -323,7 +323,7 @@ public class SatelliteWrap {
             return this.name;
         }
 
-        public boolean getDrirection() {
+        public boolean getDirection() {
             return isEast;
         }
 
@@ -363,13 +363,13 @@ public class SatelliteWrap {
             }
         }
 
-        public void editSatellite(String name, boolean isEast, int postion, int lnb) {
+        public void editSatellite(String name, boolean isEast, int position, int lnb) {
             try {
                 JSONArray array = new JSONArray();
                 array.put(this.name);
                 array.put(name);
                 array.put(isEast);
-                array.put(postion);
+                array.put(position);
                 array.put(dishPos);
                 array.put("" + lnb);
                 mDtvkitGlueClient.request("Dvbs.editSatellite", array);

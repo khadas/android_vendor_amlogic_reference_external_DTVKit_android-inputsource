@@ -30,7 +30,7 @@ using amlogic::SubtitleListener;
 enum {
     REQUEST        = 0,
     DTVKIT_DRAW    = 1,
-    SUBSERVER_DRAW = 2,
+    SUB_SERVER_DRAW = 2,
     HBBTV_DRAW     = 3,
 };
 
@@ -63,11 +63,11 @@ typedef struct datablock_s {
     hidl_memory mem;
 } datablock_t;
 
-typedef struct dvbparam_s {
+typedef struct dvb_param_s {
     std::string resource;
     std::string json;
     int id;
-}dvbparam_t;
+}dvb_param_t;
 
 class DTVKitClientJni : public DTVKitListener {
 public:

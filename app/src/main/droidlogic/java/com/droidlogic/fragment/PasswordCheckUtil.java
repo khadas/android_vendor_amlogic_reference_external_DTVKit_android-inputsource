@@ -253,7 +253,7 @@ public class PasswordCheckUtil {
         return mNewPassword;
     }
 
-    private void start_oncreate_animator() {
+    private void start_on_create_animator() {
         float TranslationY = password_layout.getTranslationY();
         float start_position = TranslationY - password_layout.getHeight();
         ObjectAnimator transAnim1 = ObjectAnimator.ofFloat(password_layout, "translationY", start_position, TranslationY);
@@ -340,7 +340,7 @@ public class PasswordCheckUtil {
     }
 
     private boolean isPasswordRight(String inputPassword) {
-        Log.d("wujiang", "--------inputpassword = " + inputPassword);
+        Log.d(TAG, "--------inputPassword = " + inputPassword);
         if (null == inputPassword || "".equals(inputPassword)) {
             return false;
         }
@@ -367,7 +367,7 @@ public class PasswordCheckUtil {
             }
         }
 
-        Log.d("wujiang", "getFocusPickerView: i = " + i);
+        Log.d(TAG, "getFocusPickerView: i = " + i);
         return pickerView;
     }
 
@@ -386,7 +386,7 @@ public class PasswordCheckUtil {
     }
 
     public interface PasswordCallback {
-        void passwordRight(String newpwd);
+        void passwordRight(String newPassword);
         void onKeyBack();
         void otherKeyHandler(int key_code);
         boolean checkNewPasswordValid(String passwd);

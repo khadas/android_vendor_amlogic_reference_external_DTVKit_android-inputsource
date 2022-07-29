@@ -7,7 +7,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.droidlogic.dtvkit.inputsource.R;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.dtvkit.inputsource.searchguide.OnMessageHandler;
@@ -35,7 +35,7 @@ public class DataPresenter {
     public static final String FRAGMENT_SEARCH_UI = "Search UI";
     public static final String FRAGMENT_REGIONAL_CHANNELS = "Regional Channels";
 
-    private final ParameterMananer mParameterManager;
+    private final ParameterManager mParameterManager;
     private final DialogManager mDialogManager;
     private final HashMap<String, OnMessageHandler> mHandlers = new HashMap<>();
     private final Context mContext;
@@ -49,11 +49,11 @@ public class DataPresenter {
 
     public DataPresenter(Context context) {
         mContext = context;
-        mParameterManager = new ParameterMananer(context, DtvkitGlueClient.getInstance());
+        mParameterManager = new ParameterManager(context, DtvkitGlueClient.getInstance());
         mDialogManager = new DialogManager(context, mParameterManager);
     }
 
-    public ParameterMananer getParameterManager() {
+    public ParameterManager getParameterManager() {
         return mParameterManager;
     }
 
@@ -142,7 +142,7 @@ public class DataPresenter {
                 break;
             case FRAGMENT_SPEC:
                 pos = 0;
-                dataList.addAll(getOperatorsTypeList(ParameterMananer.SIGNAL_QPSK));
+                dataList.addAll(getOperatorsTypeList(ParameterManager.SIGNAL_QPSK));
                 break;
             default:
                 break;
@@ -175,16 +175,16 @@ public class DataPresenter {
         String result = TvContract.Channels.TYPE_DVB_T;
 
         switch (source) {
-            case ParameterMananer.SIGNAL_COFDM:
+            case ParameterManager.SIGNAL_COFDM:
                 result = TvContract.Channels.TYPE_DVB_T;
                 break;
-            case ParameterMananer.SIGNAL_QAM:
+            case ParameterManager.SIGNAL_QAM:
                 result = TvContract.Channels.TYPE_DVB_C;
                 break;
-            case ParameterMananer.SIGNAL_QPSK:
+            case ParameterManager.SIGNAL_QPSK:
                 result = TvContract.Channels.TYPE_DVB_S;
                 break;
-            case ParameterMananer.SIGNAL_ISDBT:
+            case ParameterManager.SIGNAL_ISDBT:
                 result = TvContract.Channels.TYPE_ISDB_T;
                 break;
             default:

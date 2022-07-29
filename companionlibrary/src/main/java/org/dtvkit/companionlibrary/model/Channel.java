@@ -795,7 +795,7 @@ public final class Channel {
          * Sets the App Linking Intent.
          *
          * @param appLinkIntentUri The Intent that should be executed when the App Linking card is
-         * selected. Use the method toUri(Intent.URI_INTENT_SCHEME) on your Intentto turn it into a
+         * selected. Use the method toUri(Intent.URI_INTENT_SCHEME) on your Intent to turn it into a
          * String. See {@link TvContract.Channels#COLUMN_APP_LINK_INTENT_URI}.
          * @return This Builder object to allow for chaining of calls to builder methods.
          */

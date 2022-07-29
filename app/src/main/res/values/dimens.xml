@@ -21,10 +21,10 @@
     <dimen name="ut_scan_button_padding">24dp</dimen>
     <dimen name="ut_scan_button_text_size">16sp</dimen>
 
-    <dimen name="ut_scan_channellist_width">312dp</dimen>
-    <dimen name="ut_scan_channellist_padding_top">202dp</dimen>
-    <dimen name="ut_scan_channellist_padding_start">40dp</dimen>
-    <dimen name="ut_scan_channellist_padding_bottom">12dp</dimen>
+    <dimen name="ut_scan_channel_list_width">312dp</dimen>
+    <dimen name="ut_scan_channel_list_padding_top">202dp</dimen>
+    <dimen name="ut_scan_channel_list_padding_start">40dp</dimen>
+    <dimen name="ut_scan_channel_list_padding_bottom">12dp</dimen>
 
     <dimen name="ut_scan_channel_num_width">48dp</dimen>
     <dimen name="ut_scan_channel_name_width">96dp</dimen>

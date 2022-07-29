@@ -48,7 +48,7 @@ import java.util.Date;
 import java.util.TimeZone;
 
 import com.droidlogic.app.SystemControlManager;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.dtvkit.inputsource.R;
@@ -72,7 +72,7 @@ public class DtvkitDvbSettings extends Activity {
 
     private DtvkitGlueClient mDtvkitGlueClient = DtvkitGlueClient.getInstance();
     private SystemControlManager mSysControlManager = SystemControlManager.getInstance();
-    private ParameterMananer mParameterManager = null;
+    private ParameterManager mParameterManager = null;
     private SysSettingManager mSysSettingManager = null;
     private List<String> mStoragePathList = new ArrayList<String>();
     private List<String> mStorageNameList = new ArrayList<String>();
@@ -96,7 +96,7 @@ public class DtvkitDvbSettings extends Activity {
     protected static final int PERIOD_SHOW_DONE_TIME_OUT = 10000;
     protected static final int PERIOD_RIGHT_NOW = 0;
 
-    private String intenAction = "com.droidlogic.dtvkit.inputsource.AutomaticSearching";
+    private String intentAction = "com.droidlogic.dtvkit.inputsource.AutomaticSearching";
     private int mAutoSearchingMode = 0;
     private int mRepetition        = 0;
     private String mHour           = "4";
@@ -124,7 +124,7 @@ public class DtvkitDvbSettings extends Activity {
                         String volumeId = (String)msg.obj;
                         String formattedPath = mSysSettingManager.getStorageRawPathByVolumeId(volumeId);
                         if (!TextUtils.isEmpty(formattedPath)) {
-                            mParameterManager.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, formattedPath);
+                            mParameterManager.saveStringParameters(ParameterManager.KEY_PVR_RECORD_PATH, formattedPath);
                         }
                     }
                     hideFormatConfirmDialog();
@@ -144,8 +144,8 @@ public class DtvkitDvbSettings extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.lanuage_settings);
-        mParameterManager = new ParameterMananer(this, mDtvkitGlueClient);
+        setContentView(R.layout.language_settings);
+        mParameterManager = new ParameterManager(this, mDtvkitGlueClient);
         mSysSettingManager = new SysSettingManager(this);
         mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         updateStorageList();
@@ -205,16 +205,16 @@ public class DtvkitDvbSettings extends Activity {
         String result = "TYPE_DVB_T";
 
         switch (source) {
-            case ParameterMananer.SIGNAL_COFDM:
+            case ParameterManager.SIGNAL_COFDM:
                 result = "TYPE_DVB_T";
                 break;
-            case ParameterMananer.SIGNAL_QAM:
+            case ParameterManager.SIGNAL_QAM:
                 result = "TYPE_DVB_C";
                 break;
-            case ParameterMananer.SIGNAL_QPSK:
+            case ParameterManager.SIGNAL_QPSK:
                 result = "TYPE_DVB_S";
                 break;
-            case ParameterMananer.SIGNAL_ISDBT:
+            case ParameterManager.SIGNAL_ISDBT:
                 result = "TYPE_ISDB_T";
                 break;
             default:
@@ -224,7 +224,7 @@ public class DtvkitDvbSettings extends Activity {
     }
 
     private void checkPassWordInfo() {
-        String pinCode = mParameterManager.getStringParameters(ParameterMananer.SECURITY_PASSWORD);
+        String pinCode = mParameterManager.getStringParameters(ParameterManager.SECURITY_PASSWORD);
         String countryCode = mParameterManager.getCurrentCountryIso3Name();
         if ("fra".equals(countryCode)) {
             if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
@@ -244,7 +244,7 @@ public class DtvkitDvbSettings extends Activity {
                         Log.d(TAG, "onKeyBack");
                         String newPinCode = mParameterManager.getStringParameters(mParameterManager.SECURITY_PASSWORD);
                         if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
-                            //finish current activity when passward hasn't been set right
+                            //finish current activity when password hasn't been set right
                             setResult(RESULT_OK);
                             finish();
                         }
@@ -260,7 +260,7 @@ public class DtvkitDvbSettings extends Activity {
                             intValue = Integer.parseInt(value);
                         } catch (Exception e) {
                         }
-                        //france cannot use 0000
+                        //France cannot use 0000
                         if (intValue > 0 && intValue <= 9999) {
                             return true;
                         } else {
@@ -449,7 +449,7 @@ public class DtvkitDvbSettings extends Activity {
         pvr_path.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String saved = mParameterManager.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
+                String saved = mParameterManager.getStringParameters(ParameterManager.KEY_PVR_RECORD_PATH);
                 String current = getCurrentStoragePath(position);
                 Log.d(TAG, "pvr_path onItemSelected previous = " + saved + ", new = " + current);
                 if (mSysSettingManager.isMediaPath(current) && !SysSettingManager.isStorageFatFormat(mSysSettingManager.getStorageFsType(current))) {
@@ -461,7 +461,7 @@ public class DtvkitDvbSettings extends Activity {
                     Log.d(TAG, "pvr_path onItemSelected same path");
                     return;
                 }
-                mParameterManager.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, current);
+                mParameterManager.saveStringParameters(ParameterManager.KEY_PVR_RECORD_PATH, current);
             }
 
             @Override
@@ -488,7 +488,7 @@ public class DtvkitDvbSettings extends Activity {
         });
         adSupport.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                mParameterManager.saveIntParameters(ParameterMananer.TV_KEY_AD_SWITCH, adSupport.isChecked() ? 1 : 0);
+                mParameterManager.saveIntParameters(ParameterManager.TV_KEY_AD_SWITCH, adSupport.isChecked() ? 1 : 0);
             }
         });
         networkUpdate.setOnClickListener(new View.OnClickListener() {
@@ -511,7 +511,7 @@ public class DtvkitDvbSettings extends Activity {
             }
         });
 
-        Boolean enableFactoryUI = mSysControlManager.getPropertyBoolean("vendor.tv.dtvkit.debugmenu", false);
+        Boolean enableFactoryUI = mSysControlManager.getPropertyBoolean("vendor.tv.dtvkit.debug_menu", false);
         if (enableFactoryUI) {
             factorySettings.setVisibility(View.VISIBLE);
             FactorySettings.FactorySettingsCallback factoryCallback = new FactorySettings.FactorySettingsCallback() {
@@ -602,18 +602,18 @@ public class DtvkitDvbSettings extends Activity {
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         pvr_path.setAdapter(adapter);
-        String devicePath = mParameterManager.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
+        String devicePath = mParameterManager.getStringParameters(ParameterManager.KEY_PVR_RECORD_PATH);
         if (!mSysSettingManager.isDeviceExist(devicePath)) {
             select = 0;
-            mParameterManager.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, SysSettingManager.PVR_DEFAULT_PATH);
+            mParameterManager.saveStringParameters(ParameterManager.KEY_PVR_RECORD_PATH, SysSettingManager.PVR_DEFAULT_PATH);
         } else {
             select = getCurrentStoragePosition(devicePath);
         }
         pvr_path.setSelection(select);
         String pvrRecordMode = PropSettingManager.getString(PropSettingManager.PVR_RECORD_MODE, PropSettingManager.PVR_RECORD_MODE_CHANNEL);
         recordFrequency.setChecked(PropSettingManager.PVR_RECORD_MODE_FREQUENCY.equals(pvrRecordMode) ? true : false);
-        adSupport.setChecked(mParameterManager.getIntParameters(ParameterMananer.TV_KEY_AD_SWITCH) == 1 ? true : false);
-        if (mParameterManager.needConfirmNetWorkInfomation(mParameterManager.getNetworksOfRegion())) {
+        adSupport.setChecked(mParameterManager.getIntParameters(ParameterManager.TV_KEY_AD_SWITCH) == 1 ? true : false);
+        if (mParameterManager.needConfirmNetWorkInformation(mParameterManager.getNetworksOfRegion())) {
             networkUpdateContainer.setVisibility(View.VISIBLE);
         } else {
             networkUpdateContainer.setVisibility(View.GONE);
@@ -656,7 +656,7 @@ public class DtvkitDvbSettings extends Activity {
             }
         }
         if (!found) {
-            mParameterManager.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, mSysSettingManager.getAppDefaultPath());
+            mParameterManager.saveStringParameters(ParameterManager.KEY_PVR_RECORD_PATH, mSysSettingManager.getAppDefaultPath());
         }
         return result;
     }
@@ -858,7 +858,7 @@ public class DtvkitDvbSettings extends Activity {
         final AlertDialog alert = builder.create();
         final View dialogView = View.inflate(context, R.layout.confirm_region_network, null);
         final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
-        final ListView listView = (ListView) dialogView.findViewById(R.id.dialog_listview);
+        final ListView listView = (ListView) dialogView.findViewById(R.id.lv_dialog);
         final List<HashMap<String, Object>> dataList = new ArrayList<HashMap<String, Object>>();
         if (networkArray != null && networkArray.length() > 0) {
             JSONObject networkObj = null;
@@ -961,7 +961,7 @@ public class DtvkitDvbSettings extends Activity {
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, repList);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         repetition.setAdapter(adapter);
-        repetition.setSelection(mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_REPTITION));
+        repetition.setSelection(mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_REPETITION));
         repetition.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -972,7 +972,7 @@ public class DtvkitDvbSettings extends Activity {
                     mRepetition = position;
                 }
                 Log.d(TAG, "mRepetition =" + mRepetition);
-                mParameterManager.saveIntParameters(mParameterManager.AUTO_SEARCHING_REPTITION, mRepetition);
+                mParameterManager.saveIntParameters(mParameterManager.AUTO_SEARCHING_REPETITION, mRepetition);
             }
 
             @Override
@@ -1085,14 +1085,14 @@ public class DtvkitDvbSettings extends Activity {
         String hour = mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_HOUR);
         String minute = mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_MINUTE);
         int mode  = mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_MODE);
-        int repetition = mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_REPTITION);
+        int repetition = mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_REPETITION);
 
         Log.d(TAG, "mode:" + mode + "hour:" + hour + "minute = " + minute + "repetition =" + repetition);
         if (mode == 0) {
             Log.d(TAG, "automatic searching function is off");
             return;
         }
-        Intent intent = new Intent(intenAction);
+        Intent intent = new Intent(intentAction);
         intent.putExtra("mode", mode+"");
         intent.putExtra("repetition", repetition+"");
         if (mAlarmIntent != null) {
@@ -1106,29 +1106,29 @@ public class DtvkitDvbSettings extends Activity {
         cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hour));
         cal.set(Calendar.MINUTE, Integer.parseInt(minute));
 
-        long alarmtime = cal.getTimeInMillis();
+        long alarmTime = cal.getTimeInMillis();
         /*
         if (repetition == DAILY) {//daily
-            mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, alarmtime, AlarmManager.INTERVAL_DAY, alarmIntent);
+            mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, alarmTime, AlarmManager.INTERVAL_DAY, alarmIntent);
         } else if (repetition == WEEKLY) { //weekly
-            mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, alarmtime, AlarmManager.INTERVAL_DAY * 7, alarmIntent);
+            mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, alarmTime, AlarmManager.INTERVAL_DAY * 7, alarmIntent);
         }*/
-        Log.d(TAG, "current =" + new Date(current).toString() + "   alarmtime =" + new Date(alarmtime).toString());
+        Log.d(TAG, "current =" + new Date(current).toString() + "   alarmTime =" + new Date(alarmTime).toString());
         if (mode == 1) { //standby mode
-            if (current > alarmtime) {
+            if (current > alarmTime) {
                 if (repetition == DAILY) {//daily
-                    mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime + AlarmManager.INTERVAL_DAY, mAlarmIntent);
+                    mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime + AlarmManager.INTERVAL_DAY, mAlarmIntent);
                 } else if (repetition == WEEKLY) { //weekly
-                    mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime + AlarmManager.INTERVAL_DAY * 7, mAlarmIntent);
+                    mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime + AlarmManager.INTERVAL_DAY * 7, mAlarmIntent);
                 }
             } else {
-                mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmtime/*wakeAt*/, mAlarmIntent);
+                mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime/*wakeAt*/, mAlarmIntent);
             }
         } else if (mode == 2) { //operate mode
             if (repetition == DAILY) {//daily
-                mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, alarmtime, AlarmManager.INTERVAL_DAY, mAlarmIntent);
+                mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, alarmTime, AlarmManager.INTERVAL_DAY, mAlarmIntent);
             } else if (repetition == WEEKLY) { //weekly
-                mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, alarmtime, AlarmManager.INTERVAL_DAY * 7, mAlarmIntent);
+                mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, alarmTime, AlarmManager.INTERVAL_DAY * 7, mAlarmIntent);
             }
         }
     }

@@ -23,7 +23,7 @@ public class MhegOverlayView extends View {
         (src_width, src_height, dst_x, dst_y, dst_width, dst_height, data) -> {
             Log.v(TAG, "MhegOverlayView: " + "srcw= " + src_width +
                     ", srch= " + src_height + ", x= " + dst_x + ", y= " + dst_y +
-                    ", dstw= " + dst_width + ", dsth= " + dst_height);
+                    ", dst_w= " + dst_width + ", dst_h= " + dst_height);
             mHandler.post(() -> {
                 if (src_width == 0 || src_height == 0) {
                     if (dst_width == 9999 && overlay1 != null) {

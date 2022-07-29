@@ -9,7 +9,7 @@
         <item>left</item>
         <item>right</item>
     </string-array>
-    <string-array name="fecs">
+    <string-array name="fec">
         <item>auto</item>
         <item>1/2</item>
         <item>2/3</item>
@@ -50,7 +50,7 @@
     <string name="strTestString">TEST BINDER CONNECTION!!</string>
     <string name="strNetworkSearch">Network Search</string>
     <string name="strDVBS2">DVBS-2</string>
-    <string name="strPlaceholder">Placeholder activity for product customisation.</string>
+    <string name="strPlaceholder">Placeholder activity for product customization.</string>
     <string name="strImportSatellite">Import Satellites</string>
     <string name="strSetUp">Set Up</string>
     <string name="strSetUpNotFound">Setup Not Found!</string>
@@ -71,7 +71,7 @@
     <string name="satellite">Satellite</string>
     <string name="cable">Cable</string>
 
-    <!-- manaul search -->
+    <!-- manual search -->
     <string name="search_method">Search Method:</string>
     <string name="search_frequency">Channel Frequency:</string>
     <string name="search_frequency_hint">MHz</string>

@@ -26,10 +26,10 @@ import com.droidlogic.dtvkit.inputsource.searchguide.SearchStageFragment;
 import com.droidlogic.dtvkit.inputsource.searchguide.DtvkitScanSelector;
 import com.droidlogic.dtvkit.inputsource.searchguide.SimpleListFragment;
 
-import com.droidlogic.dtvkit.inputsource.DataMananer;
+import com.droidlogic.dtvkit.inputsource.DataManager;
 import com.droidlogic.dtvkit.inputsource.PvrStatusConfirmManager;
 import com.droidlogic.dtvkit.inputsource.R;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.fragment.PasswordCheckUtil;
 import com.droidlogic.fragment.ScanDishSetupFragment;
 import com.droidlogic.settings.ConstantManager;
@@ -60,10 +60,10 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         if (searchType == null) {
             showNextFragment(DataPresenter.FRAGMENT_REGION);
         } else {
-            int currentDvbSource = ParameterMananer.SIGNAL_COFDM;
+            int currentDvbSource = ParameterManager.SIGNAL_COFDM;
                 switch (searchType) {
                 case ("satellite"):
-                    currentDvbSource = ParameterMananer.SIGNAL_QPSK;
+                    currentDvbSource = ParameterManager.SIGNAL_QPSK;
                     List<String> dataList = new ArrayList<>();
                     mDataPresenter.getDataForFragment(DataPresenter.FRAGMENT_SPEC, dataList);
                     if (dataList.size() > 1) {
@@ -72,10 +72,10 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                     }
                     break;
                 case ("cable"):
-                    currentDvbSource = ParameterMananer.SIGNAL_QAM;
+                    currentDvbSource = ParameterManager.SIGNAL_QAM;
                     break;
                 case ("isdb"):
-                    currentDvbSource = ParameterMananer.SIGNAL_ISDBT;
+                    currentDvbSource = ParameterManager.SIGNAL_ISDBT;
                     break;
                 case ("terrestrial"):
                 default:
@@ -155,17 +155,17 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
             } else if (fragment.getTag().equals(DataPresenter.FRAGMENT_SPEC)) {
                 boolean isM7 = text.contains("M7");
                 mDataPresenter.setM7(isM7);
-                mDataPresenter.getParameterManager().setOperatorType(ParameterMananer.SIGNAL_QPSK, pos);
+                mDataPresenter.getParameterManager().setOperatorType(ParameterManager.SIGNAL_QPSK, pos);
                 if (isM7) {
                     showNextFragment(DataPresenter.FRAGMENT_AUTO_DISEQC);
                 } else {
-                    startActivityForSource(ParameterMananer.SIGNAL_QPSK, 0);
+                    startActivityForSource(ParameterManager.SIGNAL_QPSK, 0);
                 }
             } else if (fragment.getTag().equals(DataPresenter.FRAGMENT_SOURCE_SELECTOR)) {
-                int type = ParameterMananer.dvbSourceToInt(DataPresenter.dvbSourceToChannelType(text, true));
+                int type = ParameterManager.dvbSourceToInt(DataPresenter.dvbSourceToChannelType(text, true));
                 Log.i(TAG, "setCurrentSource:" + type);
                 mDataPresenter.getParameterManager().setCurrentDvbSource(type);
-                if (type == ParameterMananer.SIGNAL_QPSK && mDataPresenter.getParameterManager().checkIsGermanyCountry()) {
+                if (type == ParameterManager.SIGNAL_QPSK && mDataPresenter.getParameterManager().checkIsGermanyCountry()) {
                     showNextFragment(DataPresenter.FRAGMENT_SPEC);
                     return;
                 }
@@ -177,7 +177,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
             if (text.equals(getResources().getString(R.string.strSkip))) {
                 select = 1;
             }
-            startActivityForSource(ParameterMananer.SIGNAL_QPSK, select);
+            startActivityForSource(ParameterManager.SIGNAL_QPSK, select);
         } else {
             Log.i(TAG, "default onNext behaviour, finish");
             finish();
@@ -192,22 +192,22 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         int requestCode = 0;
         String className = null;
         switch (currentDvbSource) {
-            case ParameterMananer.SIGNAL_COFDM:
-                className = DataMananer.KEY_ACTIVITY_DVBT;
+            case ParameterManager.SIGNAL_COFDM:
+                className = DataManager.KEY_ACTIVITY_DVBT;
                 requestCode = REQUEST_CODE_START_DVBT_ACTIVITY;
                 break;
-            case ParameterMananer.SIGNAL_QAM:
-                className = DataMananer.KEY_ACTIVITY_DVBT;
+            case ParameterManager.SIGNAL_QAM:
+                className = DataManager.KEY_ACTIVITY_DVBT;
                 requestCode = REQUEST_CODE_START_DVBC_ACTIVITY;
                 break;
-            case ParameterMananer.SIGNAL_QPSK:
-                className = DataMananer.KEY_ACTIVITY_DVBS;
+            case ParameterManager.SIGNAL_QPSK:
+                className = DataManager.KEY_ACTIVITY_DVBS;
                 requestCode = REQUEST_CODE_START_DVBS_ACTIVITY;
                 intent.putExtra("M7", mDataPresenter.isM7());
                 intent.putExtra("manual", selector == 1);
                 break;
-            case ParameterMananer.SIGNAL_ISDBT:
-                className = DataMananer.KEY_ACTIVITY_ISDBT;
+            case ParameterManager.SIGNAL_ISDBT:
+                className = DataManager.KEY_ACTIVITY_ISDBT;
                 requestCode = REQUEST_CODE_START_ISDBT_ACTIVITY;
                 break;
             default:
@@ -215,8 +215,8 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         }
         if (className == null) {
             Log.e(TAG, "Error with dvb source(" + currentDvbSource + "), correct it to dvbt");
-            currentDvbSource = ParameterMananer.SIGNAL_COFDM;
-            className = DataMananer.KEY_ACTIVITY_DVBT;
+            currentDvbSource = ParameterManager.SIGNAL_COFDM;
+            className = DataManager.KEY_ACTIVITY_DVBT;
             requestCode = REQUEST_CODE_START_DVBT_ACTIVITY;
         }
         String pvrFlag = PvrStatusConfirmManager.read(this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
@@ -225,12 +225,12 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         } else {
             intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
         }
-        intent.setClassName(DataMananer.KEY_PACKAGE_NAME, className);
-        if (currentDvbSource == ParameterMananer.SIGNAL_QAM) {
-            intent.putExtra(DataMananer.KEY_IS_DVBT, false);
-        } else if (currentDvbSource == ParameterMananer.SIGNAL_COFDM
-                || currentDvbSource == ParameterMananer.SIGNAL_ISDBT) {
-            intent.putExtra(DataMananer.KEY_IS_DVBT, true);
+        intent.setClassName(DataManager.KEY_PACKAGE_NAME, className);
+        if (currentDvbSource == ParameterManager.SIGNAL_QAM) {
+            intent.putExtra(DataManager.KEY_IS_DVBT, false);
+        } else if (currentDvbSource == ParameterManager.SIGNAL_COFDM
+                || currentDvbSource == ParameterManager.SIGNAL_ISDBT) {
+            intent.putExtra(DataManager.KEY_IS_DVBT, true);
         }
         //intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         //finish();
@@ -307,7 +307,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
     }
 
     private void checkPassWordInfo() {
-        String pinCode = mDataPresenter.getParameterManager().getStringParameters(ParameterMananer.SECURITY_PASSWORD);
+        String pinCode = mDataPresenter.getParameterManager().getStringParameters(ParameterManager.SECURITY_PASSWORD);
         String countryCode = mDataPresenter.getParameterManager().getCurrentCountryIso3Name();
         if ("fra".equals(countryCode)) {
             if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
@@ -317,7 +317,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                     @Override
                     public void passwordRight(String password) {
                         Log.d(TAG, "password is right");
-                        mDataPresenter.getParameterManager().saveStringParameters(ParameterMananer.SECURITY_PASSWORD, password);
+                        mDataPresenter.getParameterManager().saveStringParameters(ParameterManager.SECURITY_PASSWORD, password);
                         getContentResolver().notifyChange(
                                 Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
                                 null, ContentResolver.NOTIFY_SYNC_TO_NETWORK);
@@ -325,9 +325,9 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                     @Override
                     public void onKeyBack() {
                         Log.d(TAG, "onKeyBack");
-                        String newPinCode = mDataPresenter.getParameterManager().getStringParameters(ParameterMananer.SECURITY_PASSWORD);
+                        String newPinCode = mDataPresenter.getParameterManager().getStringParameters(ParameterManager.SECURITY_PASSWORD);
                         if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
-                            //finish current activity when passward hasn't been set right
+                            //finish current activity when password hasn't been set right
                             setResult(RESULT_CANCELED);
                             finish();
                         }
@@ -343,7 +343,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                             intValue = Integer.parseInt(value);
                         } catch (Exception e) {
                         }
-                        //france cannot use 0000
+                        //France cannot use 0000
                         if (intValue > 0 && intValue <= 9999) {
                             return true;
                         } else {
@@ -360,7 +360,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         super.onStart();
         for (Fragment fragment : getFragmentManager().getFragments()) {
             if (fragment instanceof SearchStageFragment) {
-                ((SearchStageFragment) fragment).onLifecycleChanged(SearchStageFragment.ACTIVITY_LIFECYCLE_ONSTART);
+                ((SearchStageFragment) fragment).onLifecycleChanged(SearchStageFragment.ACTIVITY_LIFECYCLE_ON_START);
             }
         }
     }
@@ -370,7 +370,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         super.onStop();
         for (Fragment fragment : getFragmentManager().getFragments()) {
             if (fragment instanceof SearchStageFragment) {
-                ((SearchStageFragment) fragment).onLifecycleChanged(SearchStageFragment.ACTIVITY_LIFECYCLE_ONSTOP);
+                ((SearchStageFragment) fragment).onLifecycleChanged(SearchStageFragment.ACTIVITY_LIFECYCLE_ON_STOP);
             }
         }
     }
@@ -380,7 +380,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         super.onPause();
         for (Fragment fragment : getFragmentManager().getFragments()) {
             if (fragment instanceof SearchStageFragment) {
-                ((SearchStageFragment) fragment).onLifecycleChanged(SearchStageFragment.ACTIVITY_LIFECYCLE_ONPAUSE);
+                ((SearchStageFragment) fragment).onLifecycleChanged(SearchStageFragment.ACTIVITY_LIFECYCLE_ON_PAUSE);
             }
         }
     }
@@ -391,7 +391,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         checkPassWordInfo();
         for (Fragment fragment : getFragmentManager().getFragments()) {
             if (fragment instanceof SearchStageFragment) {
-                ((SearchStageFragment) fragment).onLifecycleChanged(SearchStageFragment.ACTIVITY_LIFECYCLE_ONRESUME);
+                ((SearchStageFragment) fragment).onLifecycleChanged(SearchStageFragment.ACTIVITY_LIFECYCLE_ON_RESUME);
             }
         }
     }

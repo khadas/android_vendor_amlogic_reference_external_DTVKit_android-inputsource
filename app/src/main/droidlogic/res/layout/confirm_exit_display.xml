@@ -9,7 +9,7 @@
     android:orientation="horizontal">
 
     <include
-        android:id="@+id/icon_cofirm_all"
+        android:id="@+id/icon_confirm_all"
         layout="@layout/confirm_display" />
 
     <include

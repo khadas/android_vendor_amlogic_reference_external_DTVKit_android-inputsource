@@ -62,7 +62,7 @@ import org.json.JSONObject;
  * Service to handle callbacks from JobScheduler. This service will be called by the system to
  * update the EPG with channels and programs periodically.
  * <p />
- * You can extend this class and add it your app by including it in your app's AndroidManfiest.xml:
+ * You can extend this class and add it your app by including it in your app's AndroidManifest.xml:
  * <pre>
  *      &lt;service
  *          android:name=".SampleJobService"
@@ -127,8 +127,8 @@ public abstract class EpgSyncJobService extends JobService {
     public static final String SYNC_STATUS = "sync_status";
 
     public static final String SYNC_REASON = "sync_reason";
-    public static final String SYNC_BYSCAN = "sync_byscan";
-    public static final String SYNC_BYOTHER = "sync_byother";
+    public static final String SYNC_BY_SCAN = "sync_by_scan";
+    public static final String SYNC_BY_OTHER = "sync_by_other";
     /** Indicates that the EPG sync was canceled before being completed. */
     public static final int ERROR_EPG_SYNC_CANCELED = 1;
     /** Indicates that the input id was not defined and the EPG sync cannot complete. */
@@ -612,9 +612,9 @@ public abstract class EpgSyncJobService extends JobService {
 
             Log.d(TAG, "finishEpgSync notify Update channel mUpdateByScan = " + mUpdateByScan);
             if (mUpdateByScan) {
-                intent.putExtra(SYNC_REASON, SYNC_BYSCAN);
+                intent.putExtra(SYNC_REASON, SYNC_BY_SCAN);
             } else {
-                intent.putExtra(SYNC_REASON, SYNC_BYOTHER);
+                intent.putExtra(SYNC_REASON, SYNC_BY_OTHER);
             }
             mUpdateByScan = false;
             LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
@@ -688,7 +688,7 @@ public abstract class EpgSyncJobService extends JobService {
                         newProgramsIndex++;
                     } else if (oldProgram.getEndTimeUtcMillis()
                             < newProgram.getEndTimeUtcMillis()) {
-                        if (DEBUG) Log.e(TAG, "oldendtime < newendtime");
+                        if (DEBUG) Log.e(TAG, "oldEndTime < newEndTime");
                         // No match. Remove the old program first to see if the next program in
                         // {@code oldPrograms} partially matches the new program.
                         ops.add(ContentProviderOperation.newDelete(

@@ -34,7 +34,7 @@ public class SubtitleServerView extends View {
         public void drawEx(int parserType, int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, int[] data) {
             Log.v(TAG, "SubtitleServiceDraw: type= " + parserType + ", srcw= " + src_width +
                     ", srch= " + src_height + ", x= " + dst_x + ", y= " + dst_y +
-                    ", dstw= " + dst_width + ", dsth= " + dst_height + ", pause= " + mPauseExDraw);
+                    ", dst_w= " + dst_width + ", dst_h= " + dst_height + ", pause= " + mPauseExDraw);
             mHandler.post(() -> {
                 if (mPauseExDraw > 0) {
                     return;
@@ -130,11 +130,11 @@ public class SubtitleServerView extends View {
         }
 
         @Override
-        public void drawCC(boolean bshow, String json) {
+        public void drawCC(boolean bShow, String json) {
             Message msg = mHandler.obtainMessage();
             msg.what = MSG_SUBTITLE_SHOW_CLOSED_CAPTION;
             msg.obj = json;
-            msg.arg1 = bshow == false ? 0 : 1;
+            msg.arg1 = bShow == false ? 0 : 1;
             mHandler.sendMessage(msg);
         }
 
@@ -184,7 +184,7 @@ public class SubtitleServerView extends View {
         postInvalidate();
     }
 
-    public void setTeletexTransparent(boolean mode) {
+    public void setTeletextTransparent(boolean mode) {
         mTtxTransparent = mode;
     }
 

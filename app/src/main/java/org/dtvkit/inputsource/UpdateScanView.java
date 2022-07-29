@@ -10,5 +10,5 @@ public interface UpdateScanView {
         default void updateScanSignalQuality(int signalQuality){}
         default void updateScanStatus(String status){}
         default void finishScanView(){}
-        default void notifyUpdateViewEvent(String evneType, Bundle event){}
+        default void notifyUpdateViewEvent(String eventType, Bundle event){}
 }

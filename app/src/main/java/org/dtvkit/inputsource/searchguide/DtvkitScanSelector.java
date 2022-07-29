@@ -11,7 +11,7 @@ import android.util.Log;
 
 import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.dtvkit.inputsource.PvrStatusConfirmManager;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.fragment.PasswordCheckUtil;
 import com.droidlogic.settings.ConstantManager;
 
@@ -56,7 +56,7 @@ public class DtvkitScanSelector extends com.droidlogic.dtvkit.inputsource.search
     }
 
     private void checkPassWordInfo() {
-        String pinCode = getParameterManager().getStringParameters(ParameterMananer.SECURITY_PASSWORD);
+        String pinCode = getParameterManager().getStringParameters(ParameterManager.SECURITY_PASSWORD);
         String countryCode = getParameterManager().getCurrentCountryIso3Name();
         if ("fra".equals(countryCode)) {
             if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
@@ -66,7 +66,7 @@ public class DtvkitScanSelector extends com.droidlogic.dtvkit.inputsource.search
                     @Override
                     public void passwordRight(String password) {
                         Log.d(TAG, "password is right");
-                        getParameterManager().saveStringParameters(ParameterMananer.SECURITY_PASSWORD, password);
+                        getParameterManager().saveStringParameters(ParameterManager.SECURITY_PASSWORD, password);
                         getContext().getContentResolver().notifyChange(
                                 Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
                                 null, ContentResolver.NOTIFY_SYNC_TO_NETWORK);
@@ -92,7 +92,7 @@ public class DtvkitScanSelector extends com.droidlogic.dtvkit.inputsource.search
                             intValue = Integer.parseInt(value);
                         } catch (Exception e) {
                         }
-                        //france cannot use 0000
+                        //France cannot use 0000
                         if (intValue > 0 && intValue <= 9999) {
                             return true;
                         } else {
@@ -112,8 +112,8 @@ public class DtvkitScanSelector extends com.droidlogic.dtvkit.inputsource.search
 
     private void initData() {
         int currentDvbSource = getParameterManager().getCurrentDvbSource();
-        String sourceParameter = getParameterManager().getStringParameters(ParameterMananer.TV_KEY_DTVKIT_SYSTEM);
-        String sourceStr = ParameterMananer.dvbSourceToString(currentDvbSource);
+        String sourceParameter = getParameterManager().getStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM);
+        String sourceStr = ParameterManager.dvbSourceToString(currentDvbSource);
         if (!TextUtils.equals(sourceParameter, sourceStr)) {
             getParameterManager().setCurrentDvbSource(currentDvbSource);
         }

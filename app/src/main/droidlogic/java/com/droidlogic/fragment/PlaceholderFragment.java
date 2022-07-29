@@ -48,9 +48,9 @@ public class PlaceholderFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 //getFragmentManager().beginTransaction().add(R.id.container, ScanChannelFragment.newInstance()).commit();
-                    /*ScanChannelFragment scanfragment = ScanChannelFragment.newInstance();
-                    scanfragment.setArguments(getIntent().getExtras());
-                    mScanFragmentManager.show(scanfragment);
+                    /*ScanChannelFragment scanFragment = ScanChannelFragment.newInstance();
+                    scanFragment.setArguments(getIntent().getExtras());
+                    mScanFragmentManager.show(scanFragment);
                     mCurrentFragment = SCAN_FRAGMENT;*/
                 try {
                     Intent intent = getActivity().getIntent();

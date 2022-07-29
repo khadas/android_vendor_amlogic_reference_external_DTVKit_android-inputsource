@@ -32,7 +32,7 @@ public class DtvkitGlueClient {
 
     private static DtvkitGlueClient mSingleton = null;
     private final CopyOnWriteArrayList<Pair<Integer, SignalHandler>> mHandlers = new CopyOnWriteArrayList<>();
-    // Notification object used to listen to the start of the rpcserver daemon.
+    // Notification object used to listen to the start of the rpcServer daemon.
     //private final ServiceNotification mServiceNotification = new ServiceNotification();
     //private static final int DTVKITSERVER_DEATH_COOKIE = 1000;
    // private IDTVKitServer mProxy = null;
@@ -43,12 +43,12 @@ public class DtvkitGlueClient {
    // private SystemControlHandler mSysControlHandler;
     private SubtitleListener mListener;
     private PidFilterListener mPidListener;
-    private native void nativeconnectdtvkit(DtvkitGlueClient client, ByteBuffer buffer);
-    private native void nativedisconnectdtvkit();
-    private native void nativeSetMutilSurface(int index, Surface surface);
+    private native void nativeConnectDtvkit(DtvkitGlueClient client, ByteBuffer buffer);
+    private native void nativeDisconnectDtvkit();
+    private native void nativeSetMultiSurface(int index, Surface surface);
     private native void nativeSetSurface(Surface surface);
     private native void nativeSetSurfaceToPlayer(Surface surface);
-    private native String nativerequest(String resource, String json);
+    private native String nativeRequest(String resource, String json);
     private native void native_attachSubtitleCtl(int flag);
     private native void native_detachSubtitleCtl();
     private native void native_destroySubtitleCtl();
@@ -64,11 +64,11 @@ public class DtvkitGlueClient {
     }
 
         //native callback
-    public void notifySubtitleCallback(int width, int height, int dstx, int dsty, int dstwidth, int dstheight, int[] data)
+    public void notifySubtitleCallback(int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, int[] data)
     {
-         Log.d(TAG, "notifySubtitleCallBack received!!! width = " + width + ", heigth = " + height);
+         Log.d(TAG, "notifySubtitleCallBack received!!! width = " + width + ", height = " + height);
          if (mTarget != null) {
-            mTarget.draw(width, height, dstx, dsty, dstwidth, dstheight, data);
+            mTarget.draw(width, height, dst_x, dst_y, dst_width, dst_height, data);
          }
     }
 
@@ -84,11 +84,11 @@ public class DtvkitGlueClient {
         }
     }
 
-    public void notifySubtitleCallbackEx(int type, int width, int height, int dstx, int dsty, int dstwidth, int dstheight, int[] data)
+    public void notifySubtitleCallbackEx(int type, int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, int[] data)
     {
-         Log.d(TAG, "notifySubtitleCallBackEx received!!! width = " + width + ", heigth = " + height);
+         Log.d(TAG, "notifySubtitleCallBackEx received!!! width = " + width + ", height = " + height);
          if (mListener != null) {
-            mListener.drawEx(type, width, height, dstx, dsty, dstwidth, dstheight, data);
+            mListener.drawEx(type, width, height, dst_x, dst_y, dst_width, dst_height, data);
          }
     }
 
@@ -100,10 +100,10 @@ public class DtvkitGlueClient {
          }
     }
 
-    public void notifyCCSubtitleCallbackEx(boolean bshow, String json) {
+    public void notifyCCSubtitleCallbackEx(boolean bShow, String json) {
         Log.d(TAG, "notifyCCSubtitleCallbackEx received!!!" + json);
         if (mListener != null) {
-            mListener.drawCC(bshow, json);
+            mListener.drawCC(bShow, json);
         }
     }
 
@@ -141,8 +141,8 @@ public class DtvkitGlueClient {
         native_UnCrypt(src, dest);
    }
 
-   public void setMutilSurface(int index, Surface sh) {
-        nativeSetMutilSurface(index, sh);
+   public void setMultiSurface(int index, Surface sh) {
+        nativeSetMultiSurface(index, sh);
    }
 
    public void setDisplay(Surface sh) {
@@ -150,7 +150,7 @@ public class DtvkitGlueClient {
    }
 
    public void disConnectDtvkitClient() {
-        nativedisconnectdtvkit();
+        nativeDisconnectDtvkit();
         native_detachSubtitleCtl();
    }
 
@@ -159,7 +159,7 @@ public class DtvkitGlueClient {
     final class ServiceNotification extends IServiceNotification.Stub {
         @Override
         public void onRegistration(String fqName, String name, boolean preexisting) {
-            Log.i(TAG, "rpcserver HIDL service started " + fqName + " " + name);
+            Log.i(TAG, "rpcServer HIDL service started " + fqName + " " + name);
             connectToProxy();
         }
     }
@@ -187,8 +187,8 @@ public class DtvkitGlueClient {
 
     private static class HALCallback extends IDTVKitServerCallback.Stub {
         DtvkitGlueClient DtvkitClient;
-        HALCallback(DtvkitGlueClient dkgc) {
-            DtvkitClient = dkgc;
+        HALCallback(DtvkitGlueClient dtvkitGlueClient) {
+            DtvkitClient = dtvkitGlueClient;
     }
 
     public void notifyCallback(DTVKitHidlParcel parcel) {
@@ -238,7 +238,7 @@ public class DtvkitGlueClient {
     public interface SubtitleListener {
         void drawEx(int parserType, int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, int[] data);
         void pauseEx(int pause);
-        void drawCC(boolean bshow, String json);
+        void drawCC(boolean bShow, String json);
         void mixVideoEvent(int event);
     }
 
@@ -249,7 +249,7 @@ public class DtvkitGlueClient {
     protected DtvkitGlueClient() {
         // Singleton
         mDirectBuffer = ByteBuffer.allocateDirect(DIRECT_BUFFER_SIZE);
-        nativeconnectdtvkit(this, mDirectBuffer);
+        nativeConnectDtvkit(this, mDirectBuffer);
         /*
         int debuggable = SystemProperties.getInt("ro.debuggable", 0);
         if (debuggable == 1) {
@@ -308,7 +308,7 @@ public class DtvkitGlueClient {
         final String reason = resource + " : " + arguments;
         long startTime = System.nanoTime();
         try {
-            JSONObject object = new JSONObject(nativerequest(resource, arguments.toString()));
+            JSONObject object = new JSONObject(nativeRequest(resource, arguments.toString()));
             if (object.getBoolean("accepted")) {
                 return object;
             } else {

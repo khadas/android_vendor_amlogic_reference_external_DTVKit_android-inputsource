@@ -16,7 +16,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 //import com.droidlogic.fragment.R;
 
 import com.droidlogic.dtvkit.inputsource.R;
@@ -85,7 +85,7 @@ public class DialogItemListView extends ListView implements OnItemSelectedListen
                 case KeyEvent.KEYCODE_NUMPAD_ENTER:
                     if (mDialogCallBack != null) {
                         int position = getSelectedItemPosition();
-                        /*if ((ParameterMananer.KEY_SATALLITE.equals(getKey()) && position == 0) || (ParameterMananer.KEY_TRANSPONDER.equals(getKey()) && position == 1)) {
+                        /*if ((ParameterManager.KEY_SATELLITE.equals(getKey()) && position == 0) || (ParameterManager.KEY_TRANSPONDER.equals(getKey()) && position == 1)) {
                             Log.d(TAG, "satellite or transponder no response");
                             return true;
                         }*/

@@ -35,13 +35,13 @@ import android.widget.Toast;
 
 import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
-import com.droidlogic.dtvkit.inputsource.DataMananer;
+import com.droidlogic.dtvkit.inputsource.DataManager;
 import com.droidlogic.dtvkit.inputsource.DtvkitDvbScanSelect;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.dtvkit.inputsource.PvrStatusConfirmManager;
 import com.droidlogic.dtvkit.inputsource.R;
 import com.droidlogic.fragment.DvbsParameterManager;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.settings.ConstantManager;
 
 import com.droidlogic.dtvkit.inputsource.searchguide.DataPresenter;
@@ -62,7 +62,7 @@ import java.util.Locale;
 public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     private final String TAG = DtvkitDvbsSetupFragment.class.getSimpleName();
     private static final int REQUEST_CODE_SET_UP_SETTINGS = 1;
-    private DataMananer mDataManager;
+    private DataManager mDataManager;
     private boolean mStartSync = false;
     private boolean mStartSearch = false;
     private int mFoundServiceNumber = 0;
@@ -70,7 +70,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     private int mSearchType = -1;// 0 manual 1 auto
     private int mSearchDvbsType = -1;
     private PvrStatusConfirmManager mPvrStatusConfirmManager = null;
-    private ParameterMananer mParameterManager;
+    private ParameterManager mParameterManager;
 
     protected HandlerThread mHandlerThread = null;
     protected Handler mThreadHandler = null;
@@ -79,7 +79,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     private final static int MSG_ON_SIGNAL = 2;
 
     private long clickLastTime;
-    private final String inputId = com.droidlogic.dtvkit.inputsource.service.DtvkitSettingService.DTVKIT_INPUTID;;
+    private final String inputId = com.droidlogic.dtvkit.inputsource.service.DtvkitSettingService.DTVKIT_INPUT_ID;;
     private String pvrStatus;
 
     // UI to Update
@@ -143,9 +143,9 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mDataManager = new DataMananer(getActivity().getApplicationContext());
+        mDataManager = new DataManager(getActivity().getApplicationContext());
         mPvrStatusConfirmManager = new PvrStatusConfirmManager(getActivity().getApplicationContext(), mDataManager);
-        mParameterManager = new ParameterMananer(getActivity().getApplicationContext(), DtvkitGlueClient.getInstance());
+        mParameterManager = new ParameterManager(getActivity().getApplicationContext(), DtvkitGlueClient.getInstance());
     }
 
     @Override
@@ -169,7 +169,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.satsetup, container, false);
+        View view = inflater.inflate(R.layout.sat_setup, container, false);
         final Button optionSet = view.findViewById(R.id.option_set_btn);
         optionSet.setOnClickListener(v -> {
             Intent intentSet = new Intent();
@@ -182,19 +182,19 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             } else {
                 intentSet.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
             }
-            intentSet.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_SETTINGS);
+            intentSet.setClassName(DataManager.KEY_PACKAGE_NAME, DataManager.KEY_ACTIVITY_SETTINGS);
             startActivity(intentSet);
-            mDataManager.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_SETTINGS);
+            mDataManager.saveIntParameters(DataManager.KEY_SELECT_SEARCH_ACTIVITY, DataManager.SELECT_SETTINGS);
         });
 
         mChannelHolder = view.findViewById(R.id.channel_holder);
-        mSearchStatus = view.findViewById(R.id.searchstatus);
+        mSearchStatus = view.findViewById(R.id.tv_search_status);
         mSetup = view.findViewById(R.id.setup);
-        mSearch = view.findViewById(R.id.startsearch);
+        mSearch = view.findViewById(R.id.btn_start_search);
         mChannelInfo = view.findViewById(R.id.tv_scan_info);
-        mSearchProgress = view.findViewById(R.id.searchprogress);
+        mSearchProgress = view.findViewById(R.id.proBar_search_progress);
 
-        final Button search = (Button) view.findViewById(R.id.startsearch);
+        final Button search = (Button) view.findViewById(R.id.btn_start_search);
         final Button setup = (Button) view.findViewById(R.id.setup);
         final Button importSatellite = (Button) view.findViewById(R.id.import_satellite);
         search.setOnClickListener(new View.OnClickListener() {
@@ -233,7 +233,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             }
         });
 
-        //ui set visibility gone as will be excuted after first boot
+        //ui set visibility gone as will be executed after first boot
         importSatellite.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 mParameterManager.importDatabase(ConstantManager.DTVKIT_SATELLITE_DATA);
@@ -246,46 +246,46 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         CheckBox nit = (CheckBox) view.findViewById(R.id.network);
         CheckBox clear = (CheckBox) view.findViewById(R.id.clear_old);
         CheckBox dvbs2 = (CheckBox) view.findViewById(R.id.dvbs2);
-        Spinner searchmode = (Spinner) view.findViewById(R.id.search_mode);
-        Spinner fecmode = (Spinner) view.findViewById(R.id.fec_mode);
-        Spinner modulationmode = (Spinner) view.findViewById(R.id.modulation_mode);
+        Spinner searchMode = (Spinner) view.findViewById(R.id.search_mode);
+        Spinner fecMode = (Spinner) view.findViewById(R.id.fec_mode);
+        Spinner modulationMode = (Spinner) view.findViewById(R.id.modulation_mode);
         final LinearLayout blindContainer = (LinearLayout) view.findViewById(R.id.blind_frequency_container);
         EditText edit_start_freq = (EditText) view.findViewById(R.id.edit_start_freq);
         EditText edit_end_freq = (EditText) view.findViewById(R.id.edit_end_freq);
-        edit_start_freq.setText(String.valueOf(DataMananer.VALUE_BLIND_DEFAULT_START_FREQUENCY));
-        edit_end_freq.setText(String.valueOf(DataMananer.VALUE_BLIND_DEFAULT_END_FREQUENCY));
+        edit_start_freq.setText(String.valueOf(DataManager.VALUE_BLIND_DEFAULT_START_FREQUENCY));
+        edit_end_freq.setText(String.valueOf(DataManager.VALUE_BLIND_DEFAULT_END_FREQUENCY));
 
-        nit.setChecked(mDataManager.getIntParameters(DataMananer.KEY_DVBS_NIT) == 1);
-        clear.setChecked(mDataManager.getIntParameters(DataMananer.KEY_CLEAR) == 1);
-        dvbs2.setChecked(mDataManager.getIntParameters(DataMananer.KEY_DVBS2) == 1);
+        nit.setChecked(mDataManager.getIntParameters(DataManager.KEY_DVBS_NIT) == 1);
+        clear.setChecked(mDataManager.getIntParameters(DataManager.KEY_CLEAR) == 1);
+        dvbs2.setChecked(mDataManager.getIntParameters(DataManager.KEY_DVBS2) == 1);
         nit.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (nit.isChecked()) {
-                    mDataManager.saveIntParameters(DataMananer.KEY_DVBS_NIT, 1);
+                    mDataManager.saveIntParameters(DataManager.KEY_DVBS_NIT, 1);
                 } else {
-                    mDataManager.saveIntParameters(DataMananer.KEY_DVBS_NIT, 0);
+                    mDataManager.saveIntParameters(DataManager.KEY_DVBS_NIT, 0);
                 }
             }
         });
         clear.setOnClickListener(v -> {
             if (clear.isChecked()) {
-                mDataManager.saveIntParameters(DataMananer.KEY_CLEAR, 1);
+                mDataManager.saveIntParameters(DataManager.KEY_CLEAR, 1);
             } else {
-                mDataManager.saveIntParameters(DataMananer.KEY_CLEAR, 0);
+                mDataManager.saveIntParameters(DataManager.KEY_CLEAR, 0);
             }
         });
         dvbs2.setOnClickListener(v -> {
             if (dvbs2.isChecked()) {
-                mDataManager.saveIntParameters(DataMananer.KEY_DVBS2, 1);
+                mDataManager.saveIntParameters(DataManager.KEY_DVBS2, 1);
             } else {
-                mDataManager.saveIntParameters(DataMananer.KEY_DVBS2, 0);
+                mDataManager.saveIntParameters(DataManager.KEY_DVBS2, 0);
             }
         });
-        searchmode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        searchMode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                Log.d(TAG, "searchmode onItemSelected position = " + position);
-                mDataManager.saveIntParameters(DataMananer.KEY_SEARCH_MODE, position);
+                Log.d(TAG, "searchMode onItemSelected position = " + position);
+                mDataManager.saveIntParameters(DataManager.KEY_SEARCH_MODE, position);
             }
 
             @Override
@@ -293,11 +293,11 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                 // TODO Auto-generated method stub
             }
         });
-        fecmode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        fecMode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                Log.d(TAG, "fecmode onItemSelected position = " + position);
-                mDataManager.saveIntParameters(DataMananer.KEY_FEC_MODE, position);
+                Log.d(TAG, "fecMode onItemSelected position = " + position);
+                mDataManager.saveIntParameters(DataManager.KEY_FEC_MODE, position);
             }
 
             @Override
@@ -305,11 +305,11 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                 // TODO Auto-generated method stub
             }
         });
-        modulationmode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        modulationMode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                Log.d(TAG, "modulationmode onItemSelected position = " + position);
-                mDataManager.saveIntParameters(DataMananer.KEY_MODULATION_MODE, position);
+                Log.d(TAG, "modulationMode onItemSelected position = " + position);
+                mDataManager.saveIntParameters(DataManager.KEY_MODULATION_MODE, position);
             }
 
             @Override
@@ -317,11 +317,11 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                 // TODO Auto-generated method stub
             }
         });
-        int searchmodeValue = mDataManager.getIntParameters(DataMananer.KEY_SEARCH_MODE);
-        searchmode.setSelection(searchmodeValue);
+        int searchModeValue = mDataManager.getIntParameters(DataManager.KEY_SEARCH_MODE);
+        searchMode.setSelection(searchModeValue);
 
-        fecmode.setSelection(mDataManager.getIntParameters(DataMananer.KEY_FEC_MODE));
-        modulationmode.setSelection(mDataManager.getIntParameters(DataMananer.KEY_MODULATION_MODE));
+        fecMode.setSelection(mDataManager.getIntParameters(DataManager.KEY_FEC_MODE));
+        modulationMode.setSelection(mDataManager.getIntParameters(DataManager.KEY_MODULATION_MODE));
         Spinner channelTypeSpinner = (Spinner) view.findViewById(R.id.channel_type);
         channelTypeSpinner.setSelection(getCurrentChannelType());
         channelTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -353,8 +353,8 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             nit.setEnabled(false);
             optionSet.setEnabled(false);
             setup.setEnabled(false);
-            searchmode.setEnabled(false);
-            fecmode.setEnabled(false);
+            searchMode.setEnabled(false);
+            fecMode.setEnabled(false);
             serviceTypeSpinner.setEnabled(false);
             channelTypeSpinner.setEnabled(false);
         }
@@ -424,10 +424,10 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         Log.d(TAG, "onSignal progress = " + progress);
         int found = getFoundServiceNumberOnSearch();
         setSearchProgress(progress);
-        int sstatus = mParameterManager.getStrengthStatus();
-        int qstatus = mParameterManager.getQualityStatus();
+        int strengthStatus = mParameterManager.getStrengthStatus();
+        int qualityStatus = mParameterManager.getQualityStatus();
         setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
-        setStrengthAndQualityStatus(String.format(Locale.getDefault(), "Strength: %d%%", sstatus), String.format(Locale.getDefault(), "Quality: %d%%", qstatus), String.format(Locale.getDefault(), "Channel: %d", found));
+        setStrengthAndQualityStatus(String.format(Locale.getDefault(), "Strength: %d%%", strengthStatus), String.format(Locale.getDefault(), "Quality: %d%%", qualityStatus), String.format(Locale.getDefault(), "Channel: %d", found));
         if (progress >= 100) {
             sendFinishSearch(true);
         }
@@ -457,7 +457,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             return;
         }
         getActivity().runOnUiThread(() -> {
-            final ProgressBar bar = (ProgressBar) getActivity().findViewById(R.id.searchprogress);
+            final ProgressBar bar = (ProgressBar) getActivity().findViewById(R.id.proBar_search_progress);
             bar.setProgress(progress);
         });
     }
@@ -478,7 +478,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         int ret = 0;
         try {
             JSONArray array = new JSONArray();
-            array.put(ParameterMananer.SIGNAL_QPSK);
+            array.put(ParameterManager.SIGNAL_QPSK);
             JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.GetFilterServiceTypeInSearch", array);
             if (obj != null) {
                 ret = obj.optInt("data", 0);
@@ -496,7 +496,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         }
         try {
             JSONArray array = new JSONArray();
-            array.put(ParameterMananer.SIGNAL_QPSK);
+            array.put(ParameterManager.SIGNAL_QPSK);
             array.put(type);
             DtvkitGlueClient.getInstance().request("Dvb.SetFilterServiceTypeInSearch", array);
         } catch (Exception e) {
@@ -633,13 +633,13 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             args.put("fti");
         } else {
             /*[scanmode, network, {lnblist: [{lnb:1},{lnb:2},..]}]*/
-            String searchmode = DataMananer.KEY_SEARCH_MODE_LIST[mDataManager.getIntParameters(DataMananer.KEY_SEARCH_MODE)];
-            args.put(searchmode);//arg1
-            args.put(mDataManager.getIntParameters(DataMananer.KEY_DVBS_NIT) == 1);//arg2
+            String searchMode = DataManager.KEY_SEARCH_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_SEARCH_MODE)];
+            args.put(searchMode);//arg1
+            args.put(mDataManager.getIntParameters(DataManager.KEY_DVBS_NIT) == 1);//arg2
             List<String> lnbList = DvbsParameterManager.getInstance(getActivity()).getLnbWrap().getLnbIdList();
             JSONObject lnbArgs = new JSONObject();
             JSONArray lnbArgs_array = new JSONArray();
-            Log.i(TAG, "initSearchParameter searchmode = " + searchmode);
+            Log.i(TAG, "initSearchParameter searchMode = " + searchMode);
             Log.i(TAG, "initSearchParameter lnbList = " + lnbList);
             try {
                 for (String id : lnbList) {
@@ -848,16 +848,16 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         return result;
     }
 
-    private void setStrengthAndQualityStatus(final String sstatus, final String qstatus) {
-        setStrengthAndQualityStatus(sstatus, qstatus, "");
+    private void setStrengthAndQualityStatus(final String strengthStatus, final String qualityStatus) {
+        setStrengthAndQualityStatus(strengthStatus, qualityStatus, "");
     }
 
-    private void setStrengthAndQualityStatus(final String sstatus, final String qstatus, final String channel) {
+    private void setStrengthAndQualityStatus(final String strengthStatus, final String qualityStatus, final String channel) {
         if (getActivity() == null) {
             return;
         }
         getActivity().runOnUiThread(() -> {
-            if (TextUtils.isEmpty(sstatus) && TextUtils.isEmpty(qstatus)) {
+            if (TextUtils.isEmpty(strengthStatus) && TextUtils.isEmpty(qualityStatus)) {
                 if (mChannelHolder != null) {
                     mChannelHolder.setVisibility(View.GONE);
                 }
@@ -867,7 +867,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                 }
             }
             if (mChannelInfo != null) {
-                mChannelInfo.setText(sstatus + "\t\t" + qstatus + "\t\t" + channel);
+                mChannelInfo.setText(strengthStatus + "\t\t" + qualityStatus + "\t\t" + channel);
             }
         });
     }
@@ -876,7 +876,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     public void onLifecycleChanged(int lifecycle) {
         super.onLifecycleChanged(lifecycle);
         Log.e(TAG, "onLifecycleChanged => " + lifecycle);
-        if (lifecycle == SearchStageFragment.ACTIVITY_LIFECYCLE_ONSTOP) {
+        if (lifecycle == SearchStageFragment.ACTIVITY_LIFECYCLE_ON_STOP) {
             if (mStartSearch) {
                 sendFinishSearch(false);
             }

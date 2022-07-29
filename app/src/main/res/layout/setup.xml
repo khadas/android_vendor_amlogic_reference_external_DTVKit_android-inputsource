@@ -53,7 +53,7 @@
             android:orientation="vertical">
 
             <Button
-                android:id="@+id/terrestrialmanualsearch"
+                android:id="@+id/btn_terrestrial_manual_search"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="2dp"
@@ -62,7 +62,7 @@
                 android:text="@string/manualSearch" />
 
             <Button
-                android:id="@+id/terrestrialautosearch"
+                android:id="@+id/btn_terrestrial_auto_search"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -113,7 +113,7 @@
             android:orientation="vertical">
 
             <Button
-                android:id="@+id/satellitemanualsearch"
+                android:id="@+id/btn_satellite_manual_search"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="2dp"
@@ -122,7 +122,7 @@
                 android:text="@string/manualSearch" />
 
             <Button
-                android:id="@+id/satelliteautosearch"
+                android:id="@+id/btn_satellite_auto_search"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -173,7 +173,7 @@
             android:orientation="vertical">
 
             <Button
-                android:id="@+id/cablemanualsearch"
+                android:id="@+id/btn_cable_manual_search"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="2dp"
@@ -182,7 +182,7 @@
                 android:text="@string/manualSearch" />
 
             <Button
-                android:id="@+id/cableautosearch"
+                android:id="@+id/btn_cable_auto_search"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"

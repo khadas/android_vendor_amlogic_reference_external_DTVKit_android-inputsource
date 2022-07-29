@@ -7,7 +7,7 @@
     android:layout_height="match_parent">
 
     <LinearLayout
-        android:id="@+id/linearlayoutMMI"
+        android:id="@+id/ll_ci_MMI"
         android:layout_width="@dimen/px_1050.0"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
@@ -57,7 +57,7 @@
             app:maxHeight="300dp">
 
             <LinearLayout
-                android:id="@+id/linearlayoutMMIItems"
+                android:id="@+id/ll_ci_MMI_Items"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">

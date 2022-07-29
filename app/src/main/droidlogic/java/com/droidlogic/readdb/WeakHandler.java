@@ -1,4 +1,4 @@
-package com.droidlogic.readdbfile;
+package com.droidlogic.readdb;
 
 import android.os.Handler;
 import android.os.Looper;

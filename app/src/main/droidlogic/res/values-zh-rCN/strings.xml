@@ -85,7 +85,7 @@
     <string name="dialog_add_satellite_direction">方向</string>
     <string name="dialog_add_satellite_longitude">经度</string>
     <string name="dialog_parameter_not_complete">参数不完整!</string>
-    <string name="dialog_parameter_select_transponer">请选择转发器!</string>
+    <string name="dialog_parameter_select_transponder">请选择转发器!</string>
     <string name="dialog_parameter_select_satellite">请选择卫星!</string>
     <string name="dialog_parameter_set_blind">请设置盲扫频点!</string>
     <string name="dialog_parameter_set_lnb">请设置完的LNB!</string>
@@ -120,7 +120,7 @@
     <string name="strSettingsAutoOrdering_enable">开</string>
     <string name="strSettingsAutoSearching">自动搜索:</string>
     <string name="strSettingsAutoSearchingSetting">设置</string>
-    <string name="strSatlliteExportImport">卫星设置导出/导入</string>
+    <string name="strSatelliteExportImport">卫星设置导出/导入</string>
     <string name="strChannelsExportImport">频道数据导出/导入</string>
     <string name="strExport">导出</string>
     <string name="strImport">导入</string>

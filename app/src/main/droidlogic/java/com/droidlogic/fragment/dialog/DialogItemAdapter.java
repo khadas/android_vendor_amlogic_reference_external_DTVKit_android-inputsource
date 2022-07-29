@@ -58,11 +58,11 @@ public class DialogItemAdapter extends BaseAdapter {
             holder.selectText = (TextView) convertView.findViewById(R.id.select_text);
             holder.selectText = (TextView) convertView.findViewById(R.id.select_text);
             holder.titleText = (TextView) convertView.findViewById(R.id.title_text);
-            holder.leftarrayText = (View) convertView.findViewById(R.id.left_array_text);
+            holder.leftArrayText = (View) convertView.findViewById(R.id.left_array_text);
             holder.progressBar = (ProgressBar) convertView.findViewById(R.id.progressBar);
             holder.parameterText = (TextView) convertView.findViewById(R.id.parameter_text);
             holder.editText = (EditText) convertView.findViewById(R.id.editText);
-            holder.rightarrayText = (View) convertView.findViewById(R.id.right_array_text);
+            holder.rightArrayText = (View) convertView.findViewById(R.id.right_array_text);
             convertView.setTag(holder);
         } else{
             holder = (ViewHolder) convertView.getTag();
@@ -75,9 +75,9 @@ public class DialogItemAdapter extends BaseAdapter {
         }
         holder.titleText.setText(mData.get(position).getTitleText());
         if (mData.get(position).getLeftArrayStatus()) {
-            holder.leftarrayText.setVisibility(View.VISIBLE);
+            holder.leftArrayText.setVisibility(View.VISIBLE);
         } else {
-            holder.leftarrayText.setVisibility(View.INVISIBLE);
+            holder.leftArrayText.setVisibility(View.INVISIBLE);
         }
         if (mData.get(position).getProgress() > -1) {
             holder.progressBar.setProgress(mData.get(position).getProgress());
@@ -95,9 +95,9 @@ public class DialogItemAdapter extends BaseAdapter {
             holder.editText.setVisibility(View.GONE);
         }
         if (mData.get(position).getRightArrayStatus()) {
-            holder.rightarrayText.setVisibility(View.VISIBLE);
+            holder.rightArrayText.setVisibility(View.VISIBLE);
         } else {
-            holder.rightarrayText.setVisibility(View.INVISIBLE);
+            holder.rightArrayText.setVisibility(View.INVISIBLE);
         }
         return convertView;
     }
@@ -238,10 +238,10 @@ public class DialogItemAdapter extends BaseAdapter {
     public class ViewHolder{
         TextView selectText;
         TextView titleText;
-        View leftarrayText;
+        View leftArrayText;
         ProgressBar progressBar;
         TextView parameterText;
         EditText editText;
-        View rightarrayText;
+        View rightArrayText;
     }
 }

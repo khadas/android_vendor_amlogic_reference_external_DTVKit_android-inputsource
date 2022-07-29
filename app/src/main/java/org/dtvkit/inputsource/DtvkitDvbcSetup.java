@@ -63,10 +63,10 @@ public class DtvkitDvbcSetup extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.cabsetup);
+        setContentView(R.layout.cab_setup);
 
-        final View startSearch = findViewById(R.id.cablestartsearch);
-        final View stopSearch = findViewById(R.id.cablestopsearch);
+        final View startSearch = findViewById(R.id.btn_cable_start_search);
+        final View stopSearch = findViewById(R.id.btn_cable_stop_search);
 
         startSearch.setEnabled(true);
         startSearch.setOnClickListener(new View.OnClickListener() {
@@ -166,19 +166,19 @@ public class DtvkitDvbcSetup extends Activity {
 
     private void setSearchStatus(String status) {
         Log.i(TAG, String.format("Search status \"%s\"", status));
-        final TextView text = (TextView) findViewById(R.id.searchstatus);
+        final TextView text = (TextView) findViewById(R.id.tv_search_status);
         text.setText(status);
     }
 
     private ProgressBar getProgressBar() {
-        return (ProgressBar) findViewById(R.id.searchprogress);
+        return (ProgressBar) findViewById(R.id.proBar_search_progress);
     }
 
     private void disableStopSearchButton() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                findViewById(R.id.cablestopsearch).setEnabled(false);
+                findViewById(R.id.btn_cable_stop_search).setEnabled(false);
             }
         });
     }

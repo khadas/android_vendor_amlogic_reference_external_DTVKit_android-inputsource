@@ -49,7 +49,7 @@ public class FvpInterface {
             byte[] intermediatePublicKey = retrievePublicKey(context);
             //byte[] intermediatePublicKey = new byte[1];
             // Use Trusty API to sign the CSR in Trusted Application
-            byte[] signedCSR = signCSRTEE(csr, intermediatePublicKey);
+            byte[] signedCSR = signCSRTee(csr, intermediatePublicKey);
 
             // Create certificate chain and return
             return createCertificateChain(signedCSR, intermediatePublicKey);
@@ -88,7 +88,7 @@ public class FvpInterface {
      *
      * On success, a {@code Cursor} with a single value (i.e. single column and single row) is returned.
      * The certificate can be retrieved from the {@code Cursor} as a byte array using {@code Cursor.getBlob()}
-     * and then serialised into a Certificate object. On error {@code null} is returned.
+     * and then serialized into a Certificate object. On error {@code null} is returned.
      *
      * Need to request {@code com.amazon.fvp.provider.permission.READ_PROVIDER} Android permission
      * for access.
@@ -144,7 +144,7 @@ public class FvpInterface {
      * @param intermediatePublicKey FVP Intermediate CA public key
      * @return  Signed Certificate Signing Request on success
      */
-    private byte[] signCSRTEE(byte[] csr, byte[] intermediatePublicKey) {
+    private byte[] signCSRTee(byte[] csr, byte[] intermediatePublicKey) {
         Log.e(TAG,"Csr size = " + csr.length + ",PublicKey size = " + intermediatePublicKey.length);
         byte[] signedCSR = native_signCSR(csr, intermediatePublicKey);
         if (signedCSR != null && signedCSR.length >0) {

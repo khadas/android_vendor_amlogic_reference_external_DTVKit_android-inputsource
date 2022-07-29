@@ -23,7 +23,7 @@ public class DvbsParameterManager {
     private Context mContext;
     private DtvkitGlueClient mDtvkitGlueClient;
     private String mCurrentListDirection;
-    private String mCurrentListType = ParameterMananer.ITEM_LNB;
+    private String mCurrentListType = ParameterManager.ITEM_LNB;
     private String mCurrentSatellite = "";//not null
     private String mCurrentLnbId = "";//not null
     private String mFocusedLnbId = "";//not null
@@ -68,9 +68,9 @@ public class DvbsParameterManager {
     }
 
     public LinkedList<ItemDetail> getCurrentItemList() {
-        if (ParameterMananer.ITEM_SATALLITE.equals(mCurrentListType)) {
+        if (ParameterManager.ITEM_SATELLITE.equals(mCurrentListType)) {
             return getSatelliteNameList();
-        } else if (ParameterMananer.ITEM_TRANSPONDER.equals(mCurrentListType)) {
+        } else if (ParameterManager.ITEM_TRANSPONDER.equals(mCurrentListType)) {
             return getTransponderList();
         } else {
             return getLnbNameList();
@@ -217,22 +217,22 @@ public class DvbsParameterManager {
         return paraList.get(index);
     }
 
-    private ItemDetail parseLnbParaValue(String parakey, String keyTitle, LnbWrap.Lnb lnb) {
+    private ItemDetail parseLnbParaValue(String paraKey, String keyTitle, LnbWrap.Lnb lnb) {
         String valueStr = "none";
         boolean enable_switch = true;
         int itemType = ItemDetail.SWITCH_EDIT;
 
-        if (lnbKeyList[0].equals(parakey)) {
+        if (lnbKeyList[0].equals(paraKey)) {
             String currentSate = getCurrentSatellite();
             if (!TextUtils.isEmpty(currentSate)) {
                 valueStr = currentSate;
             }
-        } else if (lnbKeyList[1].equals(parakey)) {
+        } else if (lnbKeyList[1].equals(paraKey)) {
             String currentTp = getCurrentTransponder();
             if (!TextUtils.isEmpty(currentTp)) {
                 valueStr = currentTp;
             }
-        } else if (lnbKeyList[2].equals(parakey)) {
+        } else if (lnbKeyList[2].equals(paraKey)) {
             int lnbType = lnb.getLnbInfo().getType();
             int lnb_low_freq = lnb.getLnbInfo().lowLocalFreq();
             int lnb_high_freq = lnb.getLnbInfo().highLocalFreq();
@@ -245,14 +245,14 @@ public class DvbsParameterManager {
             } else {
                 valueStr = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST[0]);
             }
-        } else if (lnbKeyList[3].equals(parakey)) {
+        } else if (lnbKeyList[3].equals(paraKey)) {
             boolean unicable =  lnb.getUnicable().getOnoff();
             if (unicable) {
                 valueStr = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[1]);
             } else {
                 valueStr = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[0]);
             }
-        } else if (lnbKeyList[4].equals(parakey)) {
+        } else if (lnbKeyList[4].equals(paraKey)) {
             String lp = lnb.getLnbInfo().getLnbPower();
             int lnbType = lnb.getLnbInfo().getType();
             if (lp.isEmpty()) {
@@ -260,7 +260,7 @@ public class DvbsParameterManager {
             } else {
                 valueStr = lp;
             }
-        } else if (lnbKeyList[5].equals(parakey)) {
+        } else if (lnbKeyList[5].equals(paraKey)) {
             int lnbType = lnb.getLnbInfo().getType();
             String tone22K = lnb.getLnbInfo().get22Khz();
             boolean isSingle = lnb.getLnbInfo().isSingle();
@@ -268,24 +268,24 @@ public class DvbsParameterManager {
                 enable_switch = false;
             }
             valueStr = tone22K;
-        } else if (lnbKeyList[6].equals(parakey)) {
+        } else if (lnbKeyList[6].equals(paraKey)) {
             String tb = lnb.getToneBurst();
             if (!tb.isEmpty()) {
                 valueStr = tb;
             }
-        } else if (lnbKeyList[7].equals(parakey)) {
-            int c_switch = lnb.getCswitch();
+        } else if (lnbKeyList[7].equals(paraKey)) {
+            int c_switch = lnb.getCSwitch();
             if (c_switch > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_0_LIST.length -1)) {
                 c_switch = 0;
             }
             valueStr = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_0_LIST[c_switch];
-        } else if (lnbKeyList[8].equals(parakey)) {
-            int u_switch = lnb.getUswitch();
+        } else if (lnbKeyList[8].equals(paraKey)) {
+            int u_switch = lnb.getUSwitch();
             if (u_switch > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_1_LIST.length -1)) {
                 u_switch = 0;
             }
             valueStr = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_1_LIST[u_switch];
-        } else if (lnbKeyList[9].equals(parakey)) {
+        } else if (lnbKeyList[9].equals(paraKey)) {
             int motor = lnb.getMotor();
             if (motor > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST.length -1)) {
                 motor = 0;
@@ -297,14 +297,14 @@ public class DvbsParameterManager {
         return item;
     }
 
-    public int getCurrentLnbParaIntValue(String parakey) {
+    public int getCurrentLnbParaIntValue(String paraKey) {
         LnbWrap.Lnb lnb = mLnbWrap.getLnbById(mCurrentLnbId);
-        return parseLnbParaIntValue(parakey, lnb);
+        return parseLnbParaIntValue(paraKey, lnb);
     }
 
-    private int parseLnbParaIntValue(String parakey, LnbWrap.Lnb lnb) {
+    private int parseLnbParaIntValue(String paraKey, LnbWrap.Lnb lnb) {
         int ret = 0;
-        if (lnbKeyList[2].equals(parakey)) {
+        if (lnbKeyList[2].equals(paraKey)) {
             ret = lnb.getLnbInfo().getType();
             if (ret == 1) {
                 ret = 2;
@@ -315,17 +315,17 @@ public class DvbsParameterManager {
             } else if (ret > 4) {
                 ret = 0;
             }
-        } else if (lnbKeyList[3].equals(parakey)) {
+        } else if (lnbKeyList[3].equals(paraKey)) {
             boolean onoff = lnb.getUnicable().getOnoff();
             ret = onoff ? 1 : 0;
-        } else if (lnbKeyList[4].equals(parakey)) {
+        } else if (lnbKeyList[4].equals(paraKey)) {
             String lp = lnb.getLnbInfo().getLnbPower();
             if (lp.equals("off")) {
                 ret = 0;
             } else {
                 ret = 1;
             }
-        } else if (lnbKeyList[5].equals(parakey)) {
+        } else if (lnbKeyList[5].equals(paraKey)) {
             String tone22K = lnb.getLnbInfo().get22Khz();
             if (tone22K.equals("off")) {
                 ret = 0;
@@ -334,7 +334,7 @@ public class DvbsParameterManager {
             } else {
                 ret = 2;
             }
-        } else if (lnbKeyList[6].equals(parakey)) {
+        } else if (lnbKeyList[6].equals(paraKey)) {
             String tb = lnb.getToneBurst();
             if (tb.equals("a")) {
                 ret = 1;
@@ -343,49 +343,49 @@ public class DvbsParameterManager {
             } else {
                 ret = 0;
             }
-        } else if (lnbKeyList[7].equals(parakey)) {
-            ret = lnb.getCswitch();
+        } else if (lnbKeyList[7].equals(paraKey)) {
+            ret = lnb.getCSwitch();
             if (ret > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_0_LIST.length -1)) {
                 ret = 0;
             }
-        } else if (lnbKeyList[8].equals(parakey)) {
-            ret = lnb.getUswitch();
+        } else if (lnbKeyList[8].equals(paraKey)) {
+            ret = lnb.getUSwitch();
             if (ret > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_1_LIST.length -1)) {
                 ret = 0;
             }
-        } else if (lnbKeyList[9].equals(parakey)) {
+        } else if (lnbKeyList[9].equals(paraKey)) {
             ret = lnb.getMotor();
             if (ret > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST.length -1)) {
                 ret = 0;
             }
-        } else if ("lnb".equals(parakey)) {
+        } else if ("lnb".equals(paraKey)) {
             ret = Integer.parseInt(lnb.getId());
-        } else if ("low_min_freq".equals(parakey)) {
+        } else if ("low_min_freq".equals(paraKey)) {
             ret = lnb.getLnbInfo().lowMin();
             if (ret == 65535) ret =0;
-        } else if ("low_max_freq".equals(parakey)) {
+        } else if ("low_max_freq".equals(paraKey)) {
             ret = lnb.getLnbInfo().lowMax();
             if (ret == 65535) ret =0;
-        } else if ("low_local_oscillator_frequency".equals(parakey)) {
+        } else if ("low_local_oscillator_frequency".equals(paraKey)) {
             ret = lnb.getLnbInfo().lowLocalFreq();
             if (ret == 65535) ret =0;
-        } else if ("high_min_freq".equals(parakey)) {
+        } else if ("high_min_freq".equals(paraKey)) {
             ret = lnb.getLnbInfo().highMin();
             if (ret == 65535) ret =0;
-        } else if ("high_max_freq".equals(parakey)) {
+        } else if ("high_max_freq".equals(paraKey)) {
             ret = lnb.getLnbInfo().highMax();
             if (ret == 65535) ret =0;
-        } else if ("high_local_oscillator_frequency".equals(parakey)) {
+        } else if ("high_local_oscillator_frequency".equals(paraKey)) {
             ret = lnb.getLnbInfo().highLocalFreq();
             if (ret == 65535) ret =0;
-        } else if ("unicable_chan".equals(parakey)) {
+        } else if ("unicable_chan".equals(paraKey)) {
             ret = lnb.getUnicable().getChannel();
             if (ret == 65535) ret =0;
-        } else if ("unicable_if".equals(parakey)) {
+        } else if ("unicable_if".equals(paraKey)) {
             ret = lnb.getUnicable().getBandFreq();
             if (ret == 65535) ret =0;
-        } else if ("unicable_position_b".equals(parakey)) {
-            boolean lbp = lnb.getUnicable().isPostionB();
+        } else if ("unicable_position_b".equals(paraKey)) {
+            boolean lbp = lnb.getUnicable().isPositionB();
             ret = lbp ? 1 : 0;
         }
         return ret;
@@ -460,8 +460,8 @@ public class DvbsParameterManager {
             return 0;
         }
         List<String> lnbList = mLnbWrap.getLnbIdList();
-        for (String lnbid : lnbList) {
-            if (lnbid.equals(mCurrentLnbId)) {
+        for (String lnbId : lnbList) {
+            if (lnbId.equals(mCurrentLnbId)) {
                 found = true;
                 break;
             }
@@ -553,7 +553,7 @@ public class DvbsParameterManager {
     }
 
     public int getDisEqcLocationIndex(String location) {
-        int index = 1;//defualt 1= "off"
+        int index = 1;//default 1= "off"
         if (location == null || location.isEmpty())
             return index;
         List<String> locationNameList = getLnbWrap().getDiseqcLocationNames();
@@ -571,7 +571,7 @@ public class DvbsParameterManager {
         if (key == null)
             return value;
         switch (key) {
-            case "dishlimit_state":
+            case "dish_limit_state":
                 value = mDishStatus;
                 break;
             case "dish_dir":
@@ -597,7 +597,7 @@ public class DvbsParameterManager {
             value = 0;
         }
         switch (key) {
-            case "dishlimit_state": {
+            case "dish_limit_state": {
                 if (value > 1) value = 0;
                 mDishStatus = value;
                 break;
@@ -639,7 +639,7 @@ public class DvbsParameterManager {
     }
 
     public void resetSelections() {
-        mCurrentListType = ParameterMananer.ITEM_LNB;
+        mCurrentListType = ParameterManager.ITEM_LNB;
         mCurrentLnbId = "";
         mFocusedLnbId = "";
         mCurrentSatellite = "";

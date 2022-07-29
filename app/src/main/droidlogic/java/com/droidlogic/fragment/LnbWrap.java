@@ -177,7 +177,7 @@ public class LnbWrap {
         private boolean onOff = false;
         private int channel = 0;
         private int band_freq = 1284;
-        private boolean isPostionB = false;
+        private boolean isPositionB = false;
         private Lnb mLnb = null;
 
         public Unicable(Lnb lnb) {
@@ -190,7 +190,7 @@ public class LnbWrap {
                     onOff = (boolean)(json.get("unicable"));
                     channel = (int)(json.get("unicable_chan"));
                     band_freq = (int)(json.get("unicable_if"));
-                    isPostionB = (boolean)(json.get("unicable_position_b"));
+                    isPositionB = (boolean)(json.get("unicable_position_b"));
                 }
             } catch (Exception e) {
             }
@@ -206,7 +206,7 @@ public class LnbWrap {
                 array.put(onOff);
                 array.put(channel);
                 array.put(band_freq);
-                array.put(isPostionB);
+                array.put(isPositionB);
             } catch (Exception e) {
             }
             return array;
@@ -224,8 +224,8 @@ public class LnbWrap {
             return band_freq;
         }
 
-        public boolean isPostionB() {
-            return isPostionB;
+        public boolean isPositionB() {
+            return isPositionB;
         }
 
         public boolean switchUnicable() {
@@ -235,7 +235,7 @@ public class LnbWrap {
         }
 
         public boolean switchUnicablePosition() {
-            isPostionB = !isPostionB;
+            isPositionB = !isPositionB;
             mLnb.updateToDtvkit();
             return true;
         }
@@ -489,7 +489,7 @@ public class LnbWrap {
         public JSONArray toJsonArray() {
             JSONArray array = new JSONArray();
             try {
-                //not pass lnbid
+                //not pass lnbId
                 JSONArray tempArray = unicable.toJsonArray();
                 for (int i = 0; i < tempArray.length(); i ++) {
                     array.put(tempArray.get(i));
@@ -523,11 +523,11 @@ public class LnbWrap {
             return tone_burst;
         }
 
-        public int getCswitch() {
+        public int getCSwitch() {
             return c_switch;
         }
 
-        public int getUswitch() {
+        public int getUSwitch() {
             return u_switch;
         }
 
@@ -548,7 +548,7 @@ public class LnbWrap {
             return true;
         }
 
-        public boolean editCswitch(int val) {
+        public boolean editCSwitch(int val) {
             if (val > 4 || val < 0) {
                 val = 0;
             }
@@ -560,7 +560,7 @@ public class LnbWrap {
             return true;
         }
 
-        public boolean editUswitch(int val) {
+        public boolean editUSwitch(int val) {
             if (val > 16 || val < 0) {
                 val = 0;
             }

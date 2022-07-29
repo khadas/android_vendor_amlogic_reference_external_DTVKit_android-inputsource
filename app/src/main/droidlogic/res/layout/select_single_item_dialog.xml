@@ -18,7 +18,7 @@
         android:textSize="14sp" />
 
     <com.droidlogic.fragment.dialog.DialogItemListView
-        android:id="@+id/select_single_item_listview"
+        android:id="@+id/lv_select_single_item"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"></com.droidlogic.fragment.dialog.DialogItemListView>
 

@@ -90,7 +90,7 @@
     <string name="dialog_add_satellite_direction">Direction</string>
     <string name="dialog_add_satellite_longitude">Longitude</string>
     <string name="dialog_parameter_not_complete">Parameters not completed!</string>
-    <string name="dialog_parameter_select_transponer">please select a transponder before search it!</string>
+    <string name="dialog_parameter_select_transponder">please select a transponder before search it!</string>
     <string name="dialog_parameter_select_satellite">please select a satellite before search it!</string>
     <string name="dialog_parameter_set_blind">please set blind frequency before search it!</string>
     <string name="dialog_parameter_set_lnb">please set LNB before search it!</string>
@@ -126,7 +126,7 @@
     <string name="strSettingsAutoSearching">Automatic Searching:</string>
     <string name="strSettingsAutoSearchingSetting">Setting</string>
     <string name="strSettingsAutoSearchingHourFormat">(24-hour format)</string>
-    <string name="strSatlliteExportImport">Satellites Export/Import</string>
+    <string name="strSatelliteExportImport">Satellites Export/Import</string>
     <string name="strChannelsExportImport">Channels Export/Import</string>
     <string name="strExport">Export</string>
     <string name="strImport">Import</string>

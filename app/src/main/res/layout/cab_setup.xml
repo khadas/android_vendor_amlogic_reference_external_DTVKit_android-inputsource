@@ -47,7 +47,7 @@
         android:nextFocusUp="@id/symbolrate" />
 
     <TextView
-        android:id="@+id/searchstatus"
+        android:id="@+id/tv_search_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="10dp"
@@ -57,7 +57,7 @@
         android:textSize="20dp" />
 
     <ProgressBar
-        android:id="@+id/searchprogress"
+        android:id="@+id/proBar_search_progress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -70,7 +70,7 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/cablestartsearch"
+            android:id="@+id/btn_cable_start_search"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginRight="1dp"
@@ -78,7 +78,7 @@
             android:background="@drawable/button"
             android:text="@string/strStartSearch" />
         <Button
-            android:id="@+id/cablestopsearch"
+            android:id="@+id/btn_cable_stop_search"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginLeft="1dp"

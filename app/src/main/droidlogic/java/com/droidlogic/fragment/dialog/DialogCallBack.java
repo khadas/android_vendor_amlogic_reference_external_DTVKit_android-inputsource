@@ -4,5 +4,5 @@ import android.os.Bundle;
 import android.view.View;
 
 public interface DialogCallBack {
-    void onStatusChange(View view, String dialogtype, Bundle data);
+    void onStatusChange(View view, String dialogType, Bundle data);
 }

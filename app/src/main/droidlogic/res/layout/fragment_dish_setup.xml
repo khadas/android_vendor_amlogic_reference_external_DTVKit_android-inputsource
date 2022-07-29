@@ -88,7 +88,7 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/listview_item_title"
+                android:id="@+id/tv_item_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingBottom="10dp"
@@ -97,7 +97,7 @@
                 android:textSize="14sp" />
 
             <com.droidlogic.fragment.ItemListView
-                android:id="@+id/listview_item"
+                android:id="@+id/lv_item"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/px_540.0"
                 android:layout_marginRight="10dp"
@@ -127,7 +127,7 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/listview_item_title2"
+                android:id="@+id/tv_item_title2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingBottom="10dp"
@@ -136,7 +136,7 @@
                 android:textSize="14sp" />
 
             <com.droidlogic.fragment.ItemListView
-                android:id="@+id/listview_item2"
+                android:id="@+id/lv_item2"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/px_540.0"
                 android:layout_marginRight="@dimen/px_12.0"
@@ -165,7 +165,7 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/listview_option_title"
+                android:id="@+id/lv_option_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingBottom="10dp"
@@ -174,7 +174,7 @@
                 android:textSize="14sp" />
 
             <com.droidlogic.fragment.ItemListView
-                android:id="@+id/listview_option"
+                android:id="@+id/lv_option"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/px_540.0"
                 android:layout_marginLeft="5dp"
@@ -290,7 +290,7 @@
                     android:textSize="14sp" />
 
                 <ProgressBar
-                    android:id="@+id/strength_progressbar"
+                    android:id="@+id/proBar_strength"
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -326,7 +326,7 @@
                     android:textSize="14sp" />
 
                 <ProgressBar
-                    android:id="@+id/quality_progressbar"
+                    android:id="@+id/proBar_quality"
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

@@ -9,7 +9,7 @@
         <item>左</item>
         <item>右</item>
     </string-array>
-    <string-array name="fecs">
+    <string-array name="fec">
         <item>自动</item>
         <item>1/2</item>
         <item>2/3</item>
@@ -46,7 +46,7 @@
     <string name="strModulationMode">调制模式:</string>
     <string name="invalid_parameter">无效的参数!</string>
 
-    <!-- manaul search -->
+    <!-- manual search -->
     <string name="strManualSearch">手动搜索</string>
     <string name="strAutoSearch">自动搜索</string>
     <string name="search_method">搜索方法:</string>

@@ -17,12 +17,12 @@ import android.util.Log;
 
 import com.droidlogic.app.DataProviderManager;
 
-public class DataMananer {
+public class DataManager {
 
-    private static final String TAG = "DataMananer";
+    private static final String TAG = "DataManager";
     private Context mContext;
 
-    public static final String KEY_SATALLITE = "key_satallite";
+    public static final String KEY_SATELLITE = "key_satellite";
     public static final String KEY_TRANSPONDER = "key_transponder";
     public static final String KEY_CURRENT_TYPE = "key_current_type";
     public static final String KEY_LNB_TYPE = "key_lnb_type";
@@ -49,7 +49,7 @@ public class DataMananer {
     public static final String KEY_DISEQC1_2_DISH_SAVE_POSITION = "key_dish_save_to_position";
     public static final String KEY_DISEQC1_2_DISH_MOVE_TO_POSITION = "key_dish_move_to_position";
 
-    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATALLITE, KEY_TRANSPONDER, KEY_LNB_TYPE, KEY_UNICABLE, KEY_LNB_POWER,
+    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATELLITE, KEY_TRANSPONDER, KEY_LNB_TYPE, KEY_UNICABLE, KEY_LNB_POWER,
             KEY_22_KHZ, KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
     public static final String KEY_LNB_CUSTOM = "key_lnb_custom";
     public static final String KEY_LNB_CUSTOM_SINGLE_DOUBLE = "key_lnb_custom_single_double";
@@ -59,7 +59,7 @@ public class DataMananer {
     public static final String KEY_LNB_CUSTOM_HIGH_MIN = "key_lnb_high_band_min";
     public static final String KEY_LNB_CUSTOM_HIGH_MAX = "key_lnb_high_band_max";
     //default value
-    public static final String KEY_SATALLITE_DEFAULT_VALUE = "null";
+    public static final String KEY_SATELLITE_DEFAULT_VALUE = "null";
     public static final String KEY_TRANSPONDER_DEFAULT_VALUE = "null";
     public static final String KEY_LNB_TYPE_DEFAULT_VALUE = "9750/10600";
     //unicable
@@ -85,7 +85,7 @@ public class DataMananer {
     public static final String KEY_REMOVE_TRANSPONDER = "remove_transponder";
 
     //default value that is save by index
-    public static final int KEY_SATALLITE_DEFAULT_VALUE_INDEX = 0;
+    public static final int KEY_SATELLITE_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_TRANSPONDER_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_LNB_TYPE_DEFAULT_INDEX_INDEX = 1;
     //unicable
@@ -192,7 +192,7 @@ public class DataMananer {
     //dtvkit satellite data import flag
     public static final String DTVKIT_IMPORT_SATELLITE_FLAG = "has_dtvkit_import_satellite";
 
-    public DataMananer(Context context) {
+    public DataManager(Context context) {
         this.mContext = context;
     }
 
@@ -333,8 +333,8 @@ public class DataMananer {
             case KEY_CURRENT_TYPE:
                 defValue = "";
                 break;
-            case KEY_SATALLITE:
-                defValue = KEY_SATALLITE_DEFAULT_VALUE;
+            case KEY_SATELLITE:
+                defValue = KEY_SATELLITE_DEFAULT_VALUE;
                 break;
             case KEY_TRANSPONDER:
                 defValue = KEY_TRANSPONDER_DEFAULT_VALUE;

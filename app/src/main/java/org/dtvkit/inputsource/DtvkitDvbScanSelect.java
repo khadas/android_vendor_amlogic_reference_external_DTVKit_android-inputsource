@@ -43,7 +43,7 @@ import org.json.JSONObject;
 import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.fragment.PasswordCheckUtil;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 
@@ -72,9 +72,9 @@ public class DtvkitDvbScanSelect extends Activity {
     public static final String SEARCH_FOUND_FIRST_SERVICE = "first_service";
     public static final String SEARCH_FOUND_LCN_STATE = "lcn_state";
 
-    private DataMananer mDataMananer;
+    private DataManager mDataManager;
     private Intent mIntent = null;
-    private ParameterMananer mParameterMananer;
+    private ParameterManager mParameterManager;
     private Context mContext;
     private int currentIndex = 0;
     private int currentDvbSource = 0;
@@ -85,8 +85,8 @@ public class DtvkitDvbScanSelect extends Activity {
         setContentView(R.layout.select_search_activity);
         mContext = this;
         mIntent = getIntent();
-        mDataMananer = new DataMananer(this);
-        mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
+        mDataManager = new DataManager(this);
+        mParameterManager = new ParameterManager(this, DtvkitGlueClient.getInstance());
         initLayout();
     }
 
@@ -134,8 +134,8 @@ public class DtvkitDvbScanSelect extends Activity {
     }
 
     private void checkPassWordInfo() {
-        String pinCode = mParameterMananer.getStringParameters(ParameterMananer.SECURITY_PASSWORD);
-        String countryCode = mParameterMananer.getCurrentCountryIso3Name();
+        String pinCode = mParameterManager.getStringParameters(ParameterManager.SECURITY_PASSWORD);
+        String countryCode = mParameterManager.getCurrentCountryIso3Name();
         if ("fra".equals(countryCode)) {
             if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
                 PasswordCheckUtil passwordDialog = new PasswordCheckUtil(pinCode);
@@ -144,7 +144,7 @@ public class DtvkitDvbScanSelect extends Activity {
                     @Override
                     public void passwordRight(String password) {
                         Log.d(TAG, "password is right");
-                        mParameterMananer.saveStringParameters(mParameterMananer.SECURITY_PASSWORD, password);
+                        mParameterManager.saveStringParameters(mParameterManager.SECURITY_PASSWORD, password);
                         getContentResolver().notifyChange(
                             Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
                             null, ContentResolver.NOTIFY_SYNC_TO_NETWORK);
@@ -152,9 +152,9 @@ public class DtvkitDvbScanSelect extends Activity {
                     @Override
                     public void onKeyBack() {
                         Log.d(TAG, "onKeyBack");
-                        String newPinCode = mParameterMananer.getStringParameters(mParameterMananer.SECURITY_PASSWORD);
+                        String newPinCode = mParameterManager.getStringParameters(mParameterManager.SECURITY_PASSWORD);
                         if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
-                            //finish current activity when passward hasn't been set right
+                            //finish current activity when password hasn't been set right
                             finish();
                         }
                     }
@@ -169,7 +169,7 @@ public class DtvkitDvbScanSelect extends Activity {
                             intValue = Integer.parseInt(value);
                         } catch (Exception e) {
                         }
-                        //france cannot use 0000
+                        //France cannot use 0000
                         if (intValue > 0 && intValue <= 9999) {
                             return true;
                         } else {
@@ -225,35 +225,35 @@ public class DtvkitDvbScanSelect extends Activity {
         scan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (currentDvbSource == ParameterMananer.SIGNAL_QPSK && mParameterMananer.checkIsGermanyCountry()) {
-                    JSONArray operTypeList = mParameterMananer.getOperatorsTypeList(ParameterMananer.SIGNAL_QPSK);
-                    showOperatorTypeConfirmDialog(ParameterMananer.SIGNAL_QPSK, mContext, operTypeList);
+                if (currentDvbSource == ParameterManager.SIGNAL_QPSK && mParameterManager.checkIsGermanyCountry()) {
+                    JSONArray operTypeList = mParameterManager.getOperatorsTypeList(ParameterManager.SIGNAL_QPSK);
+                    showOperatorTypeConfirmDialog(ParameterManager.SIGNAL_QPSK, mContext, operTypeList);
                 }
                 String className = null;
                 int requestCode = 0;
                 switch (currentDvbSource) {
-                    case ParameterMananer.SIGNAL_COFDM:
-                        className = DataMananer.KEY_ACTIVITY_DVBT;
+                    case ParameterManager.SIGNAL_COFDM:
+                        className = DataManager.KEY_ACTIVITY_DVBT;
                         requestCode = REQUEST_CODE_START_DVBT_ACTIVITY;
                         break;
-                    case ParameterMananer.SIGNAL_QAM:
-                        className = DataMananer.KEY_ACTIVITY_DVBT;
+                    case ParameterManager.SIGNAL_QAM:
+                        className = DataManager.KEY_ACTIVITY_DVBT;
                         requestCode = REQUEST_CODE_START_DVBC_ACTIVITY;
                         break;
-                    case ParameterMananer.SIGNAL_QPSK:
-                        className = DataMananer.KEY_ACTIVITY_DVBS;
+                    case ParameterManager.SIGNAL_QPSK:
+                        className = DataManager.KEY_ACTIVITY_DVBS;
                         requestCode = REQUEST_CODE_START_DVBS_ACTIVITY;
                         break;
-                    case ParameterMananer.SIGNAL_ISDBT:
-                        className = DataMananer.KEY_ACTIVITY_ISDBT;
+                    case ParameterManager.SIGNAL_ISDBT:
+                        className = DataManager.KEY_ACTIVITY_ISDBT;
                         requestCode = REQUEST_CODE_START_ISDBT_ACTIVITY;
                         break;
                 }
                 if (className == null) {
                     Log.e(TAG, "Error with dvb source(" + currentDvbSource + "), correct it to dvbt");
-                    currentDvbSource = ParameterMananer.SIGNAL_COFDM;
+                    currentDvbSource = ParameterManager.SIGNAL_COFDM;
                     setCurrentDvbSource(currentDvbSource);
-                    className = DataMananer.KEY_ACTIVITY_DVBT;
+                    className = DataManager.KEY_ACTIVITY_DVBT;
                     requestCode = REQUEST_CODE_START_DVBT_ACTIVITY;
                 }
                 String pvrFlag = PvrStatusConfirmManager.read(DtvkitDvbScanSelect.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
@@ -262,12 +262,12 @@ public class DtvkitDvbScanSelect extends Activity {
                 } else {
                     intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
                 }
-                intent.setClassName(DataMananer.KEY_PACKAGE_NAME, className);
-                if (currentDvbSource == ParameterMananer.SIGNAL_QAM) {
-                    intent.putExtra(DataMananer.KEY_IS_DVBT, false);
-                } else if (currentDvbSource == ParameterMananer.SIGNAL_COFDM
-                        || currentDvbSource == ParameterMananer.SIGNAL_ISDBT) {
-                    intent.putExtra(DataMananer.KEY_IS_DVBT, true);
+                intent.setClassName(DataManager.KEY_PACKAGE_NAME, className);
+                if (currentDvbSource == ParameterManager.SIGNAL_QAM) {
+                    intent.putExtra(DataManager.KEY_IS_DVBT, false);
+                } else if (currentDvbSource == ParameterManager.SIGNAL_COFDM
+                        || currentDvbSource == ParameterManager.SIGNAL_ISDBT) {
+                    intent.putExtra(DataManager.KEY_IS_DVBT, true);
                 }
                 startActivityForResult(intent, requestCode);
             }
@@ -282,9 +282,9 @@ public class DtvkitDvbScanSelect extends Activity {
                 } else {
                     intent.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
                 }
-                intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_SETTINGS);
+                intent.setClassName(DataManager.KEY_PACKAGE_NAME, DataManager.KEY_ACTIVITY_SETTINGS);
                 startActivityForResult(intent, REQUEST_CODE_START_SETTINGS_ACTIVITY);
-                mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_SETTINGS);
+                mDataManager.saveIntParameters(DataManager.KEY_SELECT_SEARCH_ACTIVITY, DataManager.SELECT_SETTINGS);
                 Log.d(TAG, "start to set related language");
             }
         });
@@ -321,16 +321,16 @@ public class DtvkitDvbScanSelect extends Activity {
         int source = 0;
         switch (position) {
             case 0:
-                source = ParameterMananer.SIGNAL_QAM;
+                source = ParameterManager.SIGNAL_QAM;
                 break;
             case 1:
-                source = ParameterMananer.SIGNAL_COFDM;
+                source = ParameterManager.SIGNAL_COFDM;
                 break;
             case 2:
-                source = ParameterMananer.SIGNAL_QPSK;
+                source = ParameterManager.SIGNAL_QPSK;
                 break;
             case 3:
-                source = ParameterMananer.SIGNAL_ISDBT;
+                source = ParameterManager.SIGNAL_ISDBT;
                 break;
         }
         if (currentDvbSource != source) {
@@ -345,7 +345,7 @@ public class DtvkitDvbScanSelect extends Activity {
         final AlertDialog alert = builder.create();
         final View dialogView = View.inflate(context, R.layout.operator_type_setting, null);
         final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
-        final ListView listView = (ListView) dialogView.findViewById(R.id.dialog_listview);
+        final ListView listView = (ListView) dialogView.findViewById(R.id.lv_dialog);
         final List<HashMap<String, Object>> dataList = new ArrayList<HashMap<String, Object>>();
         if (operatorsTypeArray != null && operatorsTypeArray.length() > 0) {
             JSONObject operTypeObj = null;
@@ -379,14 +379,14 @@ public class DtvkitDvbScanSelect extends Activity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, final int position, long id) {
                 Log.d(TAG, "showOperatorTypeConfirmDialog onItemClick position = " + position);
-                int index = mParameterMananer.getOperatorTypeIndex(tunerType);
+                int index = mParameterManager.getOperatorTypeIndex(tunerType);
                 if (index == position) {
                     Log.d(TAG, "showOperatorTypeConfirmDialog same position = " + position);
                     alert.dismiss();
                     return;
                 }
                 Log.d(TAG, "showOperatorTypeConfirmDialog onItemClick position = " + position);
-                mParameterMananer.setOperatorType(tunerType, position);
+                mParameterManager.setOperatorType(tunerType, position);
                 currentIndex = position;
                 alert.dismiss();
             }
@@ -409,42 +409,42 @@ public class DtvkitDvbScanSelect extends Activity {
     }
 
     private int dvbSourceToSpinnerPos(int source) {
-        int posistion = 0;
+        int position = 0;
         switch (source) {
-            case ParameterMananer.SIGNAL_COFDM:
-                posistion = 1;
+            case ParameterManager.SIGNAL_COFDM:
+                position = 1;
                 break;
-            case ParameterMananer.SIGNAL_QAM:
-                posistion = 0;
+            case ParameterManager.SIGNAL_QAM:
+                position = 0;
                 break;
-            case ParameterMananer.SIGNAL_QPSK:
-                posistion = 2;
+            case ParameterManager.SIGNAL_QPSK:
+                position = 2;
                 break;
-            case ParameterMananer.SIGNAL_ISDBT:
-                posistion = 3;
+            case ParameterManager.SIGNAL_ISDBT:
+                position = 3;
                 break;
-            case ParameterMananer.SIGNAL_ANALOG:
+            case ParameterManager.SIGNAL_ANALOG:
                 //not supported now, will correct to dvbt
-                posistion = 1;
+                position = 1;
                 break;
         }
-        return posistion;
+        return position;
     }
 
     private String dvbSourceToString(int source) {
         String result = "DVB-T";
 
         switch (source) {
-            case ParameterMananer.SIGNAL_COFDM:
+            case ParameterManager.SIGNAL_COFDM:
                 result = "DVB-T";
                 break;
-            case ParameterMananer.SIGNAL_QAM:
+            case ParameterManager.SIGNAL_QAM:
                 result = "DVB-C";
                 break;
-            case ParameterMananer.SIGNAL_QPSK:
+            case ParameterManager.SIGNAL_QPSK:
                 result = "DVB-S";
                 break;
-            case ParameterMananer.SIGNAL_ISDBT:
+            case ParameterManager.SIGNAL_ISDBT:
                 result = "ISDB-T";
                 break;
             default:
@@ -457,16 +457,16 @@ public class DtvkitDvbScanSelect extends Activity {
         String result = "TYPE_DVB_T";
 
         switch (source) {
-            case ParameterMananer.SIGNAL_COFDM:
+            case ParameterManager.SIGNAL_COFDM:
                 result = "TYPE_DVB_T";
                 break;
-            case ParameterMananer.SIGNAL_QAM:
+            case ParameterManager.SIGNAL_QAM:
                 result = "TYPE_DVB_C";
                 break;
-            case ParameterMananer.SIGNAL_QPSK:
+            case ParameterManager.SIGNAL_QPSK:
                 result = "TYPE_DVB_S";
                 break;
-            case ParameterMananer.SIGNAL_ISDBT:
+            case ParameterManager.SIGNAL_ISDBT:
                 result = "TYPE_ISDB_T";
                 break;
             default:
@@ -480,7 +480,7 @@ public class DtvkitDvbScanSelect extends Activity {
         try {
             array.put(source);
             DtvkitGlueClient.getInstance().request("Dvb.SetDvbSource", array);
-            mParameterMananer.saveStringParameters(ParameterMananer.TV_KEY_DTVKIT_SYSTEM,
+            mParameterManager.saveStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM,
                 dvbSourceToString(source));
             EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(source));
         } catch (Exception e) {
@@ -488,16 +488,16 @@ public class DtvkitDvbScanSelect extends Activity {
     }
 
     private int getCurrentDvbSource() {
-        int source = ParameterMananer.SIGNAL_COFDM;
+        int source = ParameterManager.SIGNAL_COFDM;
         try {
             JSONObject sourceReq = DtvkitGlueClient.getInstance().request("Dvb.GetDvbSource", new JSONArray());
             if (sourceReq != null) {
                 source = sourceReq.optInt("data");
             }
-            String sourceParameter = mParameterMananer.getStringParameters(ParameterMananer.TV_KEY_DTVKIT_SYSTEM);
+            String sourceParameter = mParameterManager.getStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM);
             String sourceStr = dvbSourceToString(source);
             if (!Objects.equals(sourceParameter, sourceStr)) {
-                mParameterMananer.saveStringParameters(ParameterMananer.TV_KEY_DTVKIT_SYSTEM, sourceStr);
+                mParameterManager.saveStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM, sourceStr);
             }
         } catch (Exception e) {
         }

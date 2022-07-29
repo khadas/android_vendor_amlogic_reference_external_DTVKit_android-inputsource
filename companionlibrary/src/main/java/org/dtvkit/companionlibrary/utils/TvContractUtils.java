@@ -89,7 +89,7 @@ public class TvContractUtils {
         Map<Uri, String> logos = new HashMap<>();
         ArrayList<ContentProviderOperation> ops = new ArrayList<>();
 
-        //1.fisrt get existed channels in tv.db
+        //1.first get existed channels in tv.db
         cacheRelatedChannel(channelMap, channelUseSettingValueMap,
             context, inputId, isSearched, channels, updateChannelType, extras);
         //2.find new channel and channels that need to be updated
@@ -107,7 +107,7 @@ public class TvContractUtils {
         }
     }
 
-    //1.fisrt get existed channels in tv.db
+    //1.first get existed channels in tv.db
     private static void cacheRelatedChannel(ArrayMap<String, Long> channelMap, ArrayMap<String, ArrayMap<String, String>> channelUseSettingValueMap,
             Context context, String inputId, boolean isSearched, List<Channel> channels, String updateChannelType, PersistableBundle extras) {
         Uri channelsUri = TvContract.buildChannelsUriForInput(inputId);
@@ -169,7 +169,7 @@ public class TvContractUtils {
                 if (TextUtils.isEmpty(updateChannelType) && searchSignalTypeToChannelType(signalType) != null) {
                     updateChannelType = searchSignalTypeToChannelType(signalType);
                 }
-                if (!("full".equals(signalType)) && !isChannelTypeMatchs(updateChannelType, channelType)) {
+                if (!("full".equals(signalType)) && !isChannelTypeMatches(updateChannelType, channelType)) {
                     if (DEBUG) Log.i(TAG, "Skip unmatch type channels (" + updateChannelType + ":" + channelType + ")");
                     continue;
                 }
@@ -419,7 +419,7 @@ public class TvContractUtils {
         }
     }
 
-    public static boolean isChannelTypeMatchs(String sourceType, String targetType) {
+    public static boolean isChannelTypeMatches(String sourceType, String targetType) {
         boolean ret = false;
         if (sourceType != null && targetType != null && targetType.contains(sourceType)) {
             ret = true;
@@ -461,7 +461,7 @@ public class TvContractUtils {
                 } else if (value instanceof Integer) {
                     values.put(columnKey, (Integer)value);
                 } else {
-                    Log.i(TAG, "updateChannelInternalProviderData unkown data type");
+                    Log.i(TAG, "updateChannelInternalProviderData unknown data type");
                     return ret;
                 }
                 ret = true;
@@ -636,16 +636,16 @@ public class TvContractUtils {
                 return result;
             }
             Channel channel = null;
-            int neworkId = 0;
+            int networkId = 0;
             int streamId = 0;
             int service = 0;
             while (cursor.moveToNext()) {
                 channel = Channel.fromCursor(cursor);
                 if (channel != null) {
-                    neworkId = channel.getOriginalNetworkId();
+                    networkId = channel.getOriginalNetworkId();
                     streamId = channel.getTransportStreamId();
                     service = channel.getServiceId();
-                    if (neworkId == originalNetworkId && streamId == transportStreamId && serviceId == service) {
+                    if (networkId == originalNetworkId && streamId == transportStreamId && serviceId == service) {
                         result = channel;
                         break;
                     }
@@ -875,32 +875,32 @@ public class TvContractUtils {
                 return 1;
             }
 
-            int[] disnumbera = getMajorAndMinor(a);
-            int[] disnumberb = getMajorAndMinor(b);
-            if (disnumbera[0] != disnumberb[0]) {
-                return (disnumbera[0] - disnumberb[0]) > 0 ? 1 : -1;
-            } else if (disnumbera[1] != disnumberb[1]) {
-                return (disnumbera[1] - disnumberb[1]) > 0 ? 1 : -1;
+            int[] displayNumberA = getMajorAndMinor(a);
+            int[] displayNumberB = getMajorAndMinor(b);
+            if (displayNumberA[0] != displayNumberB[0]) {
+                return (displayNumberA[0] - displayNumberB[0]) > 0 ? 1 : -1;
+            } else if (displayNumberA[1] != displayNumberB[1]) {
+                return (displayNumberA[1] - displayNumberB[1]) > 0 ? 1 : -1;
             }
             return 0;
         }
 
-        private int[] getMajorAndMinor(String disnumber) {
+        private int[] getMajorAndMinor(String displayNumber) {
             int[] result = {-1, -1};//major, minor
-            String[] splitone = (disnumber != null ? disnumber.split("-") : null);
-            if (splitone != null && splitone.length > 0) {
+            String[] splitOne = (displayNumber != null ? displayNumber.split("-") : null);
+            if (splitOne != null && splitOne.length > 0) {
                 int length = 2;
-                if (splitone.length <= 2) {
-                    length = splitone.length;
+                if (splitOne.length <= 2) {
+                    length = splitOne.length;
                 } else {
-                    Log.d(TAG, "informal disnumber");
+                    Log.d(TAG, "informal displayNumber");
                     return result;
                 }
                 for (int i = 0; i < length; i++) {
                     try {
-                       result[i] = Integer.valueOf(splitone[i]);
+                       result[i] = Integer.valueOf(splitOne[i]);
                     } catch (NumberFormatException e) {
-                        Log.d(TAG, splitone[i] + " not integer:" + e.getMessage());
+                        Log.d(TAG, splitOne[i] + " not integer:" + e.getMessage());
                     }
                 }
             }

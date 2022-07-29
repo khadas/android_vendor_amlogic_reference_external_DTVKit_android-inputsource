@@ -36,7 +36,7 @@ extern "C" {
 
 static JavaVM   *gJavaVM = NULL;
 
-static jbyteArray signCSR(JNIEnv *env, jobject thiz, jbyteArray jcsr, jbyteArray jPublicKey) {
+static jbyteArray signCSR(JNIEnv *env, jobject thiz, jbyteArray jCsr, jbyteArray jPublicKey) {
     ALOGI("signCSR in");
 
     TEEC_Result res;
@@ -53,14 +53,14 @@ static jbyteArray signCSR(JNIEnv *env, jobject thiz, jbyteArray jcsr, jbyteArray
     jsize  public_key_len = 0;
     jbyteArray array = NULL;
 
-    //1.init comtext
+    //1.init context
     res = TEEC_InitializeContext(NULL, &ctx);
     if (res != TEEC_SUCCESS) {
         ALOGD("TEEC_InitializeContext ret 0x%X\n", res);
         return NULL;
     }
 
-    //2.open TA secssion
+    //2.open TA session
     res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
     if (res != TEEC_SUCCESS) {
         ALOGD("TEEC_Opensession ret 0x%X origin 0x%X\n",res, err_origin);
@@ -80,9 +80,9 @@ static jbyteArray signCSR(JNIEnv *env, jobject thiz, jbyteArray jcsr, jbyteArray
     }
 
     //3.get csr and public key
-    if (jcsr != NULL) {
-        csr = env->GetByteArrayElements(jcsr, NULL);
-        csr_len = env->GetArrayLength(jcsr);
+    if (jCsr != NULL) {
+        csr = env->GetByteArrayElements(jCsr, NULL);
+        csr_len = env->GetArrayLength(jCsr);
     }
 
     if (jPublicKey != NULL) {
@@ -115,7 +115,7 @@ static jbyteArray signCSR(JNIEnv *env, jobject thiz, jbyteArray jcsr, jbyteArray
     TEEC_FinalizeContext(&ctx);
 
     if (csr != NULL) {
-        env->ReleaseByteArrayElements(jcsr, csr, 0);
+        env->ReleaseByteArrayElements(jCsr, csr, 0);
     }
 
     if (public_key != NULL) {

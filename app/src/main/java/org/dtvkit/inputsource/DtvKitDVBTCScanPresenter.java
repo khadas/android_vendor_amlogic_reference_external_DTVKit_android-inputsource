@@ -15,7 +15,7 @@ import android.util.Log;
 
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.settings.ConstantManager;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.app.DataProviderManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 
@@ -56,8 +56,8 @@ public class DtvKitDVBTCScanPresenter {
 
     private HandlerThread mHandlerThread = null;
     private Handler mScanWorkHandler = null;
-    private ParameterMananer mParameterManager = null;
-    private DataMananer mDataManager = null;
+    private ParameterManager mParameterManager = null;
+    private DataManager mDataManager = null;
     private Context mContext = null;
     private UpdateScanView mUpdateScanView = null;
     private DtvkitGlueClient mDtvkitGlueClient = null;
@@ -65,8 +65,8 @@ public class DtvKitDVBTCScanPresenter {
     private String mInputId = null;
     private int mServiceNumber = 0;
     private int mDVBType = 0;
-    private int mScanMode = DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO;
-    private int  mManualFreqScan = DataMananer.VALUE_FREQUENCY_MODE;
+    private int mScanMode = DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO;
+    private int  mManualFreqScan = DataManager.VALUE_FREQUENCY_MODE;
     private boolean mStartSyncChannelProvider = false;
     private boolean mStartScanProcess = false;
 
@@ -85,7 +85,7 @@ public class DtvKitDVBTCScanPresenter {
             if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
                 if (null != mUpdateScanView) {
                     mUpdateScanView.updateScanStatus("Finished");
-                    if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) {
+                    if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) {
                         mUpdateScanView.updateScanSignalStrength(0);
                         mUpdateScanView.updateScanSignalQuality(0);
                         mUpdateScanView.finishScanView();
@@ -101,8 +101,8 @@ public class DtvKitDVBTCScanPresenter {
         mDVBType = dvbType;
         mInputId = inputId;
         mDtvkitGlueClient = DtvkitGlueClient.getInstance();
-        mParameterManager = new ParameterMananer(context, mDtvkitGlueClient);
-        mDataManager = new DataMananer(context);
+        mParameterManager = new ParameterManager(context, mDtvkitGlueClient);
+        mDataManager = new DataManager(context);
         mUpdateScanView = updateScanView;
         initScanWorkHandler();
     }
@@ -112,7 +112,7 @@ public class DtvKitDVBTCScanPresenter {
     }
 
     public boolean startAutoScan(){
-        mScanMode = DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO;
+        mScanMode = DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO;
         if (null != mScanWorkHandler) {
             mScanWorkHandler.removeMessages(MSG_START_SEARCH);
             Message mess = mScanWorkHandler.obtainMessage(MSG_START_SEARCH, 0, 0, null);
@@ -165,7 +165,7 @@ public class DtvKitDVBTCScanPresenter {
         mScanWorkHandler = new Handler(mHandlerThread.getLooper(), (Message msg)->{
             switch (msg.what) {
                 case MSG_START_SEARCH: {
-                    if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) {
+                    if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) {
                         handleStartAutoScan();
                     } else {
                         //TBD:manual scan
@@ -290,7 +290,7 @@ public class DtvKitDVBTCScanPresenter {
         int signalStrength = 0;
         int signalQuality = 0;
 
-        if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO != mScanMode) {
+        if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO != mScanMode) {
             signalStrength = mParameterManager.getStrengthStatus();
             signalQuality = mParameterManager.getQualityStatus();
         }
@@ -303,7 +303,7 @@ public class DtvKitDVBTCScanPresenter {
                     mUpdateScanView.updateScanProgress(progress);
                     mUpdateScanView.updateScanChannelNumber(serviceNumber, 0);
                     Log.d(TAG, "SCAN_MONITOR_STATUS_CHANGE progress = " + progress + "|serviceNumber = " + serviceNumber);
-                    if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO != mScanMode) {
+                    if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO != mScanMode) {
                         mUpdateScanView.updateScanSignalStrength(signalStrength);
                         mUpdateScanView.updateScanSignalQuality(signalQuality);
                         Log.d(TAG, "SCAN_MONITOR_STATUS_CHANGE signalStrength = " + signalStrength + "|signalQuality = " + signalQuality);
@@ -314,7 +314,7 @@ public class DtvKitDVBTCScanPresenter {
             }
         } else if (SCAN_MONITOR_STATUS_UPDATE == scanStatus) {
             if (null != mUpdateScanView) {
-                if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO != mScanMode) {
+                if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO != mScanMode) {
                     mUpdateScanView.updateScanSignalStrength(signalStrength);
                     mUpdateScanView.updateScanSignalQuality(signalQuality);
                     Log.d(TAG, "SCAN_MONITOR_STATUS_UPDATE signalStrength = " + signalStrength + "|signalQuality = " + signalQuality);
@@ -325,7 +325,7 @@ public class DtvKitDVBTCScanPresenter {
 
     private void handleFinishScan(boolean skipConfirmNetwork) {
         Log.d(TAG, "handleFinishScan skipConfirmNetwork = " + skipConfirmNetwork);
-        if ((DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) && !skipConfirmNetwork && notifyShowTargetRegion()) {
+        if ((DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) && !skipConfirmNetwork && notifyShowTargetRegion()) {
             Log.d(TAG, "finish scan flow after TargetRegion flow");
             return;
         } else {
@@ -363,7 +363,7 @@ public class DtvKitDVBTCScanPresenter {
     private void finishScanProcess(boolean skipConfirmNetwork) {
         if (null != mUpdateScanView) {
             mUpdateScanView.updateScanStatus("Finishing search" + "");
-            if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) {
+            if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) {
                 mUpdateScanView.updateScanSignalQuality(0);
                 mUpdateScanView.updateScanSignalStrength(0);
             }
@@ -374,7 +374,7 @@ public class DtvKitDVBTCScanPresenter {
         if (notifyShowLcnConflict()) {
             Log.d(TAG, "showLcnConflict");
             return;
-        } else if ((DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) && !skipConfirmNetwork && notifyShowNetworkInfo()) {
+        } else if ((DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) && !skipConfirmNetwork && notifyShowNetworkInfo()) {
             Log.d(TAG, "ShowNetworkInfo");
             return;
         } else {
@@ -433,7 +433,7 @@ public class DtvKitDVBTCScanPresenter {
 
     private boolean notifyShowLcnConflict() {
         JSONArray array = mParameterManager.getConflictLcn();
-        if (mParameterManager.needConfirmLcnInfomation(array)) {
+        if (mParameterManager.needConfirmLcnInformation(array)) {
             if (null != mUpdateScanView) {
                 //TBD:need check input parameter
                 Bundle data = new Bundle();
@@ -446,7 +446,7 @@ public class DtvKitDVBTCScanPresenter {
 
     private boolean notifyShowNetworkInfo() {
         JSONArray array = mParameterManager.getNetworksOfRegion();
-        if (mParameterManager.needConfirmNetWorkInfomation(array)) {
+        if (mParameterManager.needConfirmNetWorkInformation(array)) {
             if (null != mUpdateScanView) {
                 //TBD:need check input parameter
                 Bundle data = new Bundle();
@@ -518,10 +518,10 @@ public class DtvKitDVBTCScanPresenter {
             parameters.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_LCN_CONFLICT, false);
         }
 
-        if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO != mScanMode) {
+        if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO != mScanMode) {
             //TBD need add get manual scan param
         }
-        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode ? EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO : EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
+        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode ? EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO : EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, DVB_T == mDVBType ? "DVB-T" : "DVB-C");
         EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(mContext, mInputId, (mServiceNumber > 0), new ComponentName(mContext, DtvkitEpgSync.class), parameters);
         if (null != mUpdateScanView) {

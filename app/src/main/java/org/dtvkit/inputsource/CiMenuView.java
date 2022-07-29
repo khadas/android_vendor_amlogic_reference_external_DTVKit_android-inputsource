@@ -37,7 +37,7 @@ public class CiMenuView extends LinearLayout {
     private static final int MENU_TIMEOUT_MESSAGE = 1;
     private static final int RETURN_BUTTON_NUM = 0;
 
-    private static final int WAIT_CIMENU_TIMEOUT = 3000;
+    private static final int WAIT_CI_MENU_TIMEOUT = 3000;
 
     private boolean signalTriggered = false;
     private boolean isMenuVisible = false;
@@ -300,9 +300,9 @@ public class CiMenuView extends LinearLayout {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+                    final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.ll_ci_MMI_Items);
                     final LayoutInflater inflater = LayoutInflater.from(mContext);
-                    final TextView textView = (TextView)inflater.inflate(R.layout.mmibutton, null);
+                    final TextView textView = (TextView)inflater.inflate(R.layout.mmi_button, null);
                     textView.setLayoutParams(new LinearLayout.LayoutParams(findViewById(R.id.textViewMenuTitle).getWidth(), 40));
                     textView.setText(itemText);
                     textView.setId(buttonNum);
@@ -349,8 +349,8 @@ public class CiMenuView extends LinearLayout {
         private void createEnquiryMenu(final String text, final int maxLength, final boolean hide) {
             final LayoutInflater inflater = LayoutInflater.from(mContext);
 
-            final LinearLayout parentLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
-            final LinearLayout enquiryLayout = (LinearLayout)inflater.inflate(R.layout.enquiryform, null);
+            final LinearLayout parentLayout = (LinearLayout)findViewById(R.id.ll_ci_MMI_Items);
+            final LinearLayout enquiryLayout = (LinearLayout)inflater.inflate(R.layout.enquiry_form, null);
 
             final TextView enquiryTextView = (TextView)(enquiryLayout.findViewById(R.id.textViewEnquiryName));
             final EditText enquiryEditText = (EditText)(enquiryLayout.findViewById(R.id.editTextEnquiry));
@@ -404,7 +404,7 @@ public class CiMenuView extends LinearLayout {
         mContext = context;
 
         setMenuInvisible();
-        inflate(getContext(), R.layout.cimenu,  this);
+        inflate(getContext(), R.layout.ci_menu,  this);
 
         startListeningForCamSignal();
         IntentFilter intentFilter = new IntentFilter();
@@ -508,7 +508,7 @@ public class CiMenuView extends LinearLayout {
         boolean used = false;
 
         if (isMenuVisible) {
-            mmiItems = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+            mmiItems = (LinearLayout)findViewById(R.id.ll_ci_MMI_Items);
             currentFocusedItem = mmiItems.getFocusedChild();
 
             if (currentFocusedItem != null) {
@@ -548,7 +548,7 @@ public class CiMenuView extends LinearLayout {
             /* Although enterCiMenu returns TRUE, there are no guarantees that the menu has been
                entered. We must wait for a signal before telling the user that a menu has not
                been found */
-            timerHandler.sendEmptyMessageDelayed(MENU_TIMEOUT_MESSAGE, WAIT_CIMENU_TIMEOUT);
+            timerHandler.sendEmptyMessageDelayed(MENU_TIMEOUT_MESSAGE, WAIT_CI_MENU_TIMEOUT);
         }
     }
 
@@ -582,7 +582,7 @@ public class CiMenuView extends LinearLayout {
 
     private void setMenuFocus(final int buttonNum, final boolean up) {
         final ScrollView scrollView = (ScrollView)findViewById(R.id.scrollContainer);
-        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.ll_ci_MMI_Items);
 
         runOnUiThread(new Runnable() {
             @Override
@@ -605,7 +605,7 @@ public class CiMenuView extends LinearLayout {
 
     private void setMenuVisible() {
         final CiMenuView runnableView = this;
-        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMI);
+        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.ll_ci_MMI);
         Log.i(TAG, "set MMI Menu Visible");
 
         runOnUiThread(new Runnable() {
@@ -634,7 +634,7 @@ public class CiMenuView extends LinearLayout {
     }
 
     private void clearPreviousMenu() {
-        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.ll_ci_MMI_Items);
 
         runOnUiThread(new Runnable() {
             @Override
@@ -645,7 +645,7 @@ public class CiMenuView extends LinearLayout {
     }
 
     private int getCurrentFocusedItem() {
-        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.ll_ci_MMI_Items);
         final View currentFocusChild = linearLayout.getFocusedChild();
         int focusedId = 0;
 
@@ -657,7 +657,7 @@ public class CiMenuView extends LinearLayout {
     }
 
     private int numberOfMenuItems() {
-        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.linearlayoutMMIItems);
+        final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.ll_ci_MMI_Items);
         return linearLayout.getChildCount();
     }
 

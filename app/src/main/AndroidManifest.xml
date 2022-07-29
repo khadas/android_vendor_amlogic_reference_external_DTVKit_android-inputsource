@@ -114,7 +114,7 @@
             </intent-filter>
         </activity>
         <activity android:exported="false"
-             android:name="com.droidlogic.readdbfile.ReadDbActivity">
+             android:name="com.droidlogic.readdb.ReadDbActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
@@ -128,7 +128,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.media.tv.input"
-                android:resource="@xml/dtvkittvinput" />
+                android:resource="@xml/dtvkit_tv_input" />
         </service>
         <service
             android:name=".DtvkitEpgSync"

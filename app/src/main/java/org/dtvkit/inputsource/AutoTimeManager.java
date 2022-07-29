@@ -18,7 +18,7 @@ public class AutoTimeManager {
     private BroadcastReceiver mBroadcastReceiver;
     private AutoManagerCallback mCb;
     private boolean mHasChangedBySys;
-    private boolean mHasTriggledNetTime;
+    private boolean mHasTriggeredNetTime;
 
     public AutoTimeManager(Context context, AutoManagerCallback cb) {
         mContext = context;
@@ -48,14 +48,14 @@ public class AutoTimeManager {
                             } else {
                                     //its a bad idea, but we cannot get if time has been changed
                                     //by network in the booting stage.
-                                    //Since networtimeservice observing "Settings.Global.AUTO_TIME",
-                                    //so we switch it to triggle the networktime do a sync whend dtv
-                                    //changed the system time. If network time is avaliavle, it will
+                                    //Since network time service observing "Settings.Global.AUTO_TIME",
+                                    //so we switch it to triggered the network time do a sync when dtv
+                                    //changed the system time. If network time is available, it will
                                     //fix the time.
                                     //And this will just run only once.
-                                if (!mHasTriggledNetTime && !mHasChangedBySys) {
-                                    tryTriggleNetworkTimeSync();
-                                    mHasTriggledNetTime = true;
+                                if (!mHasTriggeredNetTime && !mHasChangedBySys) {
+                                    tryTriggeredNetworkTimeSync();
+                                    mHasTriggeredNetTime = true;
                                 }
                             }
                         }
@@ -100,7 +100,7 @@ public class AutoTimeManager {
         }
     }
 
-    private void tryTriggleNetworkTimeSync() {
+    private void tryTriggeredNetworkTimeSync() {
         if (mContentResolver != null && isAutomaticTimeEnabled()) {
             if (mContentObserver != null) {
                 mContentResolver.unregisterContentObserver(mContentObserver);
@@ -120,7 +120,7 @@ public class AutoTimeManager {
     public interface AutoManagerCallback {
         long getDtvRealTime();
         void enableDtvTimeSync(boolean enable);
-        /*time changed by network, telephyservice, or manual set*/
+        /*time changed by network, telephony service, or manual set*/
         void onTimeChangedBySystem();
     }
 }

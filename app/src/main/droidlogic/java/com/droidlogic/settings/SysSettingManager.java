@@ -61,11 +61,11 @@ public class SysSettingManager {
         return result;
     }
 
-    public String getVideodecodeInfo() {
+    public String getVideoDecodeInfo() {
         String result = "";
         result = readSysFs(ConstantManager.SYS_VIDEO_DECODE_PATH);
         if (DEBUG) {
-            Log.d(TAG, "getVideodecodeInfo result = " + result);
+            Log.d(TAG, "getVideoDecodeInfo result = " + result);
         }
         return result;
     }
@@ -130,7 +130,7 @@ public class SysSettingManager {
         if (!TextUtils.isEmpty(startStr) && !TextUtils.isEmpty(endStr) && !TextUtils.isEmpty(value)) {
             int start = value.indexOf(startStr);//example:"frame rate : "
             int end = value.indexOf(endStr, start);//example:" fps"
-            //deal diffrent next line symbol
+            //deal different next line symbol
             if (start != -1 && end != -1) {
                 String sub = value.substring(start, end);
                 if (sub != null) {
@@ -167,7 +167,7 @@ public class SysSettingManager {
                 result = ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_INTERLACE);
             } else if (frameFormat.startsWith(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE)) {
                 result = ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
-            } else if (frameFormat.startsWith(ConstantManager.CONSTANT_FORMAT_COMRPESSED)) {//Compressed may exist with progressive or interlace
+            } else if (frameFormat.startsWith(ConstantManager.CONSTANT_FORMAT_COMPRESSED)) {//Compressed may exist with progressive or interlace
                 result = ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
             } else {
                 result = ConstantManager.PI_TO_VIDEO_FORMAT_MAP.get(ConstantManager.CONSTANT_FORMAT_PROGRESSIVE);
@@ -311,7 +311,7 @@ public class SysSettingManager {
                         Log.d(TAG, "getWriteableDevices empty uuid");
                     }
                 } else {
-                    Log.d(TAG, "getWriteableDevices ukown device " + storagePath);
+                    Log.d(TAG, "getWriteableDevices unknown device " + storagePath);
                 }
             }
         } else {
@@ -409,10 +409,10 @@ public class SysSettingManager {
                 Method format = StorageManager.class.getMethod("format", String.class);
                 format.invoke(storageManager, volumeId);
             } catch (Exception e) {
-                Log.d(TAG, "formatStorageByVoluemId format Exception = " + e.getMessage());
+                Log.d(TAG, "formatStorageByVolumeId format Exception = " + e.getMessage());
             }
         } else {
-            Log.d(TAG, "formatStorageByVoluemId null");
+            Log.d(TAG, "formatStorageByVolumeId null");
         }
     }
 

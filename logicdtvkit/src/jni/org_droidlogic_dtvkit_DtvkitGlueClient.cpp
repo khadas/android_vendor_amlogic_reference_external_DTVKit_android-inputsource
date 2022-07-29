@@ -44,8 +44,8 @@ static jmethodID notifySubtitleCallback;
 static jmethodID notifyDvbCallback;
 static jmethodID notifyPidFilterData;
 
-static uint8_t*  gJbuffer = NULL; //java direct buffer
-static int       gJbufSize = 0;
+static uint8_t*  gJBuffer = NULL; //java direct buffer
+static int       gJBufSize = 0;
 static jboolean  gJNIReady = false;
 static jboolean  gPidListenerEnabled = false;
 
@@ -73,11 +73,11 @@ static int teletext_region_id = 0;
 #define SUBTITLE_SCTE27_SOURCE 1
 
 #define SUBTITLE_SUB_TYPE_DVB    1
-#define SUBTITLE_SUB_TYPE_TTXSUB 2
+#define SUBTITLE_SUB_TYPE_TTX_SUB 2
 #define SUBTITLE_SUB_TYPE_SCTE   3
 #define SUBTITLE_SUB_TYPE_TTX    4
 
-#define START_SUB_TYOE_CLOSED_CAPTION -5
+#define START_SUB_TYPE_CLOSED_CAPTION -5
 #define CALLBACK_SUB_TYPE_CLOSED_CAPTION 10
 #define TT_EVENT_INDEXPAGE 14
 #define TT_EVENT_GO_TO_PAGE 30
@@ -180,10 +180,10 @@ static void postPidFilterData(int length, uint8_t* data)
     JNIEnv *env = getJniEnv(&attached);
 
     if (env != NULL) {
-        if (length <= gJbufSize)
+        if (length <= gJBufSize)
         {
-            memset(gJbuffer, 0x0, gJbufSize);
-            memcpy(gJbuffer, data, length);
+            memset(gJBuffer, 0x0, gJBufSize);
+            memcpy(gJBuffer, data, length);
             //ALOGI("Get Pid Filter len %d",length);
         }
         else
@@ -265,7 +265,7 @@ static void clearCCSubtitleData()
 }
 
 static void setAFDToDVBCore(int dec_id, uint8_t afd) {
-    ALOGV("AFD value = 0x%xdfrom subtitleserver", afd);
+    ALOGV("AFD value = 0x%xd from subtitleServer", afd);
     if (mpDtvkitJni != NULL)
         mpDtvkitJni->setAfd(dec_id, afd);
 }
@@ -290,13 +290,13 @@ static void postDvbParam(const std::string& resource, const std::string json, in
 
     if (env != NULL) {
         //ALOGD("-callback event get ok");
-        //ScopedLocalRef<jstring> jresource((env), (env)->NewStringUTF(resource.c_str()));
-        //ScopedLocalRef<jstring> jjson((env),  (env)->NewStringUTF(json.c_str()));
-        jstring jresource = env->NewStringUTF(resource.c_str());
-        jstring jjson     = env->NewStringUTF(json.c_str());
-        env->CallVoidMethod(DtvkitObject, notifyDvbCallback, jresource, jjson, id);
-        env->DeleteLocalRef(jresource);
-        env->DeleteLocalRef(jjson);
+        //ScopedLocalRef<jstring> jResource((env), (env)->NewStringUTF(resource.c_str()));
+        //ScopedLocalRef<jstring> jJson((env),  (env)->NewStringUTF(json.c_str()));
+        jstring jResource = env->NewStringUTF(resource.c_str());
+        jstring jJson     = env->NewStringUTF(json.c_str());
+        env->CallVoidMethod(DtvkitObject, notifyDvbCallback, jResource, jJson, id);
+        env->DeleteLocalRef(jResource);
+        env->DeleteLocalRef(jJson);
     }
     if (attached) {
         DetachJniEnv();
@@ -438,9 +438,9 @@ void SubtitleMessageHandler::handleMessage(const Message & message) {
     switch (message.what) {
         case SUBTITLE_START:
             {
-                ALOGD("funname =%d, isdvbsubt = %d, pid = %d,  subt_type = %d, cpage = %d, apage = %d", parcel.funname,
+                ALOGD("funname =%d, is_dvb_subtitle = %d, pid = %d,  subt_type = %d, cpage = %d, apage = %d", parcel.funname,
                 parcel.is_dvb_subt, parcel.pid, parcel.subt_type, parcel.subt.cpage, parcel.subt.apage);
-                if (parcel.is_dvb_subt || parcel.pid == 0) { //pid =0 defaul cc
+                if (parcel.is_dvb_subt || parcel.pid == 0) { //pid =0 default cc
                     setSubtitleOn(parcel.pid, 0, 0, parcel.subt_type, parcel.subt.cpage, parcel.subt.apage, parcel.demux_num);
                 } else {
                     ALOGD("parcel.ttxt.magazine = %d, parcel.ttxt.page = %d", parcel.ttxt.magazine, parcel.ttxt.page);
@@ -541,14 +541,14 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
     }
 
     if (parcel.msgType == REQUEST) {
-        dvbparam_t dvbparam;
-        dvbparam.resource = parcel.bodyString[0];
-        dvbparam.json     = parcel.bodyString[1];
-        dvbparam.id       = parcel.bodyInt[0];
-        postDvbParam(dvbparam.resource, dvbparam.json, dvbparam.id);
+        dvb_param_t dvb_param;
+        dvb_param.resource = parcel.bodyString[0];
+        dvb_param.json     = parcel.bodyString[1];
+        dvb_param.id       = parcel.bodyInt[0];
+        postDvbParam(dvb_param.resource, dvb_param.json, dvb_param.id);
     }
 
-    if (parcel.msgType == SUBSERVER_DRAW) {
+    if (parcel.msgType == SUB_SERVER_DRAW) {
         sp<SubtitleMessageHandler> subtitleHandler = new SubtitleMessageHandler();
         subtitleHandler->setParcelData(parcel);
         if (gLooper.get() != nullptr) {
@@ -558,21 +558,21 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
 
 }
 
-static void connectdtvkit(JNIEnv *env, jclass clazz __unused, jobject obj, jobject buffer)
+static void connectDtvkit(JNIEnv *env, jclass clazz __unused, jobject obj, jobject buffer)
 {
     ALOGI("ref dtvkit");
     mpDtvkitJni  =  DTVKitClientJni::GetInstance();
     DtvkitObject = env->NewGlobalRef(obj);
-    gJbuffer = (uint8_t*)env->GetDirectBufferAddress(buffer);
-    gJbufSize = env->GetDirectBufferCapacity(buffer);
-    ALOGE("native buffer info %p,length %d\n", gJbuffer, gJbufSize);
+    gJBuffer = (uint8_t*)env->GetDirectBufferAddress(buffer);
+    gJBufSize = env->GetDirectBufferCapacity(buffer);
+    ALOGE("native buffer info %p,length %d\n", gJBuffer, gJBufSize);
     gLooper = new Looper(true);
     gLooperThread = new SubtitleLooperThread(gLooper);
     gLooperThread->run("subtitleLooper");
     gJNIReady = true;
 }
 
-static void disconnectdtvkit(JNIEnv *env, jclass clazz __unused)
+static void disConnectDtvkit(JNIEnv *env, jclass clazz __unused)
 {
     ALOGI("disconnect dtvkit");
     gLooperThread->requestExit();
@@ -580,16 +580,16 @@ static void disconnectdtvkit(JNIEnv *env, jclass clazz __unused)
     env->DeleteGlobalRef(DtvkitObject);
 }
 
-static jstring request(JNIEnv *env, jclass clazz __unused, jstring jresource, jstring jjson) {
-    const char *resource = env->GetStringUTFChars(jresource, nullptr);
-    const char *json = env->GetStringUTFChars(jjson, nullptr);
+static jstring request(JNIEnv *env, jclass clazz __unused, jstring jResource, jstring jJson) {
+    const char *resource = env->GetStringUTFChars(jResource, nullptr);
+    const char *json = env->GetStringUTFChars(jJson, nullptr);
     if (mpDtvkitJni == nullptr) {
         ALOGE("dtvkitJni is null");
         mpDtvkitJni  =  DTVKitClientJni::GetInstance();
     }
     std::string result   = mpDtvkitJni->request(resource, json);
-    env->ReleaseStringUTFChars(jresource, resource);
-    env->ReleaseStringUTFChars(jjson, json);
+    env->ReleaseStringUTFChars(jResource, resource);
+    env->ReleaseStringUTFChars(jJson, json);
     return env->NewStringUTF(result.c_str());
 }
 
@@ -608,19 +608,19 @@ static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int m
 {
     if (mSubContext != nullptr) {
         setSubtitleOff();
-        if (type == START_SUB_TYOE_CLOSED_CAPTION) {
+        if (type == START_SUB_TYPE_CLOSED_CAPTION) {
             clearCCSubtitleData();
         }
     }
     ALOGD("SubtitleServiceCtl:setSubtitleOn with.pid=(%d,%u,%u), type=%d,magazine=%d, page=%d, demuxId = %d.",
         pid, onid, tsid, type, magazine, page, demuxId);
     setSubtitleStatus(true);
-    if (type == SUBTITLE_SUB_TYPE_TTX || type == SUBTITLE_SUB_TYPE_TTXSUB) {
-        mSubContext->setSubType(SUBTITLE_SUB_TYPE_TTXSUB + DTVKIT_SUBTITLE_ADD_OFFSET);
+    if (type == SUBTITLE_SUB_TYPE_TTX || type == SUBTITLE_SUB_TYPE_TTX_SUB) {
+        mSubContext->setSubType(SUBTITLE_SUB_TYPE_TTX_SUB + DTVKIT_SUBTITLE_ADD_OFFSET);
     } else {
         mSubContext->setSubType(type + DTVKIT_SUBTITLE_ADD_OFFSET);
     }
-    if (type == START_SUB_TYOE_CLOSED_CAPTION) {
+    if (type == START_SUB_TYPE_CLOSED_CAPTION) {
         mSubContext->selectCcChannel(pid);
     } else {
         mSubContext->setSubPid(pid, onid, tsid);
@@ -638,7 +638,7 @@ static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int m
         if ((type == SUBTITLE_SUB_TYPE_TTX)) {
             mSubContext->ttControl(TT_EVENT_SET_REGION_ID, -1, -1, teletext_region_id, -1);
             mSubContext->ttControl(TT_EVENT_GO_TO_PAGE, magazine, page, 0, 0);
-        } else if (type == SUBTITLE_SUB_TYPE_TTXSUB) {
+        } else if (type == SUBTITLE_SUB_TYPE_TTX_SUB) {
             mSubContext->ttControl(TT_EVENT_GO_TO_SUBTITLE, magazine, page, 0, 0);
         } else if (type == SUBTITLE_SUB_TYPE_DVB) {
             if (magazine != 0 || page != 0) {
@@ -672,7 +672,7 @@ static void setSubtitlePause()
             env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, 0, 0, 0, 0, 0, 9999, 0, NULL);
             env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, 0, 0, 0, 0, 0, 0, 9999, NULL);
             //when play the pvr file and turn on the subtitle, then seek and switch subtitle track,
-            //the dvbcore don't deliver the resume.And it cause the subitle hide.
+            //the dvb core don't deliver the resume.And it cause the subtitle hide.
             //env->CallVoidMethod(DtvkitObject, notifySubtitleCbCtlEx, 1);
         }
 
@@ -876,12 +876,12 @@ static void enablePidListener(JNIEnv *env, jclass clazz __unused, jboolean enabl
 
 static JNINativeMethod gMethods[] = {
 {
-    "nativeconnectdtvkit", "(Lorg/droidlogic/dtvkit/DtvkitGlueClient;Ljava/nio/ByteBuffer;)V",
-    (void *) connectdtvkit
+    "nativeConnectDtvkit", "(Lorg/droidlogic/dtvkit/DtvkitGlueClient;Ljava/nio/ByteBuffer;)V",
+    (void *) connectDtvkit
 },
 {
-    "nativedisconnectdtvkit", "()V",
-    (void *) disconnectdtvkit
+    "nativeDisconnectDtvkit", "()V",
+    (void *) disConnectDtvkit
 },
 /*
 {
@@ -890,7 +890,7 @@ static JNINativeMethod gMethods[] = {
 },
 */
 {
-    "nativerequest", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+    "nativeRequest", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     (void*) request
 },
 {

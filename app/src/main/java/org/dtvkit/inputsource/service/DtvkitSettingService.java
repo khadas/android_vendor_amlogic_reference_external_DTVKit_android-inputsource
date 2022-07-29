@@ -21,7 +21,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import com.droidlogic.dtvkit.IDtvkitSetting;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
@@ -34,20 +34,20 @@ import java.util.List;
 
 public class DtvkitSettingService extends Service {
     private static final String TAG = "DtvkitSettingService";
-    public static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
+    public static final String DTVKIT_INPUT_ID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
     private static final int SYNC_FINISHED = 0x01;
     private static final int SYNC_RUNNING  = 0x02;
-    private static final int SYNC_ONSIGNAL = 0x03;
-    public static final String EPGSYNC_STOPPED = "EPGSYNC_STOPPED";
-    public static final String EPGSYNC_RUNNING = "EPGSYNC_RUNNING";
-    public static final String ONSIGNAL        = "ONSIGNAL";
-    protected ParameterMananer mParameterManager;
+    private static final int SYNC_ON_SIGNAL = 0x03;
+    public static final String EPG_SYNC_STOPPED = "EPG_SYNC_STOPPED";
+    public static final String EPG_SYNC_RUNNING = "EPG_SYNC_RUNNING";
+    public static final String ON_SIGNAL        = "ON_SIGNAL";
+    protected ParameterManager mParameterManager;
     protected HbbTvUISetting mHbbTvUISetting;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        mParameterManager = new ParameterMananer(this, DtvkitGlueClient.getInstance());
+        mParameterManager = new ParameterManager(this, DtvkitGlueClient.getInstance());
         mHbbTvUISetting   = new HbbTvUISetting();
         DtvkitGlueClient.getInstance().registerSignalHandler(mSignalHandler);
     }
@@ -62,7 +62,7 @@ public class DtvkitSettingService extends Service {
         @Override
         public void onSignal(String signal, JSONObject data) {
             //Log.d(TAG,"signal:"+signal+",json:"+data.toString());
-            Message mess = mHandler.obtainMessage(SYNC_ONSIGNAL, 0, 0, ONSIGNAL);
+            Message mess = mHandler.obtainMessage(SYNC_ON_SIGNAL, 0, 0, ON_SIGNAL);
             Bundle b = new Bundle();
             b.putString("signal",  signal);
             b.putString("data",  data.toString());
@@ -81,7 +81,7 @@ public class DtvkitSettingService extends Service {
             String message = (String)(msg.obj);;
             String signal = null;
             String data   = null;
-            if (msg.what == SYNC_ONSIGNAL) {
+            if (msg.what == SYNC_ON_SIGNAL) {
                 Bundle b = msg.getData();
                 signal   = b.getString("signal");
                 data     = b.getString("data");
@@ -160,7 +160,7 @@ public class DtvkitSettingService extends Service {
 
         @Override
         public String getStoragePath() throws RemoteException {
-            String savedPath = mParameterManager.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
+            String savedPath = mParameterManager.getStringParameters(ParameterManager.KEY_PVR_RECORD_PATH);
             if (SysSettingManager.isMediaPath(savedPath)) {
                 savedPath = SysSettingManager.convertMediaPathToMountedPath(savedPath);
             }
@@ -181,7 +181,7 @@ public class DtvkitSettingService extends Service {
                 path += "/" + SysSettingManager.PVR_DEFAULT_FOLDER;
             }
             if (path != null) {
-                mParameterManager.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, path);
+                mParameterManager.saveStringParameters(ParameterManager.KEY_PVR_RECORD_PATH, path);
             } else {
                 Log.d(TAG, "setStoragePath invalid /storage path");
             }
@@ -312,7 +312,7 @@ public class DtvkitSettingService extends Service {
 
     private void updatingGuide() {
         EpgSyncJobService.cancelAllSyncRequests(this);
-        EpgSyncJobService.requestImmediateSync(this, DTVKIT_INPUTID, true, new ComponentName(this, DtvkitEpgSync.class));
+        EpgSyncJobService.requestImmediateSync(this, DTVKIT_INPUT_ID, true, new ComponentName(this, DtvkitEpgSync.class));
     }
 
     private boolean checkAndCreatPvrFolderInStorage(String storagePath) {
@@ -340,11 +340,11 @@ public class DtvkitSettingService extends Service {
                 //mStartSync = false;
                 Log.d(TAG,"EpgSyncJobService.SYNC_FINISHED");
                 //MGRMessage message = new MGRMessage(SYNC_FINISHED, 0 , "SYNC_FINISHED");
-                String message = EPGSYNC_STOPPED;
+                String message = EPG_SYNC_STOPPED;
                 sendMGRMessage(SYNC_FINISHED,0,0,message);
             }else if (status.equals(EpgSyncJobService.SYNC_STARTED)) {
                 Log.d(TAG,"EpgSyncJobService.SYNC_STARTED");
-                String message = EPGSYNC_RUNNING;
+                String message = EPG_SYNC_RUNNING;
                 sendMGRMessage(SYNC_RUNNING,0,0,message);
             }
         }
@@ -385,7 +385,7 @@ public class DtvkitSettingService extends Service {
         if (needCheckLcn) {
             parameters.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_LCN_CONFLICT, false);
         }
-        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, DTVKIT_INPUTID, (mFoundServiceNumber > 0),
+        EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, DTVKIT_INPUT_ID, (mFoundServiceNumber > 0),
             new ComponentName(this, DtvkitEpgSync.class), parameters);
     }
 

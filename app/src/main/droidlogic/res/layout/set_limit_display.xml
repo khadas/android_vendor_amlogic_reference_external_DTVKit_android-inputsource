@@ -23,7 +23,7 @@
         android:drawableLeft="@drawable/circle_red"
         android:gravity="center_vertical|center_horizontal"
         android:paddingRight="20dp"
-        android:text="SETLIMIT"
+        android:text="SET LIMIT"
         android:textColor="#B3EEEEEE"
         android:textSize="14sp" />
 </LinearLayout>

@@ -15,7 +15,7 @@ import org.json.JSONObject;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 
 public class DtvKitScanSignalPresenter {
     private static final String TAG = "DtvKitScanSignalPresenter";
@@ -34,8 +34,8 @@ public class DtvKitScanSignalPresenter {
     private static final int INVALID_CHANNEL_INDEX = 0xFFFFFFFF;
     private static final int INVALID_FREQUENCE = 10 * 1000 * 1000; //10M
 
-    private ParameterMananer mParameterMananer = null;
-    private DataMananer mDataMananer = null;
+    private ParameterManager mParameterManager = null;
+    private DataManager mDataManager = null;
     private HandlerThread mSignalCheckThread = null;
     private Handler mSignalCheckHandler = null;
     private UpdateView mUpdateView = null;
@@ -44,9 +44,9 @@ public class DtvKitScanSignalPresenter {
     private boolean mUpdateFlag = false;
     private boolean mIsDVBT = true;
 
-    public DtvKitScanSignalPresenter(ParameterMananer parameterMananer, DataMananer dataMananer, boolean isDVBT){
-        mParameterMananer = parameterMananer;
-        mDataMananer = dataMananer;
+    public DtvKitScanSignalPresenter(ParameterManager ParameterManager, DataManager DataManager, boolean isDVBT){
+        mParameterManager = ParameterManager;
+        mDataManager = DataManager;
         mIsDVBT = isDVBT;
         initSignalCheckThread();
     }
@@ -120,7 +120,7 @@ public class DtvKitScanSignalPresenter {
         }
         args.put(FREQ_SCAN_MODE);
         args.put(freq);
-        args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
+        args.put(DataManager.VALUE_DVBC_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBC_MODE)]);
         args.put(symbol);
         tunerTryLock(DVBC_TRY_LOCK_COMMAND, args);
     }
@@ -132,16 +132,16 @@ public class DtvKitScanSignalPresenter {
             Log.e(TAG, "freqTunerTryLock freq error = " + freq);
             //return;
         }
-        args.put(FREQ_SCAN_MODE); //scan mode 0 for freq tunerlock
+        args.put(FREQ_SCAN_MODE); //scan mode 0 for freq tuner lock
         args.put(freq);
         if (mIsDVBT) {
-            args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
-            args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
-            args.put(DataMananer.VALUE_DVBT_TYPE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE)]);
+            args.put(DataManager.VALUE_DVBT_BANDWIDTH_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_BANDWIDTH)]);
+            args.put(DataManager.VALUE_DVBT_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_MODE)]);
+            args.put(DataManager.VALUE_DVBT_TYPE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE)]);
             tunerTryLock(DVBT_TRY_LOCK_COMMAND, args);
         } else {
-            args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
-            args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE));
+            args.put(DataManager.VALUE_DVBC_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBC_MODE)]);
+            args.put(mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE));
             tunerTryLock(DVBC_TRY_LOCK_COMMAND, args);
         }
     }
@@ -154,7 +154,7 @@ public class DtvKitScanSignalPresenter {
             Log.e(TAG, "channelTunerTryLock channelIndex error = " + channelIndex);
             return;
         }
-        args.put(CHANNEL_SCAN_MODE); //scan mode 0 for freq tunerlock
+        args.put(CHANNEL_SCAN_MODE); //scan mode 0 for freq tuner lock
         args.put(channelIndex);
         if (mIsDVBT) {
             tunerTryLock(DVBT_TRY_LOCK_COMMAND, args);
@@ -166,13 +166,13 @@ public class DtvKitScanSignalPresenter {
 /*
     public void dvbtTunerTryLock(int scanMode, String scanPara){
         JSONArray args = new JSONArray();
-        int scanMode = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
+        int scanMode = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
         args.put(scanMode);
-        if (DataMananer.VALUE_FREQUENCY_MODE == scanMode) {
+        if (DataManager.VALUE_FREQUENCY_MODE == scanMode) {
             args.put(getInputFreq(scanPara));
-            args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
-            args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
-            args.put(DataMananer.VALUE_DVBT_TYPE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE)]);
+            args.put(DataManager.VALUE_DVBT_BANDWIDTH_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_BANDWIDTH)]);
+            args.put(DataManager.VALUE_DVBT_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_MODE)]);
+            args.put(DataManager.VALUE_DVBT_TYPE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE)]);
         } else {
 
         }
@@ -197,7 +197,7 @@ public class DtvKitScanSignalPresenter {
             }
             Log.d(TAG, "input dvbcSymbol: " + dvbcSymbol);
         } else {
-            dvbcSymbol = mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE);
+            dvbcSymbol = mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE);
         }
         Log.d(TAG, "getDvbcSymbol: " + dvbcSymbol);
         return dvbcSymbol;
@@ -218,11 +218,11 @@ public class DtvKitScanSignalPresenter {
         int channelIndex = INVALID_CHANNEL_INDEX;
 
         if (isDvbT) {
-            index = mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME);
+            index = mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME);
         } else {
-            index = mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME);
+            index = mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
         }
-        List<String> list = mParameterMananer.getChannelTable(mParameterMananer.getCurrentCountryCode(), isDvbT, mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == 1);
+        List<String> list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), isDvbT, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
 
         String channelInfo = (index < list.size()) ? list.get(index) : null;
         if (channelInfo != null) {
@@ -243,7 +243,7 @@ public class DtvKitScanSignalPresenter {
             Log.d(TAG, "tunerTryLock: " + result.toString());
         } catch (Exception e) {
             //TBD
-            //need stop check singla
+            //need stop check single
             Log.d(TAG, "tunerTryLock Exception e : " + e);
         }
         //TBD
@@ -285,8 +285,8 @@ public class DtvKitScanSignalPresenter {
     }
 
     private void updateSignalStatus(){
-        int strength = mParameterMananer.getStrengthStatus();
-        int quality = mParameterMananer.getQualityStatus();
+        int strength = mParameterManager.getStrengthStatus();
+        int quality = mParameterManager.getQualityStatus();
 
         if (mStrength != strength || mQuality != quality) {
             mStrength = strength;

@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.app.DataProviderManager;
@@ -59,8 +59,8 @@ public class DtvkitDvbtSetup extends Activity {
     private static final String TAG = "DtvkitDvbtSetup";
 
     private boolean mIsDvbt = false;
-    private DataMananer mDataMananer;
-    private ParameterMananer mParameterMananer = null;
+    private DataManager mDataManager;
+    private ParameterManager mParameterManager = null;
     private boolean mStartSync = false;
     private boolean mStartSearch = false;
     private boolean mFinish = false;
@@ -142,7 +142,7 @@ public class DtvkitDvbtSetup extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.autosetup);
+        setContentView(R.layout.auto_setup);
         Intent cIntent = getIntent();
         final String inputId;
         final String pvrStatus;
@@ -153,7 +153,7 @@ public class DtvkitDvbtSetup extends Activity {
             inputId = null;
             pvrStatus = null;
         }
-        mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
+        mParameterManager = new ParameterManager(this, DtvkitGlueClient.getInstance());
         final Button optionSet = findViewById(R.id.option_set_btn);
         optionSet.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -168,12 +168,12 @@ public class DtvkitDvbtSetup extends Activity {
                 } else {
                     intentSet.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
                 }
-                intentSet.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_SETTINGS);
+                intentSet.setClassName(DataManager.KEY_PACKAGE_NAME, DataManager.KEY_ACTIVITY_SETTINGS);
                 startActivity(intentSet);
-                mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_SETTINGS);
+                mDataManager.saveIntParameters(DataManager.KEY_SELECT_SEARCH_ACTIVITY, DataManager.SELECT_SETTINGS);
             }
         });
-        final Button startSearch = findViewById(R.id.terrestrialstartsearch);
+        final Button startSearch = findViewById(R.id.btn_terrestrial_start_search);
         startSearch.setEnabled(true);
         startSearch.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -195,18 +195,18 @@ public class DtvkitDvbtSetup extends Activity {
             }
         });
         startSearch.requestFocus();
-        mDataMananer = new DataMananer(this);
-        mPvrStatusConfirmManager = new PvrStatusConfirmManager(this, mDataMananer);
+        mDataManager = new DataManager(this);
+        mPvrStatusConfirmManager = new PvrStatusConfirmManager(this, mDataManager);
         Intent intent = getIntent();
         if (intent != null) {
-            mIsDvbt = intent.getBooleanExtra(DataMananer.KEY_IS_DVBT, false);
+            mIsDvbt = intent.getBooleanExtra(DataManager.KEY_IS_DVBT, false);
             String status = intent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
             mPvrStatusConfirmManager.setPvrStatus(status);
-            mInAutomaticMode = intent.getBooleanExtra(DataMananer.KEY_START_SCAN_FOR_AUTOMATIC, false);
+            mInAutomaticMode = intent.getBooleanExtra(DataManager.KEY_START_SCAN_FOR_AUTOMATIC, false);
             if (mInAutomaticMode) {
-                mDataMananer.saveIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE, DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO);
+                mDataManager.saveIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE, DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO);
             }
-            Log.d(TAG, "onCreate mIsDvbt = " + mIsDvbt + ", status = " + status + ", isAutomaticmode= " + mInAutomaticMode);
+            Log.d(TAG, "onCreate mIsDvbt = " + mIsDvbt + ", status = " + status + ", isAutomaticMode= " + mInAutomaticMode);
         }
         ((TextView)findViewById(R.id.dvb_search)).setText(mIsDvbt ? R.string.strSearchDvbtDescription : R.string.strSearchDvbcDescription);
         initHandler();
@@ -217,7 +217,7 @@ public class DtvkitDvbtSetup extends Activity {
         }
 
         if (!isPipOrFccEnable()) {
-            mDtvKitScanSignalPresenter = new DtvKitScanSignalPresenter(mParameterMananer, mDataMananer, mIsDvbt);
+            mDtvKitScanSignalPresenter = new DtvKitScanSignalPresenter(mParameterManager, mDataManager, mIsDvbt);
             mDtvKitScanSignalPresenter.registerUpdateView(new DtvKitScanSignalPresenter.UpdateView(){
                 @Override
                 public void updateSignalView(int strength, int quality){
@@ -268,8 +268,8 @@ public class DtvkitDvbtSetup extends Activity {
             }
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_LIST, serviceListJsonArray);
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_FIRST_SERVICE, firstServiceName);
-            if (mParameterMananer != null) {
-                intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_LCN_STATE, mParameterMananer.getAutomaticOrderingEnabled());
+            if (mParameterManager != null) {
+                intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_LCN_STATE, mParameterManager.getAutomaticOrderingEnabled());
             }
             Log.d(TAG, "finish firstServiceName = " + firstServiceName);
             setResult(RESULT_OK, intent);
@@ -355,8 +355,8 @@ public class DtvkitDvbtSetup extends Activity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                int searchmode = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE);
-                boolean autoSearch = (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == searchmode);
+                int searchMode = mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE);
+                boolean autoSearch = (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == searchMode);
                 mPvrStatusConfirmManager.setSearchType(autoSearch ? ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO : ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
                 boolean checkPvr = mPvrStatusConfirmManager.needDeletePvrRecordings();
                 if (checkPvr) {
@@ -399,85 +399,85 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private void initOrUpdateView(boolean init) {
-        LinearLayout public_typein_containner = (LinearLayout)findViewById(R.id.public_typein_containner);
+        LinearLayout public_type_in_container = (LinearLayout)findViewById(R.id.public_type_in_container);
         TextView dvb_search = (TextView)findViewById(R.id.dvb_search);
         View channel_holder = findViewById(R.id.channel_holder);
-        TextView public_type_in = (TextView)findViewById(R.id.public_typein_text);
-        EditText public_type_edit = (EditText)findViewById(R.id.public_typein_edit);
-        LinearLayout dvbt_bandwidth_containner = (LinearLayout)findViewById(R.id.dvbt_bandwidth_containner);
+        TextView public_type_in = (TextView)findViewById(R.id.public_type_in_text);
+        EditText public_type_edit = (EditText)findViewById(R.id.edtTxt_public_type_in);
+        LinearLayout dvbt_bandwidth_container = (LinearLayout)findViewById(R.id.dvbt_bandwidth_container);
         Spinner dvbt_bandwidth_spinner = (Spinner)findViewById(R.id.dvbt_bandwidth_spinner);
-        LinearLayout dvbt_mode_containner = (LinearLayout)findViewById(R.id.dvbt_mode_containner);
+        LinearLayout dvbt_mode_container = (LinearLayout)findViewById(R.id.dvbt_mode_container);
         Spinner dvbt_mode_spinner = (Spinner)findViewById(R.id.dvbt_mode_spinner);
-        LinearLayout dvbt_type_containner = (LinearLayout)findViewById(R.id.dvbt_type_containner);
+        LinearLayout dvbt_type_container = (LinearLayout)findViewById(R.id.dvbt_type_container);
         Spinner dvbt_type_spinner = (Spinner)findViewById(R.id.dvbt_type_spinner);
-        LinearLayout dvbc_mode_containner = (LinearLayout)findViewById(R.id.dvbc_mode_containner);
+        LinearLayout dvbc_mode_container = (LinearLayout)findViewById(R.id.dvbc_mode_container);
         Spinner dvbc_mode_spinner = (Spinner)findViewById(R.id.dvbc_mode_spinner);
-        LinearLayout dvbc_symbol_containner = (LinearLayout)findViewById(R.id.dvbc_symbol_containner);
+        LinearLayout dvbc_symbol_container = (LinearLayout)findViewById(R.id.dvbc_symbol_container);
         EditText dvbc_symbol_edit = (EditText)findViewById(R.id.dvbc_symbol_edit);
-        LinearLayout public_search_mode_containner = (LinearLayout)findViewById(R.id.public_search_mode_containner);
+        LinearLayout public_search_mode_container = (LinearLayout)findViewById(R.id.public_search_mode_container);
         Spinner public_search_mode_spinner = (Spinner)findViewById(R.id.public_search_mode_spinner);
         LinearLayout frequency_channel_container = (LinearLayout)findViewById(R.id.frequency_channel_container);
         Spinner frequency_channel_spinner = (Spinner)findViewById(R.id.frequency_channel_spinner);
-        LinearLayout public_search_channel_name_containner = (LinearLayout)findViewById(R.id.public_search_channel_containner);
+        LinearLayout public_search_channel_name_container = (LinearLayout)findViewById(R.id.public_search_channel_container);
         Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
-        Button search = (Button)findViewById(R.id.terrestrialstartsearch);
+        Button search = (Button)findViewById(R.id.btn_terrestrial_start_search);
         CheckBox nit = (CheckBox)findViewById(R.id.network);
-        CheckBox checkBoxLcn = (CheckBox)findViewById(R.id.lcnonoff);
-        LinearLayout dvbc_operator_containner = (LinearLayout)findViewById(R.id.dvbc_operator_containner);
-        LinearLayout dvbc_autoscantype_containner = (LinearLayout)findViewById(R.id.dvbc_autoscantype_containner);
-        LinearLayout dvbc_networkid_containner = (LinearLayout)findViewById(R.id.dvbc_newtworkid_containner);
-        LinearLayout dvbc_frequency_containner = (LinearLayout) findViewById(R.id.dvbc_freqency_containner);
+        CheckBox checkBoxLcn = (CheckBox)findViewById(R.id.chk_lcn_switch);
+        LinearLayout dvbc_operator_container = (LinearLayout)findViewById(R.id.dvbc_operator_container);
+        LinearLayout dvbc_auto_scan_type_container = (LinearLayout)findViewById(R.id.dvbc_auto_scan_type_container);
+        LinearLayout dvbc_networkid_container = (LinearLayout)findViewById(R.id.dvbc_network_id_container);
+        LinearLayout dvbc_frequency_container = (LinearLayout) findViewById(R.id.dvbc_frequency_container);
         Spinner operator_spinner = (Spinner) findViewById(R.id.dvbc_operator_spinner);
-        Spinner dvbc_autoscantype_spinner = (Spinner) findViewById(R.id.dvbc_autoscantype_spinner);
+        Spinner dvbc_auto_scan_type_spinner = (Spinner) findViewById(R.id.dvbc_auto_scan_type_spinner);
         EditText dvbc_networkid_editText = (EditText) findViewById(R.id.dvbc_networkid_edit);
-        EditText dvbc_frequency_editText = (EditText) findViewById(R.id.dvbc_freqency_edit);
+        EditText dvbc_frequency_editText = (EditText) findViewById(R.id.dvbc_frequency_edit);
 
-        int isFrequencyMode = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
-        if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
+        int isFrequencyMode = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
+        if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
             public_type_in.setText(R.string.search_frequency);
             public_type_edit.setHint(R.string.search_frequency_hint);
-            public_typein_containner.setVisibility(View.VISIBLE);
-            public_search_channel_name_containner.setVisibility(View.GONE);
+            public_type_in_container.setVisibility(View.VISIBLE);
+            public_search_channel_name_container.setVisibility(View.GONE);
         } else {
             //public_type_in.setText(R.string.search_number);
             //public_type_edit.setHint(R.string.search_number_hint);//not needed
-            public_typein_containner.setVisibility(View.GONE);
-            public_search_channel_name_containner.setVisibility(View.VISIBLE);
+            public_type_in_container.setVisibility(View.GONE);
+            public_search_channel_name_container.setVisibility(View.VISIBLE);
             updateChannelNameContainer();
         }
         public_type_edit.setText("");
-        int value = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE);
+        int value = mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE);
         public_search_mode_spinner.setSelection(value);
         nit.setVisibility(View.GONE);//dvbt,dvbc not use this any more
-        if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == value) {
+        if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == value) {
             if (mIsDvbt) {
-                dvbc_mode_containner.setVisibility(View.GONE);
-                dvbc_symbol_containner.setVisibility(View.GONE);
+                dvbc_mode_container.setVisibility(View.GONE);
+                dvbc_symbol_container.setVisibility(View.GONE);
                 frequency_channel_container.setVisibility(View.GONE);
-                public_search_channel_name_containner.setVisibility(View.GONE);
+                public_search_channel_name_container.setVisibility(View.GONE);
             } else {
-                //dvbc_operator_containner.setVisibility(View.VISIBLE);
-                dvbc_autoscantype_containner.setVisibility(View.VISIBLE);
-                int autoScanTypePos = dvbc_autoscantype_spinner.getSelectedItemPosition();
+                //dvbc_operator_container.setVisibility(View.VISIBLE);
+                dvbc_auto_scan_type_container.setVisibility(View.VISIBLE);
+                int autoScanTypePos = dvbc_auto_scan_type_spinner.getSelectedItemPosition();
                 int visibility = View.GONE;
                 if (autoScanTypePos < 2) {
                     visibility = View.VISIBLE;
                 }
-                dvbc_mode_containner.setVisibility(View.GONE);
+                dvbc_mode_container.setVisibility(View.GONE);
                 dvbc_mode_spinner.setSelection(getResources().getStringArray(R.array.dvbc_mode_entries).length - 1);
-                dvbc_networkid_containner.setVisibility(visibility);
-                dvbc_symbol_containner.setVisibility(View.GONE);
-                dvbc_frequency_containner.setVisibility(visibility);
+                dvbc_networkid_container.setVisibility(visibility);
+                dvbc_symbol_container.setVisibility(View.GONE);
+                dvbc_frequency_container.setVisibility(visibility);
             }
             checkBoxLcn.setVisibility(View.VISIBLE);
-            checkBoxLcn.setChecked(mParameterMananer.getAutomaticOrderingEnabled());
-            dvbt_bandwidth_containner.setVisibility(View.GONE);
-            dvbt_mode_containner.setVisibility(View.GONE);
-            dvbt_type_containner.setVisibility(View.GONE);
-            dvbc_operator_containner.setVisibility(View.GONE);
+            checkBoxLcn.setChecked(mParameterManager.getAutomaticOrderingEnabled());
+            dvbt_bandwidth_container.setVisibility(View.GONE);
+            dvbt_mode_container.setVisibility(View.GONE);
+            dvbt_type_container.setVisibility(View.GONE);
+            dvbc_operator_container.setVisibility(View.GONE);
             frequency_channel_container.setVisibility(View.GONE);
-            public_search_channel_name_containner.setVisibility(View.GONE);
-            public_typein_containner.setVisibility(View.GONE);
+            public_search_channel_name_container.setVisibility(View.GONE);
+            public_type_in_container.setVisibility(View.GONE);
             search.setText(R.string.strAutoSearch);
             if (!isPipOrFccEnable()) {
                 findViewById(R.id.channel_holder).setVisibility(View.GONE);
@@ -493,45 +493,45 @@ public class DtvkitDvbtSetup extends Activity {
                 }
             }
             search.setText(R.string.strManualSearch);
-            if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
-                public_typein_containner.setVisibility(View.VISIBLE);
-                public_search_channel_name_containner.setVisibility(View.GONE);
+            if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
+                public_type_in_container.setVisibility(View.VISIBLE);
+                public_search_channel_name_container.setVisibility(View.GONE);
             } else {
-                public_typein_containner.setVisibility(View.GONE);
-                public_search_channel_name_containner.setVisibility(View.VISIBLE);
+                public_type_in_container.setVisibility(View.GONE);
+                public_search_channel_name_container.setVisibility(View.VISIBLE);
             }
             frequency_channel_container.setVisibility(View.VISIBLE);
-            frequency_channel_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY));
+            frequency_channel_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY));
             if (mIsDvbt) {
-                dvbt_bandwidth_containner.setVisibility(View.VISIBLE);
-                dvbt_mode_containner.setVisibility(View.VISIBLE);
-                dvbt_type_containner.setVisibility(View.VISIBLE);
-                dvbc_symbol_containner.setVisibility(View.GONE);
-                dvbc_mode_containner.setVisibility(View.GONE);
-                dvbt_bandwidth_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH));
-                dvbt_mode_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE));
-                dvbt_type_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE));
+                dvbt_bandwidth_container.setVisibility(View.VISIBLE);
+                dvbt_mode_container.setVisibility(View.VISIBLE);
+                dvbt_type_container.setVisibility(View.VISIBLE);
+                dvbc_symbol_container.setVisibility(View.GONE);
+                dvbc_mode_container.setVisibility(View.GONE);
+                dvbt_bandwidth_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_BANDWIDTH));
+                dvbt_mode_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_MODE));
+                dvbt_type_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE));
             } else {
-                dvbt_bandwidth_containner.setVisibility(View.GONE);
-                dvbt_mode_containner.setVisibility(View.GONE);
-                dvbt_type_containner.setVisibility(View.GONE);
-                dvbc_symbol_containner.setVisibility(View.VISIBLE);
-                dvbc_mode_containner.setVisibility(View.VISIBLE);
-                dvbc_mode_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE));
-                //dvbc_symbol_edit.setText(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE) + "");
+                dvbt_bandwidth_container.setVisibility(View.GONE);
+                dvbt_mode_container.setVisibility(View.GONE);
+                dvbt_type_container.setVisibility(View.GONE);
+                dvbc_symbol_container.setVisibility(View.VISIBLE);
+                dvbc_mode_container.setVisibility(View.VISIBLE);
+                dvbc_mode_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBC_MODE));
+                //dvbc_symbol_edit.setText(mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE) + "");
             }
             checkBoxLcn.setVisibility(View.GONE);
-            dvbc_operator_containner.setVisibility(View.GONE);
-            dvbc_autoscantype_containner.setVisibility(View.GONE);
-            dvbc_networkid_containner.setVisibility(View.GONE);
-            dvbc_frequency_containner.setVisibility(View.GONE);
+            dvbc_operator_container.setVisibility(View.GONE);
+            dvbc_auto_scan_type_container.setVisibility(View.GONE);
+            dvbc_networkid_container.setVisibility(View.GONE);
+            dvbc_frequency_container.setVisibility(View.GONE);
         }
         if (init) {//init one time
             dvbt_bandwidth_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "dvbt_bandwidth_spinner onItemSelected position = " + position);
-                    mDataMananer.saveIntParameters(DataMananer.KEY_DVBT_BANDWIDTH, position);
+                    mDataManager.saveIntParameters(DataManager.KEY_DVBT_BANDWIDTH, position);
                     trylockForScanParaChange();
                 }
 
@@ -544,7 +544,7 @@ public class DtvkitDvbtSetup extends Activity {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "dvbt_mode_spinner onItemSelected position = " + position);
-                    mDataMananer.saveIntParameters(DataMananer.KEY_DVBT_MODE, position);
+                    mDataManager.saveIntParameters(DataManager.KEY_DVBT_MODE, position);
                     trylockForScanParaChange();
                 }
 
@@ -556,12 +556,12 @@ public class DtvkitDvbtSetup extends Activity {
             dvbt_type_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    if (mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == position) {
+                    if (mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == position) {
                         Log.d(TAG, "dvbt_type_spinner same position = " + position);
                         return;
                     }
                     Log.d(TAG, "dvbt_type_spinner onItemSelected position = " + position);
-                    mDataMananer.saveIntParameters(DataMananer.KEY_DVBT_TYPE, position);
+                    mDataManager.saveIntParameters(DataManager.KEY_DVBT_TYPE, position);
                     initOrUpdateView(false);
                     trylockForScanParaChange();
                 }
@@ -575,7 +575,7 @@ public class DtvkitDvbtSetup extends Activity {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "dvbc_mode_spinner onItemSelected position = " + position);
-                    mDataMananer.saveIntParameters(DataMananer.KEY_DVBC_MODE, position);
+                    mDataManager.saveIntParameters(DataManager.KEY_DVBC_MODE, position);
                     trylockForScanParaChange();
                 }
 
@@ -587,12 +587,12 @@ public class DtvkitDvbtSetup extends Activity {
             public_search_mode_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    if (position == mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE)) {
+                    if (position == mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE)) {
                         Log.d(TAG, "public_search_mode_spinner select same position = " + position);
                         return;
                     }
                     Log.d(TAG, "public_search_mode_spinner onItemSelected position = " + position);
-                    mDataMananer.saveIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE, position);
+                    mDataManager.saveIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE, position);
                     initOrUpdateView(false);
                 }
 
@@ -604,12 +604,12 @@ public class DtvkitDvbtSetup extends Activity {
             frequency_channel_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    if (position == mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY)) {
+                    if (position == mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY)) {
                         Log.d(TAG, "frequency_channel_container select same position = " + position);
                         return;
                     }
                     Log.d(TAG, "frequency_channel_container onItemSelected position = " + position);
-                    mDataMananer.saveIntParameters(DataMananer.KEY_IS_FREQUENCY, position);
+                    mDataManager.saveIntParameters(DataManager.KEY_IS_FREQUENCY, position);
                     initOrUpdateView(false);
                 }
 
@@ -623,9 +623,9 @@ public class DtvkitDvbtSetup extends Activity {
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "public_search_channel_name_spinner onItemSelected position = " + position);
                     if (mIsDvbt) {
-                        mDataMananer.saveIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME, position);
+                        mDataManager.saveIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME, position);
                     } else {
-                        mDataMananer.saveIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME, position);
+                        mDataManager.saveIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME, position);
                     }
                     trylockForScanParaChange();
                 }
@@ -638,9 +638,9 @@ public class DtvkitDvbtSetup extends Activity {
             checkBoxLcn.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     if (checkBoxLcn.isChecked()) {
-                        mParameterMananer.setAutomaticOrderingEnabled(true);
+                        mParameterManager.setAutomaticOrderingEnabled(true);
                     } else {
-                        mParameterMananer.setAutomaticOrderingEnabled(false);
+                        mParameterManager.setAutomaticOrderingEnabled(false);
                     }
                 }
             });
@@ -662,7 +662,7 @@ public class DtvkitDvbtSetup extends Activity {
                 }
             });
             if (!mIsDvbt) {
-                dvbc_autoscantype_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+                dvbc_auto_scan_type_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                         initOrUpdateView(false);
@@ -687,7 +687,7 @@ public class DtvkitDvbtSetup extends Activity {
                             0, 44, 870, "MHz", listener);
                 } catch (Exception e) {
                 }
-                JSONArray operatorList = mParameterMananer.getOperatorsTypeList(ParameterMananer.SIGNAL_QAM);
+                JSONArray operatorList = mParameterManager.getOperatorsTypeList(ParameterManager.SIGNAL_QAM);
                 List<String> operatorStrList = new ArrayList<>();
                 try {
                     if (operatorList != null && operatorList.length() > 0) {
@@ -718,7 +718,7 @@ public class DtvkitDvbtSetup extends Activity {
                     });
                 }
                 if (mInAutomaticMode) {
-                    dvbc_autoscantype_spinner.setSelection(2);
+                    dvbc_auto_scan_type_spinner.setSelection(2);
                 }
                 dvbc_symbol_edit.addTextChangedListener (new TextWatcher(){
                     @Override
@@ -740,39 +740,39 @@ public class DtvkitDvbtSetup extends Activity {
             }
         }
         if (!mIsDvbt) {
-            if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == value) {
+            if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == value) {
                 updateDvbcOperator(operator_spinner.getSelectedItemPosition());
                 if (operator_spinner.getAdapter() != null) {
-                    dvbc_operator_containner.setVisibility(View.VISIBLE);
+                    dvbc_operator_container.setVisibility(View.VISIBLE);
                 }
             } else {
-                mDvbcSymAutoEdit.updateDefault(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE));
+                mDvbcSymAutoEdit.updateDefault(mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE));
             }
         }
     }
 
     private void updateDvbcOperator(int index) {
-        JSONArray operatorList = mParameterMananer.getOperatorsTypeList(ParameterMananer.SIGNAL_QAM);
+        JSONArray operatorList = mParameterManager.getOperatorsTypeList(ParameterManager.SIGNAL_QAM);
         if (operatorList != null && operatorList.length() > index) {
             JSONObject operator = operatorList.optJSONObject(index);
             if (operator != null) {
                 int networkID = operator.optInt("Networkid", 0);
-                int symbolrate = operator.optInt("SymbolRate", 0);
+                int symbolRate = operator.optInt("SymbolRate", 0);
                 int freq = operator.optInt("Freqency", 0);
                 freq = freq / 1000;
-                updateDvbcOperator(networkID, symbolrate, freq);
+                updateDvbcOperator(networkID, symbolRate, freq);
             } else {
                 updateDvbcOperator(0, 0, 0);
             }
         }
     }
 
-    private void updateDvbcOperator(int networkid, int symbolerate, int freq) {
+    private void updateDvbcOperator(int networkid, int symbolRate, int freq) {
         if (mDvbcNitAutoEdit != null) {
             mDvbcNitAutoEdit.updateDefault(networkid);
         }
         if (mDvbcSymAutoEdit != null) {
-            mDvbcSymAutoEdit.updateDefault(symbolerate);
+            mDvbcSymAutoEdit.updateDefault(symbolRate);
         }
         if (mDvbcFreqAutoEdit != null) {
             mDvbcFreqAutoEdit.updateDefault(freq);
@@ -780,15 +780,15 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private JSONArray initDvbcScanParamsEx() {
-        Spinner dvbc_autoscantype_spinner = (Spinner) findViewById(R.id.dvbc_autoscantype_spinner);
-        String scanType = DVBC_AUTO_SCANTYPE[dvbc_autoscantype_spinner.getSelectedItemPosition()];
+        Spinner dvbc_auto_scan_type_spinner = (Spinner) findViewById(R.id.dvbc_auto_scan_type_spinner);
+        String scanType = DVBC_AUTO_SCANTYPE[dvbc_auto_scan_type_spinner.getSelectedItemPosition()];
         Spinner operator_spinner = (Spinner) findViewById(R.id.dvbc_operator_spinner);
         ArrayAdapter<String> operatorAdpater = (ArrayAdapter<String>) operator_spinner.getAdapter();
         String operator = "";
         if (operatorAdpater != null) {
             operator = (String) operatorAdpater.getItem(operator_spinner.getSelectedItemPosition());
 
-            JSONArray operatorList = mParameterMananer.getOperatorsTypeList(ParameterMananer.SIGNAL_QAM);
+            JSONArray operatorList = mParameterManager.getOperatorsTypeList(ParameterManager.SIGNAL_QAM);
             try {
                 if (operatorList != null && operatorList.length() > 0) {
                     for (int i = 0; i < operatorList.length(); i++) {
@@ -797,7 +797,7 @@ public class DtvkitDvbtSetup extends Activity {
                             if (object.optString("operators_name").equals(operator))
                             {
                                 JSONArray args = new JSONArray();
-                                args.put(ParameterMananer.SIGNAL_QAM);
+                                args.put(ParameterManager.SIGNAL_QAM);
                                 args.put(object.getInt("operators_value"));
                                 DtvkitGlueClient.getInstance().request("Dvb.SetOperatorsType", args);
                                 break;
@@ -813,7 +813,7 @@ public class DtvkitDvbtSetup extends Activity {
         array.put(scanType);
         array.put(operator);
         array.put(true);//retune, clear db
-        array.put(DataMananer.VALUE_DVBC_MODE_LIST[isAutoSearch() ? 5 : mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
+        array.put(DataManager.VALUE_DVBC_MODE_LIST[isAutoSearch() ? 5 : mDataManager.getIntParameters(DataManager.KEY_DVBC_MODE)]);
         if (mDvbcNitAutoEdit != null) {
             array.put(mDvbcNitAutoEdit.getValue());
         } else {
@@ -833,27 +833,27 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private void updateChannelNameContainer() {
-        LinearLayout public_search_channel_name_containner = (LinearLayout)findViewById(R.id.public_search_channel_containner);
+        LinearLayout public_search_channel_name_container = (LinearLayout)findViewById(R.id.public_search_channel_container);
         Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
 
         List<String> list = null;
-        List<String> newlist = new ArrayList<String>();
+        List<String> newList = new ArrayList<String>();
         ArrayAdapter<String> adapter = null;
-        int select = mIsDvbt ? mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME) :
-                mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME);
-        list = mParameterMananer.getChannelTable(mParameterMananer.getCurrentCountryCode(), mIsDvbt, mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == 1);
+        int select = mIsDvbt ? mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME) :
+                mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
+        list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
         for (String one : list) {
             String[] parameter = one.split(",");//first number, second string, third number
             if (parameter != null && parameter.length == 3) {
                 String result = "NO." + parameter[0] + "  " + parameter[1] + "  " + parameter[2] + "Hz";
-                newlist.add(result);
+                newList.add(result);
             }
         }
         if (list == null) {
             Log.d(TAG, "updateChannelNameContainer can't find channel freq table");
             return;
         }
-        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, newlist);
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, newList);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         public_search_channel_name_spinner.setAdapter(adapter);
         select = (select < list.size()) ? select : 0;
@@ -862,17 +862,17 @@ public class DtvkitDvbtSetup extends Activity {
 
     private JSONArray initSearchParameter(JSONArray args) {
         if (args != null) {
-            if (!(DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE))) {
+            if (!(DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE))) {
                 String parameter = getParameter();
                 if (!TextUtils.isEmpty(parameter)) {
-                    int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
+                    int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
                     if (mIsDvbt) {
-                        if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
+                        if (DataManager.VALUE_FREQUENCY_MODE == isFrequencySearch) {
                             args.put(false);//nit not used, default false
                             args.put(Integer.valueOf(parameter) * 1000);//khz to hz
-                            args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
-                            args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
-                            args.put(DataMananer.VALUE_DVBT_TYPE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE)]);
+                            args.put(DataManager.VALUE_DVBT_BANDWIDTH_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_BANDWIDTH)]);
+                            args.put(DataManager.VALUE_DVBT_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_MODE)]);
+                            args.put(DataManager.VALUE_DVBT_TYPE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE)]);
                         } else {
                             parameter = getChannelIndex();
                             if (parameter == null) {
@@ -882,10 +882,10 @@ public class DtvkitDvbtSetup extends Activity {
                             args.put(Integer.valueOf(parameter));
                         }
                     } else {
-                        if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
+                        if (DataManager.VALUE_FREQUENCY_MODE == isFrequencySearch) {
                             args.put(false);//nit not used, default false
                             args.put(Integer.valueOf(parameter) * 1000);//khz to hz
-                            args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
+                            args.put(DataManager.VALUE_DVBC_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBC_MODE)]);
                             args.put(getUpdatedDvbcSymbolRate());
                         } else {
                             parameter = getChannelIndex();
@@ -911,10 +911,10 @@ public class DtvkitDvbtSetup extends Activity {
 
     private String getParameter() {
         String parameter = null;
-        EditText public_type_edit = (EditText)findViewById(R.id.public_typein_edit);
+        EditText public_type_edit = (EditText)findViewById(R.id.edtTxt_public_type_in);
         Editable editable = public_type_edit.getText();
-        int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
-        if (DataMananer.VALUE_FREQUENCY_MODE != isfrequencysearch) {
+        int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
+        if (DataManager.VALUE_FREQUENCY_MODE != isFrequencySearch) {
             parameter = getChannelIndex();
         } else if (editable != null) {
             String value = editable.toString();
@@ -930,20 +930,20 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private int getUpdatedDvbcSymbolRate() {
-        int parameter = DataMananer.VALUE_DVBC_SYMBOL_RATE;
+        int parameter = DataManager.VALUE_DVBC_SYMBOL_RATE;
         if (mDvbcSymAutoEdit != null) {
             parameter = mDvbcSymAutoEdit.getValue();
         }
-        mDataMananer.saveIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE, parameter);
+        mDataManager.saveIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE, parameter);
 
         return parameter;
     }
 
     private String getChannelIndex() {
         String result = null;
-        int index = mIsDvbt ? mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME) :
-                mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME);
-        List<String> list = mParameterMananer.getChannelTable(mParameterMananer.getCurrentCountryCode(), mIsDvbt, mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == 1);
+        int index = mIsDvbt ? mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME) :
+                mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
+        List<String> list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
         String channelInfo = (index < list.size()) ? list.get(index) : null;
         if (channelInfo != null) {
             String[] parameter = channelInfo.split(",");//first number, second string, third number
@@ -957,9 +957,9 @@ public class DtvkitDvbtSetup extends Activity {
 
     private String getFreqOfChannelId() {
         String result = null;
-        int index = mIsDvbt ? mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME) :
-                mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME);
-        List<String> list = mParameterMananer.getChannelTable(mParameterMananer.getCurrentCountryCode(), mIsDvbt, mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == 1);
+        int index = mIsDvbt ? mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME) :
+                mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
+        List<String> list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
         String channelInfo = (index < list.size()) ? list.get(index) : null;
         if (channelInfo != null) {
             String[] parameter = channelInfo.split(",");//first number, second string, third number
@@ -1002,10 +1002,10 @@ public class DtvkitDvbtSetup extends Activity {
             args = initSearchParameter(args);
             if (args != null) {
                 String command = null;
-                int searchmode = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE);
-                int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
-                if (!(DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == searchmode)) {
-                    if (isfrequencysearch == DataMananer.VALUE_FREQUENCY_MODE) {
+                int searchMode = mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE);
+                int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
+                if (!(DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == searchMode)) {
+                    if (isFrequencySearch == DataManager.VALUE_FREQUENCY_MODE) {
                         command = (mIsDvbt ? "Dvbt.startManualSearchByFreq" : "Dvbc.startManualSearchByFreq");
                     } else {
                         command = (mIsDvbt ? "Dvbt.startManualSearchById" : "Dvbc.startManualSearchById");
@@ -1026,7 +1026,7 @@ public class DtvkitDvbtSetup extends Activity {
                 Log.d(TAG, "command = " + command + ", args = " + args.toString());
                 DtvkitGlueClient.getInstance().request(command, args);
                 mStartSearch = true;
-                mParameterMananer.saveChannelIdForSource(-1);
+                mParameterManager.saveChannelIdForSource(-1);
             } else {
                 stopMonitoringSearch();
                 setSearchStatus("parameter not complete", "");
@@ -1071,20 +1071,20 @@ public class DtvkitDvbtSetup extends Activity {
     }
     private void prepareSearchFinished(boolean skipConfirmNetwork) {
         boolean needSetTargetRegion = false;
-        boolean autoSearch = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE) == DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO;
+        boolean autoSearch = mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE) == DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO;
         try {
-            JSONArray countryArray = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_COUNTRY, -1, -1, -1);
-            JSONArray primaryArray = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_PRIMARY,
+            JSONArray countryArray = mParameterManager.getTargetRegions(TargetRegionManager.TARGET_REGION_COUNTRY, -1, -1, -1);
+            JSONArray primaryArray = mParameterManager.getTargetRegions(TargetRegionManager.TARGET_REGION_PRIMARY,
                     countryArray.length() > 0 ? (int) (((JSONObject) (countryArray.get(0))).get("country_code")) : -1, -1, -1);
-            JSONArray secondaryArray = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_SECONDARY,
+            JSONArray secondaryArray = mParameterManager.getTargetRegions(TargetRegionManager.TARGET_REGION_SECONDARY,
                     countryArray.length() > 0 ? (int) (((JSONObject) (countryArray.get(0))).get("country_code")) : -1,
                     primaryArray.length() > 0 ? (int) (((JSONObject) (primaryArray.get(0))).get("region_code")) : -1,
                     -1);
-            JSONArray tertiaryArray = mParameterMananer.getTargetRegions(TargetRegionManager.TARGET_REGION_TERTIARY,
+            JSONArray tertiaryArray = mParameterManager.getTargetRegions(TargetRegionManager.TARGET_REGION_TERTIARY,
                     countryArray.length() > 0 ? (int) (((JSONObject) (countryArray.get(0))).get("country_code")) : -1,
                     primaryArray.length() > 0 ? (int) (((JSONObject) (primaryArray.get(0))).get("region_code")) : -1,
                     secondaryArray.length() > 0 ? (int) (((JSONObject) (secondaryArray.get(0))).get("region_code")) : -1);
-            if (mParameterMananer.needConfirmTargetRegion(countryArray, primaryArray, secondaryArray, tertiaryArray)) {
+            if (mParameterManager.needConfirmTargetRegion(countryArray, primaryArray, secondaryArray, tertiaryArray)) {
                 needSetTargetRegion = true;
             }
         } catch (Exception e) {
@@ -1099,21 +1099,21 @@ public class DtvkitDvbtSetup extends Activity {
                     JSONArray array = null;
                     switch (target_id) {
                         case TargetRegionManager.TARGET_REGION_COUNTRY:
-                            array = mParameterMananer.getTargetRegions(target_id, -1, -1, -1);
+                            array = mParameterManager.getTargetRegions(target_id, -1, -1, -1);
                             break;
                         case TargetRegionManager.TARGET_REGION_PRIMARY:
-                            array = mParameterMananer.getTargetRegions(target_id,
+                            array = mParameterManager.getTargetRegions(target_id,
                                         regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
                                         -1, -1);
                             break;
                         case TargetRegionManager.TARGET_REGION_SECONDARY:
-                            array = mParameterMananer.getTargetRegions(target_id,
+                            array = mParameterManager.getTargetRegions(target_id,
                                         regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
                                         regionManager.getRegionCode(regionManager.TARGET_REGION_PRIMARY),
                                         -1);
                             break;
                         case TargetRegionManager.TARGET_REGION_TERTIARY:
-                            array = mParameterMananer.getTargetRegions(target_id,
+                            array = mParameterManager.getTargetRegions(target_id,
                                         regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
                                         regionManager.getRegionCode(regionManager.TARGET_REGION_PRIMARY),
                                         regionManager.getRegionCode(regionManager.TARGET_REGION_SECONDARY));
@@ -1124,9 +1124,9 @@ public class DtvkitDvbtSetup extends Activity {
                         String region_name = null;
                         int region_code = -1;
                         for (int i = 0; i < array.length(); i++) {
-                            region = mParameterMananer.getJSONObjectFromJSONArray(array, i);
-                            region_name = mParameterMananer.getTargetRegionName(target_id, region);
-                            region_code = mParameterMananer.getTargetRegionCode(target_id, region);
+                            region = mParameterManager.getJSONObjectFromJSONArray(array, i);
+                            region_name = mParameterManager.getTargetRegionName(target_id, region);
+                            region_code = mParameterManager.getTargetRegionCode(target_id, region);
                             map.put(region_name, region_code);
                         }
                     } else {
@@ -1145,20 +1145,20 @@ public class DtvkitDvbtSetup extends Activity {
                 @Override
                 public void onFinishWithSelections(int country, int primary, int secondary, int tertiary) {
                     if (country != -1) {
-                        mParameterMananer.setTargetRegionSelection(
+                        mParameterManager.setTargetRegionSelection(
                             TargetRegionManager.TARGET_REGION_COUNTRY, country);
                     }
 
                     if (primary != -1) {
-                        mParameterMananer.setTargetRegionSelection(
+                        mParameterManager.setTargetRegionSelection(
                             TargetRegionManager.TARGET_REGION_PRIMARY, primary);
                     }
                     if (secondary != -1) {
-                        mParameterMananer.setTargetRegionSelection(
+                        mParameterManager.setTargetRegionSelection(
                             TargetRegionManager.TARGET_REGION_SECONDARY, secondary);
                     }
                     if (tertiary != -1) {
-                        mParameterMananer.setTargetRegionSelection(
+                        mParameterManager.setTargetRegionSelection(
                             TargetRegionManager.TARGET_REGION_TERTIARY, tertiary);
                     }
                     onSearchFinished(skipConfirmNetwork);
@@ -1178,7 +1178,7 @@ public class DtvkitDvbtSetup extends Activity {
 
     private void onSearchFinished(boolean skipConfirmNetwork) {
         mStartSearch = false;
-        runOnUiThread(() -> findViewById(R.id.terrestrialstartsearch).setEnabled(false));
+        runOnUiThread(() -> findViewById(R.id.btn_terrestrial_start_search).setEnabled(false));
         updateSearchButton(true);
         setSearchStatus("Finishing search", "");
         setStrengthAndQualityStatus("","");
@@ -1195,13 +1195,13 @@ public class DtvkitDvbtSetup extends Activity {
         }
         boolean networksNeedUpdate = false;
         boolean lcnConflictNeedUpdate = false;
-        boolean autoSearch = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE) == DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO;
-        JSONArray array = mParameterMananer.getConflictLcn();
-        if (mParameterMananer.needConfirmLcnInfomation(array)) {
+        boolean autoSearch = mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE) == DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO;
+        JSONArray array = mParameterManager.getConflictLcn();
+        if (mParameterManager.needConfirmLcnInformation(array)) {
             lcnConflictNeedUpdate = true;
         } else {
-            array = mParameterMananer.getNetworksOfRegion();
-            if (mParameterMananer.needConfirmNetWorkInfomation(array)) {
+            array = mParameterManager.getNetworksOfRegion();
+            if (mParameterManager.needConfirmNetWorkInformation(array)) {
                 networksNeedUpdate = true;
             }
         }
@@ -1214,11 +1214,11 @@ public class DtvkitDvbtSetup extends Activity {
                 }
             });
         } else if (autoSearch && !skipConfirmNetwork && networksNeedUpdate) {
-            final JSONArray networlArray = array;
+            final JSONArray networkArray = array;
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    showNetworkInfoConfirmDialog(DtvkitDvbtSetup.this, networlArray);
+                    showNetworkInfoConfirmDialog(DtvkitDvbtSetup.this, networkArray);
                 }
             });
         } else {
@@ -1253,13 +1253,13 @@ public class DtvkitDvbtSetup extends Activity {
         if (needCheckLcn) {
             parameters.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_LCN_CONFLICT, false);
         }
-        int searchmode = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE);
-        int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
-        if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO != searchmode) {
-            String freq = (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) ? (getParameter() + "000") : getFreqOfChannelId();
+        int searchMode = mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE);
+        int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
+        if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO != searchMode) {
+            String freq = (DataManager.VALUE_FREQUENCY_MODE == isFrequencySearch) ? (getParameter() + "000") : getFreqOfChannelId();
             parameters.putInt(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY, Integer.valueOf(freq));
         }
-        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == searchmode ? EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO : EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
+        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == searchMode ? EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO : EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, mIsDvbt ? "DVB-T" : "DVB-C");
         EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(this, inputId, (mFoundServiceNumber > 0),new ComponentName(this, DtvkitEpgSync.class), parameters);
     }
@@ -1288,29 +1288,29 @@ public class DtvkitDvbtSetup extends Activity {
             @Override
             public void run() {
                 Log.i(TAG, String.format("Search status \"%s\"", status));
-                final TextView text = (TextView) findViewById(R.id.searchstatus);
+                final TextView text = (TextView) findViewById(R.id.tv_search_status);
                 text.setText(String.format("%s\t%s",status,description));
             }
         });
     }
 
-    private void setStrengthAndQualityStatus(final String sstatus, final String qstatus) {
-        setStrengthAndQualityStatus(sstatus, qstatus, "");
+    private void setStrengthAndQualityStatus(final String strengthStatus, final String qualityStatus) {
+        setStrengthAndQualityStatus(strengthStatus, qualityStatus, "");
     }
 
-    private void setStrengthAndQualityStatus(final String sstatus, final String qstatus, final String channel) {
+    private void setStrengthAndQualityStatus(final String strengthStatus, final String qualityStatus, final String channel) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (TextUtils.isEmpty(sstatus) && TextUtils.isEmpty(qstatus)) {
+                if (TextUtils.isEmpty(strengthStatus) && TextUtils.isEmpty(qualityStatus)) {
                     findViewById(R.id.channel_holder).setVisibility(View.GONE);
                 } else {
                     findViewById(R.id.channel_holder).setVisibility(View.VISIBLE);
                 }
-                Log.i(TAG, String.format("Strength: %s", sstatus));
-                Log.i(TAG, String.format("Quality: %s", qstatus));
+                Log.i(TAG, String.format("Strength: %s", strengthStatus));
+                Log.i(TAG, String.format("Quality: %s", qualityStatus));
                 TextView channelInfo = (TextView) findViewById(R.id.tv_scan_info);
-                channelInfo.setText(sstatus + "\t\t" + qstatus + "\t\t" + channel);
+                channelInfo.setText(strengthStatus + "\t\t" + qualityStatus + "\t\t" + channel);
             }
         });
     }
@@ -1319,7 +1319,7 @@ public class DtvkitDvbtSetup extends Activity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final ProgressBar bar = (ProgressBar) findViewById(R.id.searchprogress);
+                final ProgressBar bar = (ProgressBar) findViewById(R.id.proBar_search_progress);
                 bar.setProgress(progress);
             }
         });
@@ -1329,21 +1329,21 @@ public class DtvkitDvbtSetup extends Activity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final ProgressBar bar = (ProgressBar) findViewById(R.id.searchprogress);
+                final ProgressBar bar = (ProgressBar) findViewById(R.id.proBar_search_progress);
                 bar.setIndeterminate(indeterminate);
             }
         });
     }
 
     private boolean isAutoSearch() {
-        return DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE);
+        return DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE);
     }
 
     private void updateSearchButton(final boolean strStart) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                ((Button) findViewById(R.id.terrestrialstartsearch)).setText(strStart ? (isAutoSearch() ? R.string.strStartSearch : R.string.strManualSearch) : R.string.strStopSearch);
+                ((Button) findViewById(R.id.btn_terrestrial_start_search)).setText(strStart ? (isAutoSearch() ? R.string.strStartSearch : R.string.strManualSearch) : R.string.strStopSearch);
             }
         });
     }
@@ -1421,22 +1421,22 @@ public class DtvkitDvbtSetup extends Activity {
         }
         String signal = (String) map.get("signal");
         JSONObject data = (JSONObject) map.get("data");
-        int sstatus = mParameterMananer.getStrengthStatus();
-        int qstatus = mParameterMananer.getQualityStatus();
+        int strengthStatus = mParameterManager.getStrengthStatus();
+        int qualityStatus = mParameterManager.getQualityStatus();
         int found = getFoundServiceNumberOnSearch();
         if (signal != null && ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged")))) {
             int progress = getSearchProcess(data);
             Log.d(TAG, "onSignal progress = " + progress);
             setSearchProgress(progress);
             setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
-            setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", sstatus), String.format(Locale.ENGLISH, "Quality: %d%%", qstatus), String.format(Locale.ENGLISH, "Channel: %d", found));
+            setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", strengthStatus), String.format(Locale.ENGLISH, "Quality: %d%%", qualityStatus), String.format(Locale.ENGLISH, "Channel: %d", found));
             if (progress >= 100) {
                 //onSearchFinished();
                 sendFinishSearch(false);
             }
         } else if (signal != null && ((mIsDvbt && signal.equals("UpdateMsgStatus")) || (!mIsDvbt && signal.equals("UpdateMsgStatus")))) {
-            Log.d(TAG, "UpdateMsgStatus: sstatus = " + sstatus + "%, qstatus = " + qstatus + "%");
-            setStrengthAndQualityStatus(String.format(Locale.getDefault(), "Strength: %d%%", sstatus), String.format(Locale.getDefault(), "Quality: %d%%", qstatus), String.format(Locale.ENGLISH, "Channel: %d", found));
+            Log.d(TAG, "UpdateMsgStatus: StrengthStatus = " + strengthStatus + "%, qualityStatus = " + qualityStatus + "%");
+            setStrengthAndQualityStatus(String.format(Locale.getDefault(), "Strength: %d%%", strengthStatus), String.format(Locale.getDefault(), "Quality: %d%%", qualityStatus), String.format(Locale.ENGLISH, "Channel: %d", found));
         }
     }
 
@@ -1456,15 +1456,15 @@ public class DtvkitDvbtSetup extends Activity {
         final AlertDialog alert = builder.create();
         final View dialogView = View.inflate(context, R.layout.confirm_region_network, null);
         final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
-        final ListView listView = (ListView) dialogView.findViewById(R.id.dialog_listview);
+        final ListView listView = (ListView) dialogView.findViewById(R.id.lv_dialog);
         final List<HashMap<String, Object>> dataList = new ArrayList<HashMap<String, Object>>();
         if (networkArray != null && networkArray.length() > 0) {
             JSONObject networkObj = null;
             String name = null;
             for (int i = 0; i < networkArray.length(); i++) {
                 HashMap<String, Object> map = new HashMap<String, Object>();
-                networkObj = mParameterMananer.getJSONObjectFromJSONArray(networkArray, i);
-                name = mParameterMananer.getNetworkName(networkObj);
+                networkObj = mParameterManager.getJSONObjectFromJSONArray(networkArray, i);
+                name = mParameterManager.getNetworkName(networkObj);
                 map.put("name", name);
                 dataList.add(map);
             }
@@ -1478,23 +1478,23 @@ public class DtvkitDvbtSetup extends Activity {
                 new int[] {R.id.name});
 
         listView.setAdapter(adapter);
-        listView.setSelection(mParameterMananer.getCurrentNetworkIndex(networkArray));
+        listView.setSelection(mParameterManager.getCurrentNetworkIndex(networkArray));
         title.setText(R.string.search_confirm_network);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, final int position, long id) {
-                int currentNetWorkIndex = mParameterMananer.getCurrentNetworkIndex(networkArray);
+                int currentNetWorkIndex = mParameterManager.getCurrentNetworkIndex(networkArray);
                 if (currentNetWorkIndex == position) {
                     Log.d(TAG, "showNetworkInfoConfirmDialog same position = " + position);
                     alert.dismiss();
                     return;
                 }
-                //excute by child thread
+                //execute by child thread
                 mThreadHandler.post(new Runnable() {
                     @Override
                     public void run() {
                         Log.d(TAG, "showNetworkInfoConfirmDialog onItemClick position = " + position);
-                        mParameterMananer.setNetworkPreferedOfRegion(mParameterMananer.getNetworkId(networkArray, position));
+                        mParameterManager.setNetworkPreferedOfRegion(mParameterManager.getNetworkId(networkArray, position));
                         //ui need to be updated in main handler
                         runOnUiThread(new Runnable() {
                             @Override
@@ -1535,15 +1535,15 @@ public class DtvkitDvbtSetup extends Activity {
         final AlertDialog alert = builder.create();
         final View dialogView = View.inflate(context, R.layout.confirm_region_network, null);
         final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
-        final ListView listView = (ListView) dialogView.findViewById(R.id.dialog_listview);
+        final ListView listView = (ListView) dialogView.findViewById(R.id.lv_dialog);
         final List<HashMap<String, Object>> DATALIST = new ArrayList<HashMap<String, Object>>();
-        final int[] DEALTINDEX = {0, 0};
-        final int[] FINALINDEX = {0};
-        final boolean[] NEEDSHOWNEXT = {false};
+        final int[] DealtIndex = {0, 0};
+        final int[] FinalIndex = {0};
+        final boolean[] NeedShowNext = {false};
         if (lcnConflictArray != null && lcnConflictArray.length() > 0) {
-            int[] updateDefaultIndex = getLcnConflictDataList(DATALIST, lcnConflictArray, DEALTINDEX[0]);
-            DEALTINDEX[0] = updateDefaultIndex[0];
-            DEALTINDEX[1] = updateDefaultIndex[1];
+            int[] updateDefaultIndex = getLcnConflictDataList(DATALIST, lcnConflictArray, DealtIndex[0]);
+            DealtIndex[0] = updateDefaultIndex[0];
+            DealtIndex[1] = updateDefaultIndex[1];
         } else {
             Log.d(TAG, "showLcnConflictServiceConfirmDialog no lcnConflictArray");
             return;
@@ -1563,20 +1563,20 @@ public class DtvkitDvbtSetup extends Activity {
                     Log.d(TAG, "showLcnConflictServiceConfirmDialog finalSelect position = " + position);
                     finalSelect = true;
                 }
-                int realIndex = DEALTINDEX[0] + position;
-                JSONObject serviceObj = mParameterMananer.getJSONObjectFromJSONArray(lcnConflictArray, realIndex);
+                int realIndex = DealtIndex[0] + position;
+                JSONObject serviceObj = mParameterManager.getJSONObjectFromJSONArray(lcnConflictArray, realIndex);
                 if (serviceObj == null) {
                     Log.d(TAG, "showLcnConflictServiceConfirmDialog service not found");
                     return;
                 } else {
                     Log.d(TAG, "showLcnConflictServiceConfirmDialog serviceObj = " + serviceObj);
                 }
-                FINALINDEX[0] = realIndex;
-                //excute by child thread
+                FinalIndex[0] = realIndex;
+                //execute by child thread
                 mThreadHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        Log.d(TAG, "showLcnConflictServiceConfirmDialog onItemClick position = " + position + ", DEALTINDEX[0] = " + DEALTINDEX[0] + ", DEALTINDEX[1] = " + DEALTINDEX[1] + ", FINALINDEX[0] = " + FINALINDEX[0]);
+                        Log.d(TAG, "showLcnConflictServiceConfirmDialog onItemClick position = " + position + ", DealtIndex[0] = " + DealtIndex[0] + ", DealtIndex[1] = " + DealtIndex[1] + ", FinalIndex[0] = " + FinalIndex[0]);
                         String uri = null;
                         String tunerType = null;
                         try {
@@ -1587,22 +1587,22 @@ public class DtvkitDvbtSetup extends Activity {
                         }
                         if (uri != null && tunerType != null) {
                             Log.d(TAG, "showLcnConflictServiceConfirmDialog selectServiceKeepConflictLcn");
-                            mParameterMananer.selectServiceKeepConflictLcn(uri, tunerType);
+                            mParameterManager.selectServiceKeepConflictLcn(uri, tunerType);
                             //ui need to be updated in main handler
-                            if (mParameterMananer.hasSelectToEnd(lcnConflictArray, FINALINDEX[0])) {
-                                NEEDSHOWNEXT[0] = false;
+                            if (mParameterManager.hasSelectToEnd(lcnConflictArray, FinalIndex[0])) {
+                                NeedShowNext[0] = false;
                             } else {
-                                NEEDSHOWNEXT[0] = true;
+                                NeedShowNext[0] = true;
                             }
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
                                     //turn to next lcn
-                                    if (NEEDSHOWNEXT[0]) {
+                                    if (NeedShowNext[0]) {
                                         Log.d(TAG, "showLcnConflictServiceConfirmDialog onItemClick select next");
-                                        int[] updateDefaultIndex = getLcnConflictDataList(DATALIST, lcnConflictArray, DEALTINDEX[1]);
-                                        DEALTINDEX[0] = updateDefaultIndex[0];
-                                        DEALTINDEX[1] = updateDefaultIndex[1];
+                                        int[] updateDefaultIndex = getLcnConflictDataList(DATALIST, lcnConflictArray, DealtIndex[1]);
+                                        DealtIndex[0] = updateDefaultIndex[0];
+                                        DealtIndex[1] = updateDefaultIndex[1];
                                         listView.setAdapter(getLcnConflictDataListSimpleAdapter(context, DATALIST));
                                     } else {
                                         Log.d(TAG, "showLcnConflictServiceConfirmDialog onItemClick select over");
@@ -1618,7 +1618,7 @@ public class DtvkitDvbtSetup extends Activity {
         alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
-                if (mParameterMananer.hasSelectToEnd(lcnConflictArray, FINALINDEX[0])) {
+                if (mParameterManager.hasSelectToEnd(lcnConflictArray, FinalIndex[0])) {
                     Log.d(TAG, "showLcnConflictServiceConfirmDialog select over onDismiss");
                     runOnUiThread(new Runnable() {
                         @Override
@@ -1631,7 +1631,7 @@ public class DtvkitDvbtSetup extends Activity {
                     mThreadHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            mParameterMananer.dealRestLcnConflictAsDefault(lcnConflictArray, DEALTINDEX[0]);
+                            mParameterManager.dealRestLcnConflictAsDefault(lcnConflictArray, DealtIndex[0]);
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -1668,9 +1668,9 @@ public class DtvkitDvbtSetup extends Activity {
             int previousLcn = -1;
             for (int i = index; i < values.length(); i++) {
                 HashMap<String, Object> map = new HashMap<String, Object>();
-                lcnConflictObj = mParameterMananer.getJSONObjectFromJSONArray(values, i);
-                name = mParameterMananer.getLcnServiceName(lcnConflictObj);
-                lcn = mParameterMananer.getLcnServiceLcnValue(lcnConflictObj);
+                lcnConflictObj = mParameterManager.getJSONObjectFromJSONArray(values, i);
+                name = mParameterManager.getLcnServiceName(lcnConflictObj);
+                lcn = mParameterManager.getLcnServiceLcnValue(lcnConflictObj);
                 if (previousLcn != -1 && previousLcn != lcn) {
                     //record new start index
                     result[1] = i;
@@ -1705,14 +1705,14 @@ public class DtvkitDvbtSetup extends Activity {
             return;
         }
 
-        if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE)) {
+        if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE)) {
             Log.d(TAG, "trylockForScanParaChange auto not need trylock");
             return;
         }
         if (null != mDtvKitScanSignalPresenter) {
             Log.d(TAG, "trylockForScanParaChange");
-            if (DataMananer.VALUE_FREQUENCY_MODE == mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY)) {
-                EditText public_type_edit = (EditText)findViewById(R.id.public_typein_edit);
+            if (DataManager.VALUE_FREQUENCY_MODE == mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY)) {
+                EditText public_type_edit = (EditText)findViewById(R.id.edtTxt_public_type_in);
                 Editable freq = public_type_edit.getText();
                 if (mIsDvbt) {
                     mDtvKitScanSignalPresenter.freqTunerTryLock(freq.toString());
@@ -1748,8 +1748,8 @@ public class DtvkitDvbtSetup extends Activity {
             JSONObject lcnConflictObj = null;
             int conflictLcn = -1;
             for (int i = selectEndIndex; i < lcnConflictArray.length(); i++) {
-                lcnConflictObj = mParameterMananer.getJSONObjectFromJSONArray(lcnConflictArray, i);
-                conflictLcn = mParameterMananer.getLcnServiceLcnValue(lcnConflictObj);
+                lcnConflictObj = mParameterManager.getJSONObjectFromJSONArray(lcnConflictArray, i);
+                conflictLcn = mParameterManager.getLcnServiceLcnValue(lcnConflictObj);
                 if (selectEndIndex == i) {
                     finalLcn = conflictLcn;
                     continue;
@@ -1774,9 +1774,9 @@ public class DtvkitDvbtSetup extends Activity {
             int previousLcn = -1;
             boolean needUpdate = false;
             for (int i = restStartIndex; i < lcnConflictArray.length(); i++) {
-                lcnConflictObj = mParameterMananer.getJSONObjectFromJSONArray(lcnConflictArray, i);
-                lcn = mParameterMananer.getLcnServiceLcnValue(lcnConflictObj);
-                tunerType = mParameterMananer.getLcnServiceTunerType(lcnConflictObj);
+                lcnConflictObj = mParameterManager.getJSONObjectFromJSONArray(lcnConflictArray, i);
+                lcn = mParameterManager.getLcnServiceLcnValue(lcnConflictObj);
+                tunerType = mParameterManager.getLcnServiceTunerType(lcnConflictObj);
                 if (previousLcn == -1) {
                     previousLcn = lcn;
                     needUpdate = true;
@@ -1788,7 +1788,7 @@ public class DtvkitDvbtSetup extends Activity {
                 }
                 if (needUpdate) {
                     Log.d(TAG, "dealRestLcnConflictAsDefault needUpdate previousLcn = " + previousLcn + ", tunerType = " + tunerType);
-                    mParameterMananer.selectDefaultLcnConflictProcess(previousLcn, tunerType);
+                    mParameterManager.selectDefaultLcnConflictProcess(previousLcn, tunerType);
                 }
             }
         }

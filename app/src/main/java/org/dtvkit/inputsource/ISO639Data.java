@@ -299,7 +299,7 @@ public class ISO639Data {
      * Try to convert iso639-2/b to iso639-2/t
      * For Android locale class does not support iso639-2/b, but some
      * dtv streams transfer language code with iso639-2/b type.
-     * We store the difernent code list between iso639-2/b and iso639-2/t
+     * We store the different code list between iso639-2/b and iso639-2/t
      * @param lanCode (lowercase)
      * @return If lanCode in the store list, return the value of iso639-2t,
      * otherwise, return the lanCode self (Maybe is iso639-2/t or iso639-3

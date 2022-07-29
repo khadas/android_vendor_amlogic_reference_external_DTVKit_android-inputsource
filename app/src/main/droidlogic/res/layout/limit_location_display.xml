@@ -9,10 +9,10 @@
     android:orientation="horizontal">
 
     <include
-        android:id="@+id/icon_selimit_all"
-        layout="@layout/setlimit_display" />
+        android:id="@+id/icon_set_limit_all"
+        layout="@layout/set_limit_display" />
 
     <include
         android:id="@+id/icon_location_all"
-        layout="@layout/setlocation_display" />
+        layout="@layout/set_location_display" />
 </LinearLayout>

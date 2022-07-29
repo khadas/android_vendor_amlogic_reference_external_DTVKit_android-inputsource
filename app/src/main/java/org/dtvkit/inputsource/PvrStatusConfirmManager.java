@@ -18,7 +18,7 @@ import android.text.TextUtils;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 
-import com.droidlogic.dtvkit.inputsource.DataMananer;
+import com.droidlogic.dtvkit.inputsource.DataManager;
 import com.droidlogic.settings.ConstantManager;
 
 public class PvrStatusConfirmManager {
@@ -28,7 +28,7 @@ public class PvrStatusConfirmManager {
     private String mPvrStatus = null;
     private String mPvrDeleteResponse = null;
     private Callback mCallback = null;
-    private DataMananer mDataMananer;
+    private DataManager mDataManager;
     private String mSearchType = ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL;
 
     public static final String KEY_PVR_CLEAR_FLAG = "pvr_clear_flag";
@@ -54,9 +54,9 @@ public class PvrStatusConfirmManager {
         void onStatusCallback(String value);
     }
 
-    public PvrStatusConfirmManager(Context context, DataMananer dataMananer) {
+    public PvrStatusConfirmManager(Context context, DataManager DataManager) {
         mContext = context;
-        mDataMananer = dataMananer;
+        mDataManager = DataManager;
     }
 
     public void setPvrStatus(String status) {
@@ -135,7 +135,7 @@ public class PvrStatusConfirmManager {
         mCallback = new Callback(){
             @Override
             public void onStatusCallback(String value) {
-                final String[] STATUS = {"notstarted", "started", "failed", "recorded"};
+                final String[] STATUS = {"not_started", "started", "failed", "recorded"};
                 boolean responsed = false;
                 int count = 0;
                 if (!TextUtils.isEmpty(value)) {
@@ -151,7 +151,7 @@ public class PvrStatusConfirmManager {
                                 }
                             }
                             if (!changed) {
-                                Log.d(TAG, "onStatusCallback unkown");
+                                Log.d(TAG, "onStatusCallback unknown");
                             }
                         }
                         if (count > 0) {
@@ -177,7 +177,7 @@ public class PvrStatusConfirmManager {
                             //alert.dismiss();
                         }
                     } else {
-                        Log.d(TAG, "onStatusCallback unresponsed");
+                        Log.d(TAG, "onStatusCallback unResponsed");
                     }
                 } else  {
                     Log.d(TAG, "onStatusCallback on need to delete");

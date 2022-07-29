@@ -20,7 +20,7 @@ import com.droidlogic.dtvkit.inputsource.searchguide.DtvkitDvbsSetupFragment;
 import com.droidlogic.dtvkit.inputsource.searchguide.OnNextListener;
 import com.droidlogic.dtvkit.inputsource.searchguide.SearchStageFragment;
 import com.droidlogic.dtvkit.inputsource.searchguide.SimpleListFragment;
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.fragment.ScanDishSetupFragment;
 import com.droidlogic.fragment.dialog.DialogManager;
 
@@ -110,7 +110,7 @@ public class DtvkitDvbsSetup extends Activity {
         }
         fragment.setM7Spec(isM7);
         fragment.setListener(mOnNextListener);
-        Log.d(TAG, "showFragment setparams");
+        Log.d(TAG, "showFragment set params");
         mHandler.post(() -> {
             if (title.equals(DataPresenter.FRAGMENT_SEARCH_UI)) {
                 if (!showSearchFragment(true)) {
@@ -222,7 +222,7 @@ public class DtvkitDvbsSetup extends Activity {
                     arg.put(text);
                     mDataPresenter.getParameterManager().dvbsScanControl(arg);
                 } else if (TextUtils.equals(title, DataPresenter.FRAGMENT_REGIONAL_CHANNELS)) {
-                    // text is a hashmap toString
+                    // text is a HashMap toString
                     int length = text.length();
                     String next = text.substring(1, length - 1); //remove '{', '}'
                     String[] arr = next.split(",");
@@ -302,7 +302,7 @@ public class DtvkitDvbsSetup extends Activity {
         return dataList;
     }
 
-    //    "data":[{"RegionName":"CT2","RegionSrvList":["CT 2 HD","OCKO"]},
+    //    "data":[{"RegionName":"CT2","RegionSrvList":["CT 2 HD","O C KO"]},
     //    {"RegionName":"CT1","RegionSrvList":["CT 1 HD","CT 1 JM HD","CT 1 SM HD"]}]
     private HashMap<String, List<String>> getRegionList() {
         HashMap<String, List<String>> result = new HashMap<>();

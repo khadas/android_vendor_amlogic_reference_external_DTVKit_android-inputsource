@@ -41,7 +41,7 @@ import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.dtvkit.companionlibrary.model.Channel;
@@ -49,9 +49,9 @@ import com.droidlogic.dtvkit.companionlibrary.model.Channel;
 public class DtvkitBackGroundSearch {
     private static final String TAG = "DtvkitBackGroundSearch";
     private static final boolean DEBUG = true;
-    private static final String SCANTAG = "tis_backgroudsearch";
+    private static final String SCAN_TAG = "tis_backgroudsearch";
 
-    private DataMananer mDataMananer;
+    private DataManager mDataManager;
     private boolean mStartSync = false;
     private boolean mStartSearch = false;
     private JSONArray mServiceList = null;
@@ -76,7 +76,7 @@ public class DtvkitBackGroundSearch {
     public static final String SINGLE_FREQUENCY_STATUS_SAVE_START = "save_start";
     public static final String SINGLE_FREQUENCY_STATUS_SAVE_FINISH = "save_finish";
     public static final String SINGLE_FREQUENCY_CHANNEL_NAME = "channel_name";
-    public static final String SINGLE_FREQUENCY_CHANNEL_DISPLAY_NUNMBER = "display_number";
+    public static final String SINGLE_FREQUENCY_CHANNEL_DISPLAY_NUMBER = "display_number";
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -112,7 +112,7 @@ public class DtvkitBackGroundSearch {
         mFrequency = frequency;
         mInputId = inputId;
         mBgCallback = callback;
-        mDataMananer = new DataMananer(context);
+        mDataManager = new DataManager(context);
     }
 
     public DtvkitBackGroundSearch(Context context, int dvbSource, String inputId, BackGroundSearchCallback callback) {
@@ -124,14 +124,14 @@ public class DtvkitBackGroundSearch {
         mUpdateDvbUri = null;
         mInputId = inputId;
         mBgCallback = callback;
-        mDataMananer = new DataMananer(context);
+        mDataManager = new DataManager(context);
     }
 
     boolean isCurrentSignalSupportBackgroundSearch(boolean isAuto) {
-        boolean ret = (mCurrentDvbSource == ParameterMananer.SIGNAL_COFDM
-            || mCurrentDvbSource == ParameterMananer.SIGNAL_QAM);
+        boolean ret = (mCurrentDvbSource == ParameterManager.SIGNAL_COFDM
+            || mCurrentDvbSource == ParameterManager.SIGNAL_QAM);
         if (!isAuto) {
-            ret |= (mCurrentDvbSource == ParameterMananer.SIGNAL_QPSK);
+            ret |= (mCurrentDvbSource == ParameterManager.SIGNAL_QPSK);
         }
         return ret;
     }
@@ -139,15 +139,15 @@ public class DtvkitBackGroundSearch {
     private String getStartSearchCommand(boolean isAutoScan) {
         String ret = null;
         switch (mCurrentDvbSource) {
-            case ParameterMananer.SIGNAL_COFDM: {
+            case ParameterManager.SIGNAL_COFDM: {
                 ret = "Dvbt.startBgSearch";
             }
             break;
-            case ParameterMananer.SIGNAL_QAM: {
+            case ParameterManager.SIGNAL_QAM: {
                 ret = "Dvbc.startBgSearch";
             }
             break;
-            case ParameterMananer.SIGNAL_QPSK: {
+            case ParameterManager.SIGNAL_QPSK: {
                 if (!isAutoScan) {
                     ret = "Dvbs.startBgSearch";
                 }
@@ -162,15 +162,15 @@ public class DtvkitBackGroundSearch {
     private String getFinishSearchCommand() {
         String ret = null;
         switch (mCurrentDvbSource) {
-            case ParameterMananer.SIGNAL_COFDM: {
+            case ParameterManager.SIGNAL_COFDM: {
                 ret = "Dvbt.finishSearch";
             }
             break;
-            case ParameterMananer.SIGNAL_QAM: {
+            case ParameterManager.SIGNAL_QAM: {
                 ret = "Dvbc.finishSearch";
             }
             break;
-            case ParameterMananer.SIGNAL_QPSK: {
+            case ParameterManager.SIGNAL_QPSK: {
                 ret = "Dvbs.finishSearch";
             }
             break;
@@ -184,16 +184,16 @@ public class DtvkitBackGroundSearch {
         String result = null;
 
         switch (mCurrentDvbSource) {
-            case ParameterMananer.SIGNAL_COFDM:
+            case ParameterManager.SIGNAL_COFDM:
                 result = "DVB_T";
                 break;
-            case ParameterMananer.SIGNAL_QAM:
+            case ParameterManager.SIGNAL_QAM:
                 result = "DVB_C";
                 break;
-            case ParameterMananer.SIGNAL_QPSK:
+            case ParameterManager.SIGNAL_QPSK:
                 result = "DVB_S";
                 break;
-            case ParameterMananer.SIGNAL_ISDBT:
+            case ParameterManager.SIGNAL_ISDBT:
                 result = "ISDB_T";
                 break;
         }
@@ -203,32 +203,32 @@ public class DtvkitBackGroundSearch {
 
     private JSONArray initSearchParameter() {
         JSONArray args = new JSONArray();
-        if (mCurrentDvbSource == ParameterMananer.SIGNAL_QPSK) {
-            args.put(SCANTAG);
+        if (mCurrentDvbSource == ParameterManager.SIGNAL_QPSK) {
+            args.put(SCAN_TAG);
             args.put(0);//frequency manual scan
             args.put(false);//nit
             args.put(false);//clear old
             args.put(mUpdateDvbUri);
         } else {
             if (mFrequency != -1) {
-                if (mCurrentDvbSource == ParameterMananer.SIGNAL_COFDM) {
-                    args.put(SCANTAG);
+                if (mCurrentDvbSource == ParameterManager.SIGNAL_COFDM) {
+                    args.put(SCAN_TAG);
                     args.put(0);//frequency manual scan
                     args.put(false);//nit
                     args.put(false);//clear old
                     args.put(mFrequency);//hz
                     args.put("AUTO");
                     args.put("AUTO");
-                    args.put(mIsTS2 ? DataMananer.VALUE_DVBT_TYPE_LIST[1] : DataMananer.VALUE_DVBT_TYPE_LIST[0]);
+                    args.put(mIsTS2 ? DataManager.VALUE_DVBT_TYPE_LIST[1] : DataManager.VALUE_DVBT_TYPE_LIST[0]);
                 } else {
-                    args.put(SCANTAG);
+                    args.put(SCAN_TAG);
                     args.put(0);//frequency manual scan
                     args.put(false);//nit
                     args.put(false);//clear old
                     args.put(mFrequency);//hz
                     //use auto to search all mode
-                    args.put("AUTO"/*DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]*/);
-                    args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE));
+                    args.put("AUTO"/*DataManager.VALUE_DVBC_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBC_MODE)]*/);
+                    args.put(mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE));
                 }
                 return args;
             } else {
@@ -241,7 +241,7 @@ public class DtvkitBackGroundSearch {
     private JSONArray initAutoScanParameter() {
         //only for dvbt/dvbc
         JSONArray args = new JSONArray();
-        args.put(SCANTAG);
+        args.put(SCAN_TAG);
         args.put(2);//auto scan
         args.put(false);//nit
         args.put(true);//clear old
@@ -258,7 +258,7 @@ public class DtvkitBackGroundSearch {
         try {
             JSONArray args = new JSONArray();
             args.put(false); // Commit
-            args.put(SCANTAG);
+            args.put(SCAN_TAG);
             String finishCommand = getFinishSearchCommand();
             if (!TextUtils.isEmpty(finishCommand)) {
                 DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
@@ -296,7 +296,7 @@ public class DtvkitBackGroundSearch {
         try {
             JSONArray args = new JSONArray();
             args.put(false); // Commit
-            args.put(SCANTAG);
+            args.put(SCAN_TAG);
             String finishCommand = getFinishSearchCommand();
             if (!TextUtils.isEmpty(finishCommand)) {
                 DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
@@ -330,7 +330,7 @@ public class DtvkitBackGroundSearch {
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
-            args.put(SCANTAG);
+            args.put(SCAN_TAG);
             String finishCommand = getFinishSearchCommand();
             if (!TextUtils.isEmpty(finishCommand)) {
                 DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
@@ -347,7 +347,7 @@ public class DtvkitBackGroundSearch {
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
-            args.put(SCANTAG);
+            args.put(SCAN_TAG);
             String finishCommand = getFinishSearchCommand();
             if (!TextUtils.isEmpty(finishCommand)) {
                 DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
@@ -474,7 +474,7 @@ public class DtvkitBackGroundSearch {
                             result.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_STATUS_SAVE_FINISH);
                         }
                         result.put(SINGLE_FREQUENCY_CHANNEL_NAME + foundCount, firstServiceName);
-                        result.put(SINGLE_FREQUENCY_CHANNEL_DISPLAY_NUNMBER + foundCount, firstServiceDisplayNumber);
+                        result.put(SINGLE_FREQUENCY_CHANNEL_DISPLAY_NUMBER + foundCount, firstServiceDisplayNumber);
                         foundCount++;
                         if (foundCount >= 2) {
                             break;
@@ -546,7 +546,7 @@ public class DtvkitBackGroundSearch {
         if (signal.equals("SearchStatusUpdate")) {
             int progress = getSearchProcess(data);
             String scanTag = getScanTag(data);
-            if (!SCANTAG.equals(scanTag))
+            if (!SCAN_TAG.equals(scanTag))
                 return;
             if (progress < 0 || progress > 100) {
                 Log.d(TAG, "Invalid progress " + progress + ", low level scan has been terminated");
