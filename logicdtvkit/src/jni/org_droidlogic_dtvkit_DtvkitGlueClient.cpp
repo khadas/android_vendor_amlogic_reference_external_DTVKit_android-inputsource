@@ -47,6 +47,7 @@ static jmethodID notifyPidFilterData;
 static uint8_t*  gJbuffer = NULL; //java direct buffer
 static int       gJbufSize = 0;
 static jboolean  gJNIReady = false;
+static jboolean  gPidListenerEnabled = false;
 
 // handle subtitle message
 static sp<Looper> gLooper;
@@ -342,6 +343,11 @@ void*  DTVKitClientJni::pid_run(void *arg)
     while (true) {
             if (!gJNIReady) {
                 ALOGE("gJNIReady not ready!");
+                sleep(1);
+                continue;
+            }
+
+            if (!gPidListenerEnabled) {
                 sleep(1);
                 continue;
             }
@@ -859,6 +865,15 @@ static void resetForSeek() {
     }
 }
 
+static void enablePidListener(JNIEnv *env, jclass clazz __unused, jboolean enable) {
+    ALOGI("enablePidListener tid (%d), enable (%d)", gettid(), enable);
+    if (gPidListenerEnabled) {
+        return;
+    }
+    gPidListenerEnabled = enable;
+    ALOGI("enablePidListener tid (%d), gPidListenerEnabled (%d)", gettid(), gPidListenerEnabled);
+}
+
 static JNINativeMethod gMethods[] = {
 {
     "nativeconnectdtvkit", "(Lorg/droidlogic/dtvkit/DtvkitGlueClient;Ljava/nio/ByteBuffer;)V",
@@ -914,6 +929,11 @@ static JNINativeMethod gMethods[] = {
   "native_setRegionId", "(I)V",
   (void*) setRegionId
 },
+{
+  "native_enablePidListener", "(Z)V",
+  (void*) enablePidListener
+},
+
 
 };
 
