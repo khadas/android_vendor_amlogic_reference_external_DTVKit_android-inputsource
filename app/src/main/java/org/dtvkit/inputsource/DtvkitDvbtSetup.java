@@ -911,12 +911,25 @@ public class DtvkitDvbtSetup extends Activity {
 
     private String getParameter() {
         String parameter = null;
+        float MaxNumber = 1000.0f;
+        float MinNumber = 0.0f;
+        float ret = MinNumber;
         EditText public_type_edit = (EditText)findViewById(R.id.edtTxt_public_type_in);
         Editable editable = public_type_edit.getText();
         int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
         if (DataManager.VALUE_FREQUENCY_MODE != isFrequencySearch) {
             parameter = getChannelIndex();
         } else if (editable != null) {
+            try {
+            ret = Float.valueOf(editable.toString());
+            Log.d(TAG, "search frequency is:"+ret);
+            } catch (Exception e) {
+            }
+            if (ret > MaxNumber || ret <= MinNumber) {
+                Toast.makeText(DtvkitDvbtSetup.this, R.string.manual_search_range, Toast.LENGTH_SHORT).show();
+                return parameter;
+            }
+
             String value = editable.toString();
             if (!TextUtils.isEmpty(value)/* && TextUtils.isDigitsOnly(value)*/) {
                 //float for frequency
