@@ -4029,9 +4029,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (mView.handleKeyDown(keyCode, event)) {
                     used = true;
                 } else if (keyCode == KeyEvent.KEYCODE_ZOOM_OUT) {
-                    if (mCaptioningManager != null && !mCaptioningManager.isEnabled()) {
-                        showToast("Failed to open TeleText, please turn on the captions switch in settings first");
-                    }
                     used = true;
                 } else if (isTeletextNeedKeyCode(keyCode) && playerIsTeletextOn()) {
                     used = true;
@@ -4062,15 +4059,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (mView.handleKeyUp(keyCode, event)) {
                     used = true;
                 } else if (keyCode == KeyEvent.KEYCODE_ZOOM_OUT) {
-                    if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
-                        if (playerIsTeletextOn()) {
-                            playerStopTeletext();
-                            notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
-                        } else {
-                            playerStartTeletext(-1);
-                            if (playerIsTeletextStarted()) {
-                                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, playerGetSelectedTeleTextTrackId());
-                            }
+                    if (playerIsTeletextOn()) {
+                        playerStopTeletext();
+                        notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
+                    } else {
+                        playerStartTeletext(-1);
+                        if (playerIsTeletextStarted()) {
+                            notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, playerGetSelectedTeleTextTrackId());
                         }
                     }
                     used = true;
