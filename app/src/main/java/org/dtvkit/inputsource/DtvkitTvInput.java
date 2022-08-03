@@ -3252,7 +3252,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.i(TAG, "onRelease mMainHandle == null");
             }
             sendDoReleaseMessage();
-            hideStreamChangeUpdateDialog();
         }
 
         private void doRelease() {
@@ -4638,44 +4637,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
                 } else if (signal.equals("DvbNetworkChange") || signal.equals("DvbUpdatedService")) {
                     Log.i(TAG, "DvbNetworkChange or DvbUpdatedService, IsPip=" + mIsPip);
-                    boolean bgSearchInDvb = true;//the newer dtvkit version will handle the dvb update
-                    if (!bgSearchInDvb) {
-                        String channelSignalType = null;
-                        if (mTunedChannel != null) {
-                            try {
-                                channelSignalType = mTunedChannel.getInternalProviderData().get("channel_signal_type").toString();
-                            } catch (Exception e) {
-                                Log.i(TAG, "DvbNetworkChange or DvbUpdatedService get channel_signal_type Exception " + e.getMessage());
-                            }
-                        }
-                        if (mDvbNetworkChangeSearchStatus) {
-                            return;
-                        }
-                        mDvbNetworkChangeSearchStatus = true;
-                        if (mIsPip) {
-                            DtvkitTvInputSession mainSession = getMainTunerSession();
-                            mPipDvbChannel = mTunedChannel;
-                            if (mainSession != null) {
-                                mMainDvbChannel = mainSession.mTunedChannel;
-                            }
-                        } else {
-                            DtvkitTvInputSession pipSession = getPipTunerSession();
-                            mMainDvbChannel = mTunedChannel;
-                            if (pipSession != null) {
-                                mPipDvbChannel = pipSession.mTunedChannel;
-                            }
-                        }
-                        if (mHandlerThreadHandle != null) {
-                            mHandlerThreadHandle.post(() -> {
-                                onFinish(false, false);
-                                mHandlerThreadHandle.removeMessages(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
-                                mHandlerThreadHandle.sendMessageDelayed(
-                                        mHandlerThreadHandle.obtainMessage(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG,
-                                                (mIsPip ? INDEX_FOR_PIP : INDEX_FOR_MAIN), 0),
-                                        MSG_SHOW_STREAM_CHANGE_DELAY);
-                            });
-                        }
-                    }
+                    //this event has been handled in dtvkit, tis should ignore it
                 } else if (signal.equals("DvbUpdatedChannelData")) {
                     Log.i(TAG, "DvbUpdatedChannelData");
                     //check trackInfo update
@@ -4992,11 +4954,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         monitorTimeshiftRecordingPathAndTryRestart(true, false, false);
                         break;
                     case MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG:
-                        if (mMainHandle != null) {
-                            mMainHandle.removeMessages(MSG_DISPLAY_STREAM_CHANGE_DIALOG);
-                            mMainHandle.sendMessage(mMainHandle.obtainMessage(
-                                    MSG_DISPLAY_STREAM_CHANGE_DIALOG, (int) msg.arg1, 0));
-                        }
                         break;
                     case MSG_TRY_START_TIMESHIFT:
                         resetRecordingPath();
@@ -5215,10 +5172,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                         break;
                     case MSG_DISPLAY_STREAM_CHANGE_DIALOG:
-                        if (session.mHandlerThreadHandle != null) {
-                            session.mHandlerThreadHandle.removeCallbacksAndMessages(null);
-                        }
-                        showSearchConfirmDialog(session.outService.getApplication(), session.mTunedChannel, (int) msg.arg1);
                         break;
                     case MSG_SET_TELETEXT_MIX_NORMAL:
                         if (!session.mTeleTextMixNormal) {
@@ -8426,238 +8379,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
            }
         }
     }; */
-
-    private void showSearchConfirmDialog(final Context context, final Channel channel, final int index) {
-        if (context == null || channel == null) {
-            Log.d(TAG, "showSearchConfirmDialog null context or input");
-            return;
-        }
-
-        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        final AlertDialog alert = builder.create();
-        mStreamChangeUpdateDialog = alert;
-        final View dialogView = View.inflate(context, R.layout.confirm_search, null);
-        final TextView title = dialogView.findViewById(R.id.dialog_title);
-        final Button confirm = dialogView.findViewById(R.id.confirm);
-        final Button cancel = dialogView.findViewById(R.id.cancel);
-        final int[] tempStatus = new int[1];//0 for flag that exit is pressed by user, 1 for exit by search over
-
-        String tempChannelSignalType = channel.getType();
-        String tempDvbUri = getChannelInternalDvbUri(channel);
-        int tempUpdateFrequency;
-
-        try {
-            tempUpdateFrequency = Integer.valueOf(channel.getInternalProviderData().get("frequency").toString());
-        } catch (Exception e) {
-            Log.i(TAG, "onMessageCallback frequency Exception " + e.getMessage());
-            tempUpdateFrequency = -1;
-        }
-        final String channelSignalType = tempChannelSignalType;
-        final int updateFrequency = tempUpdateFrequency;
-        final String updateUri = tempDvbUri;
-        final DtvkitBackGroundSearch.BackGroundSearchCallback callback = new DtvkitBackGroundSearch.BackGroundSearchCallback() {
-            @Override
-            public void onMessageCallback(JSONObject mess) {
-                if (mess != null) {
-                    Log.d(TAG, "onMessageCallback " + mess);
-                    String status = null;
-                    try {
-                        status = mess.getString(DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_ITEM);
-                    } catch (Exception e) {
-                        Log.i(TAG, "onMessageCallback SINGLE_FREQUENCY_STATUS_ITEM Exception " + e.getMessage());
-                    }
-                    switch (status) {
-                        case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SEARCH_TERMINATE: {
-                            tempStatus[0] = 1;
-                            if (alert != null) {
-                                alert.dismiss();
-                            }
-                            break;
-                        }
-                        case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SAVE_FINISH: {
-                            tempStatus[0] = 1;
-                            if (alert != null) {
-                                alert.dismiss();
-                            }
-                            DtvkitTvInputSession mainSession = getMainTunerSession();
-                            DtvkitTvInputSession pipSession = getPipTunerSession();
-                            DtvkitTvInputSession updateSession;
-                            DtvkitTvInputSession restoreSession;
-                            Channel restoreChannel = null;
-                            Channel newUpdateChannel = null;
-                            if (INDEX_FOR_MAIN == index) {
-                                updateSession = mainSession;
-                                restoreSession = pipSession;
-                                restoreChannel = mPipDvbChannel;
-                            } else {
-                                updateSession = pipSession;
-                                restoreSession = mainSession;
-                                restoreChannel = mMainDvbChannel;
-                            }
-                            if (updateSession != null) {
-                                Uri channelUri = null;
-                                String serviceName0 = null;
-                                try {
-                                    serviceName0 = mess.getString(
-                                            DtvkitBackGroundSearch.SINGLE_FREQUENCY_CHANNEL_NAME + 0);
-                                } catch (Exception e) {
-                                    Log.i(TAG, "onMessageCallback Exception " + e.getMessage());
-                                }
-                                if (!TextUtils.isEmpty(serviceName0)) {
-                                    newUpdateChannel = TvContractUtils.getChannelByDisplayName(
-                                            context.getContentResolver(), serviceName0, updateFrequency);
-                                }
-                                if (newUpdateChannel != null) {
-                                    channelUri = TvContract.buildChannelUri(newUpdateChannel.getId());
-                                }
-                                if (channelUri != null) {
-                                    Bundle bundle = new Bundle();
-                                    bundle.putParcelable("channelUri", channelUri);
-                                    updateSession.notifySessionEvent(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
-                                    Log.w(TAG, "tv app tuneChannel ifNeeded, " + channelUri);
-                                } else {
-                                    mDvbNetworkChangeSearchStatus = false;
-                                    mMainDvbChannel = null;
-                                    mPipDvbChannel = null;
-                                    Log.d(TAG, "onMessageCallback none channels");
-                                    Toast.makeText(
-                                            DtvkitTvInput.this,
-                                            R.string.dvb_network_change_search_no_result, Toast.LENGTH_SHORT)
-                                            .show();
-                                }
-                            }
-                            if (restoreSession != null && restoreChannel != null) {
-                                int restoreFrequency = -1;
-                                String serviceName1 = null;
-                                try {
-                                    restoreFrequency = Integer.valueOf(restoreChannel
-                                            .getInternalProviderData().get("frequency").toString());
-                                } catch (Exception e) {
-                                    Log.i(TAG, "onMessageCallback frequency Exception " + e.getMessage());
-                                }
-                                try {
-                                    serviceName1 = mess.getString(DtvkitBackGroundSearch.SINGLE_FREQUENCY_CHANNEL_NAME + 1);
-                                } catch (Exception e) {
-                                    Log.i(TAG, "onMessageCallback serviceName1 Exception " + e.getMessage());
-                                }
-                                if (restoreFrequency != updateFrequency) {
-                                    Uri restoreUri = TvContract.buildChannelUri(restoreChannel.getId());
-                                    Bundle bundle = new Bundle();
-                                    bundle.putParcelable("channelUri", restoreUri);
-                                    restoreSession.notifySessionEvent(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
-                                    Log.w(TAG, "tv app tuneChannel ifNeeded, " + restoreUri);
-                                } else {
-                                    restoreChannel = null;
-                                    if (newUpdateChannel != null) {
-                                        if (!TextUtils.isEmpty(serviceName1)) {
-                                            restoreChannel = TvContractUtils.getChannelByDisplayName(
-                                                    context.getContentResolver(), serviceName1, updateFrequency);
-                                        }
-                                    }
-                                    if (restoreChannel != null) {
-                                        Uri restoreUri = TvContract.buildChannelUri(restoreChannel.getId());
-                                        Bundle bundle = new Bundle();
-                                        bundle.putParcelable("channelUri", restoreUri);
-                                        restoreSession.notifySessionEvent(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
-                                        Log.w(TAG, "tv app tuneChannel ifNeeded, " + restoreUri);
-                                    } else {
-                                        Uri restoreUri = TvContract.buildChannelUri(-1);
-                                        restoreSession.notifyChannelRetuned(restoreUri);
-                                        Log.d(TAG, "onMessageCallback restoreSession doesn't have available channel");
-                                        Toast.makeText(DtvkitTvInput.this,
-                                                R.string.dvb_network_change_search_channel_unavailable, Toast.LENGTH_SHORT)
-                                                .show();
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                        default:
-                            break;
-                    }
-                }
-            }
-        };
-
-        final DtvkitBackGroundSearch setup = new DtvkitBackGroundSearch(context,
-                getCurrentDvbSource(),
-                channelSignalType,
-                updateUri,
-                updateFrequency,
-                channel.getInputId(),
-                callback);
-        setup.startSearch();
-        title.setText(R.string.dvb_network_change);
-        confirm.setVisibility(View.GONE);
-        cancel.setVisibility(View.GONE);
-        /*confirm.requestFocus();
-        cancel.setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alert.dismiss();
-            }
-        });
-        confirm.setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alert.dismiss();
-                Intent setupIntent = input.createSetupIntent();
-                setupIntent.putExtra(TvInputInfo.EXTRA_INPUT_ID, input.getId());
-                setupIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(setupIntent);
-            }
-        });*/
-        alert.setOnDismissListener(dialog -> {
-            Log.d(TAG, "showSearchConfirmDialog onDismiss");
-            if (tempStatus[0] != 1 && setup != null) {
-                Log.d(TAG, "showSearchConfirmDialog need to stop search");
-                setup.stopSearch();
-                EpgSyncJobService.cancelAllSyncRequests(DtvkitTvInput.this);
-                int dvbSource = getCurrentDvbSource();
-                EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
-                EpgSyncJobService.requestImmediateSyncSearchedChannelWitchParameters(
-                        DtvkitTvInput.this, mInputId, true,
-                        new ComponentName(DtvkitTvInput.this, DtvkitEpgSync.class), null);
-                mDvbNetworkChangeSearchStatus = false;
-                mMainDvbChannel = null;
-                mPipDvbChannel = null;
-            }
-        });
-        //prevent exit key
-        alert.setCancelable(false);
-        alert.setOnKeyListener((dialog, keyCode, event) -> {
-            if (event.getAction() == KeyEvent.ACTION_UP
-                    && keyCode == KeyEvent.KEYCODE_BACK
-                    && event.getRepeatCount() == 0) {
-                if (tempStatus[0] != 1 && setup != null) {
-                    Log.d(TAG, "showSearchConfirmDialog searching");
-                    Toast.makeText(DtvkitTvInput.this,
-                            R.string.dvb_network_change,
-                            Toast.LENGTH_SHORT)
-                            .show();
-                }
-            }
-            return true;
-        });
-        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
-        alert.setView(dialogView);
-        alert.show();
-        WindowManager.LayoutParams params = alert.getWindow().getAttributes();
-        params.width = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 500, context.getResources().getDisplayMetrics());
-        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        alert.getWindow().setAttributes(params);
-        alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
-    }
-
-    private void hideStreamChangeUpdateDialog() {
-        if (mStreamChangeUpdateDialog != null && mStreamChangeUpdateDialog.isShowing()) {
-            Log.d(TAG, "hideStreamChangeUpdateDialog dismiss");
-            mStreamChangeUpdateDialog.dismiss();
-            mStreamChangeUpdateDialog = null;
-        } else {
-            Log.d(TAG, "hideStreamChangeUpdateDialog no need");
-        }
-    }
 
     private void writeSysFs(String path, String value) {
         if (null != mSysSettingManager)
