@@ -268,6 +268,7 @@ public class DtvkitGlueClient {
     }
 
     public void registerSignalHandler(SignalHandler handler, int id) {
+        Log.d(TAG, "registerSignalHandler");
         mHandlers.removeIf(pair -> pair.second == handler);
         mHandlers.add(new Pair<>(id, handler));
     }
@@ -277,6 +278,7 @@ public class DtvkitGlueClient {
     }
 
     public void unregisterSignalHandler(SignalHandler handler) {
+        Log.d(TAG, "unregisterSignalHandler");
         mHandlers.removeIf(pair -> pair.second == handler);
     }
 

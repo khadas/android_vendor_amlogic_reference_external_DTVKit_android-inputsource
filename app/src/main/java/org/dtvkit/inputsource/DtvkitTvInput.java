@@ -106,6 +106,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -2550,6 +2551,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected boolean doTune(Channel oldChannel, Channel newChannel, Uri channelUri,
                                  String dvbUri, boolean mhegTune) {
             onFinish(false, false);
+            // MUST double check
+            if (!isSessionAvailable()) {
+                Log.e(TAG, "Abort tune because session is releasing...");
+                return false;
+            }
             DtvkitGlueClient.getInstance().registerSignalHandler(mHandler, INDEX_FOR_PIP);
             mTunedChannel = newChannel; // before play
             boolean playResult = playerPlay(INDEX_FOR_PIP, dvbUri, mAudioADAutoStart,
@@ -2697,7 +2703,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             userDataStatus(false);
 
             // start tune flow
-            DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             String previousUriStr = getChannelInternalDvbUriForFcc(mFccPreviousBufferUri);
             String nextUriStr = getChannelInternalDvbUriForFcc(mFccNextBufferUri);
 
@@ -2705,7 +2710,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 // when fcc tune, param: disable_audio in playerPlay must be false.
                 mainMuteStatus = false;
             }
-
+            // MUST double check
+            if (!isSessionAvailable()) {
+                Log.e(TAG, "Abort tune because session is releasing...");
+                return false;
+            }
+            DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             if (mHbbTvManager != null) {
                 mHbbTvManager.setTuneChannelUri(channelUri);
             }
@@ -2776,8 +2786,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private Handler mHandlerThreadHandle = null;
         private Handler mMainHandle = null;
 
-        volatile Semaphore mSessionSemaphore;
-        private SessionState mSessionState = SessionState.NONE;
+        private int mTuneBarrier = 0;
+        private volatile Semaphore mSessionSemaphore;
+        private volatile SessionState mSessionState = SessionState.NONE;
         private boolean mIsPip;
 
         private Surface mSurface;
@@ -2789,7 +2800,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private Uri mPendingTuneUri = null;
 
         private CaptioningManager mCaptioningManager = null;
-        private AudioSystemCmdManager mAudioSystemCmdManager;
+        private final AudioSystemCmdManager mAudioSystemCmdManager;
         private int mCurrentAudioTrackId = -1;
 
         private final class AvailableState {
@@ -3081,6 +3092,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else {
                     Log.i(TAG, "tryAcquire mSemaphore");
                     if (mSessionSemaphore.tryAcquire(SEMAPHORE_TIME_OUT, TimeUnit.MILLISECONDS)) {
+                        mTuneBarrier = 1;
                         result = true;
                         Log.i(TAG, "tryAcquire mSemaphore OK");
                     } else {
@@ -3114,8 +3126,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 tunePendingIfNeeded(SEMAPHORE_TIME_OUT);
                 return;
             }
-            if (mSessionState == SessionState.RELEASING
-                || mSessionState == SessionState.RELEASED) {
+
+            if (!isSessionAvailable()) {
                 Log.e(TAG, "Abort tune because of mSessionState:" + mSessionState);
                 return;
             }
@@ -3123,7 +3135,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (mView != null) {
                     mView.nativeOverlayView.setOverlayTarget(mView.nativeOverlayView.mTarget);
                     mView.mSubServerView.setOverlaySubtitleListener(mView.mSubServerView.mSubListener);
-                    // hbbtv needs overlayView support,
+                    // HBBtv needs overlayView support
                     createHbbTvManager();
                 }
                 initTimeShift();
@@ -3191,6 +3203,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0, 0);
 
             boolean playResult = doTune(mTunedChannel, tunedChannel, channelUri, dvbUri, mhegTune);
+            if (!isSessionAvailable()) {
+
+                return;
+            }
             if (!playResult) {
                 notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
@@ -3215,18 +3231,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 return;
             }
             mSessionState = SessionState.RELEASING;
-            //must destory mview,!!! we
-            //will regist handle to client when
-            //creat ciMenuView,so we need destory and
-            //unregist handle.
-            releaseSignalHandler();
+            // must destroy mView! we register handle to client when
+            // create ciMenuView,so we need destroy and unregister handle.
             if (mHbbTvManager != null) {
-                Log.d(TAG, "release the hbbtv resource");
+                Log.d(TAG, "release the HBBtv resource");
                 mHbbTvManager.releaseHbbTvResource();
                 mHbbTvManager = null;
             }
             //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
-            //all case use message to release related resource as semaphare has been applied
+            //all case use message to release related resource as semaphore has been applied
             if (mMainHandle != null) {
                 mMainHandle.sendMessageAtFrontOfQueue(mMainHandle.obtainMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY));
             } else {
@@ -3234,21 +3247,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             sendDoReleaseMessage();
             hideStreamChangeUpdateDialog();
-            Log.i(TAG, "onRelease over");
         }
 
         private void doRelease() {
             Log.i(TAG, "doRelease");
-            onFinish(false, false);
+            DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
+            if (mSessionSemaphore.availablePermits() != 0) {
+                Log.e(TAG, "Semaphore permits is unexpected("
+                        + mSessionSemaphore.availablePermits() + ")");
+            }
+            if (mTuneBarrier != 0) {
+                onFinish(false, false);
+                mSessionSemaphore.release();
+            } else {
+                Log.i(TAG, "[debug]session state = " + mSessionState);
+            }
             finalReleaseWorkThread();
             removeTunerSession(this);
             mSessionState = SessionState.RELEASED;
-            // debug used
-            if (mSessionSemaphore.availablePermits() != 0) {
-                Log.e(TAG, "Semaphore permits is wrong(" + mSessionSemaphore.availablePermits()
-                        + "), need check!");
-            }
-            mSessionSemaphore.release();
             Log.i(TAG, "doRelease over");
         }
 
@@ -3285,11 +3301,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mLivingHandlerThread.quitSafely();
                 mLivingHandlerThread = null;
             }
-        }
-
-        private void releaseSignalHandler() {
-            Log.d(TAG, "releaseSignalHandler");
-            DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
         }
 
         private void sendDoReleaseMessage() {
@@ -5043,7 +5054,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "mHandlerThreadHandle " + msg.what + " done]]]");
                 return true;
             });
-            mMainHandle = new MainHandler();
+            mMainHandle = new Handler(Looper.getMainLooper(), new MainCallback(this));
         }
 
         //use osd to hide video instead
@@ -5158,74 +5169,84 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return true;
         }
 
-        private class MainHandler extends Handler {
-            public void handleMessage(Message msg) {
-                Log.d(TAG, "MainHandler [[[:" + msg.what);
+        private class MainCallback implements Handler.Callback {
+            private final WeakReference<DtvkitTvInputSession> outSession;
+            MainCallback(DtvkitTvInputSession session) {
+                outSession = new WeakReference<>(session);
+            }
+
+            public boolean handleMessage(Message msg) {
+                DtvkitTvInputSession session = outSession.get();
+                if (session == null) {
+                    return false;
+                }
+                Log.d(session.TAG, "MainHandler [[[:" + msg.what);
                 switch (msg.what) {
                     case MSG_MAIN_HANDLE_DESTROY_OVERLAY:
-                        if (!mTeleTextMixNormal) {
-                            mTeleTextMixNormal = true;
-                            playerSetRectangle(0, 0, mWinWidth, mWinHeight);
+                        if (!session.mTeleTextMixNormal) {
+                            session.mTeleTextMixNormal = true;
+                            playerSetRectangle(0, 0, session.mWinWidth, session.mWinHeight);
                         }
                         doDestroyOverlay();
-                        if (mHandlerThreadHandle != null && mLivingHandlerThread != null) {
-                            mHandlerThreadHandle.sendEmptyMessage(MSG_RELEASE_WORK_THREAD);
+                        if (session.mHandlerThreadHandle != null && session.mLivingHandlerThread != null) {
+                            session.mHandlerThreadHandle.sendEmptyMessage(MSG_RELEASE_WORK_THREAD);
                         }
                         break;
                     case MSG_SHOW_BLOCKED_TEXT:
-                        if (mView != null) {
+                        if (session.mView != null) {
                             String text = (String) msg.obj;
-                            mView.showBlockedText(text, mIsPip);
+                            session.mView.showBlockedText(text, session.mIsPip);
                         }
                         break;
                     case MSG_HIDE_BLOCKED_TEXT:
-                        if (mView != null) {
-                            mView.hideBlockedText();
+                        if (session.mView != null) {
+                            session.mView.hideBlockedText();
                         }
                         break;
                     case MSG_SHOW_TUNING_IMAGE:
-                        if (mView != null) {
-                            mView.showTuningImage(null);
+                        if (session.mView != null) {
+                            session.mView.showTuningImage(null);
                         }
                         break;
                     case MSG_HIDE_TUNING_IMAGE:
-                        if (mView != null) {
-                            mView.hideTuningImage();
+                        if (session.mView != null) {
+                            session.mView.hideTuningImage();
                         }
                         break;
                     case MSG_DISPLAY_STREAM_CHANGE_DIALOG:
-                        if (mHandlerThreadHandle != null) {
-                            mHandlerThreadHandle.removeCallbacksAndMessages(null);
+                        if (session.mHandlerThreadHandle != null) {
+                            session.mHandlerThreadHandle.removeCallbacksAndMessages(null);
                         }
-                        showSearchConfirmDialog(DtvkitTvInput.this, mTunedChannel, (int) msg.arg1);
+                        showSearchConfirmDialog(session.outService.getApplication(), session.mTunedChannel, (int) msg.arg1);
                         break;
                     case MSG_SET_TELETEXT_MIX_NORMAL:
-                        if (!mTeleTextMixNormal) {
-                            mTeleTextMixNormal = true;
-                            mView.setTeletextMix(TTX_MODE_NORMAL);
-                            playerSetRectangle(0, 0, mWinWidth, mWinHeight);
+                        if (!session.mTeleTextMixNormal) {
+                            session.mTeleTextMixNormal = true;
+                            session.mView.setTeletextMix(TTX_MODE_NORMAL);
+                            playerSetRectangle(0, 0, session.mWinWidth, session.mWinHeight);
                         }
                         break;
                     case MSG_SET_TELETEXT_MIX_TRANSPARENT: {
-                        mTeleTextMixNormal = false;
-                        mView.setTeletextMix(TTX_MODE_TRANSPARENT);
-                        playerSetRectangle(0, 0, mWinWidth, mWinHeight);
+                        session.mTeleTextMixNormal = false;
+                        session.mView.setTeletextMix(TTX_MODE_TRANSPARENT);
+                        playerSetRectangle(0, 0, session.mWinWidth, session.mWinHeight);
                     }
                     break;
                     case MSG_SET_TELETEXT_MIX_SEPARATE: {
-                        mTeleTextMixNormal = false;
-                        mView.setTeletextMix(TTX_MODE_SEPARATE);
-                        playerSetRectangle(0, mWinHeight / 4, mWinWidth / 2, mWinHeight / 2);
+                        session.mTeleTextMixNormal = false;
+                        session.mView.setTeletextMix(TTX_MODE_SEPARATE);
+                        playerSetRectangle(0, session.mWinHeight / 4,
+                                session.mWinWidth / 2, session.mWinHeight / 2);
                     }
                     break;
                     case MSG_SUBTITLE_SHOW_CLOSED_CAPTION:
                         String ccData = (String) msg.obj;
-                        boolean bshow = msg.arg1 == 0 ? false : true;
-                        if (mView != null) {
+                        boolean bshow = msg.arg1 != 0;
+                        if (session.mView != null) {
                             if (bshow && ccData != null) {
-                                mView.showCCSubtitle(ccData);
+                                session.mView.showCCSubtitle(ccData);
                             } else {
-                                mView.hideCCSubtitle();
+                                session.mView.hideCCSubtitle();
                             }
                         }
                         break;
@@ -5236,20 +5257,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         initSubtitleOrTeletextIfNeed();
                         break;
                     case MSG_EVENT_SHOW_HIDE_OVERLAY:
-                        if (mView != null) {
+                        if (session.mView != null) {
                             boolean show = (msg.arg1 == 1);
                             if (show) {
-                                mView.showOverLay();
+                                session.mView.showOverLay();
                             } else {
-                                mView.hideOverLay();
+                                session.mView.hideOverLay();
                             }
                         }
                         break;
                     case MSG_CI_UPDATE_PROFILE_CONFIRM:
-                        showOpSearchConfirmDialog(DtvkitTvInput.this, msg.arg1);
+                        showOpSearchConfirmDialog(session.outService.getApplicationContext(), msg.arg1);
                         break;
                     case MSG_CAS_OSM_PREPARE_WINDOW:
-                        if (mView != null) {
+                        if (session.mView != null) {
                             Bundle args = (Bundle) (msg.obj);
                             String text = args.getString("msg", "");
                             int mode = args.getInt("mode", 0);
@@ -5260,32 +5281,33 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             int bg = args.getInt("bg", 0);
                             int alpha = args.getInt("alpah", 0);
                             int fg = args.getInt("fg", 0);
-                            mView.prepareCasWindow(text, mode, x, y, w, h, bg, alpha, fg);
+                            session.mView.prepareCasWindow(text, mode, x, y, w, h, bg, alpha, fg);
                         }
                         break;
                     case MSG_CAS_OSM_WINDOW_SHOW:
-                        if (mView != null) {
+                        if (session.mView != null) {
                             Bundle args = (Bundle) (msg.obj);
                             int mode = args.getInt("mode", 0);
                             int duration = args.getInt("duration", 0);
-                            mView.showCasMessage(mode);
+                            session.mView.showCasMessage(mode);
                             if (duration > 0) {
-                                removeMessages(MSG_CAS_OSM_WINDOW_CLEAR);
-                                sendEmptyMessageDelayed(MSG_CAS_OSM_WINDOW_CLEAR, duration * 1000);
+                                session.mMainHandle.removeMessages(MSG_CAS_OSM_WINDOW_CLEAR);
+                                session.mMainHandle.sendEmptyMessageDelayed(MSG_CAS_OSM_WINDOW_CLEAR, duration * 1000);
                             }
                         }
                         break;
                     case MSG_CAS_OSM_WINDOW_CLEAR:
-                        if (mView != null) {
-                            mView.clearCasView();
+                        if (session.mView != null) {
+                            session.mView.clearCasView();
                         }
                         break;
 
                     default:
-                        Log.d(TAG, "MainHandler default");
+                        Log.d(session.TAG, "MainHandler default");
                         break;
                 }
-                Log.d(TAG, "MainHandler " + msg.what + " done]]]");
+                Log.d(session.TAG, "MainHandler " + msg.what + " done]]]");
+                return false;
             }
         }
 
