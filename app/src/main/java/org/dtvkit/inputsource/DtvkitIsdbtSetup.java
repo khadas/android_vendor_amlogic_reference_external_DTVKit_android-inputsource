@@ -922,6 +922,19 @@ public class DtvkitIsdbtSetup extends Activity {
         return found;
     }
 
+    private int getFoundServiceNumberOnSearch() {
+        int found = 0;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCategoryNumberOfServices", new JSONArray());
+            JSONObject datas = obj.getJSONObject("data");
+            found = datas.getInt("total_num");
+            Log.i(TAG, "getFoundServiceNumberOnSearch found = " + found);
+        } catch (Exception ignore) {
+            Log.e(TAG, "getFoundServiceNumberOnSearch Exception = " + ignore.getMessage());
+        }
+        return found;
+    }
+
     private int getSearchProcess(JSONObject data) {
         int progress = 0;
         if (data == null) {
@@ -976,7 +989,7 @@ public class DtvkitIsdbtSetup extends Activity {
             int sstatus = mParameterMananer.getStrengthStatus();
             int qstatus = mParameterMananer.getQualityStatus();
             if (progress < 100) {
-                int found = getFoundServiceNumber();
+                int found = getFoundServiceNumberOnSearch();
                 setSearchProgress(progress);
                 setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
                 setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", sstatus), String.format(Locale.ENGLISH, "Quality: %d%%", qstatus), String.format(Locale.ENGLISH, "Channel: %d", found));

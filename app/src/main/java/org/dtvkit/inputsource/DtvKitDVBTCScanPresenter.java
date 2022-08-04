@@ -36,6 +36,7 @@ public class DtvKitDVBTCScanPresenter {
     public static final String COMMAND_DVBC_MANUAL_SCAN_BY_ID = "Dvbc.startManualSearchById";
     public static final String COMMAND_DVBC_FINISH_SCAN = "Dvbc.finishSearch";
     public static final String COMMAND_DVB_GET_SERVICE_NUMBER = "Dvb.getNumberOfServices";
+    public static final String COMMAND_DVB_GET_SERVICE_NUMBER_ON_SEARCH = "Dvb.getCategoryNumberOfServices";
     public static final String COMMAND_DVB_GET_SERVICE_LIST = "Dvb.getListOfServices";
 
     public static final int DVB_T = 0;
@@ -285,7 +286,7 @@ public class DtvKitDVBTCScanPresenter {
     }
 
     private void handleScanSignal(int scanStatus, JSONObject data) {
-        int serviceNumber = getServiceNumber();
+        int serviceNumber = getFoundServiceNumberOnSearch();
         int signalStrength = 0;
         int signalQuality = 0;
 
@@ -415,6 +416,19 @@ public class DtvKitDVBTCScanPresenter {
             Log.e(TAG, "getFoundServiceNumber Exception = " + e.getMessage());
         }
         return serviceNumber;
+    }
+
+    private int getFoundServiceNumberOnSearch() {
+        int found = 0;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request(COMMAND_DVB_GET_SERVICE_NUMBER_ON_SEARCH, new JSONArray());
+            JSONObject datas = obj.getJSONObject("data");
+            found = datas.getInt("total_num");
+            Log.i(TAG, "getFoundServiceNumberOnSearch found = " + found);
+        } catch (Exception ignore) {
+            Log.e(TAG, "getFoundServiceNumberOnSearch Exception = " + ignore.getMessage());
+        }
+        return found;
     }
 
     private boolean notifyShowLcnConflict() {

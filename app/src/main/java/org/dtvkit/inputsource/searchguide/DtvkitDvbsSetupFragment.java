@@ -422,7 +422,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
 
     private void dealOnSignal(int progress) {
         Log.d(TAG, "onSignal progress = " + progress);
-        int found = getFoundServiceNumber();
+        int found = getFoundServiceNumberOnSearch();
         setSearchProgress(progress);
         int sstatus = mParameterManager.getStrengthStatus();
         int qstatus = mParameterManager.getQualityStatus();
@@ -801,6 +801,19 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             Log.i(TAG, "getFoundServiceNumber found = " + found);
         } catch (Exception ignore) {
             Log.e(TAG, "getFoundServiceNumber Exception = " + ignore.getMessage());
+        }
+        return found;
+    }
+
+    private int getFoundServiceNumberOnSearch() {
+        int found = 0;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCategoryNumberOfServices", new JSONArray());
+            JSONObject datas = obj.getJSONObject("data");
+            found = datas.getInt("total_num");
+            Log.i(TAG, "getFoundServiceNumberOnSearch found = " + found);
+        } catch (Exception ignore) {
+            Log.e(TAG, "getFoundServiceNumberOnSearch Exception = " + ignore.getMessage());
         }
         return found;
     }
