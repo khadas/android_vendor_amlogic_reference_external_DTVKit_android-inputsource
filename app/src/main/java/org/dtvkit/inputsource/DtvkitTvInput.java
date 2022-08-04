@@ -264,6 +264,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private HbbTvManager mHbbTvManager = null;
     DisplayMetrics mDisplayMetrics = new DisplayMetrics();
+    private DtvKitScheduleManager mDtvKitScheduleManager = null;
 
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
@@ -820,6 +821,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         //DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
         DtvkitGlueClient.getInstance().registerSignalHandler(mRecordingManagerHandler);
         mParameterManager = new ParameterManager(this, DtvkitGlueClient.getInstance());
+        if (null == mDtvKitScheduleManager) {
+            mDtvKitScheduleManager = new DtvKitScheduleManager(this, DtvkitGlueClient.getInstance(), true);
+        }
         updateRecorderNumber();
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_DTVKIT_SATELLITE);
         sendEmptyMessageToInputThreadHandler(MSG_UPDATE_DTVKIT_DATABASE);
@@ -1049,6 +1053,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mHandlerThread = null;
         mInputThreadHandler.removeCallbacksAndMessages(null);
         mInputThreadHandler = null;
+        if (null != mDtvKitScheduleManager) {
+            mDtvKitScheduleManager.release();
+            mDtvKitScheduleManager = null;
+        }
     }
 
     private boolean setTVAspectMode(int mode) {

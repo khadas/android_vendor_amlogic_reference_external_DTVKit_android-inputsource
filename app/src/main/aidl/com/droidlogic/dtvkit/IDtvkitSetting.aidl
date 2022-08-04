@@ -76,4 +76,6 @@ interface IDtvkitSetting {
     void syncDatabase();
 
     void setDVBChannelType(String channelType);
+
+    String bookingAction(String action, String data);
 }

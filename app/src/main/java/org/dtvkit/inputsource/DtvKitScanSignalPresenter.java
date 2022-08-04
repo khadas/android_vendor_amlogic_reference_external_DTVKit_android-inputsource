@@ -91,7 +91,7 @@ public class DtvKitScanSignalPresenter {
             Message msg = mSignalCheckHandler.obtainMessage(MSG_DVBC_SYMBOL_TRY_LOCK);
             msg.arg1 = getDvbcSymbol(symbol);
             msg.arg2 = getInputFreq(freq);
-            mSignalCheckHandler.sendMessage(msg);
+            mSignalCheckHandler.sendMessageDelayed(msg, MSG_DELAY_TIME);
         }
     }
 
@@ -100,7 +100,7 @@ public class DtvKitScanSignalPresenter {
             mSignalCheckHandler.removeMessages(MSG_FREQ_TRY_LOCK);
             Message msg = mSignalCheckHandler.obtainMessage(MSG_FREQ_TRY_LOCK);
             msg.arg1 = getInputFreq(freq);
-            mSignalCheckHandler.sendMessage(msg);
+            mSignalCheckHandler.sendMessageDelayed(msg, MSG_DELAY_TIME);
         }
     }
 
@@ -108,7 +108,7 @@ public class DtvKitScanSignalPresenter {
         if (null != mSignalCheckHandler) {
             mSignalCheckHandler.removeMessages(MSG_NUMBER_TRY_LOCK);
             Message msg = mSignalCheckHandler.obtainMessage(MSG_NUMBER_TRY_LOCK);
-            mSignalCheckHandler.sendMessage(msg);
+            mSignalCheckHandler.sendMessageDelayed(msg, MSG_DELAY_TIME);
         }
     }
 

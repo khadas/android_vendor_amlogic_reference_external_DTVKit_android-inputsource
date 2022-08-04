@@ -28,6 +28,7 @@ import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.settings.SysSettingManager;
 import com.amlogic.hbbtv.HbbTvUISetting;
 import com.droidlogic.dtvkit.IMGRCallbackListener;
+import com.droidlogic.dtvkit.inputsource.DtvKitScheduleManager;
 
 import java.io.File;
 import java.util.List;
@@ -43,6 +44,7 @@ public class DtvkitSettingService extends Service {
     public static final String ON_SIGNAL        = "ONSIGNAL";
     protected ParameterManager mParameterManager;
     protected HbbTvUISetting mHbbTvUISetting;
+    protected DtvKitScheduleManager mDtvKitScheduleManager;
 
     @Override
     public void onCreate() {
@@ -50,6 +52,7 @@ public class DtvkitSettingService extends Service {
         mParameterManager = new ParameterManager(this, DtvkitGlueClient.getInstance());
         mHbbTvUISetting   = new HbbTvUISetting();
         DtvkitGlueClient.getInstance().registerSignalHandler(mSignalHandler);
+        mDtvKitScheduleManager = new DtvKitScheduleManager(this, DtvkitGlueClient.getInstance(), false);
     }
 
     @Override
@@ -308,6 +311,11 @@ public class DtvkitSettingService extends Service {
                 return "";
             }
         }
+
+       @Override
+        public String bookingAction(String action, String data) throws RemoteException {
+            return actionBooking(action, data);
+        }
     }
 
     private void updatingGuide() {
@@ -434,4 +442,25 @@ public class DtvkitSettingService extends Service {
         }
     }
 
+    private String actionBooking (String action, String data) {
+        String result = null;
+
+        Log.d(TAG, "actionBooking action = " + action + "| data = " + data);
+        switch (action) {
+            case "ADD_BOOKING":
+                result = mDtvKitScheduleManager.addBooking(data);
+                break;
+            case "DELETE_BOOKING":
+                mDtvKitScheduleManager.deleteBooking(data);
+                break;
+            case "GET_BOOKING_LIST":
+                result = mDtvKitScheduleManager.getListOfBookings(data);
+                break;
+            default:
+                Log.d(TAG, "actionBooking action error " + action);
+                break;
+        }
+        Log.d(TAG, "actionBooking result = " + result);
+        return result;
+    }
 }
