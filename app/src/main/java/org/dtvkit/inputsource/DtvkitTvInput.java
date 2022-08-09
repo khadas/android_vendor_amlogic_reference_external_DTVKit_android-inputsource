@@ -3411,7 +3411,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             runOnMainThread(()->{
                 if (mHbbTvManager != null) {
                     Log.d(TAG,"reload the application when broadcast teletext off");
-                    mHbbTvManager.reloadApplicaition();
+                    mHbbTvManager.reloadApplication();
                 }
             });
         }
@@ -3419,7 +3419,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private void closeHbbtvTeleTextApplication() {
             runOnMainThread(()->{
                  if (mHbbTvManager != null) {
-                     mHbbTvManager.closeTeletextAppliacation();
+                     mHbbTvManager.closeTeletextApplication();
                  }
             });
         }
@@ -5395,7 +5395,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 result = false;
             }
             } else {
-                mHbbTvManager.getBroabandTracksAndNotify();
+                mHbbTvManager.getBroadbandTracksAndNotify();
                 result = false;
             }
             return result;
