@@ -40,7 +40,7 @@ public class DtvkitSettingService extends Service {
     private static final int SYNC_ON_SIGNAL = 0x03;
     public static final String EPG_SYNC_STOPPED = "EPG_SYNC_STOPPED";
     public static final String EPG_SYNC_RUNNING = "EPG_SYNC_RUNNING";
-    public static final String ON_SIGNAL        = "ON_SIGNAL";
+    public static final String ON_SIGNAL        = "ONSIGNAL";
     protected ParameterManager mParameterManager;
     protected HbbTvUISetting mHbbTvUISetting;
 

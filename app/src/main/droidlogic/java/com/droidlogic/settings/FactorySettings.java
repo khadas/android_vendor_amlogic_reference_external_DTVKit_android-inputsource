@@ -40,8 +40,8 @@ public class FactorySettings {
 
     private final static int MSG_DO_EXPORT_CHANNEL  = 0;
     private final static int MSG_DO_IMPORT_CHANNEL  = 1;
-    private final static int MSG_DO_EXPORT_SATS     = 2;
-    private final static int MSG_DO_IMPORT_SATS     = 3;
+    private final static int MSG_DO_EXPORT_SATELLITES     = 2;
+    private final static int MSG_DO_IMPORT_SATELLITES     = 3;
     private final static int MSG_DO_REST_TO_DEFAULT = 4;
     private final static int MSG_SYNC               = 5;
     private final static int MSG_FINISH             = 6;
@@ -84,14 +84,14 @@ public class FactorySettings {
                         }
                         break;
                     }
-                    case MSG_DO_EXPORT_SATS: {
+                    case MSG_DO_EXPORT_SATELLITES: {
                         ret = doExportSatellites();
                         Message message = mThreadHandler.obtainMessage(MSG_FINISH);
                         message.arg1 = ret?1:0;
                         mThreadHandler.sendMessageDelayed(message, 100);
                         break;
                     }
-                    case MSG_DO_IMPORT_SATS: {
+                    case MSG_DO_IMPORT_SATELLITES: {
                         ret = doImportSatellites();
                         Message message = mThreadHandler.obtainMessage(MSG_FINISH);
                         message.arg1 = ret?1:0;
@@ -195,13 +195,13 @@ public class FactorySettings {
                     break;
                 }
                 case R.id.btn_export_sat: {
-                    mThreadHandler.removeMessages(MSG_DO_EXPORT_SATS);
-                    mThreadHandler.sendEmptyMessageDelayed(MSG_DO_EXPORT_SATS, 200);
+                    mThreadHandler.removeMessages(MSG_DO_EXPORT_SATELLITES);
+                    mThreadHandler.sendEmptyMessageDelayed(MSG_DO_EXPORT_SATELLITES, 200);
                     break;
                 }
                 case R.id.btn_import_sat: {
-                    mThreadHandler.removeMessages(MSG_DO_IMPORT_SATS);
-                    mThreadHandler.sendEmptyMessageDelayed(MSG_DO_IMPORT_SATS, 200);
+                    mThreadHandler.removeMessages(MSG_DO_IMPORT_SATELLITES);
+                    mThreadHandler.sendEmptyMessageDelayed(MSG_DO_IMPORT_SATELLITES, 200);
                     break;
                 }
                 case R.id.btn_rest_default: {

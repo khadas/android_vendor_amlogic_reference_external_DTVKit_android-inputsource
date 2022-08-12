@@ -227,15 +227,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private static String fonts = "font";
     private String intentAction = "com.droidlogic.dtvkit.inputsource.AutomaticSearching";
     private AutomaticSearchingReceiver mAutomaticSearchingReceiver = null;
-    public final int SUBCTL_HK_DVB_SUB = 0x02;
-    public final int SUBCTL_HK_TTX_SUB = 0x04;
-    public final int SUBCTL_HK_SCTE27 = 0x08;
-    public final int SUBCTL_HK_TTX_PAG = 0x10;
-    public final int SUBCTL_HK_CC = 0x20;
-    public final int SUBCTL_HK_MHEG5S = 0x40;
-    public final int Default_SubCtlFlg = (SUBCTL_HK_DVB_SUB | SUBCTL_HK_SCTE27
-            | SUBCTL_HK_TTX_SUB | SUBCTL_HK_TTX_PAG
-            /*SUBCTL_HK_CC*/);
+    public final int SUBTITLE_CTL_HK_DVB_SUB = 0x02;
+    public final int SUBTITLE_CTL_HK_TTX_SUB = 0x04;
+    public final int SUBTITLE_CTL_HK_SCTE27 = 0x08;
+    public final int SUBTITLE_CTL_HK_TTX_PAG = 0x10;
+    public final int SUBTITLE_CTL_HK_CC = 0x20;
+    public final int SUBTITLE_CTL_HK_MHEG5S = 0x40;
+    public final int Default_SubCtlFlg = (SUBTITLE_CTL_HK_DVB_SUB | SUBTITLE_CTL_HK_SCTE27
+            | SUBTITLE_CTL_HK_TTX_SUB | SUBTITLE_CTL_HK_TTX_PAG
+            /*SUBTITLE_CTL_HK_CC*/);
 
     //record all sessions by index
     private final Map<Long, DtvkitTvInputSession> mTunerSessions = new HashMap<>();
@@ -825,9 +825,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         sendEmptyMessageToInputThreadHandler(MSG_UPDATE_DTVKIT_DATABASE);
         sendDelayedEmptyMessageToInputThreadHandler(MSG_CHECK_CHANNEL_SEARCH_STATUS, 1000);
         resetRecordingPath();
-        if (subFlg >= SUBCTL_HK_DVB_SUB) {
+        if (subFlg >= SUBTITLE_CTL_HK_DVB_SUB) {
             DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
-            if ((subFlg & SUBCTL_HK_CC) == SUBCTL_HK_CC) {
+            if ((subFlg & SUBTITLE_CTL_HK_CC) == SUBTITLE_CTL_HK_CC) {
                 initFont(); //init closed caption font
             }
         }
@@ -1183,8 +1183,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.i(TAG, "Created" + this);
             int subFlg = getSubtitleFlag();
             boolean enableCC = false;
-            if (subFlg >= SUBCTL_HK_DVB_SUB) {
-                if ((subFlg & SUBCTL_HK_CC) == SUBCTL_HK_CC) {
+            if (subFlg >= SUBTITLE_CTL_HK_DVB_SUB) {
+                if ((subFlg & SUBTITLE_CTL_HK_CC) == SUBTITLE_CTL_HK_CC) {
                     enableCC = true;
                 }
             }
@@ -1290,7 +1290,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         public void setTeletextMix(int status) {
             int subFlg = getSubtitleFlag();
-            if (subFlg >= SUBCTL_HK_DVB_SUB) {
+            if (subFlg >= SUBTITLE_CTL_HK_DVB_SUB) {
                 mSubServerView.setTeletextTransparent(status == TTX_MODE_TRANSPARENT);
                 if (status == TTX_MODE_SEPARATE) {
                     mSubServerView.setSize(1920 / 2, 0, 1920, 1080);
@@ -3495,7 +3495,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         closeHbbtvTeleTextApplication();
                     } else {
                         boolean startTele = false;
-                        if ((getSubtitleFlag() & SUBCTL_HK_TTX_PAG) == SUBCTL_HK_TTX_PAG) {
+                        if ((getSubtitleFlag() & SUBTITLE_CTL_HK_TTX_PAG) == SUBTITLE_CTL_HK_TTX_PAG) {
                             startTele = playerSetTeletextOn(true, Integer.parseInt(indexId));
                         } else {
                             startTele = playerSelectTeletextTrack(Integer.parseInt(indexId));
@@ -3583,7 +3583,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
             int subFlg = getSubtitleFlag();
-            if (mMainHandle != null && subFlg >= SUBCTL_HK_DVB_SUB) {
+            if (mMainHandle != null && subFlg >= SUBTITLE_CTL_HK_DVB_SUB) {
                 Message msg = mMainHandle.obtainMessage(MSG_SUBTITLE_SHOW_CLOSED_CAPTION, 0, 0, null);
                 mMainHandle.sendMessage(msg);
             }
@@ -8401,7 +8401,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private void userDataStatus(boolean status) {
         int subFlg = getSubtitleFlag();
-        if (subFlg >= SUBCTL_HK_DVB_SUB) {
+        if (subFlg >= SUBTITLE_CTL_HK_DVB_SUB) {
             if (status) {
                 DtvkitGlueClient.getInstance().openUserData(); //for video afd
             } else {

@@ -257,8 +257,14 @@ public class DtvkitDvbtSetup extends Activity {
             try {
                 if (mServiceList != null && mServiceList.length() > 0) {
                     firstServiceName = mServiceList.getJSONObject(0).getString("name");
+                    String freq = "";
+                    if (mSearchManualAutoType == 0) {
+                        int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
+                        freq = (DataManager.VALUE_FREQUENCY_MODE == isFrequencySearch) ? (getParameter() + "000") : getFreqOfChannelId();
+                    }
+                    Log.e(TAG, "finish freq = " + freq);
                     for (int i = 0;i < mServiceList.length();i++) {
-                        if (mServiceList.getJSONObject(i).getBoolean("hidden") == false) {
+                        if (mServiceList.getJSONObject(i).getBoolean("hidden") == false && (TextUtils.isEmpty(freq) || freq.equals(mServiceList.getJSONObject(i).getString("freq")))) {
                             firstServiceName = mServiceList.getJSONObject(i).getString("name");
                             break;
                         }

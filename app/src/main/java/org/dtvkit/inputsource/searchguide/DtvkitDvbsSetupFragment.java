@@ -575,9 +575,17 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             String firstServiceName = "";
             try {
                 if (mServiceList != null && mServiceList.length() > 0) {
+                    String searchMode = DataManager.KEY_SEARCH_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_SEARCH_MODE)];
+                    Log.i(TAG, "finish searchMode : " + searchMode);
+                    String currentTransponder = "";
+                    if ("transponder".equals(searchMode)) {
+                        mParameterManager.getDvbsParaManager().getLnbIdList().get(0).getFirstText();
+                        currentTransponder = mParameterManager.getDvbsParaManager().getCurrentTransponder();
+                        Log.i(TAG, "finish CurrentTransponder : " + currentTransponder);
+                    }
                     firstServiceName = mServiceList.getJSONObject(0).getString("name");
                     for (int i = 0; i < mServiceList.length(); i++) {
-                        if (!mServiceList.getJSONObject(i).getBoolean("hidden")) {
+                        if (!mServiceList.getJSONObject(i).getBoolean("hidden") && (TextUtils.isEmpty(currentTransponder) || currentTransponder.equals(mServiceList.getJSONObject(i).getString("transponder").replaceAll("/","")))) {
                             firstServiceName = mServiceList.getJSONObject(i).getString("name");
                             break;
                         }
