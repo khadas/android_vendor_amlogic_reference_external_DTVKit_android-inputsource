@@ -15,10 +15,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.ContentObserver;
 import android.database.Cursor;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
@@ -79,7 +77,6 @@ import com.droidlogic.app.CCSubtitleView;
 import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.app.SystemControlEvent;
 import com.droidlogic.app.SystemControlManager;
-import com.droidlogic.app.SystemControlManager.tvin_cutwin_t;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.companionlibrary.model.Channel;
 import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
@@ -95,6 +92,7 @@ import com.droidlogic.settings.SysSettingManager;
 import com.google.common.collect.Lists;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+import org.droidlogic.dtvkit.IndentingPrintWriter;
 import org.droidlogic.dtvkit.SubtitleServerView;
 import org.droidlogic.dtvkit.MhegOverlayView;
 import org.json.JSONArray;
@@ -102,10 +100,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -238,6 +238,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             /*SUBTITLE_CTL_HK_CC*/);
 
     //record all sessions by index
+    private DtvkitRecordingSession mRecordingSession = null;
     private final Map<Long, DtvkitTvInputSession> mTunerSessions = new HashMap<>();
 
     private boolean mRecordingStarted = false;
@@ -245,8 +246,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private static final int INDEX_FOR_MAIN = 0;
     private static final int INDEX_FOR_PIP = 1;
-
-    volatile private String lastMhegUri = null;
 
     //stream change and update dialog
     private AlertDialog mStreamChangeUpdateDialog = null;
@@ -267,7 +266,38 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private DtvKitScheduleManager mDtvKitScheduleManager = null;
 
     public DtvkitTvInput() {
-        Log.i(TAG, "DtvkitTvInput");
+        Log.i(TAG, "newInstance");
+    }
+
+    @Override
+    protected void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
+        final IndentingPrintWriter pw = new IndentingPrintWriter(writer, "  ");
+        if (args != null && args.length > 0) {
+            // todo: do more thing
+            pw.println(Arrays.toString(args));
+        }
+        if (mMainHandler != null) {
+            mMainHandler.dump(pw, "");
+        }
+        pw.println("Current RecordingSession:");
+        pw.increaseIndent();
+        pw.println("RecordingStarted:" + mRecordingStarted);
+        if (mRecordingSession != null) {
+            mRecordingSession.dump(fd, writer, args);
+        }
+        pw.decreaseIndent();
+        pw.println("Current TvSession:");
+        pw.increaseIndent();
+        for (DtvkitTvInputSession session : mTunerSessions.values()) {
+            session.dump(fd, writer, args);
+        }
+        pw.decreaseIndent();
+        pw.println("Information of Signal Handler:");
+        pw.increaseIndent();
+        for (String s : DtvkitGlueClient.getInstance().getSignalHandlerInfo()) {
+            pw.println(s);
+        }
+        pw.decreaseIndent();
     }
 
     protected final BroadcastReceiver mParentalControlsBroadcastReceiver = new BroadcastReceiver() {
@@ -1105,7 +1135,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return;
         }
         synchronized (mTunerSessionLock) {
-            mTunerSessions.put(session.mCurrentDtvkitTvInputSessionIndex, session);
+            mTunerSessions.put(session.mCurrentSessionIndex, session);
             Log.i(TAG, "addTunerSession " + session);
         }
     }
@@ -1115,7 +1145,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return;
         }
         synchronized (mTunerSessionLock) {
-            mTunerSessions.remove(session.mCurrentDtvkitTvInputSessionIndex);
+            mTunerSessions.remove(session.mCurrentSessionIndex);
             Log.i(TAG, "removeTunerSession " + session);
         }
     }
@@ -1769,7 +1799,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         Log.d(TAG, "onCreateRecordingSession initDtvkitTvInput");
         initDtvkitTvInput(false);
         mDtvkitRecordingSessionCount++;
-        return new DtvkitRecordingSession(this, inputId);
+        mRecordingSession = new DtvkitRecordingSession(this, inputId);
+        return mRecordingSession;
     }
 
     class DtvkitRecordingSession extends RecordingSession {
@@ -2067,7 +2098,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void doStopRecording() {
             Log.i(TAG, "doStopRecording");
-
+            mRecordingSession = null;
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
             //update record status firstly to get accurate duration time
             if (mRecordingProcessHandler != null) {
@@ -2556,6 +2587,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             }
         };
+
+        protected void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
+            final IndentingPrintWriter pw = new IndentingPrintWriter(writer, "  ");
+            pw.increaseIndent();
+            pw.println("recordingUri:" + mRecordedProgramUri);
+            pw.println("startRecord       TimeMillis:" + startRecordTimeMillis);
+            pw.println("endRecord         TimeMillis:" + endRecordTimeMillis);
+            pw.println("startRecord SystemTimeMillis:" + startRecordSystemTimeMillis);
+            pw.println("endRecord   SystemTimeMillis:" + endRecordSystemTimeMillis);
+            pw.decreaseIndent();
+        }
     }
 
     public class DtvkitPipTvSession extends DtvkitTvInputSession {
@@ -2814,7 +2856,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private boolean mTimeShiftInited = false;
         private boolean mResourceOwnedByBr = true;
 
-        protected long mCurrentDtvkitTvInputSessionIndex;
+        private final long mCurrentSessionIndex;
         private HandlerThread mLivingHandlerThread = null;
         private Handler mHandlerThreadHandle = null;
         private Handler mMainHandle = null;
@@ -2882,7 +2924,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             outService = service;
             mIsPip = isPip;
             mSessionSemaphore = getControllerSemaphore();
-            mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount++;
+            mCurrentSessionIndex = mDtvkitTvInputSessionCount++;
             Log.i(TAG, "created " + this);
             mAudioSystemCmdManager = AudioSystemCmdManager.getInstance(getApplicationContext());
             mCaptioningManager =
@@ -4917,12 +4959,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected void initWorkThread() {
             Log.d(TAG, "initWorkThread");
             mLivingHandlerThread = new HandlerThread(
-                    "LivingThread-" + mCurrentDtvkitTvInputSessionIndex);
+                    "LivingThread-" + mCurrentSessionIndex);
             mLivingHandlerThread.start();
             mHandlerThreadHandle = new Handler(mLivingHandlerThread.getLooper(), (msg) -> {
                 Log.d(TAG, "mHandlerThreadHandle [[[:" + msg.what);
                 if (mLivingHandlerThread == null || !mLivingHandlerThread.isAlive()) {
-                    Log.w(TAG, "LivingThread-" + mCurrentDtvkitTvInputSessionIndex + " quit");
+                    Log.w(TAG, "LivingThread-" + mCurrentSessionIndex + " quit");
                     return true;
                 }
                 switch (msg.what) {
@@ -5904,12 +5946,35 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return channel;
         }
 
+        protected void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
+            final IndentingPrintWriter pw = new IndentingPrintWriter(writer, "  ");
+            pw.increaseIndent();
+            pw.println(this);
+            pw.increaseIndent();
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.dump(pw, "");
+            }
+            pw.println("Session   state:" + mSessionState);
+            pw.println("TimeShift state:" + timeshiftRecorderState);
+            pw.println("LiveTv    state:" + playerState);
+            pw.println("Semaphore state:" + getControllerSemaphore().availablePermits());
+            pw.println("Current:" + mTunedChannel);
+            if (mView != null) {
+                pw.println("OverlayView:" + mWinWidth + "x" + mWinHeight);
+            }
+            pw.println("Surface:" + mSurface);
+            if (mHbbTvManager != null) {
+                pw.println("HbbTv: enabled");
+            }
+            pw.decreaseIndent();
+        }
+
         @Override
-        public synchronized String toString() {
-            return "{ " + getClass().getSimpleName()
-                    + ", index=" + mCurrentDtvkitTvInputSessionIndex
-                    + ", id = " + Integer.toHexString(System.identityHashCode(this))
-                    + " }";
+        public String toString() {
+            return "[" + getClass().getSimpleName()
+                    + ", index=" + mCurrentSessionIndex
+                    + ", instance=0x" + Integer.toHexString(System.identityHashCode(this))
+                    + "]";
         }
     }
 

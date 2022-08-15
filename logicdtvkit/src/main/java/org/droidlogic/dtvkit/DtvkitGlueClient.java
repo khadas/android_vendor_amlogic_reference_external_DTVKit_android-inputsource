@@ -1,6 +1,5 @@
 package org.droidlogic.dtvkit;
 
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.RemoteException;
@@ -15,7 +14,6 @@ import org.json.JSONObject;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
@@ -29,10 +27,11 @@ public class DtvkitGlueClient {
     private static final int REQUEST_MESSAGE_TIMEOUT_LONG_MILLIS = 3000;
     private static final int REQUEST_MESSAGE_BOMB_MILLIS = 15000;
     private Handler mMainHandler = null;
-
     private static DtvkitGlueClient mSingleton = null;
-    private final CopyOnWriteArrayList<Pair<Integer, SignalHandler>> mHandlers = new CopyOnWriteArrayList<>();
-    // Notification object used to listen to the start of the rpcServer daemon.
+    private final CopyOnWriteArrayList<Pair<Integer, SignalHandler>> mSignalHandlers = new CopyOnWriteArrayList<>();
+    // debug used
+    private final CopyOnWriteArrayList<Pair<String, SignalHandler>> mSignalHandlerFrom = new CopyOnWriteArrayList<>();
+    // Notification object used to listen to the start of the rpcserver daemon.
     //private final ServiceNotification mServiceNotification = new ServiceNotification();
     //private static final int DTVKITSERVER_DEATH_COOKIE = 1000;
    // private IDTVKitServer mProxy = null;
@@ -122,8 +121,8 @@ public class DtvkitGlueClient {
             Log.e(TAG, e.getMessage());
             return;
         }
-        synchronized (mHandlers) {
-            for (Pair <Integer, SignalHandler> handler :mHandlers) {
+        synchronized (mSignalHandlers) {
+            for (Pair <Integer, SignalHandler> handler : mSignalHandlers) {
                 if (handler.first == id)
                     handler.second.onSignal(resource, object);
             }
@@ -267,10 +266,23 @@ public class DtvkitGlueClient {
         return mSingleton;
     }
 
+    /** @hide */
+    public ArrayList<String> getSignalHandlerInfo() {
+        ArrayList<String> info = new ArrayList<>();
+        for (Pair<String, SignalHandler> pair : mSignalHandlerFrom) {
+            info.add(pair.first);
+        }
+        return info;
+    }
+
     public void registerSignalHandler(SignalHandler handler, int id) {
-        Log.d(TAG, "registerSignalHandler");
-        mHandlers.removeIf(pair -> pair.second == handler);
-        mHandlers.add(new Pair<>(id, handler));
+        Log.d(TAG, "registerSignalHandler " + handler);
+        mSignalHandlers.removeIf(pair -> pair.second == handler);
+        mSignalHandlers.add(new Pair<>(id, handler));
+        // Debug
+        String stackTraceString = Log.getStackTraceString(new Throwable());
+        mSignalHandlerFrom.removeIf(pair -> pair.second == handler);
+        mSignalHandlerFrom.add(new Pair<>(stackTraceString, handler));
     }
 
     public void registerSignalHandler(SignalHandler handler) {
@@ -278,8 +290,9 @@ public class DtvkitGlueClient {
     }
 
     public void unregisterSignalHandler(SignalHandler handler) {
-        Log.d(TAG, "unregisterSignalHandler");
-        mHandlers.removeIf(pair -> pair.second == handler);
+        Log.d(TAG, "unregisterSignalHandler " + handler);
+        mSignalHandlers.removeIf(pair -> pair.second == handler);
+        mSignalHandlerFrom.removeIf(pair -> pair.second == handler);
     }
 
     public void setOverlayTarget(OverlayTarget target) {
