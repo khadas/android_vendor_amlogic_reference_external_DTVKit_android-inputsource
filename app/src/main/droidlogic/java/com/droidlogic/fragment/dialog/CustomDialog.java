@@ -1,5 +1,6 @@
 package com.droidlogic.fragment.dialog;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -25,9 +26,6 @@ import android.widget.Toast;
 import com.droidlogic.fragment.ItemAdapter.ItemDetail;
 import com.droidlogic.fragment.ParameterManager;
 //import com.droidlogic.fragment.R;
-import com.droidlogic.fragment.ScanMainActivity;
-import com.droidlogic.fragment.LnbWrap;
-import com.droidlogic.fragment.SatelliteWrap;
 
 import java.util.LinkedList;
 import java.util.Timer;
@@ -526,21 +524,25 @@ public class CustomDialog/* extends AlertDialog*/ {
         }
         final TimerTask task = new TimerTask() {
             public void run() {
-                ((ScanMainActivity)mContext).runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        int strength = mParameterManager.getStrengthStatus();
-                        int quality = mParameterManager.getQualityStatus();
-                        if (mStrengthProgressBar != null && mQualityProgressBar != null &&
-                                mStrengthTextView != null && mQualityTextView != null) {
-                            mStrengthProgressBar.setProgress(strength);
-                            mQualityProgressBar.setProgress(quality);
-                            mStrengthTextView.setText(strength + "%");
-                            mQualityTextView.setText(quality + "%");
-                            //Log.d(TAG, "run task get strength and quality");
+                if (mContext instanceof Activity) {
+                    ((Activity) mContext).runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            int strength = mParameterManager.getStrengthStatus();
+                            int quality = mParameterManager.getQualityStatus();
+                            if (mStrengthProgressBar != null && mQualityProgressBar != null &&
+                                    mStrengthTextView != null && mQualityTextView != null) {
+                                mStrengthProgressBar.setProgress(strength);
+                                mQualityProgressBar.setProgress(quality);
+                                mStrengthTextView.setText(strength + "%");
+                                mQualityTextView.setText(quality + "%");
+                                //Log.d(TAG, "run task get strength and quality");
+                            }
                         }
-                    }
-                });
+                    });
+                } else {
+                    Log.e(TAG, "Not Activity");
+                }
             }
         };
         final Timer timer = new Timer();
