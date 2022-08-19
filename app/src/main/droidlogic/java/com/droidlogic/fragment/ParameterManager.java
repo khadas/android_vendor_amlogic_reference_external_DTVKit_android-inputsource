@@ -540,6 +540,17 @@ public class ParameterManager {
         return resultObj;
     }
 
+    public void dvbsSelectServiceList(int id, String name) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(id);
+            args.put(name);
+            DtvkitGlueClient.getInstance().request("Dvbs.selectServicelist", args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public void storeDishPosition(int position) {
         try {
             JSONArray args1 = new JSONArray();

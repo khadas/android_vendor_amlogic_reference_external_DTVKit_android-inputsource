@@ -20,10 +20,9 @@ public abstract class SearchStageFragment extends Fragment {
     private static final String TAG = SearchStageFragment.class.getSimpleName();
     private String mTitle = "";
     private OnNextListener mListener;
-    private boolean canBackToPrevious = true;
+    private boolean canBackToPrevious = false;
     private ParameterManager mParameterManager;
     private DialogManager mDialogManager;
-    private boolean isM7Spec = false;
 
     public final static int ACTIVITY_LIFECYCLE_ON_START = 1;
     public final static int ACTIVITY_LIFECYCLE_ON_RESUME = 2;
@@ -52,14 +51,6 @@ public abstract class SearchStageFragment extends Fragment {
 
     public OnNextListener getListener() {
         return mListener;
-    }
-
-    public boolean isM7Spec() {
-        return isM7Spec;
-    }
-
-    public void setM7Spec(boolean m7Spec) {
-        isM7Spec = m7Spec;
     }
 
     public boolean handleKeyDown(int keyCode, KeyEvent event) {

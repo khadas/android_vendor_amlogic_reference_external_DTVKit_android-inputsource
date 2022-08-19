@@ -28,19 +28,20 @@ public class SatelliteWrap {
         mDtvkitGlueClient = glueClient;
     }
 
-    public List<Satellite> getSatelliteList() {
+    public List<Satellite> getSatelliteList(int operator) {
         List<Satellite> satelliteList =  new ArrayList<Satellite>();
         try {
-            JSONObject jsonObject = mDtvkitGlueClient.request("Dvbs.getSatellites", new JSONArray());
+            JSONArray array = new JSONArray();
+            array.put(operator);
+            array.put(new JSONArray());
+            JSONObject jsonObject = mDtvkitGlueClient.request("Dvbs.getSatellites", array);
             if (jsonObject != null) {
                 JSONArray sate_array = (JSONArray)(jsonObject.get("data"));
-                if (sate_array != null) {
-                    for (int i = 0; i < sate_array.length(); i ++) {
-                        JSONObject sate = (JSONObject)(sate_array.get(i));
-                        Satellite satellite = new Satellite();
-                        satellite.parseFromJson(sate);
-                        satelliteList.add(satellite);
-                    }
+                for (int i = 0; i < sate_array.length(); i ++) {
+                    JSONObject sate = (JSONObject)(sate_array.get(i));
+                    Satellite satellite = new Satellite();
+                    satellite.parseFromJson(sate);
+                    satelliteList.add(satellite);
                 }
             }
         } catch (Exception e) {
@@ -133,7 +134,7 @@ public class SatelliteWrap {
         }
     }
 
-    public void editSatellite(String old_name_edit, String new_name_edit, boolean isEast_edit, int position_edit) {
+    public void editSatellite(String old_name_edit, String new_name_edit, boolean isEast_edit, float position_edit) {
         Satellite sate = getSatelliteByName(old_name_edit);
         try {
             JSONArray array = new JSONArray();
@@ -216,6 +217,43 @@ public class SatelliteWrap {
             mDtvkitGlueClient.request("Dvbs.selectTransponder", array);
         } catch (Exception e) {
         }
+    }
+
+    public boolean autoDiSEqcRecognize() {
+        boolean ret = false;
+        try {
+            JSONArray array = new JSONArray();
+            mDtvkitGlueClient.request("Dvbs.autoDiseqcRecognize", array);
+            ret = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return ret;
+    }
+
+    public boolean autoDiseqcConfirm(boolean startScan) {
+        boolean ret = false;
+        try {
+            JSONArray array = new JSONArray();
+            array.put(startScan);
+            mDtvkitGlueClient.request("Dvbs.autoDiseqcConfirm", array);
+            ret = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return ret;
+    }
+
+    public boolean autoDiseqcStop() {
+        boolean ret = false;
+        try {
+            JSONArray array = new JSONArray();
+            mDtvkitGlueClient.request("dvbs.autoDiseqcStop", array);
+            ret = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return ret;
     }
 
     public class Transponder {

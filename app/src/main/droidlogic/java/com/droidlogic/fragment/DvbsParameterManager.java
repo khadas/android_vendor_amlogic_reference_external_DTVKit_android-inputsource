@@ -1,13 +1,8 @@
 package com.droidlogic.fragment;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import android.content.Context;
 import android.text.TextUtils;
@@ -42,8 +37,29 @@ public class DvbsParameterManager {
             "test_transponder", "lnb_type", "unicable", "high_lnb_voltage", "high_tone_22k",
             "tone_burst", "diseqc1.0", "diseqc2.0", "motor"};
 
+    private int mCurrentOperator = OPERATOR_DEFAULT;
+    // sync with DTVKit definition
+    public static final int OPERATOR_ASTRA_HD_PLUS = 0;
+    public static final int OPERATOR_SKY_D = 1;
+    public static final int OPERATOR_M7 = 2;
+    public static final int OPERATOR_DEFAULT = 0xFFFF;
+
+    public static final int CMD_OPERATOR_M7 = 0x01 << 16;
+    public static final int CMD_OPERATOR_ASTRA = 0x02 << 16;
+    public static final int CMD_OPERATOR_TKGS = 0x04 << 16;
+
+    public static final int CMD_ACTION_DISEQC_CONFIRM = 0x01;
+    public static final int CMD_ACTION_GET_OPERATOR = 0x02;
+    public static final int CMD_ACTION_GET_SUB_OPERATOR = 0x03;
+    public static final int CMD_ACTION_SET_OPERATOR = 0x04;
+    public static final int CMD_ACTION_SET_SUB_OPERATOR = 0x5;
+    public static final int CMD_ACTION_GET_REGION = 0x06;
+    public static final int CMD_ACTION_SET_REGION = 0x07;
+    public static final int CMD_ACTION_GET_SERVICE_LIST = 0x08;
+    public static final int CMD_ACTION_SET_SERVICE_LIST = 0x09;
+
     private DvbsParameterManager(Context context) {
-        this.mContext = context;
+        this.mContext = context.getApplicationContext();
         this.mDtvkitGlueClient = DtvkitGlueClient.getInstance();
         this.mSateWrap = new SatelliteWrap(mContext, mDtvkitGlueClient);
         this.mLnbWrap = new LnbWrap(mContext, mDtvkitGlueClient);
@@ -57,6 +73,11 @@ public class DvbsParameterManager {
             mInstance = new DvbsParameterManager(context);
         }
         return mInstance;
+    }
+
+    public void setCurrentOperator(int operator) {
+        mCurrentOperator = operator;
+        Log.i(TAG, "set operator :" + mCurrentOperator);
     }
 
     public SatelliteWrap getSatelliteWrap() {
@@ -78,7 +99,7 @@ public class DvbsParameterManager {
     }
 
     public LinkedList<ItemDetail> getSatelliteNameList() {
-        return getSatelliteNameList(mCurrentLnbId);
+        return getSatelliteNameList(mCurrentLnbId, OPERATOR_DEFAULT);
     }
 
     public List<String> getSatelliteNameListSelected() {
@@ -89,7 +110,7 @@ public class DvbsParameterManager {
         if (TextUtils.isEmpty(lnbId)) {
             return list;
         }
-        List<SatelliteWrap.Satellite> sateList = mSateWrap.getSatelliteList();
+        List<SatelliteWrap.Satellite> sateList = mSateWrap.getSatelliteList(mCurrentOperator);
         for (SatelliteWrap.Satellite sate: sateList) {
             if (sate.isBoundedLnb(lnbId)) {
                 list.add(sate.getName());
@@ -98,9 +119,9 @@ public class DvbsParameterManager {
         return list;
     }
 
-    public LinkedList<ItemDetail> getSatelliteNameList(String lnbKey) {
+    private LinkedList<ItemDetail> getSatelliteNameList(String lnbKey, int operator_code) {
         LinkedList<ItemDetail> list = new LinkedList<ItemDetail>();
-        List<SatelliteWrap.Satellite> sateList = mSateWrap.getSatelliteList();
+        List<SatelliteWrap.Satellite> sateList = mSateWrap.getSatelliteList(operator_code);
         for (SatelliteWrap.Satellite sate: sateList) {
             int type = ItemDetail.NOT_SELECT_EDIT;
             if (sate.isBoundedLnb(lnbKey))
@@ -430,7 +451,7 @@ public class DvbsParameterManager {
                 pos ++;
             }
         } else {
-            List<SatelliteWrap.Satellite> sateList = mSateWrap.getSatelliteList();
+            List<SatelliteWrap.Satellite> sateList = mSateWrap.getSatelliteList(mCurrentOperator);
             for (SatelliteWrap.Satellite sate: sateList) {
                 if (sate.getName().equals(mCurrentSatellite)) {
                     found = true;

@@ -12,7 +12,7 @@ import com.droidlogic.fragment.ParameterManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.dtvkit.inputsource.searchguide.OnMessageHandler;
 import com.droidlogic.fragment.dialog.DialogManager;
-
+import com.droidlogic.fragment.DvbsParameterManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -35,11 +35,13 @@ public class DataPresenter {
     public static final String FRAGMENT_SEARCH_UI = "Search UI";
     public static final String FRAGMENT_REGIONAL_CHANNELS = "Regional Channels";
 
+    public static final String FRAGMENT_SERVICE_LIST = "Service List";
+
     private final ParameterManager mParameterManager;
     private final DialogManager mDialogManager;
     private final HashMap<String, OnMessageHandler> mHandlers = new HashMap<>();
     private final Context mContext;
-    private boolean isM7;
+    private static int mOperateType = DvbsParameterManager.OPERATOR_DEFAULT;
 
     private final DtvkitGlueClient.SignalHandler mSignalHandler = (signal, data) -> {
         for (OnMessageHandler handler : mHandlers.values()) {
@@ -71,12 +73,24 @@ public class DataPresenter {
         mHandlers.remove(id);
     }
 
-    public boolean isM7() {
-        return isM7;
+    public static int getOperateType() {
+        return mOperateType;
     }
 
-    public void setM7(boolean m7) {
-        isM7 = m7;
+    public static void setOperateType(int operateType) {
+        mOperateType = operateType;
+    }
+
+    public static void setOperateType(String operateType) {
+        if (operateType.contains("Sky")) {
+            mOperateType = DvbsParameterManager.OPERATOR_SKY_D;
+        } else if (operateType.contains("HD+")) {
+            mOperateType = DvbsParameterManager.OPERATOR_ASTRA_HD_PLUS;
+        } else if (operateType.contains("M7")) {
+            mOperateType = DvbsParameterManager.OPERATOR_M7;
+        } else {
+            mOperateType = DvbsParameterManager.OPERATOR_DEFAULT;
+        }
     }
 
     void startMonitor() {

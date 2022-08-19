@@ -31,7 +31,6 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.widget.Toast;
-import android.content.ComponentName;
 
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 
@@ -68,6 +67,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
     private DialogManager mDialogManager = null;
     private boolean mStartTuneActionSuccessful = false;
     private boolean isTransponder = false;
+    private int mOperatorCode = DvbsParameterManager.OPERATOR_DEFAULT;
 
     private TimerTask task = new TimerTask() {
         public void run() {
@@ -147,9 +147,6 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         };
     }
 
-    /*public static ScanDishSetupFragment newInstance() {
-        return new ScanDishSetupFragment();
-    }*/
     public ScanDishSetupFragment() {
         Log.d(TAG, "ScanDishSetupFragment create");
     }
@@ -172,7 +169,10 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         mSatelliteQuickKey2 = (LinearLayout) rootView.findViewById(R.id.function_key2);
         creatFour1();
         creatFour2();
-
+        if (getArguments() != null) {
+            mOperatorCode = getArguments().getInt("operator_code", DvbsParameterManager.OPERATOR_DEFAULT);
+        }
+        mParameterManager.getDvbsParaManager().setCurrentOperator(mOperatorCode);
         mStrengthContainer = (LinearLayout) rootView.findViewById(R.id.strength_container);
         mQualityContainer = (LinearLayout) rootView.findViewById(R.id.quality_container);
         mStrengthProgressBar = (ProgressBar)rootView.findViewById(R.id.proBar_strength);
@@ -390,7 +390,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                 case ParameterManager.KEY_TRANSPONDER: {
                     int position = data.getInt("position");
                     if ("selected".equals(data.getString("action"))) {
-                        if (parameterKey == ParameterManager.KEY_SATELLITE) {
+                        if (parameterKey.equals(ParameterManager.KEY_SATELLITE)) {
                             List<String> sates = mParameterManager.getDvbsParaManager().getSatelliteNameListSelected();
                             String testSatellite = mParameterManager.getDvbsParaManager().getCurrentSatellite();
                             if (!testSatellite.equals(sates.get(position))) {
@@ -987,7 +987,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String new_name_edit = data.getString("value1");
                         boolean is_east_edit = data.getBoolean("value2", true);
-                        int position_edit = Integer.valueOf(data.getString("value3"));
+                        float position_edit = Float.parseFloat(data.getString("value3"));
                         String old_name_edit = data.getString("value4");
                         mParameterManager.getDvbsParaManager().getSatelliteWrap().editSatellite(old_name_edit, new_name_edit, is_east_edit, position_edit);
                         if (old_name_edit.equals(mParameterManager.getDvbsParaManager().getCurrentSatellite())) {
@@ -1007,7 +1007,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         String inputId = getActivity().getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
                         if (inputId != null) {
                             Log.d(TAG, "KEY_REMOVE_SATELLITE sync inputId = " + inputId);
-                            Intent intent = new Intent(getActivity(), com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+                            Intent intent = new Intent(getActivity(), DtvkitEpgSync.class);
                             intent.putExtra("inputId", inputId);
                             intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
                             getActivity().startService(intent);
@@ -1076,7 +1076,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         String inputId = getActivity().getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
                         if (inputId != null) {
                             Log.d(TAG, "KEY_REMOVE_TRANSPONDER sync inputId = " + inputId);
-                            Intent intent = new Intent(getActivity(), com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+                            Intent intent = new Intent(getActivity(), DtvkitEpgSync.class);
                             intent.putExtra("inputId", inputId);
                             intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
                             getActivity().startService(intent);

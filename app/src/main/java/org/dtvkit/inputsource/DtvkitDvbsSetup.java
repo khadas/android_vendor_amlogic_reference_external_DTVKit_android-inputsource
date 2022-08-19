@@ -20,9 +20,8 @@ import com.droidlogic.dtvkit.inputsource.searchguide.DtvkitDvbsSetupFragment;
 import com.droidlogic.dtvkit.inputsource.searchguide.OnNextListener;
 import com.droidlogic.dtvkit.inputsource.searchguide.SearchStageFragment;
 import com.droidlogic.dtvkit.inputsource.searchguide.SimpleListFragment;
-import com.droidlogic.fragment.ParameterManager;
+import com.droidlogic.fragment.DvbsParameterManager;
 import com.droidlogic.fragment.ScanDishSetupFragment;
-import com.droidlogic.fragment.dialog.DialogManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,13 +29,13 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class DtvkitDvbsSetup extends Activity {
     private static final String TAG = DtvkitDvbsSetup.class.getSimpleName();
     private SearchStageFragment fragment = null;
     private DataPresenter mDataPresenter = null;
-    private boolean isM7 = false;
     private boolean manualDiseqc = false;
     private final Handler mHandler = new Handler(Looper.getMainLooper()) {
         @Override
@@ -52,7 +51,6 @@ public class DtvkitDvbsSetup extends Activity {
         mDataPresenter = new DataPresenter(this);
         String tag = DataPresenter.FRAGMENT_SEARCH_UI;
         if (intent != null) {
-            isM7 = intent.getBooleanExtra("M7", false);
             manualDiseqc = intent.getBooleanExtra("manual", false);
             if (manualDiseqc) {
                 showFragment(DataPresenter.FRAGMENT_MANUAL_DISEQC);
@@ -80,12 +78,16 @@ public class DtvkitDvbsSetup extends Activity {
     }
 
     private void showFragment(String title) {
+        showFragment(title, null);
+    }
+
+    private void showFragment(String title, LinkedHashMap<String, List<String>> data) {
         Log.d(TAG, "showFragment " + title);
         switch (title) {
             case DataPresenter.FRAGMENT_OPERATOR_LIST:
             case DataPresenter.FRAGMENT_OPERATOR_SUB_LIST:
+            case DataPresenter.FRAGMENT_SERVICE_LIST:
                 fragment = SimpleListFragment.newInstance(title);
-                fragment.setCanBackToPrevious(false);
                 break;
             case DataPresenter.FRAGMENT_SEARCH_UI:
                 fragment = DtvkitDvbsSetupFragment.newInstance(title);
@@ -97,18 +99,22 @@ public class DtvkitDvbsSetup extends Activity {
                 break;
             case DataPresenter.FRAGMENT_MANUAL_DISEQC:
                 fragment = new ScanDishSetupFragment();
+                Bundle b = new Bundle();
+                b.putInt("operator_code", DataPresenter.getOperateType());
+                fragment.setArguments(b);
                 fragment.setTitle(title);
                 fragment.setParameterManager(mDataPresenter.getParameterManager());
                 fragment.setDialogManager(mDataPresenter.getDialogManager());
                 break;
             case DataPresenter.FRAGMENT_REGIONAL_CHANNELS:
                 fragment = SimpleListFragment.newInstance(title, true);
-                fragment.setCanBackToPrevious(false);
                 break;
             default:
                 return;
         }
-        fragment.setM7Spec(isM7);
+        if (fragment instanceof SimpleListFragment && data != null) {
+            ((SimpleListFragment) fragment).updateDataWithExtra(data);
+        }
         fragment.setListener(mOnNextListener);
         Log.d(TAG, "showFragment set params");
         mHandler.post(() -> {
@@ -156,7 +162,8 @@ public class DtvkitDvbsSetup extends Activity {
                 if (fragment instanceof SearchStageFragment && show) {
                     Log.i(TAG, "remove " + fragment + ", "
                             + getFragmentManager().popBackStackImmediate(
-                                    ((SearchStageFragment) fragment).getTitle(), FragmentManager.POP_BACK_STACK_INCLUSIVE));
+                                    ((SearchStageFragment) fragment).getTitle(),
+                            FragmentManager.POP_BACK_STACK_INCLUSIVE));
                 }
             }
         }
@@ -177,13 +184,43 @@ public class DtvkitDvbsSetup extends Activity {
             onNext(fragment, text, 0);
         }
 
+        public void onNext(Fragment fragment, String text, @Nullable JSONArray array) {
+            if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_ASTRA_HD_PLUS) {
+                String title = ((SearchStageFragment) fragment).getTitle();
+                if (fragment instanceof DtvkitDvbsSetupFragment) {
+                    if (TextUtils.equals(text, DataPresenter.FRAGMENT_SERVICE_LIST)) {
+                        if (array == null || array.length() == 0) {
+                            Log.w(TAG, " array is null");
+                        } else {
+                            LinkedHashMap<String, List<String>> result = new LinkedHashMap<>();
+                            try {
+                                for (int i = 0; i < array.length(); i++) {
+                                    String id = ((JSONObject) array.get(i)).getString("id");
+                                    String name = ((JSONObject) array.get(i)).getString("name");
+                                    List<String> idList = new ArrayList<>();
+                                    idList.add(id);
+                                    result.put(id + " " + name, idList);
+                                }
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            } finally {
+                                showFragment(text, result);
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+
         @Override
         public void onNext(Fragment fragment, String text, int pos) {
             Log.i(TAG, "from fragment:" + fragment + ", " + text);
             if (fragment instanceof ScanDishSetupFragment) {
-                if (isM7) {
+                if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_M7) {
                     JSONArray arg = new JSONArray();
-                    arg.put(0x00010001);
+                    arg.put(DvbsParameterManager.CMD_OPERATOR_M7
+                            + DvbsParameterManager.CMD_ACTION_DISEQC_CONFIRM);
                     mDataPresenter.getParameterManager().dvbsScanControl(arg);
                 }
                 showFragment(DataPresenter.FRAGMENT_SEARCH_UI);
@@ -203,51 +240,65 @@ public class DtvkitDvbsSetup extends Activity {
                     Log.e(TAG, "wrong text:" + text);
                 }
             } else if (fragment instanceof SearchStageFragment) {
-                if (!isM7) {
-                    Log.w(TAG, "not M7 search");
-                    return;
-                }
-                String title = ((SearchStageFragment) fragment).getTitle();
-                // item selected in a SearchStageFragment
-                if (TextUtils.equals(title, DataPresenter.FRAGMENT_OPERATOR_LIST)) {
-                    JSONArray arg = new JSONArray();
-                    arg.put(0x00010004);
-                    arg.put(text);
-                    mDataPresenter.getParameterManager().dvbsScanControl(arg);
-                    showFragment(DataPresenter.FRAGMENT_OPERATOR_SUB_LIST);
-                    return;
-                } else if (TextUtils.equals(title, DataPresenter.FRAGMENT_OPERATOR_SUB_LIST)) {
-                    JSONArray arg = new JSONArray();
-                    arg.put(0x00010005);
-                    arg.put(text);
-                    mDataPresenter.getParameterManager().dvbsScanControl(arg);
-                } else if (TextUtils.equals(title, DataPresenter.FRAGMENT_REGIONAL_CHANNELS)) {
-                    // text is a HashMap toString
-                    int length = text.length();
-                    String next = text.substring(1, length - 1); //remove '{', '}'
-                    String[] arr = next.split(",");
-                    if (arr.length > 0) {
-                        JSONArray out = new JSONArray();
-                        out.put(0x00010007);
-                        try {
-                            JSONArray in = new JSONArray();
-                            for (String value : arr) {
-                                JSONObject object = new JSONObject();
-                                String[] s = value.trim().split("=");
-                                object.put("RegionName", s[0]);
-                                object.put("SetRegion", s[1]);
-                                in.put(object);
+                if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_M7) {
+                    String title = ((SearchStageFragment) fragment).getTitle();
+                    // item selected in a SearchStageFragment
+                    if (TextUtils.equals(title, DataPresenter.FRAGMENT_OPERATOR_LIST)) {
+                        JSONArray arg = new JSONArray();
+                        arg.put(DvbsParameterManager.CMD_OPERATOR_M7
+                                + DvbsParameterManager.CMD_ACTION_SET_OPERATOR);
+                        arg.put(text);
+                        mDataPresenter.getParameterManager().dvbsScanControl(arg);
+                        showFragment(DataPresenter.FRAGMENT_OPERATOR_SUB_LIST);
+                        return;
+                    } else if (TextUtils.equals(title, DataPresenter.FRAGMENT_OPERATOR_SUB_LIST)) {
+                        JSONArray arg = new JSONArray();
+                        arg.put(DvbsParameterManager.CMD_OPERATOR_M7
+                                + DvbsParameterManager.CMD_ACTION_SET_SUB_OPERATOR);
+                        arg.put(text);
+                        mDataPresenter.getParameterManager().dvbsScanControl(arg);
+                    } else if (TextUtils.equals(title, DataPresenter.FRAGMENT_REGIONAL_CHANNELS)) {
+                        // text is a HashMap toString
+                        int length = text.length();
+                        String next = text.substring(1, length - 1); //remove '{', '}'
+                        String[] arr = next.split(",");
+                        if (arr.length > 0) {
+                            JSONArray out = new JSONArray();
+                            out.put(DvbsParameterManager.CMD_OPERATOR_M7
+                                    + DvbsParameterManager.CMD_ACTION_SET_REGION);
+                            try {
+                                JSONArray in = new JSONArray();
+                                for (String value : arr) {
+                                    JSONObject object = new JSONObject();
+                                    String[] s = value.trim().split("=");
+                                    object.put("RegionName", s[0]);
+                                    object.put("SetRegion", s[1]);
+                                    in.put(object);
+                                }
+                                out.put(in);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            } finally {
+                                Log.d(TAG, "target:" + out);
                             }
-                            out.put(in);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        } finally {
-                            Log.d(TAG, "target:" + out);
+                            mDataPresenter.getParameterManager().dvbsScanControl(out);
+                        } else {
+                            Log.e(TAG, "Error parse");
                         }
-                        mDataPresenter.getParameterManager().dvbsScanControl(out);
                     } else {
-                        Log.e(TAG, "Error parse");
+                        Log.e(TAG, "cannot handle it from:" + title);
                     }
+                } else if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_ASTRA_HD_PLUS) {
+                    List<String> list = ((SimpleListFragment) fragment).getExtraData(text);
+                    if (list == null) {
+                        Log.e(TAG, "getExtraData null");
+                        return;
+                    }
+                    String[] id_name = text.split(" ", 2);
+                    int id = Integer.parseInt(id_name[0]);
+                    mDataPresenter.getParameterManager().dvbsSelectServiceList(id, id_name[1]);
+                }  else if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_SKY_D) {
+
                 } else {
                     Log.e(TAG, "Error info: " + ((SearchStageFragment) fragment).getTitle());
                 }
@@ -267,9 +318,11 @@ public class DtvkitDvbsSetup extends Activity {
                     int pos = 0;
                     JSONArray arg = new JSONArray();
                     if (title.equals(DataPresenter.FRAGMENT_OPERATOR_LIST)) {
-                        arg.put(0x00010002);
+                        arg.put(DvbsParameterManager.CMD_OPERATOR_M7
+                                + DvbsParameterManager.CMD_ACTION_GET_OPERATOR);
                     } else {
-                        arg.put(0x00010003);
+                        arg.put(DvbsParameterManager.CMD_OPERATOR_M7
+                                + DvbsParameterManager.CMD_ACTION_GET_SUB_OPERATOR);
                     }
                     List<String> dataList = parseJsonObject(mDataPresenter.getParameterManager().dvbsScanControl(arg));
                     ((SimpleListFragment) fragment).updateData(dataList, pos);
@@ -307,7 +360,8 @@ public class DtvkitDvbsSetup extends Activity {
     private HashMap<String, List<String>> getRegionList() {
         HashMap<String, List<String>> result = new HashMap<>();
         JSONArray arg = new JSONArray();
-        arg.put(0x00010006);
+        arg.put(DvbsParameterManager.CMD_OPERATOR_M7
+                + DvbsParameterManager.CMD_ACTION_GET_REGION);
         JSONObject resultObj = mDataPresenter.getParameterManager().dvbsScanControl(arg);
         try {
             JSONArray data = (JSONArray) resultObj.get("data");

@@ -112,6 +112,11 @@ public class SimpleListFragment extends com.droidlogic.dtvkit.inputsource.search
     public void onStart() {
         super.onStart();
         mProgressBar.setVisibility(View.VISIBLE);
+        // data is reported in the message
+        if (mData != null && mData.size() > 0) {
+            updateData(mData, 0);
+            return;
+        }
         if (getListener() != null) {
             getListener().onFragmentReady(this);
         }
@@ -121,6 +126,16 @@ public class SimpleListFragment extends com.droidlogic.dtvkit.inputsource.search
     public void onStop() {
         super.onStop();
         mProgressBar.setVisibility(View.GONE);
+        if (mData != null) {
+            mData.clear();
+        }
+    }
+
+    public List<String> getExtraData(String key) {
+        if (mExtraData != null && mExtraData.size() > 0) {
+            return mExtraData.get(key);
+        }
+        return null;
     }
 
     public void updateDataWithExtra(HashMap<String, List<String>> data) {
@@ -128,9 +143,12 @@ public class SimpleListFragment extends com.droidlogic.dtvkit.inputsource.search
         mExtraData = data;
         mData = new ArrayList<>(data.keySet());
         if (mListAdapter != null) {
+            mListAdapter.clear();
             mListAdapter.addAll(0, mData);
         }
-        mProgressBar.setVisibility(View.GONE);
+        if (mProgressBar != null) {
+            mProgressBar.setVisibility(View.GONE);
+        }
     }
 
     public void updateData(List<String> data, int position) {
@@ -147,12 +165,15 @@ public class SimpleListFragment extends com.droidlogic.dtvkit.inputsource.search
             position = 0;
         }
         if (mListAdapter != null) {
+            mListAdapter.clear();
             mListAdapter.addAll(0, mData);
             mList.scrollToPosition(position);
         } else {
-            Log.e(TAG, "error:resource not ready");
+            Log.w(TAG, "warning:view not ready");
         }
-        mProgressBar.setVisibility(View.GONE);
+        if (mProgressBar != null) {
+            mProgressBar.setVisibility(View.GONE);
+        }
     }
 
     private class SpinPresenter extends Presenter {

@@ -9,10 +9,8 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.ContentResolver;
 import android.content.Intent;
-import android.media.tv.TvInputInfo;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
@@ -29,13 +27,14 @@ import com.droidlogic.dtvkit.inputsource.searchguide.SimpleListFragment;
 import com.droidlogic.dtvkit.inputsource.DataManager;
 import com.droidlogic.dtvkit.inputsource.PvrStatusConfirmManager;
 import com.droidlogic.dtvkit.inputsource.R;
+import com.droidlogic.fragment.DvbsParameterManager;
 import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.fragment.PasswordCheckUtil;
-import com.droidlogic.fragment.ScanDishSetupFragment;
 import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.settings.TimezoneSelect;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -51,12 +50,13 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         setContentView(R.layout.search_guide);
         mDataPresenter = new DataPresenter(this);
 //        mDataPresenter.startMonitor();
-
+        DataPresenter.setOperateType(DvbsParameterManager.OPERATOR_DEFAULT);
         Intent intent = getIntent();
         String searchType = null;
         if (intent != null) {
             searchType = intent.getStringExtra("search_type");
         }
+        Log.d(TAG, "search_type:" + searchType);
         if (searchType == null) {
             showNextFragment(DataPresenter.FRAGMENT_REGION);
         } else {
@@ -107,7 +107,6 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 return null;
         }
         fragment = SimpleListFragment.newInstance(title);
-        fragment.setCanBackToPrevious(false);
         fragment.setListener(this);
         return fragment;
     }
@@ -120,11 +119,9 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 fragment.setListener(this);
                 fragment.setParameterManager(mDataPresenter.getParameterManager());
                 fragment.setDialogManager(mDataPresenter.getDialogManager());
-                fragment.setCanBackToPrevious(false);
                 break;
             case DataPresenter.FRAGMENT_AUTO_DISEQC:
                 fragment = AutoDiseqc.newInstance(title, this);
-                fragment.setCanBackToPrevious(false);
                 break;
             default:
                 return null;
@@ -136,6 +133,10 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
     @Override
     public void onNext(Fragment fragment, String text) {
         onNext(fragment, text, 0);
+    }
+
+    public void onNext(Fragment fragment, String text, @Nullable JSONArray array) {
+        Log.w(TAG, "not used");
     }
 
     @Override
@@ -153,23 +154,31 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 // showNextFragment(DataPresenter.FRAGMENT_SOURCE_SELECTOR);
                 showNextFragment(DataPresenter.FRAGMENT_SPEC);
             } else if (fragment.getTag().equals(DataPresenter.FRAGMENT_SPEC)) {
-                boolean isM7 = text.contains("M7");
-                mDataPresenter.setM7(isM7);
-                mDataPresenter.getParameterManager().setOperatorType(ParameterManager.SIGNAL_QPSK, pos);
-                if (isM7) {
+                DataPresenter.setOperateType(text);
+                JSONArray operatorList = mDataPresenter.getParameterManager()
+                            .getOperatorsTypeList(ParameterManager.SIGNAL_QPSK);
+                try {
+                    JSONObject object = (JSONObject) operatorList.get(pos);
+                    if (object != null) {
+                        mDataPresenter.getParameterManager().setOperatorType(
+                                ParameterManager.SIGNAL_QPSK,
+                                object.optInt("operators_value",
+                                        DvbsParameterManager.OPERATOR_DEFAULT));
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_M7) {
                     showNextFragment(DataPresenter.FRAGMENT_AUTO_DISEQC);
                 } else {
                     startActivityForSource(ParameterManager.SIGNAL_QPSK, 0);
                 }
             } else if (fragment.getTag().equals(DataPresenter.FRAGMENT_SOURCE_SELECTOR)) {
                 int type = ParameterManager.dvbSourceToInt(DataPresenter.dvbSourceToChannelType(text, true));
-                Log.i(TAG, "setCurrentSource:" + type);
-                mDataPresenter.getParameterManager().setCurrentDvbSource(type);
                 if (type == ParameterManager.SIGNAL_QPSK && mDataPresenter.getParameterManager().checkIsGermanyCountry()) {
                     showNextFragment(DataPresenter.FRAGMENT_SPEC);
                     return;
                 }
-                mDataPresenter.setM7(false);
                 startActivityForSource(type, 0);
             }
         } else if (fragment instanceof AutoDiseqc) {
@@ -187,7 +196,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
     private void startActivityForSource(int currentDvbSource, int selector) {
         Intent intent = new Intent(getIntent());
         final String pvrStatus = intent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
-
+        Log.i(TAG, "setCurrentSource:" + currentDvbSource);
         mDataPresenter.getParameterManager().setCurrentDvbSource(currentDvbSource);
         int requestCode = 0;
         String className = null;
@@ -203,7 +212,6 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
             case ParameterManager.SIGNAL_QPSK:
                 className = DataManager.KEY_ACTIVITY_DVBS;
                 requestCode = REQUEST_CODE_START_DVBS_ACTIVITY;
-                intent.putExtra("M7", mDataPresenter.isM7());
                 intent.putExtra("manual", selector == 1);
                 break;
             case ParameterManager.SIGNAL_ISDBT:
@@ -274,7 +282,9 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
         List<String> dataList = new ArrayList<>();
         if (fragment instanceof SimpleListFragment) {
             int pos = mDataPresenter.getDataForFragment(fragment.getTag(), dataList);
-            ((SimpleListFragment) fragment).updateData(dataList, pos);
+            if (pos >= 0) {
+                ((SimpleListFragment) fragment).updateData(dataList, pos);
+            }
         }
     }
 
