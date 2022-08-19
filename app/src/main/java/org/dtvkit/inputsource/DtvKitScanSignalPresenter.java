@@ -222,15 +222,18 @@ public class DtvKitScanSignalPresenter {
         } else {
             index = mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
         }
-        List<String> list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), isDvbT, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
-
-        String channelInfo = (index < list.size()) ? list.get(index) : null;
+        JSONArray list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), isDvbT, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
+        JSONObject channelInfo = null;
+        try {
+            channelInfo = (index < list.length()) ? (JSONObject)(list.get(index)) : null;
+        } catch (Exception e) {
+        }
         if (channelInfo != null) {
-            String[] parameter = channelInfo.split(",");//first number, second string, third number
-            if (parameter != null && parameter.length == 3 && TextUtils.isDigitsOnly(parameter[0])) {
-                channelIndex = Integer.valueOf(parameter[0]);
-                Log.d(TAG, "getChannelIndex channel index = " + parameter[0] + ", name = " + parameter[1] + ", freq = " + parameter[2]);
-            }
+            channelIndex = channelInfo.optInt("index");
+            Log.d(TAG, "getChannelIndex channel index = " +channelIndex +
+                ", name = " + channelInfo.optString("name", "ch" +channelIndex) +
+                ", freq = " + channelInfo.optInt("freq", 0)/1000 + "kHz");
+
         }
         return channelIndex;
     }

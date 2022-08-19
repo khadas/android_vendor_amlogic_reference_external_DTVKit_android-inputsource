@@ -1579,16 +1579,16 @@ public class ParameterManager {
         return resultObj;
     }
 
-    public List<String> getChannelTable(int countryCode, boolean isDvbt, boolean isDvbt2) {
+    public JSONArray getChannelTable(int countryCode, boolean isDvbt, boolean isDvbt2) {
         int dtvType = isDvbt?DTV_TYPE_DVBT:DTV_TYPE_DVBC;
         return getRfChannelTable(countryCode, dtvType, isDvbt2);
     }
 
-    public List<String> getIsdbtChannelTable(int countryCode) {
+    public JSONArray getIsdbtChannelTable(int countryCode) {
         return getRfChannelTable(countryCode, DTV_TYPE_ISDBT, false);
     }
-    public List<String> getRfChannelTable(int countryCode, int dtvType, boolean isDvbt2) {
-        List<String> result = new ArrayList<String>();
+    public JSONArray getRfChannelTable(int countryCode, int dtvType, boolean isDvbt2) {
+        JSONArray result = new JSONArray();
         try {
             JSONObject resultObj = null;
             JSONArray args = new JSONArray();
@@ -1604,19 +1604,8 @@ public class ParameterManager {
                 resultObj = DtvkitGlueClient.getInstance().request("Isdbt.getIsdbRfChannelTable", args);
             }
 
-            JSONArray data = null;
             if (resultObj != null) {
-                data = (JSONArray)resultObj.get("data");
-                if (data == null || data.length() == 0) {
-                    return result;
-                }
-                for (int i = 0; i < data.length(); i++) {
-                    int index = (int)(((JSONObject)(data.get(i))).get("index"));
-                    String name = (String)(((JSONObject)(data.get(i))).get("name"));
-                    int frequency = (int)(((JSONObject)(data.get(i))).get("freq"));
-                    String collection = String.valueOf(index) + "," + name + "," + String.valueOf(frequency);
-                    result.add(collection);
-                }
+                result = (JSONArray)resultObj.get("data");
             } else {
                 Log.d(TAG, "getChannelTable then get null");
             }

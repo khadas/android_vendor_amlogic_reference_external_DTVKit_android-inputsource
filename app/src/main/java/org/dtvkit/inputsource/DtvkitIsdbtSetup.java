@@ -577,27 +577,36 @@ public class DtvkitIsdbtSetup extends Activity {
         LinearLayout public_search_channel_name_container = (LinearLayout)findViewById(R.id.public_search_channel_container);
         Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
 
-        List<String> list = null;
+        JSONArray list = null;
         List<String> newList = new ArrayList<String>();
         ArrayAdapter<String> adapter = null;
         int select = mDataManager.getIntParameters(DataManager.KEY_SEARCH_ISDBT_CHANNEL_NAME);
         int county_code_Brazil = ('b' << 16 | 'r' << 8 | 'a') & 0xFFFFFF;
         list = mParameterManager.getIsdbtChannelTable(county_code_Brazil);
-        for (String one : list) {
-            String[] parameter = one.split(",");//first number, second string, third number
-            if (parameter != null && parameter.length == 3) {
-                String result = "NO." + parameter[0] + "  " + parameter[1] + "  " + parameter[2] + "Hz";
-                newList.add(result);
-            }
-        }
-        if (list == null) {
+
+        if (list == null || list.length() == 0) {
             Log.d(TAG, "updateChannelNameContainer can't find channel freq table");
             return;
         }
+
+        try {
+            for (int i = 0; i < list.length(); i++) {
+                JSONObject channelTable = (JSONObject)list.get(i);
+                int freq = channelTable.optInt("freq", 0);
+                int channelNumber = channelTable.optInt("index", 0);
+                String name = channelTable.optString("name", "ch" + channelNumber);
+                StringBuilder builder =
+                    new StringBuilder("NO." + channelNumber + " " + name + " " + freq + "Hz");
+                newList.add(builder.toString());
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "got invalid channel freq table");
+        }
+
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, newList);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         public_search_channel_name_spinner.setAdapter(adapter);
-        select = (select < list.size()) ? select : 0;
+        select = (select < list.length()) ? select : 0;
         public_search_channel_name_spinner.setSelection(select);
     }
 
@@ -673,18 +682,25 @@ public class DtvkitIsdbtSetup extends Activity {
 
     private String getChannelIndex() {
         String result = null;
+        JSONArray list = null;
+        JSONObject channelInfo = null;
+
         int index = mIsDvbt ? mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME) :
                 mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
         int county_code_Brazil = ('b' << 16 | 'r' << 8 | 'a') & 0xFFFFFF;
-        List<String> list = mParameterManager.getIsdbtChannelTable(county_code_Brazil);
-        String channelInfo = (index < list.size()) ? list.get(index) : null;
-        if (channelInfo != null) {
-            String[] parameter = channelInfo.split(",");//first number, second string, third number
-            if (parameter != null && parameter.length == 3 && TextUtils.isDigitsOnly(parameter[0])) {
-                result = parameter[0];
-                Log.d(TAG, "getChannelIndex channel index = " + parameter[0] + ", name = " + parameter[1] + ", freq = " + parameter[2]);
-            }
+        list = mParameterManager.getIsdbtChannelTable(county_code_Brazil);
+
+        try {
+            channelInfo = (index < list.length()) ? (JSONObject)(list.get(index)) : null;
+        } catch (Exception e) {
         }
+        if (channelInfo != null) {
+            result = "" + channelInfo.optInt("index");
+            Log.d(TAG, "getChannelIndex channel index = " +result +
+                ", name = " + channelInfo.optString("name", "ch" +result) +
+                ", freq = " + channelInfo.optInt("freq", 0)/1000 + "kHz");
+        }
+
         return result;
     }
 

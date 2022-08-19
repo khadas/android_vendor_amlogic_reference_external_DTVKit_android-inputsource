@@ -89,6 +89,8 @@ public class DtvkitDvbtSetup extends Activity {
     private final static int MSG_START_BY_AUTOMATIC_MODE = 7;
 
     private long clickLastTime;
+    private JSONArray mChannelFreqTable = null;
+    private int isFrequencyMode = 0;
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -439,7 +441,7 @@ public class DtvkitDvbtSetup extends Activity {
         EditText dvbc_networkid_editText = (EditText) findViewById(R.id.dvbc_networkid_edit);
         EditText dvbc_frequency_editText = (EditText) findViewById(R.id.dvbc_frequency_edit);
 
-        int isFrequencyMode = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
+        isFrequencyMode = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
         if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
             public_type_in.setText(R.string.search_frequency);
             public_type_edit.setHint(R.string.search_frequency_hint);
@@ -510,22 +512,41 @@ public class DtvkitDvbtSetup extends Activity {
             frequency_channel_container.setVisibility(View.VISIBLE);
             frequency_channel_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY));
             if (mIsDvbt) {
-                dvbt_bandwidth_container.setVisibility(View.VISIBLE);
-                dvbt_mode_container.setVisibility(View.VISIBLE);
-                dvbt_type_container.setVisibility(View.VISIBLE);
                 dvbc_symbol_container.setVisibility(View.GONE);
                 dvbc_mode_container.setVisibility(View.GONE);
-                dvbt_bandwidth_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_BANDWIDTH));
-                dvbt_mode_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_MODE));
+                dvbt_bandwidth_container.setVisibility(View.VISIBLE);
+                dvbt_mode_container.setVisibility(View.VISIBLE);
                 dvbt_type_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE));
+                if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
+                    dvbt_type_container.setVisibility(View.VISIBLE);
+                    dvbt_bandwidth_spinner.setEnabled(true);
+                    dvbt_mode_spinner.setEnabled(true);
+                    dvbt_bandwidth_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_BANDWIDTH));
+                    dvbt_mode_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_MODE));
+                } else {
+                    dvbt_type_container.setVisibility(View.GONE);
+                    dvbt_bandwidth_spinner.setEnabled(false);
+                    dvbt_mode_spinner.setEnabled(false);
+                    dvbt_bandwidth_spinner.setSelection(getParamIndexFromChannelTable(
+                        public_search_channel_name_spinner.getSelectedItemPosition(), "bandWidth"));
+                    dvbt_mode_spinner.setSelection(getParamIndexFromChannelTable(
+                        public_search_channel_name_spinner.getSelectedItemPosition(), "mode"));
+                }
             } else {
                 dvbt_bandwidth_container.setVisibility(View.GONE);
                 dvbt_mode_container.setVisibility(View.GONE);
                 dvbt_type_container.setVisibility(View.GONE);
                 dvbc_symbol_container.setVisibility(View.VISIBLE);
                 dvbc_mode_container.setVisibility(View.VISIBLE);
-                dvbc_mode_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBC_MODE));
-                //dvbc_symbol_edit.setText(mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE) + "");
+                if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
+                    dvbc_mode_spinner.setEnabled(true);
+                    dvbc_mode_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBC_MODE));
+                    //dvbc_symbol_edit.setText(mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE) + "");
+                } else {
+                    dvbc_mode_spinner.setEnabled(false);
+                    dvbc_mode_spinner.setSelection(getParamIndexFromChannelTable(
+                        public_search_channel_name_spinner.getSelectedItemPosition(), "modulation"));
+                }
             }
             checkBoxLcn.setVisibility(View.GONE);
             dvbc_operator_container.setVisibility(View.GONE);
@@ -538,8 +559,10 @@ public class DtvkitDvbtSetup extends Activity {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "dvbt_bandwidth_spinner onItemSelected position = " + position);
-                    mDataManager.saveIntParameters(DataManager.KEY_DVBT_BANDWIDTH, position);
-                    trylockForScanParaChange();
+                    if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
+                        mDataManager.saveIntParameters(DataManager.KEY_DVBT_BANDWIDTH, position);
+                        trylockForScanParaChange();
+                    }
                 }
 
                 @Override
@@ -551,8 +574,10 @@ public class DtvkitDvbtSetup extends Activity {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "dvbt_mode_spinner onItemSelected position = " + position);
-                    mDataManager.saveIntParameters(DataManager.KEY_DVBT_MODE, position);
-                    trylockForScanParaChange();
+                    if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
+                        mDataManager.saveIntParameters(DataManager.KEY_DVBT_MODE, position);
+                        trylockForScanParaChange();
+                    }
                 }
 
                 @Override
@@ -582,8 +607,10 @@ public class DtvkitDvbtSetup extends Activity {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "dvbc_mode_spinner onItemSelected position = " + position);
-                    mDataManager.saveIntParameters(DataManager.KEY_DVBC_MODE, position);
-                    trylockForScanParaChange();
+                    if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
+                        mDataManager.saveIntParameters(DataManager.KEY_DVBC_MODE, position);
+                        trylockForScanParaChange();
+                    }
                 }
 
                 @Override
@@ -617,6 +644,7 @@ public class DtvkitDvbtSetup extends Activity {
                     }
                     Log.d(TAG, "frequency_channel_container onItemSelected position = " + position);
                     mDataManager.saveIntParameters(DataManager.KEY_IS_FREQUENCY, position);
+                    isFrequencyMode = position;
                     initOrUpdateView(false);
                 }
 
@@ -631,8 +659,12 @@ public class DtvkitDvbtSetup extends Activity {
                     Log.d(TAG, "public_search_channel_name_spinner onItemSelected position = " + position);
                     if (mIsDvbt) {
                         mDataManager.saveIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME, position);
+                        dvbt_bandwidth_spinner.setSelection(getParamIndexFromChannelTable(position, "bandWidth"));
+                        dvbt_mode_spinner.setSelection(getParamIndexFromChannelTable(position, "mode"));
                     } else {
                         mDataManager.saveIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME, position);
+                        dvbc_mode_spinner.setSelection(getParamIndexFromChannelTable(position, "modulation"));
+                        mDvbcSymAutoEdit.updateDefault(getParamIndexFromChannelTable(position, "symbol"));
                     }
                     trylockForScanParaChange();
                 }
@@ -753,7 +785,14 @@ public class DtvkitDvbtSetup extends Activity {
                     dvbc_operator_container.setVisibility(View.VISIBLE);
                 }
             } else {
-                mDvbcSymAutoEdit.updateDefault(mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE));
+                if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
+                    mDvbcSymAutoEdit.setEnabled(true);
+                    mDvbcSymAutoEdit.updateDefault(mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE));
+                } else {
+                    mDvbcSymAutoEdit.setEnabled(false);
+                    mDvbcSymAutoEdit.updateDefault(getParamIndexFromChannelTable(
+                        public_search_channel_name_spinner.getSelectedItemPosition(), "symbol"));
+                }
             }
         }
     }
@@ -843,27 +882,32 @@ public class DtvkitDvbtSetup extends Activity {
         LinearLayout public_search_channel_name_container = (LinearLayout)findViewById(R.id.public_search_channel_container);
         Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
 
-        List<String> list = null;
         List<String> newList = new ArrayList<String>();
         ArrayAdapter<String> adapter = null;
         int select = mIsDvbt ? mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME) :
                 mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
-        list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
-        for (String one : list) {
-            String[] parameter = one.split(",");//first number, second string, third number
-            if (parameter != null && parameter.length == 3) {
-                String result = "NO." + parameter[0] + "  " + parameter[1] + "  " + parameter[2] + "Hz";
-                newList.add(result);
-            }
-        }
-        if (list == null) {
+        mChannelFreqTable = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
+        if (mChannelFreqTable == null || mChannelFreqTable.length() == 0) {
             Log.d(TAG, "updateChannelNameContainer can't find channel freq table");
             return;
+        }
+        try {
+            for (int i = 0; i < mChannelFreqTable.length(); i++) {
+                JSONObject channelTable = (JSONObject)mChannelFreqTable.get(i);
+                int freq = channelTable.optInt("freq", 0);
+                int channelNumber = channelTable.optInt("index", 0);
+                String name = channelTable.optString("name", "ch" + channelNumber);
+                StringBuilder builder =
+                    new StringBuilder("NO." + channelNumber + " " + name + " " + freq + "Hz");
+                newList.add(builder.toString());
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "got invalid channel freq table");
         }
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, newList);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         public_search_channel_name_spinner.setAdapter(adapter);
-        select = (select < list.size()) ? select : 0;
+        select = (select < mChannelFreqTable.length()) ? select : 0;
         public_search_channel_name_spinner.setSelection(select);
     }
 
@@ -961,34 +1005,79 @@ public class DtvkitDvbtSetup extends Activity {
 
     private String getChannelIndex() {
         String result = null;
+        JSONObject channelInfo = null;
+
         int index = mIsDvbt ? mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME) :
                 mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
-        List<String> list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
-        String channelInfo = (index < list.size()) ? list.get(index) : null;
+        if (mChannelFreqTable == null) {
+            JSONArray list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
+        }
+
+        try {
+            channelInfo = (index < mChannelFreqTable.length()) ? (JSONObject)(mChannelFreqTable.get(index)) : null;
+        } catch (Exception e) {
+        }
         if (channelInfo != null) {
-            String[] parameter = channelInfo.split(",");//first number, second string, third number
-            if (parameter != null && parameter.length == 3 && TextUtils.isDigitsOnly(parameter[0])) {
-                result = parameter[0];
-                Log.d(TAG, "getChannelIndex channel index = " + parameter[0] + ", name = " + parameter[1] + ", freq = " + parameter[2]);
-            }
+            result = "" + channelInfo.optInt("index");
+            Log.d(TAG, "getChannelIndex channel index = " +result +
+                ", name = " + channelInfo.optString("name", "ch" +result) +
+                ", freq = " + channelInfo.optInt("freq", 0)/1000 + "kHz");
         }
         return result;
     }
 
     private String getFreqOfChannelId() {
         String result = null;
+        JSONObject channelInfo = null;
+
         int index = mIsDvbt ? mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME) :
                 mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
-        List<String> list = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
-        String channelInfo = (index < list.size()) ? list.get(index) : null;
+        if (mChannelFreqTable == null) {
+            mChannelFreqTable = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
+        }
+        try {
+            channelInfo = (index < mChannelFreqTable.length()) ? (JSONObject)(mChannelFreqTable.get(index)) : null;
+        } catch (Exception e) {
+        }
         if (channelInfo != null) {
-            String[] parameter = channelInfo.split(",");//first number, second string, third number
-            if (parameter != null && parameter.length == 3 && TextUtils.isDigitsOnly(parameter[2])) {
-                result = parameter[2];
-                Log.d(TAG, "getChannelIndex channel index = " + parameter[0] + ", name = " + parameter[1] + ", freq = " + parameter[2]);
-            }
+            result = "" + channelInfo.optInt("freq");
+            Log.d(TAG, "getFreqOfChannelId freq = " +result +
+                ", name = " + channelInfo.optString("name", "ch" +result) +
+                ", freq = " + channelInfo.optInt("freq", 0)/1000 + "kHz");
         }
         return result;
+    }
+
+    private int getParamIndexFromChannelTable(int channelIndex, String param) {
+        JSONObject channelTable = null;
+        int index = 0;
+
+        if (mChannelFreqTable == null) {
+            mChannelFreqTable = mParameterManager.getChannelTable(mParameterManager.getCurrentCountryCode(), mIsDvbt, mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == 1);
+        }
+
+        if (mChannelFreqTable == null || mChannelFreqTable.length() == 0 || channelIndex >= mChannelFreqTable.length()) {
+            Log.d(TAG, "getParamIndexFroChannelTable can't find channel freq table");
+            return index;
+        }
+        try {
+            channelTable = (JSONObject)mChannelFreqTable.get(channelIndex);
+            if ("bandWidth".equalsIgnoreCase(param)) {
+                String bandWidth = channelTable.optString("bandWidth", "");
+                index = bandWidthStrToInt(bandWidth);
+            } else if ("mode".equalsIgnoreCase(param)) {
+                String transmission = channelTable.optString("mode", "");
+                index = transmissionStrToInt(transmission);
+            } else if ("modulation".equalsIgnoreCase(param)) {
+                String modulation = channelTable.optString("modulation", "");
+                index = modulationStrToInt(modulation);
+            } else if ("symbol".equalsIgnoreCase(param)) {
+                index = channelTable.optInt("symbol", 0);
+            }
+        } catch (Exception e){
+        }
+
+        return index;
     }
 
     private void sendStartSearch() {
@@ -1753,6 +1842,62 @@ public class DtvkitDvbtSetup extends Activity {
         }
     }
 
+    private int bandWidthStrToInt(String bandWidthStr) {
+        int ret = 3;
+
+        if ("5MHZ".equalsIgnoreCase(bandWidthStr)) {
+            ret = 0;
+        } else if ("6MHZ".equalsIgnoreCase(bandWidthStr)) {
+            ret = 1;
+        } else if ("7MHZ".equalsIgnoreCase(bandWidthStr)) {
+            ret = 2;
+        } else if ("8MHZ".equalsIgnoreCase(bandWidthStr)) {
+            ret = 3;
+        } else if ("10MHZ".equalsIgnoreCase(bandWidthStr)) {
+            ret = 4;
+        }
+
+        return ret;
+    }
+
+    private int transmissionStrToInt(String transmission) {
+        int ret = 3;
+
+        if ("1K".equalsIgnoreCase(transmission)) {
+            ret = 0;
+        } else if ("2K".equalsIgnoreCase(transmission)) {
+            ret = 1;
+        } else if ("4K".equalsIgnoreCase(transmission)) {
+            ret = 2;
+        } else if ("8K".equalsIgnoreCase(transmission)) {
+            ret = 3;
+        } else if ("16K".equalsIgnoreCase(transmission)) {
+            ret = 4;
+        } else if ("16K".equalsIgnoreCase(transmission)) {
+            ret = 5;
+        }
+
+        return ret;
+    }
+
+    private int modulationStrToInt(String modulation) {
+        int ret = 5;//default auto
+
+        if ("QAM16".equalsIgnoreCase(modulation)) {
+            ret = 0;
+        } else if ("QAM32".equalsIgnoreCase(modulation)) {
+            ret = 1;
+        } else if ("QAM64".equalsIgnoreCase(modulation)) {
+            ret = 2;
+        } else if ("QAM128".equalsIgnoreCase(modulation)) {
+            ret = 3;
+        } else if ("QAM256".equalsIgnoreCase(modulation)) {
+            ret = 4;
+        }
+
+        return ret;
+    }
+
     private boolean isPipOrFccEnable(){
         if (PropSettingManager.getBoolean(PropSettingManager.ENABLE_FULL_PIP_FCC_ARCHITECTURE, false)) {
             if (PropSettingManager.getBoolean(PropSettingManager.ENABLE_PIP_SUPPORT, false) || PropSettingManager.getBoolean(PropSettingManager.ENABLE_FCC_SUPPORT, false)) {
@@ -1905,6 +2050,10 @@ public class DtvkitDvbtSetup extends Activity {
                 ret = mDefault;
             }
             return ret;
+        }
+
+        public void setEnabled(boolean enable) {
+            mEditText.setEnabled(enable);
         }
     }
 }
