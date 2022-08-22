@@ -2,7 +2,7 @@
 package com.droidlogic.dtvkit;
 
 // Declare any non-default types here with import statements
-import com.droidlogic.dtvkit.IMGRCallbackListener;
+import com.droidlogic.dtvkit.IDtvKitCallbackListener;
 
 interface IDtvkitSetting {
     /**
@@ -65,11 +65,15 @@ interface IDtvkitSetting {
 
     void renameRecord(String name, String uri);
 
+    void acquireWakeLock();
+
+    void releaseWakeLock();
+
     String request(String resource, String arguments);
 
-    void registerListener(IMGRCallbackListener listener);
+    void registerListener(IDtvKitCallbackListener listener);
 
-    void unregisterListener(IMGRCallbackListener listener);
+    void unregisterListener(IDtvKitCallbackListener listener);
 
     void updateChannelList();
 

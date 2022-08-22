@@ -27,8 +27,8 @@ import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.settings.SysSettingManager;
 import com.amlogic.hbbtv.HbbTvUISetting;
-import com.droidlogic.dtvkit.IMGRCallbackListener;
 import com.droidlogic.dtvkit.inputsource.DtvKitScheduleManager;
+import com.droidlogic.dtvkit.IDtvKitCallbackListener;
 
 import java.io.File;
 import java.util.List;
@@ -74,7 +74,7 @@ public class DtvkitSettingService extends Service {
         }
     };
 
-    private RemoteCallbackList<IMGRCallbackListener> mListenerList = new RemoteCallbackList<>();
+    private RemoteCallbackList<IDtvKitCallbackListener> mListenerList = new RemoteCallbackList<>();
 
     private Handler mHandler = new Handler() {
         @Override
@@ -211,12 +211,12 @@ public class DtvkitSettingService extends Service {
         }
 
         @Override
-        public void registerListener(IMGRCallbackListener listener) throws RemoteException {
+        public void registerListener(IDtvKitCallbackListener listener) throws RemoteException {
             mListenerList.register(listener);
         }
 
         @Override
-        public void unregisterListener(IMGRCallbackListener listener) throws RemoteException {
+        public void unregisterListener(IDtvKitCallbackListener listener) throws RemoteException {
             mListenerList.unregister(listener);
         }
 
@@ -293,6 +293,16 @@ public class DtvkitSettingService extends Service {
         @Override
         public void renameRecord(String name, String uri) throws RemoteException {
             mParameterManager.renameRecord(name, uri);
+        }
+
+        @Override
+        public void acquireWakeLock() throws RemoteException {
+            mParameterManager.acquireWakeLock();
+        }
+
+        @Override
+        public void releaseWakeLock() throws RemoteException {
+            mParameterManager.releaseWakeLock();
         }
 
         @Override

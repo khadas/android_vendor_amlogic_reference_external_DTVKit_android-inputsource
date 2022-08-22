@@ -1,6 +1,6 @@
-//IMGRCallbackListener.aidl
+//IDtvKitCallbackListener.aidl
 package com.droidlogic.dtvkit;
 
-interface IMGRCallbackListener{
+interface IDtvKitCallbackListener{
     void onRespond(String msg, String signal, String data);
 }

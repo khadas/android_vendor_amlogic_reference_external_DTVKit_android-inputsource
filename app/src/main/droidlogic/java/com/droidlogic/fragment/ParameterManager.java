@@ -2958,4 +2958,24 @@ public class ParameterManager {
     private void setSubtitlesEnabled(boolean enabled) {
         playerSetSubtitlesOn(enabled, 0);
     }
+
+    public void acquireWakeLock() {
+        JSONArray array = new JSONArray();
+        try {
+            array.put("timerTask");
+            DtvkitGlueClient.getInstance().request("Dvb.acquireWakeLock", array);
+        } catch (Exception e) {
+            Log.i(TAG,"acquireWakeLock fail");
+        }
+    }
+
+    public void releaseWakeLock() {
+        JSONArray array = new JSONArray();
+        try {
+            array.put("timerTask");
+            DtvkitGlueClient.getInstance().request("Dvb.releaseWakeLock", array);
+        } catch (Exception e) {
+            Log.i(TAG,"releaseWakeLock fail");
+        }
+    }
 }
