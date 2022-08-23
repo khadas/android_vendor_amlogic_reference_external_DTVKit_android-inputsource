@@ -510,6 +510,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     sendEmptyMessageToInputThreadHandler(MSG_STOP_MONITOR_SYNCING);
                     if (mainSession != null) {
                         mainSession.sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
+                        if (!TextUtils.isEmpty(mDynamicDbSyncTag)) {
+                            mainSession.sendMsgTsUpdate(mDynamicDbSyncTag);
+                            mDynamicDbSyncTag = "";
+                        }
                     }
                 } else if (TextUtils.equals("CiplusUpdateService", from)) {
                     sendEmptyMessageToInputThreadHandler(MSG_STOP_MONITOR_SYNCING);
@@ -4515,6 +4519,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     startService(intent);
                 } else if (signal.equals("DvbUpdatedChannel")) {
                     Log.i(TAG, "DvbUpdatedChannel");
+                    try {
+                        mDynamicDbSyncTag = data.getString("uri");
+                    } catch (JSONException ignore) {
+                    }
+                    Log.d(TAG, "new Uri:"+ mDynamicDbSyncTag);
                     checkAndUpdateLcn();
                     int dvbSource = getCurrentDvbSource();
                     EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
@@ -4850,6 +4859,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_SELECT_TRACK = 16;
         protected static final int MSG_DO_RELEASE_SPECIFIED_SESSION = 17;
         protected static final int MSG_TRY_STOP_TIMESHIFT = 18;
+        protected static final int MSG_TS_UPDATE = 19;
 
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
@@ -5037,6 +5047,26 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         updateEvent.putString(ConstantManager.CI_PLUS_COMMAND,
                                 ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED);
                         sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, updateEvent);
+                        break;
+                    case MSG_TS_UPDATE:
+                        String newUri = (String)msg.obj;
+                        Log.d(TAG, "MSG_TS_UPDATE, uri:"+ newUri);
+                        Uri retuneUri;
+                        long id = 0;
+                        Channel channel = getChannelWithDvbUri(newUri);
+                        boolean found = false;
+                        if (channel != null) {
+                            found = true;
+                            id = channel.getId();
+                            Log.d(TAG, "id = "+ id);
+                        }
+                        if (found)
+                        {
+                           retuneUri = Uri.parse("content://android.media.tv/channel");
+                           retuneUri = ContentUris.withAppendedId(retuneUri,id);
+                           Log.i(TAG, "retune to " + retuneUri);
+                           notifyChannelRetuned(retuneUri);
+                        }
                         break;
                     default:
                         Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
@@ -5288,7 +5318,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             session.mView.clearCasView();
                         }
                         break;
-
                     default:
                         Log.d(session.TAG, "MainHandler default");
                         break;
@@ -5613,6 +5642,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_TRY_STOP_TIMESHIFT);
                 mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_TRY_STOP_TIMESHIFT, delay);
+            }
+        }
+
+        public void sendMsgTsUpdate(String uri) {
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.removeMessages(MSG_TS_UPDATE);
+                Message msg = mHandlerThreadHandle.obtainMessage(MSG_TS_UPDATE, uri);
+                mHandlerThreadHandle.sendMessage(msg);
             }
         }
 
