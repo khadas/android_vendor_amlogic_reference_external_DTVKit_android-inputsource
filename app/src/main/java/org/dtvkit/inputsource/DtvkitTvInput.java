@@ -5701,8 +5701,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else {
                     if ("DscState".equals(type)) {
                         int state = casEvent.optInt("DscState", 0);
+                        int pathType = casEvent.optInt("pathType", 0);
                         int scrambledMsg = state + MSG_SHOW_BLOCKED_TEXT;
-                        if (mMainHandle != null) {
+                        if (pathType == 0 && mMainHandle != null) {
                             mMainHandle.sendEmptyMessage(scrambledMsg);
                         }
                     }
