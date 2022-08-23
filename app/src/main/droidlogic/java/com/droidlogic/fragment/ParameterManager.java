@@ -822,7 +822,7 @@ public class ParameterManager {
         JSONObject resultObj = null;
         try {
             JSONArray args1 = new JSONArray();
-            resultObj = DtvkitGlueClient.getInstance().request("Dvb.getCountrys", args1);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.getCountries", args1);
             if (resultObj != null) {
                 Log.d(TAG, "getCountries resultObj:" + resultObj.toString());
             } else {
@@ -1763,25 +1763,25 @@ public class ParameterManager {
         return result;
     }
 
-    public JSONObject setNetworkPreferedOfRegion(int networkId) {
+    public JSONObject setNetworkPreferredOfRegion(int networkId) {
         JSONObject resultObj = null;
         if (networkId == -1) {
-            Log.d(TAG, "setNetworkPreferedOfRegion invalid networkId");
+            Log.d(TAG, "setNetworkPreferredOfRegion invalid networkId");
             return resultObj;
         } else {
-            Log.d(TAG, "setNetworkPreferedOfRegion networkId = " + networkId);
+            Log.d(TAG, "setNetworkPreferredOfRegion networkId = " + networkId);
         }
         try {
             JSONArray args = new JSONArray();
             args.put(networkId);
-            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setNetworkPreferedOfRegion", args);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setNetworkPreferredOfRegion", args);
             if (resultObj != null) {
-                Log.d(TAG, "setNetworkPreferedOfRegion resultObj:" + resultObj.toString());
+                Log.d(TAG, "setNetworkPreferredOfRegion resultObj:" + resultObj.toString());
             } else {
-                Log.d(TAG, "setNetworkPreferedOfRegion then get null");
+                Log.d(TAG, "setNetworkPreferredOfRegion then get null");
             }
         } catch (Exception e) {
-            Log.d(TAG, "setNetworkPreferedOfRegion Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            Log.d(TAG, "setNetworkPreferredOfRegion Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
         return resultObj;
@@ -2513,7 +2513,7 @@ public class ParameterManager {
         boolean result = false;
         String defaultCountry = "deu"; //todo: not defined in trunk, so use German here
         try {
-            result = DtvkitGlueClient.getInstance().request("Dvb.resetoreDefault", new JSONArray()).getBoolean("data");
+            result = DtvkitGlueClient.getInstance().request("Dvb.restoreDefault", new JSONArray()).getBoolean("data");
             if (result) {
                 JSONArray args = new JSONArray();
                 args.put(ConstantManager.DTVKIT_SATELLITE_DATA);

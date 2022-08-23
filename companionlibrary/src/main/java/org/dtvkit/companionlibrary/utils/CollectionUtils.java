@@ -25,8 +25,7 @@ public class CollectionUtils {
     /**
      * Returns an array with the arrays concatenated together.
      *
-     * @see <a href="http://stackoverflow.com/a/784842/1122089">Stackoverflow answer</a> by
-     *      <a href="http://stackoverflow.com/users/40342/joachim-sauer">Joachim Sauer</a>
+     * @see <a href="http://stackoverflow.com/a/784842/1122089">Stackoverflow answer</a>
      */
     public static <T> T[] concatAll(T[] first, T[]... rest) {
         int totalLength = first.length;

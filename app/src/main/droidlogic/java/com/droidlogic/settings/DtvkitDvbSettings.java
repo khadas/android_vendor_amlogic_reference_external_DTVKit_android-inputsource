@@ -894,7 +894,7 @@ public class DtvkitDvbSettings extends Activity {
                     return;
                 }
                 Log.d(TAG, "showNetworkInfoConfirmDialog onItemClick position = " + position);
-                mParameterManager.setNetworkPreferedOfRegion(mParameterManager.getNetworkId(networkArray, position));
+                mParameterManager.setNetworkPreferredOfRegion(mParameterManager.getNetworkId(networkArray, position));
                 //updatingGuide();
                 needSyncChannels = true;
                 alert.dismiss();

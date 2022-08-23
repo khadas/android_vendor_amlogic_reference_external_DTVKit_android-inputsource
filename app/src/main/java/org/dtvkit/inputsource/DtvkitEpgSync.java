@@ -493,7 +493,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                     return new String[]{TvContract.Programs.Genres.ENTERTAINMENT};
                 case "sport":
                     return new String[]{TvContract.Programs.Genres.SPORTS};
-                case "childrens":
+                case "children's":
                     return new String[]{TvContract.Programs.Genres.FAMILY_KIDS};
                 case "music":
                     if (mIsUK) {

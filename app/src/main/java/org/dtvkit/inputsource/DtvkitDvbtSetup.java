@@ -804,7 +804,7 @@ public class DtvkitDvbtSetup extends Activity {
             if (operator != null) {
                 int networkID = operator.optInt("Networkid", 0);
                 int symbolRate = operator.optInt("SymbolRate", 0);
-                int freq = operator.optInt("Freqency", 0);
+                int freq = operator.optInt("Frequency", 0);
                 freq = freq / 1000;
                 updateDvbcOperator(networkID, symbolRate, freq);
             } else {
@@ -1607,7 +1607,7 @@ public class DtvkitDvbtSetup extends Activity {
                     @Override
                     public void run() {
                         Log.d(TAG, "showNetworkInfoConfirmDialog onItemClick position = " + position);
-                        mParameterManager.setNetworkPreferedOfRegion(mParameterManager.getNetworkId(networkArray, position));
+                        mParameterManager.setNetworkPreferredOfRegion(mParameterManager.getNetworkId(networkArray, position));
                         //ui need to be updated in main handler
                         runOnUiThread(new Runnable() {
                             @Override
