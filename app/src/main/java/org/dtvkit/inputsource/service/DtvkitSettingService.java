@@ -91,15 +91,15 @@ public class DtvkitSettingService extends Service {
             } else {
                 message = (String)(msg.obj);
             }
+            int count = mListenerList.beginBroadcast();
             try{
-                int count = mListenerList.beginBroadcast();
                 for (int i = 0; i < count; i++) {
                     mListenerList.getBroadcastItem(i).onRespond(message, signal, data);
                 }
-                mListenerList.finishBroadcast();
             } catch (RemoteException e){
                 e.printStackTrace();
             }
+            mListenerList.finishBroadcast();
         }
     };
 
