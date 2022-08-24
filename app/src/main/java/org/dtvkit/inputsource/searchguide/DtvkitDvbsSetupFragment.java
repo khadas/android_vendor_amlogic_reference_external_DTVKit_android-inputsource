@@ -38,6 +38,7 @@ import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.inputsource.DataManager;
 import com.droidlogic.dtvkit.inputsource.DtvkitDvbScanSelect;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
+import com.droidlogic.dtvkit.inputsource.DtvkitRequest;
 import com.droidlogic.dtvkit.inputsource.PvrStatusConfirmManager;
 import com.droidlogic.dtvkit.inputsource.R;
 import com.droidlogic.fragment.DvbsParameterManager;
@@ -97,7 +98,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             if (signal.equals("DvbsStatusChanged")) {
                 int progress = getSearchProcess(data);
                 Log.d(TAG, "onSignal progress = " + progress);
-                if (mThreadHandler != null) {
+                if (mThreadHandler != null && (progress % 10 == 0)) {
                     mThreadHandler.removeMessages(MSG_ON_SIGNAL);
                     Message msg = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, progress, 0, null);
                     boolean info = mThreadHandler.sendMessageDelayed(msg, 0);
@@ -411,18 +412,44 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         return false;
     }
 
-    private void updateSearchUi(boolean stop, boolean progressBarUi, String reason) {
-        if (getActivity() != null) {
-            updateSearchButton(stop);
-            enableSetupButton(stop);
-            setSearchStatus(reason);
-            setStrengthAndQualityStatus("", "");
-            setProgressBar(progressBarUi);
+    private void updateSearchUi(final boolean stop, final boolean progressBarUi, final String reason) {
+        if (getActivity() == null) {
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            updateSearchUiDirectly(stop, progressBarUi, reason);
+        });
+
+    }
+
+    private void updateSearchUiDirectly(boolean stop, boolean progressBarUi, String reason) {
+        if (mSearch != null) {
+            mSearch.setText(stop ? R.string.strStartSearch : R.string.strStopSearch);
+        }
+        if (mSetup != null) {
+            mSetup.setEnabled(stop);
+        }
+        Log.i(TAG, String.format("Search status \"%s\"", reason));
+        if (mSearchStatus != null) {
+            mSearchStatus.setText(String.format("%s\t%s", reason, ""));
+        }
+        if (mChannelHolder != null) {
+            mChannelHolder.setVisibility(View.GONE);
+        }
+        if (mChannelInfo != null) {
+            mChannelInfo.setText("" + "\t\t" + "" + "\t\t" + "");
+        }
+        if (mSearchProgress != null) {
+            mSearchProgress.setIndeterminate(progressBarUi);
         }
     }
 
     private void dealOnSignal(int progress) {
         Log.d(TAG, "onSignal progress = " + progress);
+        if (!mStartSearch) {
+            Log.d(TAG, "onSignal but search is finished.");
+            return;
+        }
         int found = getFoundServiceNumberOnSearch();
         setSearchProgress(progress);
         int strengthStatus = mParameterManager.getStrengthStatus();
@@ -435,22 +462,20 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     }
 
     private void sendFinishSearch(boolean sync) {
-        String ret = "true";
         mStartSearch = false;
         stopMonitoringSearch();
-        try {
-            JSONArray args = new JSONArray();
-            args.put(true); // Commit
-            DtvkitGlueClient.getInstance().request("Dvbs.finishSearch", args);
-        } catch (Exception e) {
-            ret = e.getMessage();
-        } finally {
-            if (sync && mThreadHandler != null) {
-                mThreadHandler.removeMessages(MSG_FINISH_SEARCH);
-                Message mess = mThreadHandler.obtainMessage(MSG_FINISH_SEARCH, 0, 0, ret);
-                mThreadHandler.sendMessageDelayed(mess, 1000);
+        JSONArray args = new JSONArray();
+        args.put(true);
+
+        DtvkitRequest.getInstance().request(mThreadHandler, "Dvbs.finishSearch", args,
+            (result)->{
+                Log.d(TAG, "sendFinishSearch over");
+                if (sync) {
+                    updateSearchUi(true, true, "Finishing search");
+                    onSearchFinished();
+                }
             }
-        }
+        );
     }
 
     private void setSearchProgress(final int progress) {
@@ -678,19 +703,28 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             Log.w(TAG, "Search is going on");
             return;
         }
-        try {
-            JSONArray args = initSearchParameter();
-            if (args != null) {
-                Log.i(TAG, "search parameter:" + args.toString());
-                //DtvkitGlueClient.getInstance().request("Dvbs.startSearch", args);
-                //prevent ui not fresh on time
-                doSearchByThread(args);
-            } else {
-                updateSearchUi(true, false, getString(R.string.invalid_parameter));
+        mStartSearch = true;
+        DtvkitRequest.getInstance().request(mThreadHandler, ()->{
+            try {
+                JSONArray args = initSearchParameter();
+                if (args != null) {
+                    Log.i(TAG, "search parameter:" + args.toString());
+                    startMonitoringSearch();
+                    mSearchDvbsType = DtvkitDvbScanSelect.SEARCH_TYPE_DVBS;
+                    DtvkitGlueClient.getInstance().request("Dvbs.startSearchEx", args);
+                    DataProviderManager.putBooleanValue(getActivity(), ConstantManager.KEY_IS_SEARCHING, true);
+                    mFoundServiceNumber = 0;
+                    mServiceList = null;
+                    mParameterManager.saveChannelIdForSource(-1);
+                } else {
+                    updateSearchUi(true, false, getString(R.string.invalid_parameter));
+                }
+            } catch (Exception e) {
+                updateSearchUi(true, false, e.getMessage());
+                stopMonitoringSearch();
             }
-        } catch (Exception e) {
-            updateSearchUi(true, false, e.getMessage());
-        }
+        }, null);
+
     }
 
     private void doSearchByThread(final JSONArray args) {
