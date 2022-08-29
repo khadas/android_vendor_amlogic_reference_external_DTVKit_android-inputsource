@@ -3472,7 +3472,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (playerIsTeletextOn()) {
                     boolean setTeleOff = playerSetTeletextOn(false, -1);//close if opened
                     Log.d(TAG, "selectSubtitleOrTeletext off setTeleOff = " + setTeleOff);
-                    reloadHbbTvApplication();
+                    //reloadHbbTvApplication();
                     if (mSubFlagTtxPage) {
                         Log.d(TAG, "selectSubtitleOrTeletext ttx page exit, restart ttx sub");
                         playerSetSubtitlesOn(true);
@@ -3513,7 +3513,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (!playerIsTeletextOn()) {
                         boolean setTeleOn = playerSetTeletextOn(true, Integer.parseInt(indexId));
                         Log.d(TAG, "selectSubtitleOrTeletext start setTeleOn = " + setTeleOn);
-                        closeHbbtvTeleTextApplication();
+                        //closeHbbtvTeleTextApplication();
                     } else {
                         boolean startTele = false;
                         if ((getSubtitleFlag() & SUBTITLE_CTL_HK_TTX_PAG) == SUBTITLE_CTL_HK_TTX_PAG) {
@@ -4094,7 +4094,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (playerIsTeletextOn()) {
                         playerStopTeletext();
                         notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
+                        reloadHbbTvApplication();
                     } else {
+                        closeHbbtvTeleTextApplication();
                         playerStartTeletext(-1);
                         if (playerIsTeletextStarted()) {
                             notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, playerGetSelectedTeleTextTrackId());
