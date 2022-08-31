@@ -184,7 +184,13 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         mListViewOption = (ItemListView) rootView.findViewById(R.id.lv_option);
         mListSatellites = (ItemListView) rootView.findViewById(R.id.lv_item2);
         mItemDetailItem.addAll(mParameterManager.getDvbsParaManager().getLnbNameList());
-        String dPosition = mParameterManager.getDvbsParaManager().getLnbIdList().get(0).getFirstText();
+
+        String dPosition = "";
+        LinkedList<ItemDetail> mLnbIdList = mParameterManager.getDvbsParaManager().getLnbIdList();
+        if (!mLnbIdList.isEmpty()) {
+            dPosition = mLnbIdList.get(0).getFirstText();
+        }
+
         mParameterManager.getDvbsParaManager().setCurrentLnbId(dPosition);
         mItemDetailSatellites.addAll(mParameterManager.getDvbsParaManager().getSatelliteNameList());
         mItemAdapterItem = new ItemAdapter(mItemDetailItem, getActivity());
