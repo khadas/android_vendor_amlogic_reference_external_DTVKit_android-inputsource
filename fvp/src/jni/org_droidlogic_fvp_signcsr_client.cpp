@@ -30,6 +30,7 @@ extern "C" {
 #include "org_droidlogic_fvp_signcsr_client.h"
 
 #define SIGNED_CSR_LEN     4096
+#define SIGNED_DATA_LEN     512
 #define TA_CMD_RSA_SIGN_TEST   0xFFFF9005
 #define TA_FVP_UUID { 0x5f440c5c, 0x87cc, 0x4e97, { 0x96, 0x32, 0x74, 0xe4, 0x0a, 0x19, 0x4a, 0x1f } }
 
@@ -56,14 +57,14 @@ static jbyteArray signCSR(JNIEnv *env, jobject thiz, jbyteArray jCsr, jbyteArray
     //1.init context
     res = TEEC_InitializeContext(NULL, &ctx);
     if (res != TEEC_SUCCESS) {
-        ALOGD("TEEC_InitializeContext ret 0x%X\n", res);
+        ALOGE("TEEC_InitializeContext ret 0x%X\n", res);
         return NULL;
     }
 
     //2.open TA session
     res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
     if (res != TEEC_SUCCESS) {
-        ALOGD("TEEC_Opensession ret 0x%X origin 0x%X\n",res, err_origin);
+        ALOGE("TEEC_Opensession ret 0x%X origin 0x%X\n",res, err_origin);
         TEEC_FinalizeContext(&ctx);
         return NULL;
     }
@@ -74,7 +75,8 @@ static jbyteArray signCSR(JNIEnv *env, jobject thiz, jbyteArray jCsr, jbyteArray
 
     signed_csr = (char*)malloc(SIGNED_CSR_LEN);
     if (signed_csr == NULL) {
-        ALOGD("signCSR malloc error");
+        ALOGE("signCSR malloc error");
+        TEEC_CloseSession(&sess);
         TEEC_FinalizeContext(&ctx);
         return NULL;
     }
@@ -100,15 +102,19 @@ static jbyteArray signCSR(JNIEnv *env, jobject thiz, jbyteArray jCsr, jbyteArray
 
     //4.command
     res = TEEC_InvokeCommand(&sess, TA_CMD_RSA_SIGN_TEST, &op, &err_origin);
-    if (res != TEEC_SUCCESS) {
-        ALOGD("sign csr failed , res = 0x%x\r\n", res);
+    if (res != TEEC_SUCCESS || op.params[2].tmpref.size != SIGNED_DATA_LEN) {
+        ALOGE("sign csr failed , res = 0x%x,size=%d\r\n", res, op.params[2].tmpref.size);
+        free(signed_csr);
+        TEEC_CloseSession(&sess);
+        TEEC_FinalizeContext(&ctx);
+        return NULL;
     }
 
-    array = env->NewByteArray(sizeof(signed_csr));
+    array = env->NewByteArray(op.params[2].tmpref.size);
     if (array != NULL) {
-        env->SetByteArrayRegion(array, 0, sizeof(signed_csr), (const jbyte*)signed_csr);
+        env->SetByteArrayRegion(array, 0, op.params[2].tmpref.size, (const jbyte*)signed_csr);
     }
-    ALOGD("signed_csr_len = %d", sizeof(signed_csr));
+    ALOGD("signed_csr_len = %d", op.params[2].tmpref.size);
 
     //5.release resource
     TEEC_CloseSession(&sess);

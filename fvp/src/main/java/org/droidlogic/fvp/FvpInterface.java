@@ -17,12 +17,16 @@ import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
+import android.content.res.Resources;
+import java.io.InputStream;
 
 public class FvpInterface {
 
     private static final String TAG = "FvpInterface";
     private static final String PkgAllowName = "com.vewd.core.fvpsign";
+    private static final String PkgAllowNameForTrunk = "uk.co.freeview.signaidl";
     private static final String CONTENT_URI = "content://com.amazon.fvp.provider/mdsIntermediateCertificate";
+    private static int mLocalPublicKeyId = -1;
     private Context mContext;
 
     private native byte[] native_signCSR(byte[] csr, byte[] intermediatePublicKey);
@@ -32,6 +36,11 @@ public class FvpInterface {
 
     public FvpInterface() {
         Log.d(TAG,"FvpInterface init");
+    }
+
+    public FvpInterface(int publicKeyResourceId) {
+        Log.d(TAG,"FvpInterface init,publicKeyResourceId=" + publicKeyResourceId);
+        mLocalPublicKeyId = publicKeyResourceId;
     }
 
      /**
@@ -44,16 +53,20 @@ public class FvpInterface {
 
         // Check whether caller is allowed to call signCSR
         if (isCallerAllowed(context)) {
-
+            byte[] intermediatePublicKey = null;
             // Retrieve Intermediate CA public key
-            byte[] intermediatePublicKey = retrievePublicKey(context);
+            if (mLocalPublicKeyId == -1)
+                intermediatePublicKey = retrievePublicKey(context);
+            else
+                intermediatePublicKey = retrievePublicKeyFromLocal(context, mLocalPublicKeyId);
             //byte[] intermediatePublicKey = new byte[1];
             // Use Trusty API to sign the CSR in Trusted Application
             byte[] signedCSR = signCSRTee(csr, intermediatePublicKey);
 
-            // Create certificate chain and return
-            return createCertificateChain(signedCSR, intermediatePublicKey);
-
+            if (mLocalPublicKeyId == -1)// Create certificate chain and return
+                return createCertificateChain(signedCSR, intermediatePublicKey);
+            else
+                return signedCSR;
         }
 
         // Return null if any issues
@@ -74,7 +87,7 @@ public class FvpInterface {
 
         mContext = context;
         String packageName = mContext.getPackageName();
-        if (packageName.equals(PkgAllowName)) {
+        if (packageName.equals(PkgAllowName) || packageName.equals(PkgAllowNameForTrunk)) {
             return true;
         }
 
@@ -131,6 +144,31 @@ public class FvpInterface {
     }
 
     /**
+     * Calls the FVP Certificate public key with local resource
+     *
+     * @param context   Android Context
+     * @param id   local resource id of public key
+     * @return  FVP Intermediate CA public key on success; Return null if failed
+     */
+    private byte[] retrievePublicKeyFromLocal(Context context, int id) {
+        byte[] PublicKey = null;
+
+        try {
+            InputStream input = context.getResources().openRawResource(id);
+            PublicKey = new byte[input.available()];
+            input.read(PublicKey);
+            input.close();
+        } catch (Resources.NotFoundException e) {
+            Log.e(TAG, "Resources.NotFoundException: " + e.getMessage());
+        } catch (IOException e) {
+            Log.e(TAG, "File read Exception: " + e.getMessage());
+        }
+
+        Log.d(TAG, "PublicKey: " + Arrays.toString(PublicKey));
+        return PublicKey;
+    }
+
+    /**
      * Calls SoC Trusted Application in Trusted Execution Environment (TEE) using Trusty API to
      * sign a given {@code csr} using the given {@code intermediatePublicKey} and Intermediate CA
      * private key stored in TEE.
@@ -145,10 +183,10 @@ public class FvpInterface {
      * @return  Signed Certificate Signing Request on success
      */
     private byte[] signCSRTee(byte[] csr, byte[] intermediatePublicKey) {
-        Log.e(TAG,"Csr size = " + csr.length + ",PublicKey size = " + intermediatePublicKey.length);
+        Log.d(TAG,"Csr size = " + csr.length + ",PublicKey size = " + intermediatePublicKey.length);
         byte[] signedCSR = native_signCSR(csr, intermediatePublicKey);
         if (signedCSR != null && signedCSR.length >0) {
-            Log.e(TAG, "native_signCSR success");
+            Log.d(TAG, "native_signCSR success");
             printCSRData(signedCSR);
             return signedCSR;
         } else {

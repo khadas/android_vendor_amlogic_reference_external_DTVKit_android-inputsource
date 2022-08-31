@@ -8,6 +8,7 @@ LOCAL_SRC_FILES := $(call all-subdir-java-files)
 LOCAL_DX_FLAGS := --core-library
 LOCAL_DEX_PREOPT := false
 LOCAL_VENDOR_MODULE := true
+LOCAL_MODULE_CLASS := JAVA_LIBRARIES
 include $(BUILD_JAVA_LIBRARY)
 
 
