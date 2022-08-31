@@ -303,7 +303,7 @@ public class CiMenuView extends LinearLayout {
                     final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.ll_ci_MMI_Items);
                     final LayoutInflater inflater = LayoutInflater.from(mContext);
                     final TextView textView = (TextView)inflater.inflate(R.layout.mmi_button, null);
-                    textView.setLayoutParams(new LinearLayout.LayoutParams(findViewById(R.id.textViewMenuTitle).getWidth(), 40));
+                    textView.setLayoutParams(new LinearLayout.LayoutParams(1050, 40));
                     textView.setText(itemText);
                     textView.setId(buttonNum);
 
@@ -704,7 +704,6 @@ public class CiMenuView extends LinearLayout {
             @Override
             public void run() {
                 Log.i(TAG, "Entered print received signal with text: " + sigText);
-                text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
                 text.setText(sigText);
             }
         });

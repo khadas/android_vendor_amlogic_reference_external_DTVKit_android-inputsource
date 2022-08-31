@@ -1923,4 +1923,6 @@
     <dimen name="px_1919.0">959.5dp</dimen>
     <dimen name="px_1920.0">960dp</dimen>
 
+    <dimen name="text_size_px_28">14sp</dimen>
+    <dimen name="text_size_px_32">16sp</dimen>
 </resources>

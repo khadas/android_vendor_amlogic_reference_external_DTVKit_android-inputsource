@@ -10,9 +10,10 @@
     android:fontFamily="@string/option_item_secondary_text_font"
     android:gravity="center_vertical"
     android:minHeight="48dp"
+    android:minWidth="@dimen/px_1050.0"
     android:paddingStart="32dp"
     android:singleLine="true"
     android:textColor="@color/ci_menu_title_color"
-    android:textSize="16sp"
+    android:textSize="@dimen/text_size_px_28"
     tools:text="123" />
 

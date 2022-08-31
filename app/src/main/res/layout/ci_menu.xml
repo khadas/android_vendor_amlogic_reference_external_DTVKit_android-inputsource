@@ -24,7 +24,7 @@
             android:fontFamily="@string/condensed_font"
             android:paddingStart="32dp"
             android:textColor="@color/ci_menu_title_color"
-            android:textSize="36sp"
+            android:textSize="@dimen/text_size_px_32"
             tools:text="CI Card" />
 
         <TextView
@@ -37,7 +37,7 @@
             android:layout_marginBottom="5dp"
             android:singleLine="true"
             android:textColor="@color/ci_menu_title_color"
-            android:textSize="20sp"
+            android:textSize="@dimen/text_size_px_28"
             tools:text="CI Card"
             android:visibility="gone"/>
 
@@ -85,7 +85,7 @@
             android:layout_marginBottom="10dp"
             android:singleLine="true"
             android:textColor="@color/ci_menu_footer_color"
-            android:textSize="20sp"
+            android:textSize="@dimen/text_size_px_28"
             tools:text="Bottom" />
     </LinearLayout>
 
