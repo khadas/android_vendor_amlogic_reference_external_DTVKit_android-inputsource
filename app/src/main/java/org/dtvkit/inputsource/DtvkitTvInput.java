@@ -84,6 +84,8 @@ import com.droidlogic.dtvkit.companionlibrary.model.Program;
 import com.droidlogic.dtvkit.companionlibrary.model.RecordedProgram;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
+import com.droidlogic.dtvkit.inputsource.parental.ContentRatingSystem;
+import com.droidlogic.dtvkit.inputsource.parental.ContentRatingsManager;
 import com.droidlogic.dtvkit.inputsource.util.FeatureUtil;
 import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.settings.ConstantManager;
@@ -191,6 +193,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private ContentResolver mContentResolver;
     private TvInputManager mTvInputManager;
+    private ContentRatingsManager mContentRatingsManager;
     protected String mInputId;
 
     private enum SessionState {
@@ -643,6 +646,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mHandlerThread.start();
         initInputThreadHandler();
         mTvInputManager = (TvInputManager) this.getSystemService(Context.TV_INPUT_SERVICE);
+        mContentRatingsManager = new ContentRatingsManager(getApplicationContext(), mTvInputManager);
         mContentResolver = getContentResolver();
         mAlarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
 
@@ -738,6 +742,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 PERIOD_CHECK_TV_PROVIDER_DELAY);
                     } else {
                         Log.i(TAG, "initInputThreadHandler，initDtvkitTvInput");
+                        mContentRatingsManager.update();
                         initDtvkitTvInput(true);
                     }
                     break;
@@ -7629,20 +7634,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private int getCurrentMinAgeByBlockedRatings() {
         List<TvContentRating> ratingList = mTvInputManager.getBlockedRatings();
-        String rating_system;
-        String parent_control_rating;
         int min_age = 0xFF;
         for (int i = 0; i < ratingList.size(); i++) {
-            parent_control_rating = ratingList.get(i).getMainRating();
-            rating_system = ratingList.get(i).getRatingSystem();
-            if (rating_system.equals("DVB")) {
-                String[] ageArray = parent_control_rating.split("_", 2);
-                if (ageArray[0].equals("DVB")) {
-                    int age_temp = Integer.valueOf(ageArray[1]);
-                    min_age = Math.min(min_age, age_temp);
-                }
+            ContentRatingSystem.Rating rating = mContentRatingsManager.getRating(ratingList.get(i));
+            if (rating == null) {
+                continue;
+            }
+            if (rating.getAgeHint() > 0) {
+                min_age = Math.min(min_age, rating.getAgeHint());
             }
         }
+        Log.d(TAG, "min_age Rating::" + min_age);
         return min_age;
     }
 

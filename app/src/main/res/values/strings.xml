@@ -133,6 +133,7 @@
     <string name="tertiary_region">Tertiary Region</string>
     <string name="no_sub_regions">No sub-regions</string>
     <string name="target_region_country">Country</string>
+    <string name="other_countries">Other Countries</string>
 
     <!-- other scan strings-->
     <string name="strOperator">Operator</string>
