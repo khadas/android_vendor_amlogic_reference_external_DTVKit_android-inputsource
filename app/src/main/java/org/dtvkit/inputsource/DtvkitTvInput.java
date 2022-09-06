@@ -1321,7 +1321,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "showText:" + text);
 
                 mText.setText(text);
-                if (mText.getVisibility() != View.VISIBLE) {
+                if (!TextUtils.isEmpty(text) && mText.getVisibility() != View.VISIBLE) {
                     mText.setVisibility(View.VISIBLE);
                 }
                 //display black background
@@ -4320,6 +4320,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 msg.arg1 = 0;
                                 mMainHandle.sendMessageDelayed(msg, 0);
                             }
+                            playerSetSubtitlesOn(false);
                             playerState = PlayerState.BLOCKED;
                             notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", Rating));
                             break;
@@ -4406,6 +4407,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         case "scambled":
                             Log.i(TAG, "** scrambled **");
                             playerState = PlayerState.SCRAMBLED;
+                            if (mMainHandle != null) {
+                                mMainHandle.sendEmptyMessage(MSG_SHOW_BLOCKED_TEXT);
+                            } else {
+                                Log.d(TAG, "mMainHandle is null");
+                            }
                             notifySessionEvent("signal_scrambled_service", null);
                             break;
                         case "not_running":
