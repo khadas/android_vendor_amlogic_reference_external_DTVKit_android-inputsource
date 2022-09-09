@@ -5881,7 +5881,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             int dvbSource = getCurrentDvbSource();
             String signalType = dvbSourceToChannelTypeString(dvbSource);
             String signalSelection = createQuerySelection(dvbSource);
-            boolean isOpEnv = isInOpProfileEnv();
             try {
                 if (uri != null) {
                     cursor = outService.getContentResolver().query(uri, Channel.PROJECTION, signalSelection, null, null);
@@ -5892,15 +5891,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 while (cursor.moveToNext()) {
                     Channel nextChannel = Channel.fromCursor(cursor);
                     if (nextChannel != null && nextChannel.getType().contains(signalType)) {
-                        String profileName =
-                            TvContractUtils.getStringFromChannelInternalProviderData(nextChannel, Channel.KEY_CHANNEL_PROFILE, null);
-                        String profileVersion =
-                            TvContractUtils.getStringFromChannelInternalProviderData(nextChannel, Channel.KEY_CHANNEL_CI_PROFILE_VERSION, null);
-                        boolean isOpChannel = !TextUtils.isEmpty(profileName) && ("v1".equalsIgnoreCase(profileVersion) || "v2".equalsIgnoreCase(profileVersion));
-                        if (isOpChannel == isOpEnv) {
-                            channel = nextChannel;
-                            break;
-                        }
+                        channel = nextChannel;
+                        break;
                     }
                 }
             } catch (Exception ignored) {
