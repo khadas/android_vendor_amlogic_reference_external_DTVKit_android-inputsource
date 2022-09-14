@@ -2097,8 +2097,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         private void doStopRecording() {
-            Log.i(TAG, "doStopRecording");
             mRecordingSession = null;
+            Log.i(TAG, "doStopRecording Started:" + mRecordingStarted);
+
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
             //update record status firstly to get accurate duration time
             if (mRecordingProcessHandler != null) {
@@ -2125,6 +2126,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             endRecordSystemTimeMillis = SystemClock.uptimeMillis();
             Log.d(TAG, "updateRecordingToDb:" + recordingUri);
             if (recordingUri == null) {
+                // startRecording failed, so do Release
+                if (mRecordingProcessHandler != null) {
+                    mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
+                    mRecordingProcessHandler.removeMessages(MSG_RECORD_ON_STOP);
+                    mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_ON_STOP);
+                }
                 return;
             }
 
@@ -2245,7 +2252,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (mRecordingProcessHandler != null)
                         mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
                 } else {
-                    Log.d(TAG, "updateRecordingToDb notify stop mRecordedProgramUri = " + mRecordedProgramUri + " index = " + mCurrentRecordIndex);
+                    Log.d(TAG, "updateRecordingToDb notify stop mRecordedProgramUri = " + mRecordedProgramUri
+                        + " mRecordingStarted = " + mRecordingStarted
+                        + " index = " + mCurrentRecordIndex);
                     notifyRecordingStopped(mRecordedProgramUri);
                     if (mRecordStopAndSaveReceived || mRecordingStarted) {
                         if (mRecordingProcessHandler != null) {
@@ -2544,6 +2553,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (!recordingIsRecordingPathActive(data, mPath)) {
                     Log.d(TAG, "RecordingStatusChanged, stopped[path:" + mPath + "]");
                     stopRecording(false);
+                    if (mRecordingStarted) {
+                        doStopRecording();
+                    }
                 } else if (checkActiveRecordings(recordingGetActiveRecordings(data),
                         /*check the record_av_only rule*/
                         new Predicate<JSONObject>() {
