@@ -69,6 +69,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     private int mSearchDvbsType = -1;
     private PvrStatusConfirmManager mPvrStatusConfirmManager = null;
     private ParameterManager mParameterManager;
+    private DvbsParameterManager mDvbsParameterManager;
 
     protected HandlerThread mHandlerThread = null;
     protected Handler mThreadHandler = null;
@@ -168,6 +169,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         mDataManager = new DataManager(getActivity().getApplicationContext());
         mPvrStatusConfirmManager = new PvrStatusConfirmManager(getActivity().getApplicationContext(), mDataManager);
         mParameterManager = new ParameterManager(getActivity().getApplicationContext(), DtvkitGlueClient.getInstance());
+        mDvbsParameterManager = DvbsParameterManager.getInstance(getActivity().getApplicationContext());
     }
 
     @Override
@@ -378,8 +380,10 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        mStartSearch = false;
         releaseHandler();
         stopMonitoringSync();
+
     }
 
     private void initHandler() {
@@ -503,8 +507,11 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             return;
         }
         getActivity().runOnUiThread(() -> {
-            final ProgressBar bar = (ProgressBar) getActivity().findViewById(R.id.proBar_search_progress);
-            bar.setProgress(progress);
+            if (mSearchProgress != null && getActivity() != null && mStartSearch) {
+                final ProgressBar bar = mSearchProgress;
+                bar.setProgress(progress);
+            }
+
         });
     }
 
@@ -699,15 +706,14 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             args.put(mDataManager.getIntParameters(DataManager.KEY_DVBS_NIT) == 1);//arg2
         }
         // handle lnb list
-        List<String> lnbList = DvbsParameterManager.getInstance(getActivity()).getLnbWrap().getLnbIdList();
+        List<String> lnbList = mDvbsParameterManager.getLnbWrap().getLnbIdList();
         JSONObject lnbArgs = new JSONObject();
         JSONArray lnbArgs_array = new JSONArray();
         Log.i(TAG, "initSearchParameter lnbList = " + lnbList);
         try {
             for (String id : lnbList) {
                 JSONObject obj = new JSONObject();
-                if (DvbsParameterManager.getInstance(getActivity())
-                        .getSatelliteNameListSelected(id).size() > 0) {
+                if (mDvbsParameterManager.getSatelliteNameListSelected(id).size() > 0) {
                     obj.put("lnb", id);
                     lnbArgs_array.put(obj);
                 }

@@ -160,10 +160,10 @@ public class DtvkitDvbsSetup extends Activity {
             } else {
                 // do not need any other fragments
                 if (fragment instanceof SearchStageFragment && show) {
-                    Log.i(TAG, "remove " + fragment + ", "
-                            + getFragmentManager().popBackStackImmediate(
-                                    ((SearchStageFragment) fragment).getTitle(),
-                            FragmentManager.POP_BACK_STACK_INCLUSIVE));
+
+                    Log.i(TAG, "remove " + fragment );
+                    getFragmentManager().popBackStack(
+                                    ((SearchStageFragment) fragment).getTitle(), FragmentManager.POP_BACK_STACK_INCLUSIVE);
                 }
             }
         }
