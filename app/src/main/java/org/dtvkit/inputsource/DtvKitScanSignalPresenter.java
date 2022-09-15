@@ -31,8 +31,9 @@ public class DtvKitScanSignalPresenter {
     private static final int MSG_NUMBER_TRY_LOCK = 3;
     private static final int MSG_DVBC_SYMBOL_TRY_LOCK = 4;
     private static final int MSG_DELAY_TIME = 2000;//ms
+    private static final int MSG_TRY_LOCK_DELAY_TIME = 300;//ms
     private static final int INVALID_CHANNEL_INDEX = 0xFFFFFFFF;
-    private static final int INVALID_FREQUENCE = 10 * 1000 * 1000; //10M
+    private static final int DEFAULT_FREQUENCE = 40 * 1000 * 1000; //10M
 
     private ParameterManager mParameterManager = null;
     private DataManager mDataManager = null;
@@ -91,7 +92,7 @@ public class DtvKitScanSignalPresenter {
             Message msg = mSignalCheckHandler.obtainMessage(MSG_DVBC_SYMBOL_TRY_LOCK);
             msg.arg1 = getDvbcSymbol(symbol);
             msg.arg2 = getInputFreq(freq);
-            mSignalCheckHandler.sendMessageDelayed(msg, MSG_DELAY_TIME);
+            mSignalCheckHandler.sendMessageDelayed(msg, MSG_TRY_LOCK_DELAY_TIME);
         }
     }
 
@@ -100,7 +101,7 @@ public class DtvKitScanSignalPresenter {
             mSignalCheckHandler.removeMessages(MSG_FREQ_TRY_LOCK);
             Message msg = mSignalCheckHandler.obtainMessage(MSG_FREQ_TRY_LOCK);
             msg.arg1 = getInputFreq(freq);
-            mSignalCheckHandler.sendMessageDelayed(msg, MSG_DELAY_TIME);
+            mSignalCheckHandler.sendMessageDelayed(msg, MSG_TRY_LOCK_DELAY_TIME);
         }
     }
 
@@ -108,15 +109,15 @@ public class DtvKitScanSignalPresenter {
         if (null != mSignalCheckHandler) {
             mSignalCheckHandler.removeMessages(MSG_NUMBER_TRY_LOCK);
             Message msg = mSignalCheckHandler.obtainMessage(MSG_NUMBER_TRY_LOCK);
-            mSignalCheckHandler.sendMessageDelayed(msg, MSG_DELAY_TIME);
+            mSignalCheckHandler.sendMessageDelayed(msg, MSG_TRY_LOCK_DELAY_TIME);
         }
     }
 
     private void innerDVBCSymbolTryLock(int symbol, int freq){
         JSONArray args = new JSONArray();
-        if (freq < INVALID_FREQUENCE) {
+        if (freq < DEFAULT_FREQUENCE) {
             Log.e(TAG, "dvbSymbolTryLock freq error = " + freq);
-            //return;
+            freq = DEFAULT_FREQUENCE;
         }
         args.put(FREQ_SCAN_MODE);
         args.put(freq);
@@ -128,9 +129,9 @@ public class DtvKitScanSignalPresenter {
     private void innerFreqTunerTryLock(int freq) {
         JSONArray args = new JSONArray();
 
-        if (freq < INVALID_FREQUENCE) {
+        if (freq < DEFAULT_FREQUENCE) {
             Log.e(TAG, "freqTunerTryLock freq error = " + freq);
-            //return;
+            freq = DEFAULT_FREQUENCE;
         }
         args.put(FREQ_SCAN_MODE); //scan mode 0 for freq tuner lock
         args.put(freq);

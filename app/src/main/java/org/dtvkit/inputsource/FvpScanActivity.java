@@ -94,7 +94,8 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
             mVideoView.stopPlayback();
         }
         //Send Message to mds client
-        sendFvpChannelScanMessage();
+        //sendFvpChannelScanMessage();
+        sendScanFinishBroadcast();
         Log.d(TAG, "need do some thing when scan view finish");
         super.finish();
     }
@@ -234,5 +235,14 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
         } else {
             Log.e(TAG, "sendFvpChannelScanMessage error can't find application or class");
         }
+    }
+
+    private void sendScanFinishBroadcast() {
+        Intent intent = new Intent();
+        intent.setAction("com.android.tv.fvp.INTENT_ACTION");
+        intent.setComponent(new ComponentName("com.droidlogic.android.tv", "com.android.tv.fvp.FvpIntentReceiver"));
+        intent.putExtra("FVP_TYPE", "scan_action");
+        sendBroadcast(intent);
+        Log.d(TAG, "sendScanFinishBroadcast");
     }
 }
