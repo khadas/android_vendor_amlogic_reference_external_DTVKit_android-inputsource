@@ -4620,6 +4620,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
                     Intent intent = new Intent(outService, DtvkitEpgSync.class);
                     intent.putExtra("inputId", mInputId);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, mTunedChannel != null ? mTunedChannel.getId() : -1);
+                    try {
+                        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY, data.getInt("frequency"));
+                    } catch (Exception e) {
+
+                    }
                     intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
                     startService(intent);
                 } else if (signal.equals("DvbUpdatedEventNow")) {
@@ -4629,6 +4636,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
                     Intent intent = new Intent(outService, DtvkitEpgSync.class);
                     intent.putExtra("inputId", mInputId);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, mTunedChannel != null ? mTunedChannel.getId() : -1);
+                    try {
+                        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY, data.getInt("frequency"));
+                    } catch (Exception e) {
+
+                    }
                     intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
                     startService(intent);
                 } else if (signal.equals("DvbUpdatedChannel")) {

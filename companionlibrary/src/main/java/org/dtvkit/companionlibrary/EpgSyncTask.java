@@ -20,6 +20,10 @@ import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_FINI
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_REASON;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_STARTED;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_STATUS;
+import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL;
+import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID;
+import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY;
+
 
 import android.content.ContentProviderOperation;
 import android.content.Intent;
@@ -41,7 +45,9 @@ import com.droidlogic.dtvkit.companionlibrary.model.Program;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -68,10 +74,10 @@ public class EpgSyncTask {
     public void run(Intent intent) {
         if (intent != null) {
             String syncReason = intent.getStringExtra(BUNDLE_KEY_SYNC_FROM);
-            if (TextUtils.equals(mSyncReason, syncReason)) {
-                Log.i(TAG, "sync reason is the same from:" + syncReason);
-                return;
-            }
+//            if (TextUtils.equals(mSyncReason, syncReason)) {
+//                Log.i(TAG, "sync reason is the same from:" + syncReason);
+//                return;
+//            }
         }
         if (mFutureTask != null) {
             Log.i(TAG, "cancel " + mFutureTask.cancel(true));
@@ -98,6 +104,12 @@ public class EpgSyncTask {
                 intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_REASON, false));
         persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM,
                 intent.getStringExtra(BUNDLE_KEY_SYNC_FROM));
+        persistableBundle.putInt(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY,
+                intent.getIntExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY, -1));
+        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL,
+                intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true));
+        persistableBundle.putLong(EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID,
+                intent.getLongExtra(BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, -1));
         Bundle parameters = intent.getBundleExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS);
         if (parameters != null) {
             Set<String> keySet = parameters.keySet();
@@ -196,6 +208,9 @@ public class EpgSyncTask {
             mUpdateByScan = mBundle.getBoolean(BUNDLE_KEY_SYNC_REASON, false);
             String syncSignalType = mBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE);
             boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
+            boolean updateChannel = mBundle.getBoolean(BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true);
+            Long currentChannelId = mBundle.getLong(BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, -1);
+            int frequency = mBundle.getInt(BUNDLE_KEY_SYNC_FREQUENCY, -1);
 
             if (mInputId == null) {
                 return ERROR_INPUT_ID_NULL;
@@ -204,8 +219,6 @@ public class EpgSyncTask {
             if (isCancelled()) {
                 return ERROR_EPG_SYNC_CANCELED;
             }
-
-            List<Channel> tvChannels = mMainService.getChannels(syncCurrent);
 
             if (syncCurrent) {
                 if (!TextUtils.isEmpty(syncSignalType) && !mMainService.checkSignalTypesMatch(syncSignalType)) {
@@ -220,10 +233,13 @@ public class EpgSyncTask {
                 }
             }
 
-            TvContractUtils.updateChannels(mMainService, mInputId, mIsSearchedChannel, tvChannels, EpgSyncJobService.getChannelTypeFilter(), mBundle);
-            LongSparseArray<Channel> channelMap = TvContractUtils.buildChannelMap(
-                    mMainService.getContentResolver(), mInputId);
-            if (channelMap == null) {
+            if (updateChannel) {
+                List<Channel> tvChannels = mMainService.getChannels(syncCurrent);
+                TvContractUtils.updateChannels(mMainService, mInputId, mIsSearchedChannel, tvChannels, EpgSyncJobService.getChannelTypeFilter(), mBundle);
+            }
+            LinkedList<Channel> channelList = TvContractUtils.buildChannelMap(
+                    mMainService.getContentResolver(), mInputId, frequency, currentChannelId);
+            if (channelList == null) {
                 return ERROR_NO_CHANNELS;
             }
 
@@ -237,12 +253,11 @@ public class EpgSyncTask {
             if (!nowNext) {
                 eventPeriods = getListOfUpdatedEventPeriods();
             }*/
-            for (int i = 0; i < channelMap.size(); ++i) {
+            for (int i = 0; i < channelList.size(); ++i) {
                 if (DEBUG) {
-                    Log.d(TAG, "Update channel " + channelMap.valueAt(i).toString());
+                    Log.d(TAG, "Update channel " + channelList.get(i).toString());
                 }
-
-                Uri channelUri = TvContract.buildChannelUri(channelMap.keyAt(i));
+                Uri channelUri = TvContract.buildChannelUri(channelList.get(i).getId());
 
                 /* Check whether the job has been cancelled */
                 if (isCancelled()) {
@@ -251,7 +266,7 @@ public class EpgSyncTask {
 
                 if (!channelOnly) {
                     /* Get the programs */
-                    List<Program> programs = new ArrayList<>(mMainService.getAllProgramsForChannel(channelUri, channelMap.valueAt(i)));
+                    List<Program> programs = new ArrayList<>(mMainService.getAllProgramsForChannel(channelUri,  channelList.get(i)));
 
                     if (!programs.isEmpty()) {
                         /* Set channel ids if not set */
@@ -259,7 +274,7 @@ public class EpgSyncTask {
                             if (programs.get(index).getChannelId() == -1) {
                                 programs.set(index,
                                         new Program.Builder(programs.get(index))
-                                                .setChannelId(channelMap.valueAt(i).getId())
+                                                .setChannelId(channelList.get(i).getId())
                                                 .build());
                             }
                         }

@@ -63,6 +63,7 @@ public final class Channel {
     private int mSearchable = 1;//default searchable
     private String mServiceType;
     private int mIsLocked;
+    private int mFrequency;
 
     //sync with ChannelInfo in droidlogic-tv.jar
     public static final String KEY_IS_FAVOURITE = "is_favourite";
@@ -277,6 +278,10 @@ public final class Channel {
         return mVideoCodec;
     }
 
+    public int getFrequency() {
+        return mFrequency;
+    }
+
     /**
      * @return The value of {@link TvContract.Channels#COLUMN_LOCKED} for the channel.
      */
@@ -400,6 +405,7 @@ public final class Channel {
         mDescription = other.mDescription;
         mVideoFormat = other.mVideoFormat;
         mVideoCodec = other.mVideoCodec;
+        mFrequency = other.mFrequency;
         mOriginalNetworkId = other.mOriginalNetworkId;
         mTransportStreamId = other.mTransportStreamId;
         mServiceId = other.mServiceId;
@@ -496,6 +502,7 @@ public final class Channel {
         if (data != null) {
             try {
                 builder.setVideoCodec((String)data.get(KEY_VIDEO_CODEC));
+                builder.setFrequency(Integer.parseInt((String)data.get(KEY_FREQUENCY)));
             } catch (Exception e) {
             }
         }
@@ -656,6 +663,11 @@ public final class Channel {
 
         public Builder setVideoCodec(String videoCodec) {
             mChannel.mVideoCodec = videoCodec;
+            return this;
+        }
+
+        public Builder setFrequency(int frequency) {
+            mChannel.mFrequency = frequency;
             return this;
         }
 

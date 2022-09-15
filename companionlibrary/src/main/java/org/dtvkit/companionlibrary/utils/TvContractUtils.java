@@ -54,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Comparator;
 import java.util.Collections;
@@ -499,10 +500,11 @@ public class TvContractUtils {
      * Channel object.
      * @hide
      */
-    public static LongSparseArray<Channel> buildChannelMap(ContentResolver resolver,
-            String inputId) {
+    public static LinkedList<Channel> buildChannelMap(ContentResolver resolver,
+            String inputId, int frequency, long firstChannelId) {
         Uri uri = TvContract.buildChannelsUriForInput(inputId);
-        LongSparseArray<Channel> channelMap = new LongSparseArray<>();
+        LinkedList<Channel> channelList = new LinkedList<>();
+        Channel firstChannel = null;
         Cursor cursor = null;
         try {
             cursor = resolver.query(uri, Channel.PROJECTION, null, null, null);
@@ -515,7 +517,18 @@ public class TvContractUtils {
 
             while (cursor.moveToNext()) {
                 Channel nextChannel = Channel.fromCursor(cursor);
-                channelMap.put(nextChannel.getId(), nextChannel);
+                if (firstChannelId == nextChannel.getId()) {
+                    firstChannel = nextChannel;
+                    continue;
+                }
+                if (frequency != -1 && nextChannel.getFrequency() == frequency) {
+                    channelList.addFirst(nextChannel);
+                } else {
+                    channelList.add(nextChannel);
+                }
+            }
+            if (firstChannel != null) {
+                channelList.addFirst(firstChannel);
             }
         } catch (Exception e) {
             Log.d(TAG, "Content provider query: " + Arrays.toString(e.getStackTrace()));
@@ -525,7 +538,7 @@ public class TvContractUtils {
                 cursor.close();
             }
         }
-        return channelMap;
+        return channelList;
     }
 
     /**

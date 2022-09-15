@@ -113,6 +113,9 @@ public abstract class EpgSyncJobService extends Service {
     public static final String BUNDLE_KEY_SYNC_FROM = "BUNDLE_KEY_SYNC_FROM";
     public static final String BUNDLE_KEY_SYNC_PARAMETERS = "BUNDLE_KEY_SYNC_PARAMETERS";
     public static final String BUNDLE_KEY_SYNC_CANCEL = "BUNDLE_KEY_SYNC_CANCEL";
+    public static final String BUNDLE_KEY_SYNC_FREQUENCY = "BUNDLE_KEY_SYNC_FREQUENCY";
+    public static final String BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL = "BUNDLE_KEY_SYNC_NEED_UPDATE_CANCEL";
+    public static final String BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID = "BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID";
 
     private static final Object mContextLock = new Object();
     protected Context mContext;
