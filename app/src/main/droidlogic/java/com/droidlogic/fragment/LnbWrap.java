@@ -466,6 +466,7 @@ public class LnbWrap {
         private int c_switch = 0;
         private int u_switch = 0;
         private int motor    = 0;
+        private int unicable_version = 0;
         private LnbInfo lnbInfo = new LnbInfo(this);
 
         public Lnb(){
@@ -480,10 +481,13 @@ public class LnbWrap {
                     c_switch = (int)(json.get("c_switch"));
                     u_switch = (int)(json.get("u_switch"));
                     motor = (int)(json.get("motor_switch"));
+                    unicable_version = Integer.parseInt((String)(json.get("unicable_version")));
                     lnbInfo.parseFromJson(json);
                 }
             } catch (Exception e) {
             }
+            if (unicable_version > 2 || unicable_version < 0)
+                unicable_version = 0;
         }
 
         public JSONArray toJsonArray() {
@@ -502,6 +506,7 @@ public class LnbWrap {
                 for (int i = 0; i < tempArray.length(); i ++) {
                     array.put(tempArray.get(i));
                 }
+                array.put("" + unicable_version);
             } catch (Exception e) {
             }
             return array;
@@ -533,6 +538,11 @@ public class LnbWrap {
 
         public int getMotor() {
             return motor;
+        }
+
+        public int getUnicableVersion() {
+            boolean unicable_on = unicable.getOnoff();
+            return unicable_on ? unicable_version : 0;
         }
 
         public boolean editToneBurst(String val) {
@@ -581,6 +591,22 @@ public class LnbWrap {
             }
             motor = val;
             updateToDtvkit();
+            return true;
+        }
+
+        public boolean editUnicableVersion(int val) {
+            if (val > 2 || val < 0) return false;
+
+            boolean unicable_on = unicable.getOnoff();
+            if (unicable_version != val) {
+                unicable_version = val;
+                if ((val > 0 && unicable_on == false)
+                    || (val == 0 && unicable_on == true)) {
+                    unicable.switchUnicable();
+                } else {
+                    updateToDtvkit();
+                }
+            }
             return true;
         }
 

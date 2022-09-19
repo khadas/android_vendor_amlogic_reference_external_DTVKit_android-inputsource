@@ -34,7 +34,7 @@ public class DvbsParameterManager {
     private List<Integer> mUbFreqs = new ArrayList<>();
 
     private final String[] lnbKeyList = {"test_satellite",
-            "test_transponder", "lnb_type", "unicable", "high_lnb_voltage", "high_tone_22k",
+            "test_transponder", "lnb_type", "unicable_version", "high_lnb_voltage", "high_tone_22k",
             "tone_burst", "diseqc1.0", "diseqc2.0", "motor"};
 
     private int mCurrentOperator = OPERATOR_DEFAULT;
@@ -267,17 +267,13 @@ public class DvbsParameterManager {
                 valueStr = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST[0]);
             }
         } else if (lnbKeyList[3].equals(paraKey)) {
-            boolean unicable =  lnb.getUnicable().getOnoff();
-            if (unicable) {
-                valueStr = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[1]);
-            } else {
-                valueStr = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[0]);
-            }
+            int  version =  lnb.getUnicableVersion();
+            valueStr = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[version];
         } else if (lnbKeyList[4].equals(paraKey)) {
             String lp = lnb.getLnbInfo().getLnbPower();
             int lnbType = lnb.getLnbInfo().getType();
             if (lp.isEmpty()) {
-                valueStr = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[1]);//on
+                valueStr = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[1];//on
             } else {
                 valueStr = lp;
             }
@@ -337,8 +333,7 @@ public class DvbsParameterManager {
                 ret = 0;
             }
         } else if (lnbKeyList[3].equals(paraKey)) {
-            boolean onoff = lnb.getUnicable().getOnoff();
-            ret = onoff ? 1 : 0;
+            ret = lnb.getUnicableVersion();
         } else if (lnbKeyList[4].equals(paraKey)) {
             String lp = lnb.getLnbInfo().getLnbPower();
             if (lp.equals("off")) {

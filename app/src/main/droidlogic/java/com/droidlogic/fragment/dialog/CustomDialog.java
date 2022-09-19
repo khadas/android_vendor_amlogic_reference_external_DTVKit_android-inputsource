@@ -88,10 +88,10 @@ public class CustomDialog/* extends AlertDialog*/ {
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_CUSTOM_TYPE_LIST = {"first freq", "second freq"};
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_CUSTOM_TYPE_LIST = {R.string.parameter_lnb_custom_frequency1, R.string.parameter_lnb_custom_frequency2};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST = {"off", "on"};
-    public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
+    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST = {"off", "unicable v1", "unicable v2"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_BAND = {"0", "1", "2", "3", "4", "5", "6", "7"};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_POSITION = {"disable", "enable"};
-    public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_POSITION = {R.string.parameter_position_disable, R.string.parameter_position_enable};
+    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_POSITION = {"a", "b"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST = {/*"13V", "18V",*/"off", "on"/*, "13/18V"*/};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {"on", "off"/*, "auto"*/};
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
@@ -131,7 +131,10 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final int[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_LIST = {DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_SWITCH, DIALOG_SET_EDIT_SWITCH_ITEM_USER_BAND, DIALOG_SET_EDIT_SWITCH_ITEM_UB_FREQUENCY, DIALOG_SET_EDIT_SWITCH_ITEM_POSITION};
     public static final int[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_SWITCH_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
     public static final String[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_LIST = {"0", "1", "2", "3", "4", "5", "6", "7"};
-    public static final int[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST = {1284, 1400, 1516, 1632, 1748, 1864, 1980, 2096};
+    public static final int[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST = {1284, 1400, 1516, 1632, 1748, 1864, 1980, 2096,
+                                                                                               1340, 1485, 1550, 1532, 1745, 1810, 1875, 1940,
+                                                                                               1210, 1420, 1880, 2040, 985, 1050, 1115, 1275,
+                                                                                               1365, 1680, 1710, 1160, 1810, 1945, 1388, 2014};
     public static final int[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_POSITION_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
 
     public CustomDialog(Context context, String type, DialogCallBack callback, ParameterManager manager) {
@@ -178,16 +181,15 @@ public class CustomDialog/* extends AlertDialog*/ {
         LinkedList<DialogItemAdapter.DialogItemDetail> items = new LinkedList<DialogItemAdapter.DialogItemDetail>();
         DialogItemAdapter.DialogItemDetail item = null;
         int channel = mParameterManager.getDvbsParaManager().getCurrentLnbParaIntValue("unicable_chan");
-        if (channel > (DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST.length - 1)) {
-            channel = 0;
-        }
         for (int i = 0; i < DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_LIST.length; i++) {
             switch (i) {
                 case 0: {
-                    int unicable = mParameterManager.getDvbsParaManager().getCurrentLnbParaIntValue("unicable");
+                    int version = mParameterManager.getDvbsParaManager().getCurrentLnbParaIntValue("unicable_version");
+                    if (version > DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST.length - 1)
+                        version = 0;
                     item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH,
                             mContext.getString(DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_LIST[i]),
-                            mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[unicable]), false);
+                            DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[version], false);
                     break;
                 }
                 case 1:
@@ -207,7 +209,7 @@ public class CustomDialog/* extends AlertDialog*/ {
                     int position = mParameterManager.getDvbsParaManager().getCurrentLnbParaIntValue("unicable_position_b");
                     item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH,
                             mContext.getString(DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_LIST[i]),
-                            mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_POSITION[position]), false);
+                            DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_POSITION[position], false);
                     break;
                 }
                 default:

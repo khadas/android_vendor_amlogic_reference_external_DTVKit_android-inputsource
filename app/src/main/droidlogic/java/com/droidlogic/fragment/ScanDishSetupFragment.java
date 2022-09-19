@@ -475,9 +475,32 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     boolean isRightAction = "right".equals(data.getString("action"));
                     boolean isSelectAction = "selected".equals(data.getString("action"));
                     if (unicable_position == 0 && (isLeftAction || isRightAction)) {
-                        mParameterManager.getDvbsParaManager()
+                        int current_version = mParameterManager.getDvbsParaManager()
+                            .getCurrentLnbParaIntValue("unicable_version");
+                        int min = 0;
+                        int max = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST.length - 1;
+                        if (isLeftAction) {
+                            if (current_version > min) {
+                                current_version --;
+                            } else {
+                                current_version = max;
+                            }
+                        } else {
+                            if (current_version < max) {
+                                current_version ++;
+                            } else {
+                                current_version = min;
+                            }
+                        }
+                        int channel = mParameterManager.getDvbsParaManager().getCurrentLnbParaIntValue("unicable_chan");
+                        if (current_version == 1 && channel > 7) {
+                            mParameterManager.getDvbsParaManager()
                                 .getLnbWrap().getLnbById(lnb).getUnicable()
-                                .switchUnicable();
+                                .editUnicableChannel(0,
+                                        mParameterManager.getDvbsParaManager().getUbFrequency(0));
+                        }
+                        mParameterManager.getDvbsParaManager()
+                            .getLnbWrap().getLnbById(lnb).editUnicableVersion(current_version);
                         startTune();
                     } else if (unicable_position == 3 && (isLeftAction || isRightAction)) {
                         mParameterManager.getDvbsParaManager()
@@ -486,7 +509,9 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                         startTune();
                     } else if (unicable_position == 1 && (isLeftAction || isRightAction)) {
                         int min = 0;
-                        int max = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_BAND.length - 1;
+                        int version = mParameterManager.getDvbsParaManager()
+                            .getCurrentLnbParaIntValue("unicable_version");
+                        int max = (version == 2) ? 31 : 7;
                         int unicableChannel = mParameterManager.getDvbsParaManager().getCurrentLnbParaIntValue("unicable_chan");
                         int updateChannel = unicableChannel;
                         if (isLeftAction) {
