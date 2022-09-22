@@ -8,14 +8,19 @@ import android.widget.Toast;
 
 import java.util.Calendar;
 import java.util.TimeZone;
+import com.droidlogic.fragment.ParameterManager;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
+
 
 public class TimezoneSelect {
     private Context mContext;
     private AlertDialog alertDialog;
     String [] time;
+    private ParameterManager mParameterManager = null;
 
     public TimezoneSelect(Context context){
         mContext = context;
+        mParameterManager = new ParameterManager(mContext, DtvkitGlueClient.getInstance());
     }
 
     public void selectTimeZone(String name){
@@ -81,10 +86,17 @@ public class TimezoneSelect {
             public void onClick(DialogInterface dialogInterface, int i) {
                 //Toast.makeText(mContext, items[i], Toast.LENGTH_SHORT).show();
                 setTimeZone(time[i]);
+                mParameterManager.setCountryRegionId(i + 1);
                 alertDialog.dismiss();
             }
         });
-
+        alertBuilder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialog) {
+                setTimeZone(time[0]);
+                mParameterManager.setCountryRegionId(1);
+            }
+        });
         alertDialog = alertBuilder.create();
         alertDialog.show();
     }

@@ -2930,7 +2930,17 @@ public class ParameterManager {
             array.put(locationCode);
             DtvkitGlueClient.getInstance().request("Dvb.setEwsLocationCode", array);
         } catch (Exception e) {
-            Log.i(TAG,"setLocationCode fail");
+            Log.i(TAG, "setLocationCode fail");
+        }
+    }
+
+    public void setCountryRegionId(int regionId) {
+        JSONArray array = new JSONArray();
+        try {
+            array.put(regionId);
+            DtvkitGlueClient.getInstance().request("Dvb.setRegionId", array);
+        } catch (Exception e) {
+            Log.i(TAG,"setCountryRegionId fail");
         }
     }
 }
