@@ -636,8 +636,7 @@ static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int m
     if (mSubContext->open("", iotType))
     {
         if ((type == SUBTITLE_SUB_TYPE_TTX)) {
-            mSubContext->ttControl(TT_EVENT_SET_REGION_ID, -1, -1, teletext_region_id, -1);
-            mSubContext->ttControl(TT_EVENT_GO_TO_PAGE, magazine, page, 0, 0);
+            mSubContext->ttControl(TT_EVENT_GO_TO_PAGE, magazine, page, teletext_region_id, 0);
         } else if (type == SUBTITLE_SUB_TYPE_TTX_SUB) {
             mSubContext->ttControl(TT_EVENT_GO_TO_SUBTITLE, magazine, page, 0, 0);
         } else if (type == SUBTITLE_SUB_TYPE_DVB) {

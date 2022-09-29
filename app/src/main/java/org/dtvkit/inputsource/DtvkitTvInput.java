@@ -942,6 +942,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 initFont(); //init closed caption font
             }
         }
+        mParameterManager.initTextCharSet();
         mCusFeatureSubtitleCfg = getCustomFeatureSubtitleCfg();
         mCusFeatureAudioCfg = getCustomFeatureAudioCfg();
         mCusEnableDtvAutoTime = (getCustomFeatureAutoTimeCfg() > 0);
@@ -4282,34 +4283,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     playerNotifyTeletextEvent(16);
                     break;
                 case KeyEvent.KEYCODE_MEDIA_NEXT:
-                    switch (mRegionId) {
-                        case 0:
-                            mRegionId = 8;
-                            break;
-                        case 8:
-                            mRegionId = 16;
-                            break;
-                        case 16:
-                            mRegionId = 24;
-                            break;
-                        case 24:
-                            mRegionId = 32;
-                            break;
-                        case 32:
-                            mRegionId = 48;
-                            break;
-                        case 48:
-                            mRegionId = 64;
-                            break;
-                        case 64:
-                            mRegionId = 80;
-                            break;
-                        default:
-                            mRegionId = 0;
-                            break;
-                    }
-                    Log.i(TAG, "region id:" + mRegionId);
-                    DtvkitGlueClient.getInstance().setRegionId(mRegionId);
+                    if (mParameterManager != null)
+                        mParameterManager.switchNextTextCharRegion();
                     break;
                 case KeyEvent.KEYCODE_0:
                 case KeyEvent.KEYCODE_1:

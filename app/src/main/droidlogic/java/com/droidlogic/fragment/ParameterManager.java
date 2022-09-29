@@ -13,6 +13,7 @@ import com.droidlogic.fragment.ItemAdapter.ItemDetail;
 import com.droidlogic.fragment.dialog.CustomDialog;
 import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.settings.PropSettingManager;
+import com.droidlogic.settings.TextCharSetManager;
 
 import android.content.Context;
 import android.text.TextUtils;
@@ -953,6 +954,9 @@ public class ParameterManager {
                 if (resultObj != null) {
                     Log.d(TAG, "setCountryCodeByIndex resultObj = " + resultObj.toString());
                     setCountry((int)resultObj.get("country_code"));
+                    TextCharSetManager.getInstance().updateCharSetForCountry(
+                            (String)resultObj.get("country_name"));
+                    saveIntParameters("ttx_charset", -1);
                 }
             } else {
                 Log.d(TAG, "setCountryCodeByIndex then get null");
@@ -1442,158 +1446,32 @@ public class ParameterManager {
         return resultObj;
     }
 
-    private JSONObject getTeletextCharset() {
-        JSONObject resultObj = null;
-        try {
-            JSONArray args = new JSONArray();
-            resultObj = DtvkitGlueClient.getInstance().request("Dvb.getTeletextCharacterDesignation", args);
-            if (resultObj != null) {
-                Log.d(TAG, "getTeletextCharset resultObj:" + resultObj.toString());
-            } else {
-                Log.d(TAG, "getTeletextCharset then get null");
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "getTeletextCharset Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+    public void initTextCharSet() {
+        int savedCharSet = getIntParameters("ttx_charset");//start from 1
+        if (savedCharSet <= 0) {
+            TextCharSetManager.getInstance().updateCharSetForCurrentCountry();
+            //saveIntParameters("ttx_charset", getCurrentTeletextCharsetIndex() + 1);
+        } else {
+            TextCharSetManager.getInstance().setCurrentTeletextCharsetByPosition(savedCharSet - 1);
         }
-        return resultObj;
     }
 
     public List<String> getTeletextCharsetNameList() {
-        List<String> result = new ArrayList<String>();
-        try {
-            JSONObject resultObj = getTeletextCharset();
-            JSONArray data = null;
-            if (resultObj != null) {
-                data = (JSONArray)resultObj.get("data");
-                if (data == null || data.length() == 0) {
-                    return result;
-                }
-                String temp;
-                for (int i = 0; i < data.length(); i++) {
-                    temp = (String)(((JSONObject)(data.get(i))).get("tt_chara_design"));
-                    result.add(temp);
-                }
-            } else {
-                Log.d(TAG, "getTeletextCharsetNameList then get null");
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "getTeletextCharsetNameList Exception = " + e.getMessage());
-            return result;
-        }
-        return result;
+        return TextCharSetManager.getInstance().getTextCharsetNameList();
     }
 
     public int getCurrentTeletextCharsetIndex() {
-        int result = 0;
-        try {
-            JSONObject resultObj = getTeletextCharset();
-            JSONArray data = null;
-            if (resultObj != null) {
-                data = (JSONArray)resultObj.get("data");
-                if (data == null || data.length() == 0) {
-                    return result;
-                }
-                JSONObject temp;
-                boolean select;
-                for (int i = 0; i < data.length(); i++) {
-                    temp = data.getJSONObject(i);
-                    if (temp != null && temp.length() > 0) {
-                        select = temp.getBoolean("selected");
-                        if (select) {
-                            result = i;
-                            break;
-                        }
-                    }
-                }
-            } else {
-                Log.d(TAG, "getCurrentTeletextCharsetIndex then get null");
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "getCurrentTeletextCharsetIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
-        }
-        return result;
+        return TextCharSetManager.getInstance().getCurrentCharSetIndex();
     }
 
-    private String getTeletextCharsetByPosition(int position) {
-        String result = null;
-        try {
-            JSONObject resultObj = getTeletextCharset();
-            JSONArray data = null;
-            if (resultObj != null) {
-                data = (JSONArray)resultObj.get("data");
-                if (data == null || data.length() == 0) {
-                    return result;
-                }
-                JSONObject temp;
-                boolean select;
-                if (position >= 0 && position < data.length()) {
-                    temp = data.getJSONObject(position);
-                    if (temp != null && temp.length() > 0) {
-                        result = temp.getString("tt_chara_design");
-                    }
-                }
-            } else {
-                Log.d(TAG, "getCurrentTeletextCharsetByPosition then get null");
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "getCurrentTeletextCharsetByPosition Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
-        }
-        return result;
+    public void setCurrentTeletextCharsetByPosition(int position) {
+        TextCharSetManager.getInstance().setCurrentTeletextCharsetByPosition(position);
+        saveIntParameters("ttx_charset", getCurrentTeletextCharsetIndex() + 1);
     }
 
-    private JSONObject setCurrentTeletextCharset(String charset) {
-        JSONObject resultObj = null;
-        try {
-            JSONArray args = new JSONArray();
-            args.put(charset);
-            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setTeletextCharacterDesignation", args);
-            if (resultObj != null) {
-                Log.d(TAG, "setCurrentTeletextCharset resultObj:" + resultObj.toString());
-            } else {
-                Log.d(TAG, "setCurrentTeletextCharset then get null");
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "setCurrentTeletextCharset Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
-        }
-        return resultObj;
-    }
-
-    private int getTeletextRegionIdFromCharsetPosition(int position) {
-        int regionId = 0;
-        switch (position) {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-                regionId = position * 8;
-                break;
-            case 5:
-                regionId = 48;
-                break;
-            case 6:
-                regionId = 64;
-                break;
-            case 7:
-                regionId = 80;
-                break;
-            default:
-                break;
-        }
-        return regionId;
-    }
-
-    public JSONObject setCurrentTeletextCharsetByPosition(int position) {
-        JSONObject resultObj = null;
-        int regionId = getTeletextRegionIdFromCharsetPosition(position);
-        String charSet = getTeletextCharsetByPosition(position);
-        DtvkitGlueClient.getInstance().setRegionId(regionId);
-        if (charSet != null) {
-            resultObj = setCurrentTeletextCharset(charSet);
-        } else {
-            Log.d(TAG, "setCurrentTeletextCharsetByPosition null charSet");
-        }
-        return resultObj;
+    public void switchNextTextCharRegion() {
+        int newPosition = TextCharSetManager.getInstance().switchNextRegion();
+        saveIntParameters("ttx_charset", newPosition + 1);
     }
 
     public JSONArray getChannelTable(int countryCode, boolean isDvbt, boolean isDvbt2) {
