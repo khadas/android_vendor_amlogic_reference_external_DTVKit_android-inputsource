@@ -284,6 +284,11 @@ public class TvContractUtils {
                     Log.d(TAG, "Adding channel " + channel.getDisplayName() + " at " + uri);
                 }
             } else {
+                if (null == searchMode) {
+                    if (DEBUG) Log.d(TAG, "not update fvp data if not channel search update");
+                    values.remove(TvContract.Channels.COLUMN_APP_LINK_ICON_URI);
+                    values.remove(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI);
+                }
                 values.put(Channels._ID, rowId);
                 uri = TvContract.buildChannelUri(rowId);
                 if (DEBUG) {

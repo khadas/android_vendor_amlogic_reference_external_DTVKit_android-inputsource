@@ -2889,6 +2889,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private CaptioningManager mCaptioningManager = null;
         private final AudioSystemCmdManager mAudioSystemCmdManager;
         private int mCurrentAudioTrackId = -1;
+        private ProviderSync mProviderSync = null;
 
         private final class AvailableState {
             AvailableState() {
@@ -3351,6 +3352,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             finalReleaseWorkThread();
             removeTunerSession(this);
             mSessionState = SessionState.RELEASED;
+            if (null != mProviderSync) {
+                mProviderSync.shutDown();
+            }
             Log.i(TAG, "doRelease over");
         }
 
@@ -4899,6 +4903,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mMainHandle.sendEmptyMessageDelayed(MSG_EVENT_SUBTITLE_OPENED, 2000);
                 } else if (signal.equals("cas")) {
                     processCasEvents(data);
+                } else if (signal.equals("FVP_SERVICE_NID_DONE")) {
+                    if (!mIsPip) {
+                        if (null == mProviderSync) {
+                            mProviderSync = new ProviderSync();
+                        }
+                        mProviderSync.run(new FvpChannelEnhancedInfoSync(outService));
+                    }
                 }
             }
         };
