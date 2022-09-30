@@ -3,6 +3,8 @@ package com.droidlogic.dtvkit.inputsource;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.ComponentName;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -15,9 +17,20 @@ import android.widget.Toast;
 import android.view.KeyEvent;
 import android.media.MediaPlayer;
 import android.database.Cursor;
+import android.media.tv.TvContract;
+import android.media.tv.TvContract.Channels;
+import android.database.Cursor;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.stream.Stream;
+
 
 public class FvpScanActivity extends Activity implements UpdateScanView {
     private static final String TAG = "FvpScanActivity";
+    private static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
 
     private static final int MSG_UPDATE_CHANNEL_NUMBER = 0;
     private static final int MSG_UPDATE_SCAN_PROGRESS = 1;
@@ -213,36 +226,58 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
         }
     }
 
-    private void sendFvpChannelScanMessage() {
-        String application = null;
-        String className = null;
-        Uri systemMsgUri = Uri.parse("content://" + "uk.co.freeview.fvpconfigauth.provider.FVPConfigAuth" + "/systemmessages");
-        try (Cursor c = getContentResolver().query(systemMsgUri, null, null, null, null)) {
-            if (null != c && c.moveToNext()) {
-                application = c.getString(1);
-                className = c.getString(2);
-                Log.d(TAG, "query system message application = " + application + "class = " + className);
-            }
-        } catch(Exception e) {
-            Log.d(TAG, "query system message Exception = " + e);
-        }
-        if (null != application && null != className) {
-            Intent intent = new Intent("uk.co.freeview.action.CHSCAN");
-            intent.setComponent(new ComponentName(application, className));
-            intent.setType("fvp/chscan");
-            intent.putExtra("Detail", Long.toString(System.currentTimeMillis()/1000L));
-            startActivity(intent);
-        } else {
-            Log.e(TAG, "sendFvpChannelScanMessage error can't find application or class");
-        }
-    }
-
     private void sendScanFinishBroadcast() {
         Intent intent = new Intent();
+        Bundle data = new Bundle();
+
+        data.putString("auth_url", prepareAuthUrl());
+        data.putIntegerArrayList("nid_list", getNetworkIdGroup());
         intent.setAction("com.android.tv.fvp.INTENT_ACTION");
         intent.setComponent(new ComponentName("com.droidlogic.android.tv", "com.android.tv.fvp.FvpIntentReceiver"));
         intent.putExtra("FVP_TYPE", "scan_action");
+        intent.putExtra("FVP_CONFIG", data);
         sendBroadcast(intent);
         Log.d(TAG, "sendScanFinishBroadcast");
+    }
+
+    private String prepareAuthUrl() {
+        String authUrl = null;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Hbbtv.HBBGetAuthUrl", new JSONArray());
+            JSONObject data = obj.getJSONObject("data");
+            authUrl = data.getString("auth_url");
+            Log.i(TAG, "prepareAuthUrl authUrl = " + authUrl + "result" + obj.getString(""));
+        } catch (Exception e) {
+            Log.i(TAG, "prepareAuthUrl Exception = " + e.getMessage());
+        }
+        return authUrl;
+    }
+
+    private ArrayList<Integer> getNetworkIdGroup() {
+        ArrayList<Integer> networkIdList = new ArrayList();
+        Uri channelsUri = TvContract.buildChannelsUriForInput(DTVKIT_INPUTID);
+        String[] projection = {Channels.COLUMN_TYPE, Channels.COLUMN_ORIGINAL_NETWORK_ID};
+        String selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
+        String [] selectionArgs = {"TYPE_DVB_T", "TYPE_DVB_T2"};
+
+        ContentResolver resolver = getContentResolver();
+        Cursor cursor = null;
+        try {
+            cursor = resolver.query(channelsUri, projection, selection, selectionArgs, null);
+            while (cursor != null && cursor.moveToNext()) {
+                Integer networkId = Integer.valueOf(cursor.getInt(1));
+                if (!networkIdList.contains(networkId)) {
+                    networkIdList.add(networkId);
+                }
+            }
+            Stream.of(networkIdList).forEach(r->Log.d(TAG, "save networkId = " + r));
+        } catch (Exception e) {
+            Log.e(TAG, "cacheProviderChannel Exception = " + e.getMessage());
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return networkIdList;
     }
 }
