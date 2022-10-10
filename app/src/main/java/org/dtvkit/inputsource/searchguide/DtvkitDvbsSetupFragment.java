@@ -97,10 +97,9 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         Log.d(TAG, "onSignal = " + signal + ", " + data);
         if (signal.equals("DvbsStatusChanged")) {
             int progress = getSearchProcess(data);
-            Log.d(TAG, "onSignal progress = " + progress);
-            if (mThreadHandler != null && (progress % 10 == 0)) {
+            if (mThreadHandler != null) {
                 mThreadHandler.removeMessages(MSG_ON_SIGNAL);
-                Message msg = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, progress, 0, null);
+                Message msg = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, (progress/10) * 10, 0, null);
                 boolean info = mThreadHandler.sendMessageDelayed(msg, 0);
             }
         } else if (signal.equals("DiseqcConfirmRequired")) {
@@ -170,6 +169,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         mPvrStatusConfirmManager = new PvrStatusConfirmManager(getActivity().getApplicationContext(), mDataManager);
         mParameterManager = new ParameterManager(getActivity().getApplicationContext(), DtvkitGlueClient.getInstance());
         mDvbsParameterManager = DvbsParameterManager.getInstance(getActivity().getApplicationContext());
+        mDvbsParameterManager.setCurrentOperator(DataPresenter.getOperateType());
     }
 
     @Override
@@ -464,8 +464,13 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     private void dealOnSignal(int progress) {
         Log.d(TAG, "onSignal progress = " + progress);
         if (!mStartSearch) {
-            Log.d(TAG, "onSignal but search is finished.");
+            Log.w(TAG, "onSignal but search is finished.");
             return;
+        }
+        if (mSearchProgress != null) {
+            if (mSearchProgress.getProgress() == progress) {
+                return;
+            }
         }
         int found = getFoundServiceNumberOnSearch();
         setSearchProgress(progress);

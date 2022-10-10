@@ -57,9 +57,7 @@ public class SatelliteWrap {
             JSONObject obj = mDtvkitGlueClient.request("Dvbs.getSatelliteInfoByName", array);
             if (obj != null) {
                 JSONObject sate = (JSONObject)(obj.get("data"));
-                if (sate != null) {
-                    satellite.parseFromJson(sate);
-                }
+                satellite.parseFromJson(sate);
             }
         } catch (Exception e) {
         }

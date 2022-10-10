@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import com.droidlogic.dtvkit.inputsource.searchguide.DataPresenter;
 import com.droidlogic.fragment.ItemAdapter.ItemDetail;
 import com.droidlogic.fragment.ItemListView.ListItemFocusedListener;
 import com.droidlogic.fragment.ItemListView.ListItemSelectedListener;
@@ -1211,47 +1212,6 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
         public void onListItemSelected(int position, String type, boolean selected) {
             Log.d(TAG, "onListItemSelected position = " + position + ", type = " + type + ", selected = " + selected);
             if (ItemListView.LIST_LEFT.equals(mCurrentListFocus)) {
-                String listType = mParameterManager.getDvbsParaManager().getCurrentListType();
-                /*if (ItemListView.ITEM_SATELLITE.equals(listType)) {
-                    LinkedList<ItemDetail> sateAllList = mParameterManager.getDvbsParaManager().getSatelliteNameList();
-                    String testSatellite = mParameterManager.getDvbsParaManager().getCurrentSatellite();
-                    String selectedSatellite = "";
-                    if (sateAllList != null && sateAllList.size() > 0) {
-                        selectedSatellite = sateAllList.get(position).getFirstText();
-                    }
-                    if (selectedSatellite != null || !(selectedSatellite.isEmpty())) {
-                        String lnb = mParameterManager.getDvbsParaManager().getCurrentLnbId();
-                        mParameterManager.getDvbsParaManager().getSatelliteWrap().getSatelliteByName(selectedSatellite).boundLnb(lnb, selected);
-                        if (selectedSatellite.equals(testSatellite) && selected == false) {
-                            mParameterManager.getDvbsParaManager().setCurrentSatellite("");
-                            mParameterManager.getDvbsParaManager().setCurrentTransponder("");
-                        }
-                    }
-                } else if (ParameterManager.ITEM_TRANSPONDER.equals(listType)) {
-                    LinkedList<ItemDetail> tps = mParameterManager.getDvbsParaManager().getTransponderList();
-                    String selectTp = "";
-                    if (tps != null && tps.size() > 0) {
-                        selectTp = tps.get(position).getFirstText();
-                    }
-                    if (selectTp != null || !(selectTp.isEmpty())) {
-                        //if UI support multi-tp
-                        //String sateName = mParameterManager.getDvbsParaManager().getCurrentSatellite();
-                        //mParameterManager.getDvbsParaManager().getSatelliteWrap().selectTransponder(sateName, selectTp, selected);
-                        //else support single tp
-                        mParameterManager.getDvbsParaManager().selectSingleTransponder(selectTp, selected);
-                        startTune();
-                    }
-                } else if (ParameterManager.ITEM_LNB.equals(listType)) {
-                    LinkedList<ItemDetail> lnbList = mParameterManager.getDvbsParaManager().getLnbIdList();
-                    String currentLnb = mParameterManager.getDvbsParaManager().getCurrentLnbId();
-                    if (lnbList != null && lnbList.size() > 0) {
-                        String selectedLnb = lnbList.get(position).getFirstText();
-                        if (!currentLnb.equals(selectedLnb)) {
-                            mParameterManager.getDvbsParaManager().setCurrentLnbId(selectedLnb);
-                            startTune();
-                        }
-                    }
-                }*/
                 LinkedList<ItemDetail> lnbList = mParameterManager.getDvbsParaManager().getLnbIdList();
                 String currentLnb = mParameterManager.getDvbsParaManager().getCurrentLnbId();
                 if (lnbList != null && lnbList.size() > 0) {
@@ -1272,13 +1232,6 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                 mListSatellites.setListType(ItemListView.ITEM_LNB);
 
             } else if (ItemListView.LIST_RIGHT.equals(mCurrentListFocus)) {
-                /*if (position == 0) {
-                    String listType = ParameterManager.ITEM_SATELLITE;
-                    mItemAdapterItem.reFill(mParameterManager.getDvbsParaManager().getCurrentItemList());
-
-                    mListViewItem.switchListToType(listType);
-                    return;
-                }*/
                 String lnb = mParameterManager.getDvbsParaManager().getCurrentLnbId();
                 boolean isSingle = mParameterManager.getDvbsParaManager().getLnbWrap().getLnbById(lnb).getLnbInfo().isSingle();
                 if (!isSingle && position == 5) {
@@ -1300,10 +1253,12 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     if (sateAllList != null && sateAllList.size() > 0) {
                         selectedSatellite = sateAllList.get(position).getFirstText();
                     }
-                    if (selectedSatellite != null || !(selectedSatellite.isEmpty())) {
+                    if (selectedSatellite != null && !(selectedSatellite.isEmpty())) {
                         String lnb = mParameterManager.getDvbsParaManager().getCurrentLnbId();
-                        mParameterManager.getDvbsParaManager().getSatelliteWrap().getSatelliteByName(selectedSatellite).boundLnb(lnb, selected);
-                        if (selectedSatellite.equals(testSatellite) && selected == false) {
+                        mParameterManager.getDvbsParaManager()
+                                .getSatelliteWrap().getSatelliteList(DataPresenter.getOperateType())
+                                .get(position).boundLnb(lnb, selected);
+                        if (selectedSatellite.equals(testSatellite) && !selected) {
                             mParameterManager.getDvbsParaManager().setCurrentSatellite("");
                             mParameterManager.getDvbsParaManager().setCurrentTransponder("");
                         }
@@ -1315,7 +1270,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     if (tps != null && tps.size() > 0) {
                         selectTp = tps.get(position).getFirstText();
                     }
-                    if (selectTp != null || !(selectTp.isEmpty())) {
+                    if (selectTp != null && !(selectTp.isEmpty())) {
                         //if UI support multi-tp
                         //String sateName = mParameterManager.getDvbsParaManager().getCurrentSatellite();
                         //mParameterManager.getDvbsParaManager().getSatelliteWrap().selectTransponder(sateName, selectTp, selected);
@@ -1338,7 +1293,6 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
             /*if (ItemListView.LIST_LEFT.equals(mCurrentListFocus) && ItemListView.isRightList(type)) {
                 mListViewOption.cleanChoosed();
             }*/
-            boolean isOptionType = ItemListView.ITEM_OPTION.equals(type);
             if (ItemListView.LIST_LEFT.equals(mCurrentListFocus)) {
                 mParameterManager.getDvbsParaManager().setCurrentListType(ParameterManager.ITEM_LNB);
                 mItemDetailOption.clear();

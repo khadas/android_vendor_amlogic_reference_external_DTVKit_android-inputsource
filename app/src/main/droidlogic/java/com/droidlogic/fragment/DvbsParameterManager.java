@@ -99,7 +99,7 @@ public class DvbsParameterManager {
     }
 
     public LinkedList<ItemDetail> getSatelliteNameList() {
-        return getSatelliteNameList(mCurrentLnbId, OPERATOR_DEFAULT);
+        return getSatelliteNameList(mCurrentLnbId, mCurrentOperator);
     }
 
     public List<String> getSatelliteNameListSelected() {
