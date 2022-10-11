@@ -152,6 +152,7 @@ public class ParameterManager {
     public static final String KEY_SET_TIME_ZONE = "key_set_time_zone";
     public static final String KEY_GET_TIME_ZONE = "key_get_time_zone";
     public static final String KEY_SET_SUBTITLES_ENABLED = "key_set_subtitles_enabled";
+    public static final String KEY_SET_LOCATION_CODE = "key_set_location_code";
 
     //default value that is save by index
     public static final int KEY_SATELLITE_DEFAULT_VALUE_INDEX = 0;
@@ -2334,6 +2335,9 @@ public class ParameterManager {
                 Log.i(TAG,"KEY_SET_SUBTITLES_ENABLED");
                 setSubtitlesEnabled(Boolean.valueOf(newJsonValues));
                 break;
+            case KEY_SET_LOCATION_CODE:
+                setLocationCode(Integer.parseInt(newJsonValues));
+                break;
             default:
                 break;
         }
@@ -2987,6 +2991,16 @@ public class ParameterManager {
             DtvkitGlueClient.getInstance().request("Dvb.releaseWakeLock", array);
         } catch (Exception e) {
             Log.i(TAG,"releaseWakeLock fail");
+        }
+    }
+
+    private void setLocationCode(int locationCode) {
+        JSONArray array = new JSONArray();
+        try {
+            array.put(locationCode);
+            DtvkitGlueClient.getInstance().request("Dvb.setEwsLocationCode", array);
+        } catch (Exception e) {
+            Log.i(TAG,"setLocationCode fail");
         }
     }
 }

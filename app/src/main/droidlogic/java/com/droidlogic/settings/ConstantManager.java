@@ -136,6 +136,10 @@ public class ConstantManager {
     public static final String KEY_IS_SEARCHING = "is_channel_searching";
     //fvp
     public static final String ACTION_START_FVP_APP = "action_start_fvp_app";
+    //EWS
+    public static final String ACTION_EWS_CLOSE = "action_ews_close";
+    public static final String ACTION_EWS_NOTIFY = "action_ews_notify";
+    public static final String ACTION_EWS = "action_ews";
 
     public static final Map<String, String> PI_TO_VIDEO_FORMAT_MAP = new HashMap<>();
     static {

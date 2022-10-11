@@ -379,6 +379,48 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     };
 
+    protected final BroadcastReceiver mEwsTestBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (!PropSettingManager.getBoolean(PropSettingManager.EWS_TEST, false)) {
+                Log.w(TAG, "EWS_CASE hasn't been enabled");
+                return;
+            }
+            if (intent == null) {
+                return;
+            }
+            try {
+                if (ConstantManager.ACTION_EWS.equals(intent.getAction())) {
+                    String command = intent.getStringExtra("ews_command");
+                    DtvkitTvInputSession mainSession = getMainTunerSession();
+                    if (ConstantManager.ACTION_EWS_NOTIFY.equals(command)) {
+                        //am broadcast -a "action_ews" --es ews_command "action_ews_notify" --ei disaster_code 6 --ei  authority 2 --ei location_type_code 3
+                        if (mainSession != null) {
+                            Bundle EWSEvent = new Bundle();
+                            EWSEvent.putInt("disaster_code", intent.getIntExtra("disaster_code", 0));
+                            EWSEvent.putInt("authority", intent.getIntExtra("authority",0));
+                            EWSEvent.putInt("location_type_code", intent.getIntExtra("location_type_code", 0));
+                            EWSEvent.putString("disaster_code_str", "Corresponding disaster code string");
+                            EWSEvent.putString("location_code", "location_code");
+                            EWSEvent.putString("disaster_position", "disaster_position");
+                            EWSEvent.putString("disaster_date", "disaster_date");
+                            EWSEvent.putString("disaster_characteristic", "disaster_characteristic");
+                            EWSEvent.putString("information_message", "information_message");
+                            mainSession.notifySessionEvent(ConstantManager.ACTION_EWS_NOTIFY, EWSEvent);
+                        }
+                    } else if (ConstantManager.ACTION_EWS_CLOSE.equals(command)) {
+                        //am broadcast -a "action_ews" --es ews_command "action_ews_close"
+                        if (mainSession != null) {
+                            mainSession.notifySessionEvent(ConstantManager.ACTION_EWS_CLOSE, null);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "mEwsTestBroadcastReceiver Exception = " + e.getMessage());
+            }
+        }
+    };
+
     protected final BroadcastReceiver mCiTestBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -643,6 +685,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         IntentFilter netState = new IntentFilter();
         netState.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         registerReceiver(mNetStateChangeReceiver, netState);
+
+        IntentFilter ewsTest = new IntentFilter();
+        ewsTest.addAction(ConstantManager.ACTION_EWS);
+        registerReceiver(mEwsTestBroadcastReceiver, ewsTest);
 
         setDnsProp();
         sendEmptyMessageToInputThreadHandler(MSG_START_CA_SETTINGS_SERVICE);
@@ -1074,6 +1120,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         unregisterReceiver(mBootBroadcastReceiver);
         unregisterReceiver(mAutomaticSearchingReceiver);
         unregisterReceiver(mCiTestBroadcastReceiver);
+        unregisterReceiver(mEwsTestBroadcastReceiver);
         unregisterReceiver(mStorageEventReceiver);
         unregisterReceiver(mNetStateChangeReceiver);
         if (mAutoTimeManager != null) {
@@ -4911,6 +4958,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                         mProviderSync.run(new FvpChannelEnhancedInfoSync(outService));
                     }
+                } else if (signal.equals("EWSNotify")) {
+                    Bundle EWSEvent = new Bundle();
+                    try {
+                        EWSEvent.putInt("disaster_code",data.getInt("disaster_code"));
+                        EWSEvent.putInt("authority",data.getInt("authority"));
+                        EWSEvent.putInt("location_type_code",data.getInt("location_type_code"));
+                        EWSEvent.putString("disaster_code_str",data.getString("disaster_code_str"));
+                        EWSEvent.putString("location_code",data.getString("location_code"));
+                        EWSEvent.putString("disaster_position",data.getString("disaster_position"));
+                        EWSEvent.putString("disaster_date",data.getString("disaster_date"));
+                        EWSEvent.putString("disaster_characteristic",data.getString("disaster_characteristic"));
+                        EWSEvent.putString("information_message",data.getString("information_message"));
+                        notifySessionEvent(ConstantManager.ACTION_EWS_NOTIFY, EWSEvent);
+                    } catch (Exception e) {
+
+                    }
+                } else if (signal.equals("EWSClose")) {
+                    notifySessionEvent(ConstantManager.ACTION_EWS_CLOSE, null);
                 }
             }
         };
