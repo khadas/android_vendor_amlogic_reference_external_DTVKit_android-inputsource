@@ -4624,7 +4624,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.i(TAG, "DvbUpdatedEventPeriods");
                     checkAndUpdateLcn();
                     int dvbSource = getCurrentDvbSource();
-                    EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
+                    EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(dvbSource));
                     Intent intent = new Intent(outService, DtvkitEpgSync.class);
                     intent.putExtra("inputId", mInputId);
                     intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
@@ -4640,7 +4640,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.i(TAG, "DvbUpdatedEventNow");
                     checkAndUpdateLcn();
                     int dvbSource = getCurrentDvbSource();
-                    EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
+                    EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(dvbSource));
                     Intent intent = new Intent(outService, DtvkitEpgSync.class);
                     intent.putExtra("inputId", mInputId);
                     intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
@@ -4661,7 +4661,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.d(TAG, "new Uri:"+ mDynamicDbSyncTag);
                     checkAndUpdateLcn();
                     int dvbSource = getCurrentDvbSource();
-                    EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
+                    EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(dvbSource));
                     Intent intent = new Intent(outService, DtvkitEpgSync.class);
                     intent.putExtra("inputId", mInputId);
                     intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
@@ -6038,7 +6038,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Cursor cursor = null;
             Uri uri = TvContract.buildChannelsUriForInput(mInputId);
             int dvbSource = getCurrentDvbSource();
-            String signalType = dvbSourceToChannelTypeString(dvbSource);
+            String signalType = TvContractUtils.dvbSourceToChannelTypeString(dvbSource);
             String signalSelection = createQuerySelection(dvbSource);
             try {
                 if (uri != null) {
@@ -6631,18 +6631,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 bundle.putInt(ConstantManager.KEY_TVINPUTINFO_VIDEO_HEIGHT, videoHeight);
                 bundle.putFloat(ConstantManager.KEY_TVINPUTINFO_VIDEO_FRAME_RATE, videoFrameRate);
                 bundle.putString(ConstantManager.KEY_TVINPUTINFO_VIDEO_FRAME_FORMAT, videoFrameFormat);
-                //video format framework example "VIDEO_FORMAT_360P" "VIDEO_FORMAT_576I"
-                //comment it as video format will be updated in checkRealTimeResolution
-                /*String videoFormat = tunedChannel != null ? tunedChannel.getVideoFormat() : "";
-                if (tunedChannel != null) {
-                    //update video format such as VIDEO_FORMAT_1080P VIDEO_FORMAT_1080I
-                    String buildVideoFormat = "VIDEO_FORMAT_" + videoHeight + videoFrameFormat;
-                    if (videoHeight > 0 && !TextUtils.equals(buildVideoFormat, tunedChannel.getVideoFormat())) {
-                        videoFormat = buildVideoFormat;
-                        bundle.putString(ConstantManager.KEY_TVINPUTINFO_VIDEO_FORMAT, videoFormat != null ? videoFormat : "");
-                        TvContractUtils.updateSingleChannelColumn(DtvkitTvInput.this.getContentResolver(), tunedChannel.getId(), TvContract.Channels.COLUMN_VIDEO_FORMAT, buildVideoFormat);
-                    }
-                }*/
             }
             //get values from db
             String videoCodec = tunedChannel != null ? tunedChannel.getVideoCodec() : "";
@@ -8197,28 +8185,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.e(TAG, "getNumTuners = " + e.getMessage());
         }
         return numTuners;
-    }
-
-    private String dvbSourceToChannelTypeString(int source) {
-        String result = "TYPE_DVB_T";
-
-        switch (source) {
-            case ParameterManager.SIGNAL_COFDM:
-                result = "TYPE_DVB_T";
-                break;
-            case ParameterManager.SIGNAL_QAM:
-                result = "TYPE_DVB_C";
-                break;
-            case ParameterManager.SIGNAL_QPSK:
-                result = "TYPE_DVB_S";
-                break;
-            case ParameterManager.SIGNAL_ISDBT:
-                result = "TYPE_ISDB_T";
-                break;
-            default:
-                break;
-        }
-        return result;
     }
 
     private int getCurrentDvbSource() {

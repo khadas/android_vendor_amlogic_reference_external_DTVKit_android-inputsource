@@ -16,6 +16,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.droidlogic.app.DataProviderManager;
+import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 import com.droidlogic.dtvkit.inputsource.searchguide.AutoDiseqc;
 import com.droidlogic.dtvkit.inputsource.searchguide.DataPresenter;
 import com.droidlogic.dtvkit.inputsource.searchguide.DtvkitDvbsSetupFragment;
@@ -174,7 +175,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                     startActivityForSource(ParameterManager.SIGNAL_QPSK, 0);
                 }
             } else if (fragment.getTag().equals(DataPresenter.FRAGMENT_SOURCE_SELECTOR)) {
-                int type = ParameterManager.dvbSourceToInt(DataPresenter.dvbSourceToChannelType(text, true));
+                int type = TvContractUtils.dvbSourceToInt(text);
                 if (type == ParameterManager.SIGNAL_QPSK && mDataPresenter.getParameterManager().checkIsGermanyCountry()) {
                     showNextFragment(DataPresenter.FRAGMENT_SPEC);
                     return;

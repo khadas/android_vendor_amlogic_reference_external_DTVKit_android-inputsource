@@ -35,13 +35,9 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
 import java.util.Calendar;
 import java.util.Date;
@@ -57,8 +53,8 @@ import android.content.ComponentName;
 import android.media.tv.TvInputInfo;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
+import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 
-//import com.droidlogic.dtvkit.inputsource.AutomaticSearchingReceiver;
 import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.settings.SysSettingManager;
 import com.droidlogic.settings.PropSettingManager;
@@ -196,33 +192,11 @@ public class DtvkitDvbSettings extends Activity {
         String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
         Log.i(TAG, String.format("inputId: %s", inputId));
         int dvbSource = mParameterManager.getCurrentDvbSource();
-        EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(dvbSource));
+        EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(dvbSource));
         Intent intent = new Intent(this, com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
         intent.putExtra("inputId", inputId);
         intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
         startService(intent);
-    }
-
-    private String dvbSourceToChannelTypeString(int source) {
-        String result = "TYPE_DVB_T";
-
-        switch (source) {
-            case ParameterManager.SIGNAL_COFDM:
-                result = "TYPE_DVB_T";
-                break;
-            case ParameterManager.SIGNAL_QAM:
-                result = "TYPE_DVB_C";
-                break;
-            case ParameterManager.SIGNAL_QPSK:
-                result = "TYPE_DVB_S";
-                break;
-            case ParameterManager.SIGNAL_ISDBT:
-                result = "TYPE_ISDB_T";
-                break;
-            default:
-                break;
-        }
-        return result;
     }
 
     private void checkPassWordInfo() {

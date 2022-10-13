@@ -5,10 +5,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.Window;
-import android.widget.RadioGroup;
 import android.widget.Button;
 import android.media.tv.TvInputInfo;
 import android.content.Context;
@@ -16,9 +13,6 @@ import android.widget.Spinner;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.text.TextUtils;
@@ -29,15 +23,12 @@ import android.util.TypedValue;
 import android.widget.TextView;
 import android.view.WindowManager;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.droidlogic.app.DataProviderManager;
@@ -46,6 +37,7 @@ import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.fragment.PasswordCheckUtil;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
+import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 
 public class DtvkitDvbScanSelect extends Activity {
     private static final String TAG = "DtvkitDvbScanSelect";
@@ -431,58 +423,14 @@ public class DtvkitDvbScanSelect extends Activity {
         return position;
     }
 
-    private String dvbSourceToString(int source) {
-        String result = "DVB-T";
-
-        switch (source) {
-            case ParameterManager.SIGNAL_COFDM:
-                result = "DVB-T";
-                break;
-            case ParameterManager.SIGNAL_QAM:
-                result = "DVB-C";
-                break;
-            case ParameterManager.SIGNAL_QPSK:
-                result = "DVB-S";
-                break;
-            case ParameterManager.SIGNAL_ISDBT:
-                result = "ISDB-T";
-                break;
-            default:
-                break;
-        }
-        return result;
-    }
-
-    private String dvbSourceToChannelTypeString(int source) {
-        String result = "TYPE_DVB_T";
-
-        switch (source) {
-            case ParameterManager.SIGNAL_COFDM:
-                result = "TYPE_DVB_T";
-                break;
-            case ParameterManager.SIGNAL_QAM:
-                result = "TYPE_DVB_C";
-                break;
-            case ParameterManager.SIGNAL_QPSK:
-                result = "TYPE_DVB_S";
-                break;
-            case ParameterManager.SIGNAL_ISDBT:
-                result = "TYPE_ISDB_T";
-                break;
-            default:
-                break;
-        }
-        return result;
-    }
-
     private void setCurrentDvbSource(int source) {
         JSONArray array = new JSONArray();
         try {
             array.put(source);
             DtvkitGlueClient.getInstance().request("Dvb.SetDvbSource", array);
             mParameterManager.saveStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM,
-                dvbSourceToString(source));
-            EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(source));
+                    TvContractUtils.dvbSourceToDbString(source));
+            EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(source));
         } catch (Exception e) {
         }
     }
@@ -495,7 +443,7 @@ public class DtvkitDvbScanSelect extends Activity {
                 source = sourceReq.optInt("data");
             }
             String sourceParameter = mParameterManager.getStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM);
-            String sourceStr = dvbSourceToString(source);
+            String sourceStr = TvContractUtils.dvbSourceToDbString(source);
             if (!Objects.equals(sourceParameter, sourceStr)) {
                 mParameterManager.saveStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM, sourceStr);
             }

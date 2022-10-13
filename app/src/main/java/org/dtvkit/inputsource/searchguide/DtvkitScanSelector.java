@@ -113,7 +113,7 @@ public class DtvkitScanSelector extends com.droidlogic.dtvkit.inputsource.search
     private void initData() {
         int currentDvbSource = getParameterManager().getCurrentDvbSource();
         String sourceParameter = getParameterManager().getStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM);
-        String sourceStr = ParameterManager.dvbSourceToString(currentDvbSource);
+        String sourceStr = com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils.dvbSourceToDbString(currentDvbSource);
         if (!TextUtils.equals(sourceParameter, sourceStr)) {
             getParameterManager().setCurrentDvbSource(currentDvbSource);
         }

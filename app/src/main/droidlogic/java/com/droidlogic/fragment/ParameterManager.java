@@ -1,8 +1,6 @@
 package com.droidlogic.fragment;
 
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.io.File;
@@ -17,8 +15,6 @@ import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.settings.PropSettingManager;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-//import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 import android.os.Build.VERSION;
@@ -30,6 +26,7 @@ import com.droidlogic.dtvkit.inputsource.TargetRegionManager;
 
 import com.droidlogic.app.DataProviderManager;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
+import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 
 public class ParameterManager {
 
@@ -821,7 +818,7 @@ public class ParameterManager {
         return result;
     }
 
-    public int getCurrentCountryCode() {
+    public static int getCurrentCountryCode() {
         int result = -1;//-1 means can't find
         int[] currentInfo = getCurrentLangParameter();
         if (currentInfo != null && currentInfo[0] != -1) {
@@ -830,7 +827,7 @@ public class ParameterManager {
         return result;
     }
 
-    private JSONObject getCountries() {
+    private static JSONObject getCountries() {
         JSONObject resultObj = null;
         try {
             JSONArray args1 = new JSONArray();
@@ -841,7 +838,6 @@ public class ParameterManager {
                 Log.d(TAG, "getCountries then get null");
             }
         } catch (Exception e) {
-            Log.d(TAG, "getCountries Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
         return resultObj;
@@ -988,7 +984,7 @@ public class ParameterManager {
         return result;
     }
 
-    public String getCurrentCountryIso3Name() {
+    public static String getCurrentCountryIso3Name() {
         String result = null;
         int currentCountryCode = getCurrentCountryCode();
         try {
@@ -996,7 +992,7 @@ public class ParameterManager {
             JSONArray data = null;
             if (resultObj != null) {
                 data = (JSONArray)resultObj.get("data");
-                if (data == null || data.length() == 0) {
+                if (data.length() == 0) {
                     return result;
                 }
                 for (int i = 0; i < data.length(); i++) {
@@ -1193,7 +1189,7 @@ public class ParameterManager {
         return id;
     }
 
-    public int[] getCurrentLangParameter() {
+    public static int[] getCurrentLangParameter() {
         int[] result = {-1, -1, -1, -1, -1};
         JSONObject resultObj = null;
         try {
@@ -2311,7 +2307,7 @@ public class ParameterManager {
                 playerSetSpokenSubtitleOn(newJsonValues.equals("on") ? true : false);
                 break;
             case KEY_SET_DVB_SOURCE:
-                setCurrentDvbSource(dvbSourceToInt(newJsonValues));
+                setCurrentDvbSource(TvContractUtils.dvbSourceToInt(newJsonValues));
                 break;
             case KEY_SET_PIN_CODE_TO_CAM:
                 setPinCodeToCam(newJsonValues);
@@ -2835,76 +2831,10 @@ public class ParameterManager {
             array.put(source);
             DtvkitGlueClient.getInstance().request("Dvb.SetDvbSource", array);
             saveStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM,
-                    dvbSourceToString(source));
-            EpgSyncJobService.setChannelTypeFilter(dvbSourceToChannelTypeString(source));
-        } catch (Exception e) {
+                    TvContractUtils.dvbSourceToDbString(source));
+            EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(source));
+        } catch (Exception ignored) {
         }
-    }
-
-    private String dvbSourceToChannelTypeString(int source) {
-        String result = "TYPE_DVB_T";
-
-        switch (source) {
-            case ParameterManager.SIGNAL_COFDM:
-                result = "TYPE_DVB_T";
-                break;
-            case ParameterManager.SIGNAL_QAM:
-                result = "TYPE_DVB_C";
-                break;
-            case ParameterManager.SIGNAL_QPSK:
-                result = "TYPE_DVB_S";
-                break;
-            case ParameterManager.SIGNAL_ISDBT:
-                result = "TYPE_ISDB_T";
-                break;
-            default:
-                break;
-        }
-        return result;
-    }
-
-    public static String dvbSourceToString(int source) {
-        String result = "DVB-T";
-
-        switch (source) {
-            case ParameterManager.SIGNAL_COFDM:
-                result = "DVB-T";
-                break;
-            case ParameterManager.SIGNAL_QAM:
-                result = "DVB-C";
-                break;
-            case ParameterManager.SIGNAL_QPSK:
-                result = "DVB-S";
-                break;
-            case ParameterManager.SIGNAL_ISDBT:
-                result = "ISDB-T";
-                break;
-            default:
-                break;
-        }
-        return result;
-    }
-
-    public static int dvbSourceToInt(String sourceName) {
-        int source = 0;
-        switch (sourceName) {
-            case "TYPE_DVB_C":
-                source = ParameterManager.SIGNAL_QAM;
-                break;
-            case "TYPE_DVB_T":
-            case "TYPE_DVB_T2":
-                source = ParameterManager.SIGNAL_COFDM;
-                break;
-            case "TYPE_DVB_S":
-            case "TYPE_DVB_S2":
-                source = ParameterManager.SIGNAL_QPSK;
-                break;
-            case "ISDB-T":
-            case "TYPE_ISDB_T":
-                source = ParameterManager.SIGNAL_ISDBT;
-                break;
-        }
-        return source;
     }
 
     private String getPlatformProperty(String prop) {

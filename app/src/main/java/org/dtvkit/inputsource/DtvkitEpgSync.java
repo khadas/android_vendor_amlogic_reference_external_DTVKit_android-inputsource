@@ -11,6 +11,7 @@ import com.droidlogic.dtvkit.companionlibrary.model.Channel;
 import com.droidlogic.dtvkit.companionlibrary.model.EventPeriod;
 import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 import com.droidlogic.dtvkit.companionlibrary.model.Program;
+import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.fragment.ParameterManager;
@@ -30,8 +31,6 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     public static final int SIGNAL_QAM   = 4; // digital cable
     public static final int SIGNAL_ISDBT  = 5;
     public static final int SIGNAL_ANALOG = 8;
-    private ParameterManager mParameterManager = new ParameterManager(mContext, DtvkitGlueClient.getInstance());
-    private boolean mIsUK = "gbr".equals(mParameterManager.getCurrentCountryIso3Name());
 
     @Override
     public List<Channel> getChannels(boolean syncCurrent) {
@@ -55,7 +54,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 return channels;
             }
             if (syncCurrent && TextUtils.isEmpty(getChannelTypeFilter())) {
-                setChannelTypeFilter(dvbSourceToChannelTypeString(getCurrentDvbSource()));
+                setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(getCurrentDvbSource()));
             }
             int index = 0;
             int remainChannels = channelNumber;
@@ -67,7 +66,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 services = new JSONArray();
                 while (remainChannels > 0) {
                     JSONArray param1 = new JSONArray();
-                    if (syncCurrent == true)
+                    if (syncCurrent)
                         param1.put("cur");
                     else
                         param1.put("all");//signal_type current or all
@@ -104,14 +103,12 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 JSONObject transponder = new JSONObject();
                 String transponderDisplay = service.getString("transponder");
                 transponder.put("transponder_info_display_name", transponderDisplay);
-                if (transponderDisplay != null) {
-                    String[] splitTransponder = transponderDisplay.split("/");
-                    if (splitTransponder != null && splitTransponder.length == 3) {
-                        transponder.put("transponder_info_satellite_name", service.getString("sate_name"));
-                        transponder.put("transponder_info_frequency", splitTransponder[0]);
-                        transponder.put("transponder_info_polarity", splitTransponder[1]);
-                        transponder.put("transponder_info_symbol", splitTransponder[2]);
-                    }
+                String[] splitTransponder = transponderDisplay.split("/");
+                if (splitTransponder.length == 3) {
+                    transponder.put("transponder_info_satellite_name", service.getString("sate_name"));
+                    transponder.put("transponder_info_frequency", splitTransponder[0]);
+                    transponder.put("transponder_info_polarity", splitTransponder[1]);
+                    transponder.put("transponder_info_symbol", splitTransponder[2]);
                 }
                 data.put("transponder_info", transponder.toString());
                 data.put("video_pid", service.getInt("video_pid"));
@@ -183,30 +180,8 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 } else {
                     data.put("raw_displaynumber", String.format(Locale.ENGLISH, "%d", service.getInt("lcn")));
                 }
-                String channelType = TvContract.Channels.TYPE_OTHER;
                 String signal_type = service.optString("sig_name", "TYPE_OTHER");
-                switch (signal_type) {
-                    case "DVB-T":
-                        channelType = TvContract.Channels.TYPE_DVB_T;
-                        break;
-                    case "DVB-T2":
-                        channelType = TvContract.Channels.TYPE_DVB_T2;
-                        break;
-                    case "DVB-C":
-                        channelType = TvContract.Channels.TYPE_DVB_C;
-                        break;
-                    case "DVB-S":
-                        channelType = TvContract.Channels.TYPE_DVB_S;
-                        break;
-                    case "DVB-S2":
-                        channelType = TvContract.Channels.TYPE_DVB_S2;
-                        break;
-                    case "ISDB-T":
-                        channelType = TvContract.Channels.TYPE_ISDB_T;
-                        break;
-                    default:
-                        break;
-                }
+                String channelType = TvContractUtils.searchSignalTypeToChannelType(signal_type);
                 channels.add(new Channel.Builder()
                         .setDisplayName(service.getString("name"))
                         .setType(channelType)
@@ -220,9 +195,9 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setLocked(service.optBoolean("blocked")?1:0)
                         .build());
             }
-
         } catch (Exception e) {
             Log.e(TAG, "getChannels Exception = " + e.getMessage());
+            throw new UnsupportedOperationException("getChannels Failed");
         }
 
         return channels;
@@ -231,11 +206,11 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     /*param signalType should not null*/
     @Override
     public boolean checkSignalTypesMatch(String signalType) {
-        String currentSignalType = dvbSourceToChannelTypeString(getCurrentDvbSource());
+        String currentSignalType = TvContractUtils.dvbSourceToChannelTypeString(getCurrentDvbSource());
         if (signalType.contains("TYPE_")) {
             return currentSignalType.equals(signalType);
         } else {
-            return currentSignalType.equals(searchSignalTypeToChannelType(signalType));
+            return currentSignalType.equals(TvContractUtils.searchSignalTypeToChannelType(signalType));
         }
     }
 
@@ -479,6 +454,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     }
 
     private String[] getGenres(String genre, int content_value) {
+        boolean mIsUK = "gbr".equals(ParameterManager.getCurrentCountryIso3Name());
         if (content_value > 0xff) {
             //tv provider don't support level 2
             return new String[]{};
@@ -521,7 +497,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
     private TvContentRating[] parseParentalRatings(int parentalRating, String title)
     {
-        TvContentRating ratings_array[];
+        TvContentRating[] ratings_array;
         String ratingSystemDefinition = "DVB";
         String ratingDomain = "com.android.tv";
         String DVB_ContentRating[] = {"DVB_4", "DVB_5", "DVB_6", "DVB_7", "DVB_8", "DVB_9", "DVB_10", "DVB_11", "DVB_12", "DVB_13", "DVB_14", "DVB_15", "DVB_16", "DVB_17", "DVB_18", "DVB_19"};
@@ -608,54 +584,6 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         } catch (Exception e) {
         }
         return source;
-    }
-
-    private String dvbSourceToChannelTypeString(int source) {
-        String result = "TYPE_DVB_T";
-        switch (source) {
-            case SIGNAL_COFDM:
-                result = "TYPE_DVB_T";
-                break;
-            case SIGNAL_QAM:
-                result = "TYPE_DVB_C";
-                break;
-            case SIGNAL_QPSK:
-                result = "TYPE_DVB_S";
-                break;
-            case SIGNAL_ISDBT:
-                result = "TYPE_ISDB_T";
-                break;
-            default:
-                break;
-        }
-        return result;
-    }
-
-    private static String searchSignalTypeToChannelType(String searchSignalType) {
-        String result = null;
-
-        if (TextUtils.isEmpty(searchSignalType)) {
-            return null;
-        }
-        switch (searchSignalType) {
-            case "DVB-T":
-            case "DVB_T":
-                result = "TYPE_DVB_T";
-                break;
-            case "DVB-C":
-            case "DVB_C":
-                result = "TYPE_DVB_C";
-                break;
-            case "DVB-S":
-            case "DVB_S":
-                result = "TYPE_DVB_S";
-                break;
-            case "ISDB-T":
-            case "ISDB_T":
-                result = "TYPE_ISDB_T";
-                break;
-        }
-        return result;
     }
 
     private int parseModulationInt(String modulation) {

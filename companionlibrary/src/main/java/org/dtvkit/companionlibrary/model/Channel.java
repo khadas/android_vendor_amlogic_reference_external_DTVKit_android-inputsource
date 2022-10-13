@@ -365,29 +365,27 @@ public final class Channel {
         values.put(TvContract.Channels.COLUMN_SEARCHABLE, mSearchable);
         values.put(TvContract.Channels.COLUMN_SERVICE_TYPE, mServiceType);
 
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1) {
-            values.put(TvContract.Channels.COLUMN_APP_LINK_COLOR, mAppLinkColor);
-            if (!TextUtils.isEmpty(mAppLinkText)) {
-                values.put(TvContract.Channels.COLUMN_APP_LINK_TEXT, mAppLinkText);
-            } else {
-                values.putNull(TvContract.Channels.COLUMN_APP_LINK_TEXT);
-            }
-            if (!TextUtils.isEmpty(mAppLinkIconUri)) {
-                values.put(TvContract.Channels.COLUMN_APP_LINK_ICON_URI, mAppLinkIconUri);
-            } else {
-                values.putNull(TvContract.Channels.COLUMN_APP_LINK_ICON_URI);
-            }
-            if (!TextUtils.isEmpty(mAppLinkPosterArtUri)) {
-                values.put(TvContract.Channels.COLUMN_APP_LINK_POSTER_ART_URI,
-                        mAppLinkPosterArtUri);
-            } else {
-                values.putNull(TvContract.Channels.COLUMN_APP_LINK_POSTER_ART_URI);
-            }
-            if (!TextUtils.isEmpty(mAppLinkIntentUri)) {
-                values.put(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI, mAppLinkIntentUri);
-            } else {
-                values.putNull(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI);
-            }
+        values.put(TvContract.Channels.COLUMN_APP_LINK_COLOR, mAppLinkColor);
+        if (!TextUtils.isEmpty(mAppLinkText)) {
+            values.put(TvContract.Channels.COLUMN_APP_LINK_TEXT, mAppLinkText);
+        } else {
+            values.putNull(TvContract.Channels.COLUMN_APP_LINK_TEXT);
+        }
+        if (!TextUtils.isEmpty(mAppLinkIconUri)) {
+            values.put(TvContract.Channels.COLUMN_APP_LINK_ICON_URI, mAppLinkIconUri);
+        } else {
+            values.putNull(TvContract.Channels.COLUMN_APP_LINK_ICON_URI);
+        }
+        if (!TextUtils.isEmpty(mAppLinkPosterArtUri)) {
+            values.put(TvContract.Channels.COLUMN_APP_LINK_POSTER_ART_URI,
+                    mAppLinkPosterArtUri);
+        } else {
+            values.putNull(TvContract.Channels.COLUMN_APP_LINK_POSTER_ART_URI);
+        }
+        if (!TextUtils.isEmpty(mAppLinkIntentUri)) {
+            values.put(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI, mAppLinkIntentUri);
+        } else {
+            values.putNull(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI);
         }
         return values;
     }

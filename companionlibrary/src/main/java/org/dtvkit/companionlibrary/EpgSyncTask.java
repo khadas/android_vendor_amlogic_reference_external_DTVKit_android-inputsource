@@ -219,7 +219,6 @@ public class EpgSyncTask {
             if (isCancelled()) {
                 return ERROR_EPG_SYNC_CANCELED;
             }
-
             if (syncCurrent) {
                 if (!TextUtils.isEmpty(syncSignalType) && !mMainService.checkSignalTypesMatch(syncSignalType)) {
                     //dvb source changed, should cancel this job
@@ -234,7 +233,13 @@ public class EpgSyncTask {
             }
 
             if (updateChannel) {
-                List<Channel> tvChannels = mMainService.getChannels(syncCurrent);
+                List<Channel> tvChannels;
+                try {
+                    tvChannels = mMainService.getChannels(syncCurrent);
+                } catch (Exception e) {
+                    Log.e(TAG, e.toString());
+                    return ERROR_EPG_SYNC_CANCELED;
+                }
                 TvContractUtils.updateChannels(mMainService, mInputId, mIsSearchedChannel, tvChannels, EpgSyncJobService.getChannelTypeFilter(), mBundle);
             }
             LinkedList<Channel> channelList = TvContractUtils.buildChannelMap(
@@ -247,7 +252,6 @@ public class EpgSyncTask {
 //            boolean nowNext = mBundle.getBoolean(BUNDLE_KEY_SYNC_NOW_NEXT, false);
 
             boolean channelOnly = mBundle.getBoolean(BUNDLE_KEY_SYNC_CHANNEL_ONLY, false);
-
             /* Get the updated event periods if required for this type of sync */
             /* List<EventPeriod> eventPeriods = new ArrayList<>();
             if (!nowNext) {
