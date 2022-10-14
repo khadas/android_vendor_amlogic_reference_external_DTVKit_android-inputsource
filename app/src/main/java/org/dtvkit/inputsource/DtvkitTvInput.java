@@ -5623,6 +5623,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (playerPlay(INDEX_FOR_MAIN, recordedProgram.getRecordingDataUri(),
                         mAudioADAutoStart, false, 0, "", "").equals("ok")) {
                     notifyChannelRetuned(uri);
+                    playerInitAssociateDualSupport(0);
                 } else {
                     DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
