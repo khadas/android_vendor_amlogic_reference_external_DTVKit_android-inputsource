@@ -4431,7 +4431,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 msg.arg1 = 0;
                                 mMainHandle.sendMessageDelayed(msg, 0);
                             }
-                            playerSetSubtitlesOn(false);
+                            if (!mIsPip) {
+                                playerSetSubtitlesOn(false);
+                            }
                             playerState = PlayerState.BLOCKED;
                             notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", Rating));
                             break;
