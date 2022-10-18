@@ -4376,6 +4376,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 playerSetSubtitlesOn(false);
                             }
                             playerState = PlayerState.BLOCKED;
+                            dvrSubtitleFlag = 0;
                             notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", Rating));
                             break;
                         case "badsignal":
