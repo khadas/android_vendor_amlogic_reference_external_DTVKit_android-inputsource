@@ -92,6 +92,12 @@ public class DtvKitDVBTCScanPresenter {
                     }
                 }
                 stopProviderSyncMonitor();
+            } else if (status.equals(EpgSyncJobService.SYNC_ERROR)) {
+                if (null != mUpdateScanView) {
+                    mUpdateScanView.updateScanStatus("Error");
+                    mUpdateScanView.finishScanView();
+                }
+                stopProviderSyncMonitor();
             }
         }
     };
