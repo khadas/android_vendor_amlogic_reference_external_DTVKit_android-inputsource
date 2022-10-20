@@ -181,8 +181,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private int mRegionId = 0;
     private String mDynamicDbSyncTag = "";
 
-    volatile private boolean mDvbNetworkChangeSearchStatus = false;
-
     // Mutex for all mutable shared state.
     private final Object mLock = new Object();
 
@@ -2060,7 +2058,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
             mChannel = uri;
-            Channel channel = getChannel(uri);
+            Channel channel = TvContractUtils.getChannel(mContentResolver, uri);
             PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
             if (!powerManager.isInteractive()) {
                 //In standby mode, schedule recording on other source(for example HDMI), need to call this interface
@@ -2109,21 +2107,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             String dvbUri;
             long durationSecs = 0;
             Program program = getProgram(uri);
-/*
-            if (program != null) {
-                startRecordTimeMillis = program.getStartTimeUtcMillis();
-                startRecordSystemTimeMillis = SystemClock.uptimeMillis();
-                dvbUri = getProgramInternalDvbUri(program);
-            } else {
-                startRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);
-                startRecordSystemTimeMillis = SystemClock.uptimeMillis();
-                dvbUri = getChannelInternalDvbUri(getChannel(mChannel));
-                durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
-            }
-*/
             startRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);//start record time always is equal to the current stream time
             startRecordSystemTimeMillis = SystemClock.uptimeMillis();
-            dvbUri = getChannelInternalDvbUri(getChannel(mChannel));
+            dvbUri = getChannelInternalDvbUri(TvContractUtils.getChannel(mContentResolver, mChannel));
             durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
             Log.d(TAG, "startRecordTimeMillis :" + startRecordTimeMillis + "|startRecordSystemTimeMillis :" + startRecordSystemTimeMillis);
 
@@ -2200,7 +2186,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             RecordedProgram.Builder builder = null;
             InternalProviderData data = null;
             Program program = getProgram(mProgram);
-            Channel channel = getChannel(mChannel);
+            Channel channel = TvContractUtils.getChannel(mContentResolver, mChannel);
             if (program == null) {
                 program = getCurrentStreamProgram(mChannel, PropSettingManager.getCurrentStreamTime(true));
             }
@@ -2338,7 +2324,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mProgram != null) {
                 uri = getProgramInternalDvbUri(getProgram(mProgram));
             } else if (mChannel != null) {
-                uri = getChannelInternalDvbUri(getChannel(mChannel)) + ";0000";
+                uri = getChannelInternalDvbUri(TvContractUtils.getChannel(mContentResolver, mChannel)) + ";0000";
             } else {
                 return;
             }
@@ -2450,26 +2436,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             }
             return program;
-        }
-
-        private Channel getChannel(Uri uri) {
-            Channel channel = null;
-            Cursor cursor = null;
-            try {
-                if (uri != null) {
-                    cursor = mContext.getContentResolver().query(uri, Channel.PROJECTION, null, null, null);
-                }
-                while (null != cursor && cursor.moveToNext()) {
-                    channel = Channel.fromCursor(cursor);
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "getChannel query Failed = " + e.getMessage());
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
-            }
-            return channel;
         }
 
         private void updateRecordProgramInfo(String recordDataUri) {
@@ -2615,7 +2581,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             @Override
                             public boolean test(JSONObject recording) {
                                 return TextUtils.equals(recording.optString("serviceuri", "null"),
-                                        getChannelInternalDvbUri(getChannel(mChannel)))
+                                        getChannelInternalDvbUri(TvContractUtils.getChannel(mContentResolver, mChannel)))
                                         && FeatureUtil.getFeatureSupportRecordAVServiceOnly()
                                         && !recording.optBoolean("is_av", true);
                             }
@@ -3285,67 +3251,60 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mPendingTuneUri = null;
             Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + ", mIsPip = " + mIsPip);
 
-            Channel firstDbValidChannel = getFirstChannel();
-            if (firstDbValidChannel == null) {
-                //if no channel,stop play
-                playerSetServiceMute(true, Boolean.compare(mIsPip, false));
-                onFinish(false, false);
-                Log.e(TAG, "error:no channel.");
-                if (mMainHandle != null) {
-                    mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
-                    Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
-                    msg.arg1 = 1;
-                    mMainHandle.sendMessageDelayed(msg, 100);
-                }
-                return;
-            }
-
             if (mMainHandle != null) {
                 mMainHandle.sendEmptyMessage(MSG_HIDE_BLOCKED_TEXT);
                 mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
                 mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
             }
 
-            Channel targetChannel = getChannel(channelUri);
-            Channel tunedChannel = (targetChannel != null) ? targetChannel : firstDbValidChannel;
-            if (tunedChannel == null) {
-                Log.e(TAG, "onTuneByHandlerThreadHandle no channel tune to:" + channelUri);
-                return;
-            } else {
-                if (targetChannel == null) {
-                    Log.w(TAG, "onTuneByHandlerThreadHandle: targeted channel not exist,"
-                            + "we will tune to the first channel and notice livetv do refresh.");
-                    sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
+            Channel targetChannel = TvContractUtils.getChannel(mContentResolver, channelUri);
+            if (targetChannel == null) {
+                sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
+                Log.w(TAG, "Cannot find " + channelUri + ", try tuneToFirst");
+                Channel firstDbValidChannel = getFirstChannel();
+                if (firstDbValidChannel == null) {
+                    //if no channel,stop play
+                    playerSetServiceMute(true, Boolean.compare(mIsPip, false));
+                    onFinish(false, false);
+                    Log.e(TAG, "error:no channel.");
+                    if (mMainHandle != null) {
+                        mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                        Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                        msg.arg1 = 1;
+                        mMainHandle.sendMessageDelayed(msg, 100);
+                    }
+                    return;
+                } else {
+                   Log.i(TAG, "Canot find " + channelUri
+                        + ", tuneTo _ID = " + targetChannel.getId()
+                        + " " + targetChannel.getDisplayName());
                 }
+                targetChannel = firstDbValidChannel;
             }
 
+            Channel tunedChannel = targetChannel;
+
             String dvbUri;
-            boolean isVirtual = false;
-            if (tunedChannel != null) {
-                isVirtual = TvContractUtils.getBooleanFromChannelInternalProviderData(
-                        tunedChannel, Channel.KEY_CHANNEL_CI_VIRTUAL_CHANNEL, false);
-            }
+            boolean isVirtual = TvContractUtils.getBooleanFromChannelInternalProviderData(
+                        targetChannel, Channel.KEY_CHANNEL_CI_VIRTUAL_CHANNEL, false);
             if (isVirtual) {
                 Log.i(TAG, "onTuneByHandlerThreadHandle isVirtual = " + isVirtual
-                        + ", getInternalProviderData = " + tunedChannel.getInternalProviderData());
+                        + ", getInternalProviderData = " + targetChannel.getInternalProviderData());
                 dvbUri = "vc://" + TvContractUtils.getStringFromChannelInternalProviderData(
-                        tunedChannel, Channel.KEY_CHANNEL_CI_NUMBER, null);
+                        targetChannel, Channel.KEY_CHANNEL_CI_NUMBER, null);
             } else {
-                dvbUri = getChannelInternalDvbUri(tunedChannel);
+                dvbUri = getChannelInternalDvbUri(targetChannel);
             }
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
 
             //comment it as need add pip
             //writeSysFs("/sys/class/video/video_global_output", "0");
-
-            mDvbNetworkChangeSearchStatus = false;
             mAudioADAutoStart = mDataManager.getIntParameters(DataManager.TV_KEY_AD_SWITCH) == 1;
             mAudioSystemCmdManager.handleAdtvAudioEvent(
                     AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0, 0);
 
-            boolean playResult = doTune(mTunedChannel, tunedChannel, channelUri, dvbUri, mhegTune);
+            boolean playResult = doTune(mTunedChannel, targetChannel, channelUri, dvbUri, mhegTune);
             if (!isSessionAvailable()) {
-
                 return;
             }
             if (!playResult) {
@@ -3643,31 +3602,25 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return result;
         }
 
-        private boolean initSubtitleOrTeletextIfNeed() {
-            boolean isSubOn = playerGetSubtitlesOn();
-            boolean isTeleOn = playerIsTeletextOn();
-            String subTrackId = playerGetSelectedSubtitleTrackId();
-            String teleTrackId = playerGetSelectedTeleTextTrackId();
-            int subIndex = playerGetSelectedSubtitleTrack();
-            int teleIndex = playerGetSelectedTeleTextTrack();
-            Log.d(TAG, "initSubtitleOrTeletextIfNeed isSubOn = " + isSubOn
-                    + ", isTeleOn = " + isTeleOn + ", subTrackId = " + subTrackId
-                    + ", teleTrackId = " + teleTrackId);
-            if (isTeleOn) {
-                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, teleTrackId);
-            } else if (isSubOn) {
+        private void initSubtitleOrTeletextIfNeed() {
+            StringBuilder log = new StringBuilder("initSubtitleOrTeletextIfNeed");
+            if (playerIsTeletextOn()) {
+                String teletextTrackId = playerGetSelectedTeleTextTrackId();
+                log.append(",Teletext:On teletextTrackId:").append(teletextTrackId);
+                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, teletextTrackId);
+            } else if (playerGetSubtitlesOn()) {
+                String subTrackId = playerGetSelectedSubtitleTrackId();
+                log.append(",Subtitle:On subTrackId:").append(subTrackId);
                 notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, subTrackId);;
             } else {
+                log.append(",Teletext:Off Subtitle:Off");
                 notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
             }
-            return true;
+            Log.d(TAG, log.toString());
         }
 
         private void updateTrackAndSelect(int isDvrPlaying, boolean clear) {
-            boolean retuneSubtile = true;
-            if ((isDvrPlaying == 1) && (dvrSubtitleFlag == 1)) {
-                retuneSubtile = false;
-            }
+            boolean retSubtitle = (isDvrPlaying != 1) || (dvrSubtitleFlag != 1);
 
             if (clear) {
                 Log.w(TAG, "updateTrackAndSelect: clear Tracks, because not playing status");
@@ -3675,7 +3628,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 notifyTracksChanged(mTunedTracks);
                 return;
             }
-            if (retuneSubtile && (!FeatureUtil.getFeatureSupportCaptioningManager()
+            if (retSubtitle && (!FeatureUtil.getFeatureSupportCaptioningManager()
                     || (mCaptioningManager != null && mCaptioningManager.isEnabled()))) {
                 playerSetSubtitlesOn(true);
                 if (isDvrPlaying == 1) {
@@ -3683,11 +3636,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
             }
 
-            List<TvTrackInfo> tracks = playerGetTracks(mTunedChannel, false);
-            if (!tracks.equals(mTunedTracks)) {
-                mTunedTracks = tracks;
-                Log.d(TAG, "updateTrackAndSelect update new mTunedTracks");
-            }
+            mTunedTracks = playerGetTracks(mTunedChannel, false);
             notifyTracksChanged(mTunedTracks);
             int audioTrack = playerGetSelectedAudioTrack();
             Log.i(TAG, "updateTrackAndSelect audio track selected: " + audioTrack);
@@ -4156,10 +4105,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             boolean used;
 
             Log.i(TAG, "onKeyDown " + event);
-            if (mDvbNetworkChangeSearchStatus) {
-                Log.i(TAG, "onKeyDown skip as search action is raised");
-                return true;
-            }
             if (mCiAuthenticatedStatus) {
                 Log.i(TAG, "onKeyDown skip as ci Authentication");
                 showToast(R.string.play_ci_authentication);
@@ -4186,10 +4131,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public boolean onKeyUp(int keyCode, KeyEvent event) {
             boolean used;
             Log.i(TAG, "onKeyUp " + event);
-            if (mDvbNetworkChangeSearchStatus) {
-                Log.i(TAG, "onKeyUp skip as search action is raised");
-                return true;
-            }
             if (mCiAuthenticatedStatus) {
                 Log.i(TAG, "onKeyDown skip as ci Authentication");
                 showToast(R.string.play_ci_authentication);
@@ -4927,7 +4868,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                    }
                    Log.i(TAG, "ServiceRetuned " + dvbUri);
                    //find the channel URI that matches the dvb uri of the retune
-                   channel = getChannelWithDvbUri(dvbUri);
+                   channel = TvContractUtils.getChannelWithDvbUri(mContentResolver, mInputId, dvbUri);
                    if (channel != null) {
                        found = true;
                        id = channel.getId();
@@ -5213,7 +5154,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.d(TAG, "MSG_TS_UPDATE, uri:"+ newUri);
                         Uri retuneUri;
                         long id = 0;
-                        Channel channel = getChannelWithDvbUri(newUri);
+                        Channel channel = TvContractUtils.getChannelWithDvbUri(mContentResolver, mInputId, newUri);
                         boolean found = false;
                         if (channel != null) {
                             found = true;
@@ -5526,7 +5467,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.d(TAG, "checkTrackInfoUpdate no need");
                 return result;
             }
-            if (mResourceOwnedByBr == true) {
+            if (mResourceOwnedByBr) {
             List<TvTrackInfo> tracks = playerGetTracks(mTunedChannel, true);
             boolean needCheckAgain = false;
             int trackId = -1;
@@ -5954,61 +5895,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        private Channel getChannel(Uri channelUri) {
-            Channel channel = null;
-            Cursor cursor = null;
-            try {
-                if (channelUri != null) {
-                    cursor = outService.getContentResolver().query(
-                            channelUri, Channel.PROJECTION, null, null, null);
-                }
-                while (null != cursor && cursor.moveToNext()) {
-                    channel = Channel.fromCursor(cursor);
-                }
-            } catch (Exception e) {
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
-            }
-            return channel;
-        }
-
         private Channel getChannel(long channelId) {
-            return getChannel(TvContract.buildChannelUri(channelId));
-        }
-
-        private Channel getChannelWithDvbUri(String dvbUri) {
-            Channel channel = null;
-            Cursor cursor = null;
-            Uri uri = TvContract.buildChannelsUriForInput(mInputId);
-            if (TextUtils.isEmpty(dvbUri)) {
-                return null;
-            }
-            try {
-                if (uri != null) {
-                    cursor = outService.getContentResolver().query(
-                            uri, Channel.PROJECTION, null, null, null);
-                }
-                if (cursor == null || cursor.getCount() == 0) {
-                    return null;
-                }
-                while (cursor.moveToNext()) {
-                    Channel nextChannel = Channel.fromCursor(cursor);
-                    if (nextChannel != null) {
-                        if (dvbUri.equals(getChannelInternalDvbUri(nextChannel))) {
-                            channel = nextChannel;
-                            break;
-                        }
-                    }
-                }
-            } catch (Exception ignored) {
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
-            }
-            return channel;
+            return TvContractUtils.getChannel(mContentResolver, TvContract.buildChannelUri(channelId));
         }
 
         private String createQuerySelection(int dvbSource) {
@@ -6141,7 +6029,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         Channel channel = null;
         try {
             if (getMainTunerSession() != null) {
-                channel = getMainTunerSession().getChannel(channelUri);
+                channel = TvContractUtils.getChannel(mContentResolver, channelUri);
             }
             if (channel != null) {
                 result = channel.getInternalProviderData().get("dvbUri").toString();

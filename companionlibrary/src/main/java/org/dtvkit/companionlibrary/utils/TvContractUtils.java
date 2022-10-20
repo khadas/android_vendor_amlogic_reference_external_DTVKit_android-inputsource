@@ -497,6 +497,41 @@ public class TvContractUtils {
     }
 
     /**
+     * Returns the {@link Channel} with specified channel URI.
+     * @param resolver {@link ContentResolver} used to query database.
+     * @param dvbUri URI of channel to play.
+     * @return An channel object with specified dvbUri.
+     */
+    public static Channel getChannelWithDvbUri(ContentResolver resolver, String inputId, String dvbUri) {
+        Channel channel = null;
+        Uri uri = TvContract.buildChannelsUriForInput(inputId);
+        if (TextUtils.isEmpty(dvbUri)) {
+            return null;
+        }
+        try (Cursor cursor = resolver.query(
+                uri, Channel.PROJECTION, null, null, null)) {
+            if (cursor == null || cursor.getCount() == 0) {
+                return null;
+            }
+            while (cursor.moveToNext()) {
+                Channel nextChannel = Channel.fromCursor(cursor);
+                InternalProviderData data = nextChannel.getInternalProviderData();
+                if (data == null) {
+                    continue;
+                }
+                String dvb = (String) data.get("dvbUri");
+                if (dvbUri.equals(dvb)) {
+                    channel = nextChannel;
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getChannelWithDvbUri ", e);
+        }
+        return channel;
+    }
+
+    /**
      * Returns the current list of channels your app provides.
      *
      * @param resolver Application's ContentResolver.
@@ -525,6 +560,9 @@ public class TvContractUtils {
      * @return An channel object with specified channel URI.
      */
     public static Channel getChannel(ContentResolver resolver, Uri channelUri) {
+        if (channelUri == null) {
+            return null;
+        }
         try (Cursor cursor = resolver.query(channelUri, Channel.PROJECTION, null, null, null)) {
             if (cursor == null || cursor.getCount() == 0) {
                 Log.w(TAG, "No channel matches " + channelUri);
