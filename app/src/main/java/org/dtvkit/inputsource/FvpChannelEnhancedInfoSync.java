@@ -67,19 +67,19 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
         try {
             for (int i = 0; i < channelEnhancedArray.length(); i++) {
                 JSONObject service = channelEnhancedArray.getJSONObject(i);
-                int newtworkId = service.getInt("Onid");
+                int networkId = service.getInt("Onid");
                 int streamId = service.getInt("Tsid");
                 int serviceId = service.getInt("Sid");
                 String serviceUrl = service.getString("SeviceURL");
                 String logoUrl = service.getString("MediaUri");
                 channels.add(new Channel.Builder()
-                        .setOriginalNetworkId(newtworkId)
+                        .setOriginalNetworkId(networkId)
                         .setTransportStreamId(streamId)
                         .setServiceId(serviceId)
                         .setAppLinkIntentUri(serviceUrl)
                         .setAppLinkIconUri(logoUrl)
                         .build());
-                if (DEBUG) Log.d(TAG, "Channel nid =" + newtworkId + "|Tsid = " + streamId + "|Sid = " + serviceId
+                if (DEBUG) Log.d(TAG, "Channel nid =" + networkId + "|Tsid = " + streamId + "|Sid = " + serviceId
                     + "|serviceUrl = " + serviceUrl + "|logoUrl = " + logoUrl);
             }
 /*
