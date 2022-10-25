@@ -180,6 +180,9 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 } else {
                     data.put("raw_displaynumber", String.format(Locale.ENGLISH, "%d", service.getInt("lcn")));
                 }
+                if (service.has("category_id")) {
+                    data.put("category_id", service.optJSONArray("category_id"));
+                }
                 String signal_type = service.optString("sig_name", "TYPE_OTHER");
                 String channelType = TvContractUtils.searchSignalTypeToChannelType(signal_type);
                 channels.add(new Channel.Builder()
