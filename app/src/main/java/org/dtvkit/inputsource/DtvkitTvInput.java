@@ -191,7 +191,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private ContentResolver mContentResolver;
     private TvInputManager mTvInputManager;
+
     private ContentRatingsManager mContentRatingsManager;
+    private String mCurrentRatingSystem = "DVB";
+
     protected String mInputId;
 
     private enum SessionState {
@@ -302,6 +305,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         pw.decreaseIndent();
     }
 
+    private void updateParentalControl() {
+        boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
+        int rating = getCurrentMinAgeByBlockedRatings();
+        Log.d(TAG, "updateParentalControl isParentControlEnabled = "
+            + isParentControlEnabled + ", Rating = " + rating);
+        if (isParentControlEnabled != getParentalControlOn()) {
+            setParentalControlOn(isParentControlEnabled);
+        }
+        if (getParentalControlAge() != rating && isParentControlEnabled) {
+            setParentalControlAge(rating);
+        }
+    }
+
     protected final BroadcastReceiver mParentalControlsBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -311,16 +327,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             String action = intent.getAction();
             if (action.equals(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED)
                     || action.equals(TvInputManager.ACTION_PARENTAL_CONTROLS_ENABLED_CHANGED)) {
-                boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
-                int rating = getCurrentMinAgeByBlockedRatings();
-                Log.d(TAG, "BLOCKED_RATINGS_CHANGED isParentControlEnabled = " + isParentControlEnabled
-                        + ", Rating = " + rating);
-                if (isParentControlEnabled != getParentalControlOn()) {
-                    setParentalControlOn(isParentControlEnabled);
-                }
-                if (getParentalControlAge() != rating && isParentControlEnabled) {
-                    setParentalControlAge(rating);
-                }
+                Log.d(TAG, "BLOCKED_RATINGS_CHANGED");
+                updateParentalControl();
             }
         }
     };
@@ -741,6 +749,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     } else {
                         Log.i(TAG, "initInputThreadHandler，initDtvkitTvInput");
                         mContentRatingsManager.update();
+                        updateParentalControl();
                         initDtvkitTvInput(true);
                     }
                     break;
@@ -4361,8 +4370,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             break;
                         case "blocked":
                             String Rating = "";
+                            int ratingAge = 4;
                             try {
-                                Rating = String.format("DVB_%d", data.getInt("rating"));
+                                ratingAge = data.getInt("rating");
+                                Rating = String.format("DVB_%d", ratingAge);
                             } catch (JSONException ignore) {
                                 Log.e(TAG, ignore.getMessage());
                             }
@@ -4377,7 +4388,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             }
                             playerState = PlayerState.BLOCKED;
                             dvrSubtitleFlag = 0;
-                            notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", Rating));
+                            ContentRatingSystem system = mContentRatingsManager
+                                .getContentRatingSystem("com.android.tv" + "/" + mCurrentRatingSystem);
+                            if (system != null) {
+                                String ratedName = system.getRatedNameByAge(ratingAge);
+                                if (TextUtils.isDigitsOnly(ratedName)) {
+                                    ratedName = Rating;
+                                }
+                                notifyContentBlocked(TvContentRating.createRating(
+                                    "com.android.tv", mCurrentRatingSystem, ratedName));
+                            } else {
+                                notifyContentBlocked(TvContentRating.createRating(
+                                    "com.android.tv", "DVB", Rating));
+                            }
                             break;
                         case "badsignal":
                             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_WEAK_SIGNAL);
@@ -7519,11 +7542,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (rating == null) {
                 continue;
             }
-            if (rating.getAgeHint() > 0) {
-                min_age = Math.min(min_age, rating.getAgeHint());
+            if (rating.getAgeHint() < min_age) {
+                mCurrentRatingSystem = ratingList.get(i).getRatingSystem();
+                min_age = rating.getAgeHint();
             }
         }
-        Log.d(TAG, "min_age Rating::" + min_age);
+        if (min_age == 0) {
+            min_age = 4; // minimum age that DTVKit support
+        }
+        Log.d(TAG, "min_age=" + min_age + ", RatingSystem=" + mCurrentRatingSystem);
         return min_age;
     }
 

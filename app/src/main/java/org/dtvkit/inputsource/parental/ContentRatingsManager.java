@@ -33,7 +33,7 @@ import java.util.List;
 
 public class ContentRatingsManager {
     private final String TAG = ContentRatingsManager.class.getSimpleName();
-    private final boolean DEBUG = true;
+    private final boolean DEBUG = false;
     private final List<ContentRatingSystem> mContentRatingSystems = new ArrayList<>();
 
     private final Context mContext;
@@ -111,14 +111,17 @@ public class ContentRatingsManager {
                     && system.getName().equals(canonicalRating.getRatingSystem())) {
                 for (Rating rating : system.getRatings()) {
                     if (rating.getName().equals(canonicalRating.getMainRating())) {
+                        Log.d(TAG, "getRating:" + rating);
                         return rating;
                     }
                 }
             } else {
-                Log.d(TAG, "system.getDomain():" + system.getDomain());
-                Log.d(TAG, "canonicalRating.getDomain():" + canonicalRating.getDomain());
-                Log.d(TAG, "system.getName():" + system.getName());
-                Log.d(TAG, "canonicalRating.getRatingSystem():" + canonicalRating.getRatingSystem());
+                if (DEBUG) {
+                    Log.d(TAG, "system.getDomain():" + system.getDomain());
+                    Log.d(TAG, "canonicalRating.getDomain():" + canonicalRating.getDomain());
+                    Log.d(TAG, "system.getName():" + system.getName());
+                    Log.d(TAG, "canonicalRating.getRatingSystem():" + canonicalRating.getRatingSystem());
+                }
             }
         }
         return null;

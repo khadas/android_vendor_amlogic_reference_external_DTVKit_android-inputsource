@@ -131,6 +131,23 @@ public class ContentRatingSystem {
         return mIsCustom;
     }
 
+    public String getRatedNameByAge(int age) {
+        if (mRatings == null || mRatings.size() == 0) {
+            return "";
+        }
+        String name = "";
+        int bestMatch = 0;
+        for (Rating rating : mRatings) {
+            if (rating.getAgeHint() <= age) {
+                if (bestMatch <= rating.getAgeHint()) {
+                    bestMatch = rating.getAgeHint();
+                    name = rating.getTitle();
+                }
+            }
+        }
+        return name;
+    }
+
     /** Returns true if the ratings is owned by this content rating system. */
     public boolean ownsRating(TvContentRating rating) {
         return mDomain.equals(rating.getDomain()) && mName.equals(rating.getRatingSystem());
