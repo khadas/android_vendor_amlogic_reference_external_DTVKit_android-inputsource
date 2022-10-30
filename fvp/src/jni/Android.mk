@@ -10,6 +10,8 @@ LOCAL_C_INCLUDES += \
     vendor/amlogic/common/tdk_v3/ca_export_arm/include
 
 LOCAL_MODULE := libfvp_signcsr_jni
+LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0
+LOCAL_LICENSE_CONDITIONS := notice
 
 LOCAL_HEADER_LIBRARIES := jni_headers
 LOCAL_SHARED_LIBRARIES :=  \

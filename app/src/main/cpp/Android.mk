@@ -4,6 +4,8 @@ include $(CLEAR_VARS)
 DTVKITSOURCE_PLATFORM := amlogic
 
 LOCAL_MODULE := libplatform
+LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0
+LOCAL_LICENSE_CONDITIONS := notice
 #LOCAL_SDK_VERSION := 21 # for normal app (ndk jni)
 LOCAL_SHARED_LIBRARIES := liblog libandroid libnativehelper
 
