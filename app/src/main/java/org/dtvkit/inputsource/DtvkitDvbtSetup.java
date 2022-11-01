@@ -478,8 +478,13 @@ public class DtvkitDvbtSetup extends Activity {
                 dvbc_symbol_container.setVisibility(View.GONE);
                 dvbc_frequency_container.setVisibility(visibility);
             }
-            checkBoxLcn.setVisibility(View.VISIBLE);
-            checkBoxLcn.setChecked(mParameterManager.getAutomaticOrderingEnabled());
+            if (mParameterManager.checkIsFvpUkCountry()) {
+                checkBoxLcn.setVisibility(View.GONE);
+                checkBoxLcn.setChecked(true);
+            } else {
+                checkBoxLcn.setVisibility(View.VISIBLE);
+                checkBoxLcn.setChecked(mParameterManager.getAutomaticOrderingEnabled());
+            }
             dvbt_bandwidth_container.setVisibility(View.GONE);
             dvbt_mode_container.setVisibility(View.GONE);
             dvbt_type_container.setVisibility(View.GONE);

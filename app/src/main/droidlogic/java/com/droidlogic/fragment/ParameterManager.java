@@ -18,6 +18,7 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 import android.os.Build.VERSION;
+import android.os.SystemProperties;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import com.droidlogic.dtvkit.inputsource.DataManager;
@@ -1895,6 +1896,16 @@ public class ParameterManager {
         final String GERMANY_ISO3_NAME = "deu";
         String currentCountryName = getCurrentCountryIso3Name();
         if (GERMANY_ISO3_NAME.equalsIgnoreCase(currentCountryName)) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean checkIsFvpUkCountry() {
+        final String FVP_UK_COUNTRY_NAME = "gbr";
+        String currentCountryName = getCurrentCountryIso3Name();
+        if (SystemProperties.getBoolean("vendor.tv.dtv.fvp.enable", false) &&
+                FVP_UK_COUNTRY_NAME.equalsIgnoreCase(currentCountryName)) {
             return true;
         }
         return false;
