@@ -343,6 +343,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     //can't init here as storage may not be ready
                 } else if (action.equals(Intent.ACTION_BOOT_COMPLETED)) {
                     Log.d(TAG, "onReceive ACTION_BOOT_COMPLETED");
+                    setCIPlusServiceReady();
                     sendEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY);
                 } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                     CiPowerMonitor.getInstance(context).onReceiveScreenOff();
@@ -913,6 +914,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
         //DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
         DtvkitGlueClient.getInstance().registerSignalHandler(mRecordingManagerHandler);
+        DtvkitGlueClient.getInstance().registerSignalHandler(mChannelUpdateHandler);
         mParameterManager = new ParameterManager(this, DtvkitGlueClient.getInstance());
         if (null == mDtvKitScheduleManager) {
             mDtvKitScheduleManager = new DtvKitScheduleManager(this, DtvkitGlueClient.getInstance(), true);
@@ -1142,6 +1144,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mContentResolver.unregisterContentObserver(mDroidLogicDbContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingManagerHandler);
+        DtvkitGlueClient.getInstance().unregisterSignalHandler(mChannelUpdateHandler);
         //DtvkitGlueClient.getInstance().setSystemControlHandler(null);
         mHandlerThread.getLooper().quitSafely();
         mHandlerThread = null;
@@ -1634,6 +1637,25 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         } else if (signal.equals("ListOfRecordings")) {
             Log.i(TAG, "Recording onSignal: " + signal);
             sendHandleRecordingListMsg(data);
+        }
+    };
+
+    private final DtvkitGlueClient.SignalHandler mChannelUpdateHandler = (signal, data) -> {
+        if (signal.equals("DvbUpdatedChannel")) {
+            Log.i(TAG, "DvbUpdatedChannel");
+            try {
+                mDynamicDbSyncTag = data.getString("uri");
+            } catch (JSONException ignore) {
+            }
+            Log.d(TAG, "new Uri:" + mDynamicDbSyncTag);
+            checkAndUpdateLcn();
+            int dvbSource = getCurrentDvbSource();
+            EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(dvbSource));
+            Intent intent = new Intent(this, DtvkitEpgSync.class);
+            intent.putExtra("inputId", mInputId);
+            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
+            startService(intent);
+            sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);
         }
     };
 
@@ -4623,21 +4645,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
                     startService(intent);
-                } else if (signal.equals("DvbUpdatedChannel")) {
-                    Log.i(TAG, "DvbUpdatedChannel");
-                    try {
-                        mDynamicDbSyncTag = data.getString("uri");
-                    } catch (JSONException ignore) {
-                    }
-                    Log.d(TAG, "new Uri:"+ mDynamicDbSyncTag);
-                    checkAndUpdateLcn();
-                    int dvbSource = getCurrentDvbSource();
-                    EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(dvbSource));
-                    Intent intent = new Intent(outService, DtvkitEpgSync.class);
-                    intent.putExtra("inputId", mInputId);
-                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
-                    startService(intent);
-                    sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);
                 } else if (signal.equals("CiplusUpdateService")) {
                     //update CiOpSearchRequest search result
                     Log.i(TAG, "CiplusUpdateService");
@@ -8840,5 +8847,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
     public boolean isSubtitleCTL() {
        return getSubtitleFlag() >= SUBTITLE_CTL_HK_DVB_SUB;
+    }
+
+    private void setCIPlusServiceReady(){
+        PropSettingManager.setProp("vendor.tv.dtv.ciservice.ready","true");
+        Log.d(TAG, "CIPlusService initialize: set vendor.tv.dtv.ciservice.ready=true");
     }
 }
