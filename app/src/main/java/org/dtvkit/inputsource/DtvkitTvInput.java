@@ -3284,9 +3284,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     return;
                 } else {
-                   Log.i(TAG, "Canot find " + channelUri
-                        + ", tuneTo _ID = " + targetChannel.getId()
-                        + " " + targetChannel.getDisplayName());
+                   Log.i(TAG, "Cannot find " + channelUri
+                        + ", tuneTo _ID = " + firstDbValidChannel.getId()
+                        + " " + firstDbValidChannel.getDisplayName());
                 }
                 targetChannel = firstDbValidChannel;
             }
