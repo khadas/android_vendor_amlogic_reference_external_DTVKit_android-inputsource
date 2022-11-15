@@ -141,6 +141,9 @@ public class ConstantManager {
     public static final String ACTION_EWS_NOTIFY = "action_ews_notify";
     public static final String ACTION_EWS = "action_ews";
 
+    public static final String ACTION_LINK_BARKER_CHANNEL = "action_link_baker_channel";
+    public static final String ACTION_LEAVE_BARKER_CHANNEL = "action_leave_baker_channel";
+
     public static final Map<String, String> PI_TO_VIDEO_FORMAT_MAP = new HashMap<>();
     static {
         PI_TO_VIDEO_FORMAT_MAP.put("interlace", "I");

@@ -142,8 +142,6 @@ public class ParameterManager {
     public static final String KEY_GET_CURRENT_COUNTRY_NAME = "key_get_country_name";
     public static final String KEY_SET_PIN_CODE_TO_CAM = "key_set_pin_code_to_cam";
     public static final String KEY_REMOVE_OPERATOR_PROFILE_BY_CAM_ID = "key_remove_operator_profile_by_cam_id";
-    public static final String KEY_LINK_BARKER_CHANNEL = "key_link_baker_channel";
-    public static final String KEY_LEAVE_BARKER_CHANNEL = "key_leave_baker_channel";
     public static final String KEY_GET_PLATFORM_PROPERTY = "key_get_platform_property";
     public static final String KEY_GET_DAYLIGHT_SAVING_MODE = "key_get_daylight_saving_mode";
     public static final String KEY_SET_DAYLIGHT_SAVING_MODE = "key_set_daylight_saving_mode";
@@ -2326,12 +2324,6 @@ public class ParameterManager {
             case KEY_REMOVE_OPERATOR_PROFILE_BY_CAM_ID:
                 removeOperatorProfileByCamId(newJsonValues);
                 break;
-            case KEY_LINK_BARKER_CHANNEL:
-                linkBarkerChannel();
-                break;
-            case KEY_LEAVE_BARKER_CHANNEL:
-                leaveBarkerChannel();
-                break;
             case KEY_SET_DAYLIGHT_SAVING_MODE:
                 setDaylightSavingMode(Integer.parseInt(newJsonValues));
                 break;
@@ -2816,22 +2808,6 @@ public class ParameterManager {
             JSONArray args = new JSONArray();
             args.put(camId);
             DtvkitGlueClient.getInstance().request("Dvb.RemoveOperatorProfileByCamid", args);
-        } catch (Exception e) {
-        }
-    }
-
-    public void linkBarkerChannel() {
-        try {
-            JSONArray args = new JSONArray();
-            DtvkitGlueClient.getInstance().request("Dvb.LinkBarkerChannel", args);
-        } catch (Exception e) {
-        }
-    }
-
-    public void leaveBarkerChannel() {
-        try {
-            JSONArray args = new JSONArray();
-            DtvkitGlueClient.getInstance().request("Dvb.LeaveBarkerChannel", args);
         } catch (Exception e) {
         }
     }

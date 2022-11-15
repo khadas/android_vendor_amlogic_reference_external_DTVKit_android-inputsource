@@ -3970,6 +3970,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else {
                     Log.e(TAG, "ACTION_START_FVP_APP error  HbbTvManager is null");
                 }
+            } else if (TextUtils.equals(ConstantManager.ACTION_LINK_BARKER_CHANNEL, action)) {
+                linkBarkerChannel();
+            } else if (TextUtils.equals(ConstantManager.ACTION_LEAVE_BARKER_CHANNEL, action)) {
+                leaveBarkerChannel();
             }
         }
 
@@ -7836,6 +7840,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             JSONArray args = new JSONArray();
             args.put("");
             DtvkitGlueClient.getInstance().request("Dvb.requestDtvDevice", args);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+    }
+
+    public void linkBarkerChannel() {
+        try {
+            JSONArray args = new JSONArray();
+            DtvkitGlueClient.getInstance().request("Dvb.LinkBarkerChannel", args);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+    }
+
+    public void leaveBarkerChannel() {
+        try {
+            JSONArray args = new JSONArray();
+            DtvkitGlueClient.getInstance().request("Dvb.LeaveBarkerChannel", args);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
