@@ -128,7 +128,15 @@ public class TvContractUtils {
                 Channels.COLUMN_DISPLAY_NAME, Channels.COLUMN_DISPLAY_NUMBER,
                 Channels.COLUMN_INTERNAL_PROVIDER_DATA};
         ContentResolver resolver = context.getContentResolver();
-        try (Cursor cursor = resolver.query(channelsUri, projection, null, null, null)) {
+        String syncSignalType = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
+        boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
+        String selection = null;
+        String[] selectionArgs = null;
+        if (syncCurrent) {
+            selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
+            selectionArgs = TvContractUtils.searchSignalTypeToSelectionArgs(syncSignalType);
+        }
+        try (Cursor cursor = resolver.query(channelsUri, projection, selection, selectionArgs, null)) {
             InternalProviderData internalProviderData = null;
             String displayName = null;
             String displayNumber = null;
@@ -171,17 +179,6 @@ public class TvContractUtils {
                         originalNetworkId, transportStreamId, serviceId,
                         frequency, ciNumber, rawDisplayNumber);
                 if (uniqueStr == null) {
-                    continue;
-                }
-                //factory set will use "full" signalType to clear & retrieve all channels in db
-                String signalType = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, null);
-                if (TextUtils.isEmpty(updateChannelType) && searchSignalTypeToChannelType(signalType) != null) {
-                    updateChannelType = searchSignalTypeToChannelType(signalType);
-                }
-                if (!("full".equals(signalType)) && !isChannelTypeMatches(updateChannelType, channelType)) {
-                    if (DEBUG) {
-                        Log.i(TAG, "Skip mismatch type channels (" + updateChannelType + ":" + channelType + ")");
-                    }
                     continue;
                 }
                 channelMap.put(uniqueStr, rowId);
@@ -427,10 +424,6 @@ public class TvContractUtils {
         }
     }
 
-    public static boolean isChannelTypeMatches(String sourceType, String targetType) {
-        return sourceType != null && targetType != null && targetType.contains(sourceType);
-    }
-
     public static String getUniqueStrForChannel(InternalProviderData internalProviderData,
         String channelType, int originalNetworkId, int transportStreamId,
         int serviceId, int frequency, String ciNumber, String rawDisplayNumber) {
@@ -461,12 +454,12 @@ public class TvContractUtils {
      * @return LongSparseArray mapping each channel's {@link TvContract.Channels#_ID} to the
      * Channel object.
      */
-    public static LinkedList<Channel> buildChannelMap(ContentResolver resolver,
-            String inputId, int frequency, long firstChannelId) {
+    public static LinkedList<Channel> buildChannelMap(ContentResolver resolver, String inputId,
+            int frequency, String selection, String[] selectionArgs, long firstChannelId) {
         Uri uri = TvContract.buildChannelsUriForInput(inputId);
         LinkedList<Channel> channelList = new LinkedList<>();
         Channel firstChannel = null;
-        try (Cursor cursor = resolver.query(uri, Channel.PROJECTION, null, null, null)) {
+        try (Cursor cursor = resolver.query(uri, Channel.PROJECTION, selection, selectionArgs, null)) {
             if (cursor == null || cursor.getCount() == 0) {
                 if (DEBUG) {
                     Log.d(TAG, "Cursor is null or found no results");
@@ -809,6 +802,26 @@ public class TvContractUtils {
         return result;
     }
 
+    public static String toSignalType(String type) {
+        switch (type) {
+            case Channels.TYPE_DVB_T:
+            case Channels.TYPE_DVB_T2:
+                return "DVB-T";
+            case Channels.TYPE_DVB_C:
+            case Channels.TYPE_DVB_C2:
+                return "DVB-C";
+            case Channels.TYPE_DVB_S:
+            case Channels.TYPE_DVB_S2:
+                return "DVB-S";
+            case Channels.TYPE_ISDB_T:
+                return "ISDB-T";
+            case Channels.TYPE_ISDB_C:
+                return "ISDB-C";
+            default:
+                return type;
+        }
+    }
+
     /* in tis, use unified format with TvContract.Channels.TYPE_ */
     public static String searchSignalTypeToChannelType(String searchSignalType) {
         String result = TvContract.Channels.TYPE_OTHER;
@@ -855,7 +868,32 @@ public class TvContractUtils {
         return result;
     }
 
-    /* in tis, use unified format with TvContract.Channels.TYPE_ */
+    public static String[] searchSignalTypeToSelectionArgs(String searchSignalType) {
+        if (TextUtils.isEmpty(searchSignalType)) {
+            return null;
+        }
+        switch (searchSignalType) {
+            case "DVB-T":
+            case "DVB_T":
+                return new String[]{Channels.TYPE_DVB_T, Channels.TYPE_DVB_T2};
+            case "DVB-C":
+            case "DVB_C":
+                return new String[]{Channels.TYPE_DVB_C, Channels.TYPE_DVB_C2};
+            case "DVB-S":
+            case "DVB_S":
+                return new String[]{Channels.TYPE_DVB_S, Channels.TYPE_DVB_S2};
+            case "ISDB-T":
+            case "ISDB_T":
+                return new String[]{Channels.TYPE_ISDB_T, Channels.TYPE_ISDB_T};
+            case "ISDB-C":
+            case "ISDB_C":
+                return new String[]{Channels.TYPE_ISDB_C, Channels.TYPE_ISDB_C};
+            default:
+                break;
+        }
+        return null;
+    }
+
     public static String dvbSourceToChannelTypeString(int source) {
         String result = TvContract.Channels.TYPE_DVB_T;
         switch (source) {

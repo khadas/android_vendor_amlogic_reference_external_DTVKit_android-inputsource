@@ -21,7 +21,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.HashMap;
 
 public class DtvkitEpgSync extends EpgSyncJobService {
     private static final String TAG = "EpgSyncJobService";
@@ -30,10 +29,12 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     public static final int SIGNAL_COFDM = 2; // digital terrestrial
     public static final int SIGNAL_QAM   = 4; // digital cable
     public static final int SIGNAL_ISDBT  = 5;
-    public static final int SIGNAL_ANALOG = 8;
+    // public static final int SIGNAL_ANALOG = 8;
+    boolean mIsUK = false;
 
     @Override
     public List<Channel> getChannels(boolean syncCurrent) {
+        mIsUK = "gbr".equals(ParameterManager.getCurrentCountryIso3Name());
         List<Channel> channels = new ArrayList<>();
 
         Log.i(TAG, "Get channels for epg sync, current: " + syncCurrent);
@@ -86,6 +87,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
             //Log.i(TAG, "getChannels=" + obj.toString());
             Log.i(TAG, "Finally getChannels size=" + services.length());
+            boolean ciTest = PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_ADD_TEST, false);
 
             for (int i = 0; i < services.length(); i++)
             {
@@ -131,7 +133,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 } else {
                     data.put("fec", "auto");
                 }
-                if (PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_ADD_TEST, false) && (i % 4 != 0)) {
+                if (ciTest && (i % 4 != 0)) {
                     int countFlag = i % 4;
                     data.put("ci_number", countFlag);
                     data.put("profile_name", "profile_name" + countFlag);
@@ -290,10 +292,9 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     public List<Program> getAllProgramsForChannel(Uri channelUri, Channel channel) {
         List<Program> programs = new ArrayList<>();
         int parental_rating;
+        String dvbUri = getDtvkitChannelUri(channel);
 
         try {
-            String dvbUri = getDtvkitChannelUri(channel);
-
             //Log.i(TAG, String.format("Get channel programs for epg sync. Uri %s", dvbUri));
 
             JSONArray args = new JSONArray();
@@ -343,7 +344,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             Log.e(TAG, e.getMessage());
         }
         if (programs.size() > 0) {
-            Log.i(TAG, "## programs["+ programs.size() +"] ##, Uri:" + getDtvkitChannelUri(channel));
+            Log.i(TAG, "%% channel[" + channel.getDisplayName() + "], ## programs["+ programs.size() +"] ##, Uri:" + dvbUri);
         }
 
         return programs;
@@ -456,8 +457,8 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         return eventPeriods;
     }
 
+    /* getGenres is hotSpot function */
     private String[] getGenres(String genre, int content_value) {
-        boolean mIsUK = "gbr".equals(ParameterManager.getCurrentCountryIso3Name());
         if (content_value > 0xff) {
             //tv provider don't support level 2
             return new String[]{};

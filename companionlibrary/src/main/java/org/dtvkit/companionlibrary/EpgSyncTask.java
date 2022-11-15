@@ -4,7 +4,10 @@ import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.ACTION_SY
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_ERROR_REASON;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_INPUT_ID;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_CHANNEL_ONLY;
+import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID;
+import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_FROM;
+import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_REASON;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE;
@@ -20,10 +23,6 @@ import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_FINI
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_REASON;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_STARTED;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_STATUS;
-import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL;
-import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID;
-import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY;
-
 
 import android.content.ContentProviderOperation;
 import android.content.Intent;
@@ -37,7 +36,6 @@ import android.support.annotation.NonNull;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
-import android.util.LongSparseArray;
 
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.companionlibrary.model.Channel;
@@ -45,9 +43,8 @@ import com.droidlogic.dtvkit.companionlibrary.model.Program;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -131,6 +128,12 @@ public class EpgSyncTask {
                 }
             }
         }
+        String signalType = persistableBundle.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE);
+        if (TextUtils.isEmpty(signalType)) {
+            String type = TvContractUtils.toSignalType(EpgSyncJobService.getChannelTypeFilter());
+            persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, type);
+            Log.d(TAG, "BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE -> " + type);
+        }
 
         mFutureTask = new FutureTask<>(new EpgCallable(persistableBundle));
         EPG_EXECUTOR.execute(mFutureTask);
@@ -206,12 +209,15 @@ public class EpgSyncTask {
             mInputId = mBundle.getString(BUNDLE_KEY_INPUT_ID);
             boolean mIsSearchedChannel = mBundle.getBoolean(BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, false);
             mUpdateByScan = mBundle.getBoolean(BUNDLE_KEY_SYNC_REASON, false);
-            String syncSignalType = mBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE);
+            String syncSignalType = mBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, null);
             boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
             boolean updateChannel = mBundle.getBoolean(BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true);
-            Long currentChannelId = mBundle.getLong(BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, -1);
+            long currentChannelId = mBundle.getLong(BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, -1);
             int frequency = mBundle.getInt(BUNDLE_KEY_SYNC_FREQUENCY, -1);
-
+            Log.d(TAG, "doInBackground :: syncSignalType:" + syncSignalType
+                + ", frequency:" + frequency
+                + ", mInputId:" + mInputId
+                + ", updateChannel:" + updateChannel);
             if (mInputId == null) {
                 return ERROR_INPUT_ID_NULL;
             }
@@ -242,8 +248,15 @@ public class EpgSyncTask {
                 }
                 TvContractUtils.updateChannels(mMainService, mInputId, mIsSearchedChannel, tvChannels, EpgSyncJobService.getChannelTypeFilter(), mBundle);
             }
+            String selection = null;
+            String[] selectionArgs = null;
+            if (syncCurrent) {
+                selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
+                selectionArgs = TvContractUtils.searchSignalTypeToSelectionArgs(syncSignalType);
+            }
             LinkedList<Channel> channelList = TvContractUtils.buildChannelMap(
-                    mMainService.getContentResolver(), mInputId, frequency, currentChannelId);
+                    mMainService.getContentResolver(), mInputId, frequency,
+                    selection, selectionArgs, currentChannelId);
             if (channelList == null) {
                 return ERROR_NO_CHANNELS;
             }
