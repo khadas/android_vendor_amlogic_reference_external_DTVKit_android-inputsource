@@ -15,6 +15,8 @@ import android.widget.TextView;
 import android.widget.VideoView;
 import android.widget.Toast;
 import android.view.KeyEvent;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.media.MediaPlayer;
 import android.database.Cursor;
 import android.media.tv.TvContract;
@@ -26,6 +28,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.stream.Stream;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackException;
+import com.google.android.exoplayer2.Player;
 
 
 public class FvpScanActivity extends Activity implements UpdateScanView {
@@ -38,7 +44,7 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
     private static final int MSG_FINISH_SCAN_VIEW = 3;
 
     DtvKitDVBTCScanPresenter mScanPresenter = null;
-    VideoView mVideoView;
+    ExoPlayer mExoPlayer;
     TextView mScanStatus;
     TextView mDigitalChannelNumber;
     TextView mIpChannelNumber;
@@ -71,6 +77,7 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_fvp_scan);
+        initPlayer();
         initView();
     }
 
@@ -83,6 +90,7 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
     @Override
     protected void onStop() {
         super.onStop();
+        stopPlayback();
         if (null != mScanPresenter) {
             if (mScanPresenter.isStartScan()) {
                 mScanPresenter.stopScan(true);
@@ -103,9 +111,7 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
 
     @Override
     public void finish() {
-        if (mVideoView.isPlaying()) {
-            mVideoView.stopPlayback();
-        }
+        stopPlayback();
         //Send Message to mds client
         //sendFvpChannelScanMessage();
         sendScanFinishBroadcast();
@@ -172,8 +178,48 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
         Log.d(TAG, "MSG_FINISH_SCAN_VIEW " + info);
     }
 
+    private void initPlayer(){
+        mExoPlayer = new ExoPlayer.Builder(this).build();
+        mExoPlayer.setRepeatMode(Player.REPEAT_MODE_ALL);
+        mExoPlayer.addListener(new Player.Listener() {
+            @Override
+            public void onPlayerError(PlaybackException error) {
+                Player.Listener.super.onPlayerError(error);
+                Log.i(TAG,"onPlayerError:"+error);
+            }
+        });
+    }
+
+    private void stopPlayback() {
+        if (mExoPlayer != null) {
+            mExoPlayer.stop();
+            mExoPlayer.release();
+            mExoPlayer = null;
+        }
+    }
+
     private void initView() {
-        mVideoView = findViewById(R.id.fvp_video_view);
+        SurfaceView surfaceView = findViewById(R.id.fvp_surface_view);
+        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+                if (mExoPlayer != null) {
+                    mExoPlayer.setVideoSurfaceHolder(holder);
+                }
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+                if (mExoPlayer != null) {
+                    mExoPlayer.setVideoSurfaceHolder(null);
+                }
+            }
+        });
         mScanStatus = findViewById(R.id.fvp_scan_status);
         mDigitalChannelNumber = findViewById(R.id.fvp_digital_channel_number);
         mIpChannelNumber = findViewById(R.id.fvp_ip_channel_number);
@@ -189,35 +235,14 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
             String inputId = intent.getStringExtra("InputId");
             mScanPresenter = new DtvKitDVBTCScanPresenter(this, DtvKitDVBTCScanPresenter.DVB_T, inputId, this);
             mScanPresenter.startAutoScan();
+            if (mExoPlayer == null) {
+                initPlayer();
+            }
             if (null != uri) {
-                mVideoView.setVideoURI(Uri.parse(uri));
-                mVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                    @Override
-                    public void onPrepared(MediaPlayer test) {
-                        Log.d(TAG, "onPrepared = " + test);
-                    }
-                });
-                mVideoView.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-                    @Override
-                    public boolean onError(MediaPlayer mediaPlayer, int i, int i1) {
-                        Log.d(TAG, "onError = " + mediaPlayer + "|i = " + i + "i1=" + i1);
-                    return false;
-                    }
-                });
-                mVideoView.setOnInfoListener(new MediaPlayer.OnInfoListener() {
-                    @Override
-                    public boolean onInfo(MediaPlayer mediaPlayer, int i, int i1) {
-                        Log.d(TAG, "onInfo = " + mediaPlayer + "|i = " + i + "i1=" + i1);
-                    return false;
-                    }
-                });
-                mVideoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    @Override
-                    public void onCompletion(MediaPlayer mediaPlayer) {
-                        Log.d(TAG, "onCompletion = " + mediaPlayer);
-                    }
-                });
-                mVideoView.start();
+                MediaItem mediaItem = MediaItem.fromUri(uri);
+                mExoPlayer.setMediaItem(mediaItem);
+                mExoPlayer.prepare();
+                mExoPlayer.play();
             }
             Log.d(TAG, "triggerAutomaticScan:video uri = " + uri + "| dvbType = " + dvbType + "|inputId = " + inputId);
         } else {
@@ -258,7 +283,7 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
         Uri channelsUri = TvContract.buildChannelsUriForInput(DTVKIT_INPUTID);
         String[] projection = {Channels.COLUMN_TYPE, Channels.COLUMN_ORIGINAL_NETWORK_ID};
         String selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
-        String [] selectionArgs = {"TYPE_DVB_T", "TYPE_DVB_T2"};
+        String[] selectionArgs = {"TYPE_DVB_T", "TYPE_DVB_T2"};
 
         ContentResolver resolver = getContentResolver();
         Cursor cursor = null;
@@ -270,7 +295,7 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
                     networkIdList.add(networkId);
                 }
             }
-            Stream.of(networkIdList).forEach(r->Log.d(TAG, "save networkId = " + r));
+            Stream.of(networkIdList).forEach(r -> Log.d(TAG, "save networkId = " + r));
         } catch (Exception e) {
             Log.e(TAG, "cacheProviderChannel Exception = " + e.getMessage());
         } finally {

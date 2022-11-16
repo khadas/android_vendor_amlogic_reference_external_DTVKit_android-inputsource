@@ -41,8 +41,9 @@ dependencies {
     implementation 'com.android.support:leanback-v17:28.0.0'
     implementation 'com.android.support:localbroadcastmanager:28.0.0-alpha1'
     implementation project(':companionlibrary')
-    implementation 'com.google.guava:guava:31.1-jre'
+    implementation 'com.google.guava:guava:31.1-android'
     implementation 'org.jetbrains:annotations:15.0'
+    implementation 'com.google.android.exoplayer:exoplayer:2.18.1'
     compileOnly files('studio-libs/droidlogic-dtvkit.jar')
     compileOnly files('studio-libs/droidlogic.jar')
     compileOnly files('studio-libs/droidlogic-tv.jar')

@@ -4,7 +4,8 @@ include $(CLEAR_VARS)
 LOCAL_PACKAGE_NAME := inputsource
 LOCAL_MULTILIB := 32
 LOCAL_AAPT_FLAGS := --auto-add-overlay \
-   --extra-packages android.support.v17.leanback
+   --extra-packages android.support.v17.leanback \
+   --extra-packages com.google.android.exoplayer2
 
 ifneq (0, $(shell expr $(PLATFORM_SDK_VERSION) \<= 28))
 LOCAL_AAPT_FLAGS += --extra-packages android.support.constraint
@@ -23,10 +24,12 @@ LOCAL_RESOURCE_DIR := frameworks/support/leanback/src/main/res \
 
 LOCAL_STATIC_JAVA_LIBRARIES += \
    androidx.annotation_annotation \
-   guava \
    companionlibrary \
    android-support-v17-leanback \
-   amlogic-hbbtv-client
+   amlogic-hbbtv-client \
+   guava-android-31
+
+LOCAL_STATIC_JAVA_AAR_LIBRARIES += exo-player
 
 ifneq (0, $(shell expr $(PLATFORM_SDK_VERSION) \>= 29))
 LOCAL_STATIC_JAVA_LIBRARIES += android-support-constraint-layout
