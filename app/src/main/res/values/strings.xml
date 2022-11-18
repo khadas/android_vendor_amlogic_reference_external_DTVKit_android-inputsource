@@ -146,4 +146,5 @@
 
     <string name="strContinue">Continue</string>
     <string name="strSkip">Skip</string>
+    <string name="strNoTeletext">No teletext</string>
 </resources>

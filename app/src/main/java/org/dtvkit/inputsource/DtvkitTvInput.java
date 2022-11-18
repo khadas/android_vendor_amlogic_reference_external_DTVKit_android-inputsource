@@ -4161,6 +4161,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         playerStartTeletext(-1);
                         if (playerIsTeletextStarted()) {
                             notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, playerGetSelectedTeleTextTrackId());
+                        } else {
+                            showToast(R.string.strNoTeletext);
                         }
                     }
                     used = true;
