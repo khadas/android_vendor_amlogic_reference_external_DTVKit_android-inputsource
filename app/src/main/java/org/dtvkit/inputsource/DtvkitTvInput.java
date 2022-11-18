@@ -8634,6 +8634,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.d(TAG, "only dvbt/c will do automatic search.");
                     return;
                 }
+                JSONArray activeRecordings = recordingGetActiveRecordings();
+                if (activeRecordings != null && activeRecordings.length() > 0) {
+                    Log.i(TAG,"Recording in progress, give up channel search");
+                    return;
+                }
+
                 //if need to light the screen please run the interface below
                 if (mode == 2) {//operate mode
                     checkSystemWakeUp(context);
