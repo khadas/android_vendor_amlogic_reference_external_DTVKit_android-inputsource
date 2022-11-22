@@ -32,6 +32,8 @@ import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.PlaybackException;
 import com.google.android.exoplayer2.Player;
+import com.droidlogic.dtvkit.companionlibrary.model.Channel;
+import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 
 
 public class FvpScanActivity extends Activity implements UpdateScanView {
@@ -53,7 +55,7 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
     Handler mMainThreadHandler = new Handler((Message msg)->{
         switch (msg.what) {
             case MSG_UPDATE_SCAN_PROGRESS:{
-                mScanProgressNumber.setText(String.valueOf(msg.arg1));
+                mScanProgressNumber.setText("%"+String.valueOf(msg.arg1));
                 mScanProgress.setProgress(msg.arg1, true);
                 break;
             }
@@ -281,18 +283,31 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
     private ArrayList<Integer> getNetworkIdGroup() {
         ArrayList<Integer> networkIdList = new ArrayList();
         Uri channelsUri = TvContract.buildChannelsUriForInput(DTVKIT_INPUTID);
-        String[] projection = {Channels.COLUMN_TYPE, Channels.COLUMN_ORIGINAL_NETWORK_ID};
+        String[] projection = {Channels.COLUMN_TYPE, Channels.COLUMN_ORIGINAL_NETWORK_ID, Channels.COLUMN_INTERNAL_PROVIDER_DATA};
         String selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
-        String[] selectionArgs = {"TYPE_DVB_T", "TYPE_DVB_T2"};
+        String [] selectionArgs = {"TYPE_DVB_T", "TYPE_DVB_T2"};
 
         ContentResolver resolver = getContentResolver();
         Cursor cursor = null;
         try {
+            InternalProviderData internalProviderData;
             cursor = resolver.query(channelsUri, projection, selection, selectionArgs, null);
             while (cursor != null && cursor.moveToNext()) {
-                Integer networkId = Integer.valueOf(cursor.getInt(1));
-                if (!networkIdList.contains(networkId)) {
-                    networkIdList.add(networkId);
+                //Integer networkId = Integer.valueOf(cursor.getInt(1));
+                int type = cursor.getType(2);//InternalProviderData type
+                if (type == Cursor.FIELD_TYPE_BLOB) {
+                    byte[] internalProviderByteData = cursor.getBlob(2);
+                    if (internalProviderByteData != null) {
+                        internalProviderData = new InternalProviderData(internalProviderByteData);
+                        if (internalProviderData != null) {
+                            int networkId = Integer.parseInt((String)internalProviderData.get(Channel.KEY_NETWORK_ID));
+                            if (!networkIdList.contains(networkId)) {
+                                networkIdList.add(networkId);
+                            }
+                        }
+                    }
+                } else {
+                    Log.i(TAG, "COLUMN_INTERNAL_PROVIDER_DATA other type");
                 }
             }
             Stream.of(networkIdList).forEach(r -> Log.d(TAG, "save networkId = " + r));

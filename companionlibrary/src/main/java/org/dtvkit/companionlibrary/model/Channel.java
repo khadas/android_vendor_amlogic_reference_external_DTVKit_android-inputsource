@@ -83,6 +83,7 @@ public final class Channel {
     public static final String KEY_CHANNEL_SIGNAL_TYPE = "channel_signal_type";
     public static final String KEY_FREQUENCY = "frequency";
     public static final String KEY_DTVKIT_URI = "dvbUri";
+    public static final String KEY_NETWORK_ID = "network_id";
 
     public static final String FIXED_SIGNAL_TYPE_DVBC = "DVB-C";
     public static final String FIXED_SIGNAL_TYPE_DVBT = "DVB-T";
