@@ -2930,4 +2930,23 @@ public class ParameterManager {
             Log.i(TAG,"setCountryRegionId fail");
         }
     }
+
+    public JSONObject setCIHostLanguageId(int langIndex) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            args1.put(langIndex);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setCIHostLanguageId", args1);
+            if (resultObj != null) {
+                Log.d(TAG, "setCIHostLanguageId resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setCIHostLanguageId then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setCIHostLanguageId Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
 }
