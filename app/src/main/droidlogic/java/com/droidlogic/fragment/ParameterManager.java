@@ -181,6 +181,10 @@ public class ParameterManager {
     public static final int SIGNAL_ISDBT  = 5;
     public static final int SIGNAL_ANALOG = 8;
 
+    public static final int DAYLIGHT_SAVING_MODE_OFF = 0;
+    public static final int DAYLIGHT_SAVING_MODE_ON = 1;
+    public static final int DAYLIGHT_SAVING_MODE_AUTO = 2;
+
     public static final String[] DIALOG_SET_ITEM_UNICABLE_KEY_LIST = {KEY_UNICABLE_SWITCH, KEY_USER_BAND, KEY_UB_FREQUENCY, KEY_POSITION};
 
     /*public static final String KEY_DTVKIT_COUNTRY = "dtvkit_country";
@@ -213,6 +217,8 @@ public class ParameterManager {
     public static final int TV_SIG_PARENTAL_LOCKED = 2;
     public static final int TV_SIG_SCRAMBLED = 4;
     public static final int TV_SIG_CHANNEL_LOCKED = 5;
+
+    private static JSONObject mCachedDvbCountries = null;
 
     public ParameterManager(Context context, DtvkitGlueClient client) {
         this.mContext = context;
@@ -828,6 +834,9 @@ public class ParameterManager {
 
     private static JSONObject getCountries() {
         JSONObject resultObj = null;
+        if (mCachedDvbCountries != null) {
+            return mCachedDvbCountries;
+        }
         try {
             JSONArray args1 = new JSONArray();
             resultObj = DtvkitGlueClient.getInstance().request("Dvb.getCountries", args1);
@@ -839,6 +848,7 @@ public class ParameterManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        mCachedDvbCountries = resultObj;
         return resultObj;
     }
 

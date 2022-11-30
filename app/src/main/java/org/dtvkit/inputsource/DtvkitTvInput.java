@@ -16,12 +16,8 @@ import android.content.IntentFilter;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.Typeface;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.media.PlaybackParams;
 import android.media.tv.TvContentRating;
@@ -38,8 +34,6 @@ import android.net.ConnectivityManager;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.Uri;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -59,14 +53,9 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Surface;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.accessibility.CaptioningManager;
 import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.support.annotation.NonNull;
@@ -90,6 +79,7 @@ import com.droidlogic.dtvkit.inputsource.util.FeatureUtil;
 import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.settings.ConvertSettingManager;
+import com.droidlogic.settings.CountryTimeZone;
 import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.settings.SysSettingManager;
 import com.google.common.collect.Lists;
@@ -123,6 +113,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -898,6 +889,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         return ret;
     }
 
+    private void firstSync() {
+        final String firstProp = "persist.vendor.tv.first_search";
+        boolean first = PropSettingManager.getBoolean(firstProp, true);
+        if (first) {
+            mInputThreadHandler.post(() -> {
+                String iso = ParameterManager.getCurrentCountryIso3Name();
+                CountryTimeZone zone = new CountryTimeZone();
+                String[] time = zone.getTimezone(iso);
+                if (time != null) {
+                    int timeOffset = TimeZone.getTimeZone(time[0]).getRawOffset();
+                    Log.i(TAG, "country:" + iso + ", timezone:" + timeOffset / 1000);
+                    mParameterManager.setTimeZone(timeOffset / 1000);
+                }
+                PropSettingManager.setProp(firstProp, "false");
+            });
+        }
+    }
+
     private synchronized void initDtvkitTvInput(boolean isCreateSession) {
         int subFlg = getSubtitleFlag();
         if (mIsInited && isCreateSession) {
@@ -961,7 +970,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mAutoTimeManager = new AutoTimeManager(DtvkitTvInput.this, autoManagerCallback);
             mAutoTimeManager.start();
         }
-
+        firstSync();
         Log.d(TAG, "initDtvkitTvInput end");
         mIsInited = true;
     }
