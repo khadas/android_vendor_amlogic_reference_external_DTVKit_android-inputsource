@@ -285,6 +285,7 @@ public class DtvkitDvbtSetup extends Activity {
         } else {
             setResult(RESULT_CANCELED);
         }
+        sendScanFinishBroadcast();
         super.finish();
     }
 
@@ -1901,6 +1902,12 @@ public class DtvkitDvbtSetup extends Activity {
         }
 
         return ret;
+    }
+
+    private void sendScanFinishBroadcast() {
+        if (mParameterManager.checkIsFvpUkCountry()) {
+            FvpSearchBroadcast.sendBroadcast(this);
+        }
     }
 
     private boolean isPipOrFccEnable(){

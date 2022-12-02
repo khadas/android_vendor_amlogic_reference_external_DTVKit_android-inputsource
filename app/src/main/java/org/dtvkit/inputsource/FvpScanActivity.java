@@ -32,13 +32,10 @@ import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.PlaybackException;
 import com.google.android.exoplayer2.Player;
-import com.droidlogic.dtvkit.companionlibrary.model.Channel;
-import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 
 
 public class FvpScanActivity extends Activity implements UpdateScanView {
     private static final String TAG = "FvpScanActivity";
-    private static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
 
     private static final int MSG_UPDATE_CHANNEL_NUMBER = 0;
     private static final int MSG_UPDATE_SCAN_PROGRESS = 1;
@@ -254,70 +251,6 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
     }
 
     private void sendScanFinishBroadcast() {
-        Intent intent = new Intent();
-        Bundle data = new Bundle();
-
-        data.putString("auth_url", prepareAuthUrl());
-        data.putIntegerArrayList("nid_list", getNetworkIdGroup());
-        intent.setAction("com.android.tv.fvp.INTENT_ACTION");
-        intent.setComponent(new ComponentName("com.droidlogic.android.tv", "com.android.tv.fvp.FvpIntentReceiver"));
-        intent.putExtra("FVP_TYPE", "scan_action");
-        intent.putExtra("FVP_CONFIG", data);
-        sendBroadcast(intent);
-        Log.d(TAG, "sendScanFinishBroadcast");
-    }
-
-    private String prepareAuthUrl() {
-        String authUrl = null;
-        try {
-            JSONObject obj = DtvkitGlueClient.getInstance().request("Hbbtv.HBBGetAuthUrl", new JSONArray());
-            JSONObject data = obj.getJSONObject("data");
-            authUrl = data.getString("auth_url");
-            Log.i(TAG, "prepareAuthUrl authUrl = " + authUrl + "result" + obj.getString(""));
-        } catch (Exception e) {
-            Log.i(TAG, "prepareAuthUrl Exception = " + e.getMessage());
-        }
-        return authUrl;
-    }
-
-    private ArrayList<Integer> getNetworkIdGroup() {
-        ArrayList<Integer> networkIdList = new ArrayList();
-        Uri channelsUri = TvContract.buildChannelsUriForInput(DTVKIT_INPUTID);
-        String[] projection = {Channels.COLUMN_TYPE, Channels.COLUMN_ORIGINAL_NETWORK_ID, Channels.COLUMN_INTERNAL_PROVIDER_DATA};
-        String selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
-        String [] selectionArgs = {"TYPE_DVB_T", "TYPE_DVB_T2"};
-
-        ContentResolver resolver = getContentResolver();
-        Cursor cursor = null;
-        try {
-            InternalProviderData internalProviderData;
-            cursor = resolver.query(channelsUri, projection, selection, selectionArgs, null);
-            while (cursor != null && cursor.moveToNext()) {
-                //Integer networkId = Integer.valueOf(cursor.getInt(1));
-                int type = cursor.getType(2);//InternalProviderData type
-                if (type == Cursor.FIELD_TYPE_BLOB) {
-                    byte[] internalProviderByteData = cursor.getBlob(2);
-                    if (internalProviderByteData != null) {
-                        internalProviderData = new InternalProviderData(internalProviderByteData);
-                        if (internalProviderData != null) {
-                            int networkId = Integer.parseInt((String)internalProviderData.get(Channel.KEY_NETWORK_ID));
-                            if (!networkIdList.contains(networkId)) {
-                                networkIdList.add(networkId);
-                            }
-                        }
-                    }
-                } else {
-                    Log.i(TAG, "COLUMN_INTERNAL_PROVIDER_DATA other type");
-                }
-            }
-            Stream.of(networkIdList).forEach(r -> Log.d(TAG, "save networkId = " + r));
-        } catch (Exception e) {
-            Log.e(TAG, "cacheProviderChannel Exception = " + e.getMessage());
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }
-        return networkIdList;
+        FvpSearchBroadcast.sendBroadcast(this);
     }
 }
