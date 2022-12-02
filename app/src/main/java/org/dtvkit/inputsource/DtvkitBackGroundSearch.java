@@ -193,7 +193,7 @@ public class DtvkitBackGroundSearch {
         mFoundServiceNumber = 0;
         try {
             JSONArray args = new JSONArray();
-            args.put(false); // Commit
+            args.put(true); // Commit
             String finishCommand = getFinishSearchCommand();
             if (!TextUtils.isEmpty(finishCommand)) {
                 DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
@@ -213,20 +213,20 @@ public class DtvkitBackGroundSearch {
                     mStartSearch = true;
                 }
             } else {
-                stopSearch();
+                stopSearch(false);
             }
         } catch (Exception e) {
             Log.i(TAG, "startBackGroundAutoSearch search Exception " + e.getMessage());
-            stopSearch();
+            stopSearch(false);
         }
     }
 
-    public void stopSearch() {
+    public void stopSearch(boolean commitNewService) {
         mStartSearch = false;
         stopMonitoringSearch();
         try {
             JSONArray args = new JSONArray();
-            args.put(true); // Commit
+            args.put(commitNewService);
             String finishCommand = getFinishSearchCommand();
             if (!TextUtils.isEmpty(finishCommand)) {
                 DtvkitGlueClient.getInstance().request(getFinishSearchCommand(), args);
@@ -479,6 +479,14 @@ public class DtvkitBackGroundSearch {
             }
         } else {
             Log.d(TAG, "responseOnReceive null");
+        }
+    }
+
+    public void handleScreenOn() {
+        if (!mStartSync && mStartSearch) {
+           //If is in syncing, we do nothing wait sync finish
+           stopSearch(false);
+           onSearchTerminate();
         }
     }
 

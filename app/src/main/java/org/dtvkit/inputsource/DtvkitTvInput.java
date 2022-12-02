@@ -348,6 +348,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                     CiPowerMonitor.getInstance(context).onReceiveScreenOff();
                 } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
+                    if (mAutomaticSearchingReceiver != null) {
+                        mAutomaticSearchingReceiver.onReceiveScreenOn();
+                    }
                     CiPowerMonitor.getInstance(context).onReceiveScreenOn();
                 }
             }
@@ -8617,6 +8620,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private static final String WAKE_LOCK_NAME = "AutomaticSearchingReceiver";
         private PowerManager.WakeLock mWakeLock = null;
         private PendingIntent mAlarmIntent = null;
+        private DtvkitBackGroundSearch dtvkitBgSearch = null;
+        private boolean isBgScanning = false;
 
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -8646,6 +8651,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 //avoid suspend when execute appointed pvr record
                 if (mode == 1) { //standby mode
+                    if (isScreenOn(context)) {
+                        Log.i(TAG, "Not in sleep mode, skip standy scan.");
+                        return;
+                    }
                     acquireWakeLock(context);
                 }
 
@@ -8668,9 +8677,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
 
                         switch (status) {
+                            case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SEARCH_TERMINATE:
                             case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SAVE_FINISH: {
                                 Log.d(TAG, "waiting for doing something");
                                 if (mode == 1) { //standby mode
+                                    isBgScanning = false;
                                     releaseWakeLock();
                                 }
                                 break;
@@ -8680,8 +8691,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 };
 
-                DtvkitBackGroundSearch dtvkitBgSearch = new DtvkitBackGroundSearch(context, dvbSource, mInputId, backGroundSearchCallback);
+                dtvkitBgSearch = new DtvkitBackGroundSearch(context, dvbSource, mInputId, backGroundSearchCallback);
                 dtvkitBgSearch.startBackGroundAutoSearch();
+                isBgScanning = true;
+            }
+        }
+
+        public void onReceiveScreenOn() {
+            if (isBgScanning && dtvkitBgSearch != null) {
+                dtvkitBgSearch.handleScreenOn();
             }
         }
 
@@ -8742,6 +8760,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 mWakeLock = null;
             }
+        }
+
+        private boolean isScreenOn(Context context) {
+            PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            return powerManager.isScreenOn();
         }
 
         private void setNextAlarm(Context context) {
