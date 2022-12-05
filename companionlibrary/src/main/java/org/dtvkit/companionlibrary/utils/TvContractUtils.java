@@ -34,7 +34,7 @@ import android.os.PersistableBundle;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
-import android.util.LongSparseArray;
+import android.util.Pair;
 
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.companionlibrary.model.Channel;
@@ -80,6 +80,8 @@ public class TvContractUtils {
             put(Channel.KEY_NEW_DISPLAYNUMBER, "0");
             put(Channel.KEY_RAW_DISPLAYNAME, "0");
             put(Channel.KEY_RAW_DISPLAYNUMBER, "0");
+            put(Channels.COLUMN_APP_LINK_ICON_URI, "");
+            put(Channels.COLUMN_APP_LINK_INTENT_URI, "");
         }
     };
 
@@ -91,42 +93,46 @@ public class TvContractUtils {
      * @param channels The updated list of channels.
      */
     public static void updateChannels(Context context, String inputId, boolean isSearched,
-            List<Channel> channels, String updateChannelType, PersistableBundle extras) {
+            final List<Channel> channels, PersistableBundle extras) {
         // hold a map from Unique String to row ID for existing channels.
-        ArrayMap<String, Long> channelMap = new ArrayMap<>();
+        ArrayList<Pair<String, Long>> channelMap = new ArrayList<>();
         // hold a map from Unique String to old InternalProviderData for existing channels.
         ArrayMap<String, ArrayMap<String, String>> channelUseSettingValueMap = new ArrayMap<>();
-        Map<Uri, String> logos = new HashMap<>();
+        // Operations to execute
         ArrayList<ContentProviderOperation> ops = new ArrayList<>();
-
-        //1.first get existed channels in tv.db
+        // 1.first get existed channels in tv.db
         cacheRelatedChannel(channelMap, channelUseSettingValueMap,
-            context, inputId, isSearched, updateChannelType, extras);
-        //2.find new channel and channels that need to be updated
+            context, inputId, isSearched,channels, extras);
+        // 2.find new channel and channels that need to be updated
         handleUpdateOrInsert(ops, channelMap, channelUseSettingValueMap,
-            context, inputId, channels, extras);
-        //3.delete channels that don't exist in dtvkit db anymore
-        handleDelete(channelMap, context);
+                context, inputId, channels, extras);
+        // 3.delete channels that no need
+        handleChannelDelete(channelMap, context);
         //4.deal insert or update channels to tv.db
-        syncToDb(ops, logos, context);
+        syncToDb(ops, context);
 
         //notify immediately as livetv may be in background and android r sends such contentprovider notification after 10s in ContentService
-        if (VERSION.SDK_INT > VERSION_CODES.P + 1) {
+        if (VERSION.SDK_INT > VERSION_CODES.P + 1 && ops.size() > 0) {
             context.getContentResolver().notifyChange(Channels.CONTENT_URI, null, 1 << 15/*ContentResolver.NOTIFY_NO_DELAY*/);
         }
+        channelUseSettingValueMap.clear();
+        channelMap.clear();
+        ops.clear();
     }
 
     //1.first get existed channels in tv.db
     private static void cacheRelatedChannel(
-            ArrayMap<String, Long> channelMap,
+            ArrayList<Pair<String, Long>> channelMap,
             ArrayMap<String, ArrayMap<String, String>> channelUseSettingValueMap, Context context,
-            String inputId, boolean isSearched, String updateChannelType, PersistableBundle extras) {
+            String inputId, boolean isSearched, List<Channel> channels, PersistableBundle extras) {
         Uri channelsUri = TvContract.buildChannelsUriForInput(inputId);
         String[] projection = {
                 Channels._ID, Channels.COLUMN_TYPE, Channels.COLUMN_ORIGINAL_NETWORK_ID,
                 Channels.COLUMN_TRANSPORT_STREAM_ID, Channels.COLUMN_SERVICE_ID,
                 Channels.COLUMN_DISPLAY_NAME, Channels.COLUMN_DISPLAY_NUMBER,
+                Channels.COLUMN_APP_LINK_ICON_URI, Channels.COLUMN_APP_LINK_INTENT_URI,
                 Channels.COLUMN_INTERNAL_PROVIDER_DATA};
+        String searchMode = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
         ContentResolver resolver = context.getContentResolver();
         String syncSignalType = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
         boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
@@ -136,12 +142,15 @@ public class TvContractUtils {
             selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
             selectionArgs = TvContractUtils.searchSignalTypeToSelectionArgs(syncSignalType);
         }
+        int searchFrequency = extras.getInt(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY,0);
         try (Cursor cursor = resolver.query(channelsUri, projection, selection, selectionArgs, null)) {
             InternalProviderData internalProviderData = null;
             String displayName = null;
             String displayNumber = null;
             String rawDisplayName = null;
             String rawDisplayNumber = null;
+            String linkIconUri = null;
+            String linkIntentUri = null;
             while (cursor != null && cursor.moveToNext()) {
                 long rowId = cursor.getLong(0);
                 String channelType = cursor.getString(1);
@@ -150,11 +159,13 @@ public class TvContractUtils {
                 int serviceId = cursor.getInt(4);
                 displayName = cursor.getString(5);
                 displayNumber = cursor.getString(6);
-                int type = cursor.getType(7);//InternalProviderData type
+                linkIconUri = cursor.getString(7);
+                linkIntentUri = cursor.getString(8);
+                int type = cursor.getType(9);//InternalProviderData type
                 int frequency = 0;
                 String ciNumber = null;
                 if (type == Cursor.FIELD_TYPE_BLOB) {
-                    byte[] internalProviderByteData = cursor.getBlob(7);
+                    byte[] internalProviderByteData = cursor.getBlob(9);
                     if (internalProviderByteData != null) {
                         internalProviderData = new InternalProviderData(internalProviderByteData);
                     }
@@ -174,20 +185,20 @@ public class TvContractUtils {
                     if (setRawDisplayName) {
                         internalProviderData.put(Channel.KEY_NEW_DISPLAYNAME, displayName);
                     }
+                    if (!TextUtils.isEmpty(linkIconUri)) {
+                        internalProviderData.put(Channels.COLUMN_APP_LINK_ICON_URI, linkIconUri);
+                    }
+                    if (!TextUtils.isEmpty(linkIntentUri)) {
+                        internalProviderData.put(Channels.COLUMN_APP_LINK_INTENT_URI, linkIntentUri);
+                    }
                 }
                 String uniqueStr = getUniqueStrForChannel(internalProviderData, channelType,
                         originalNetworkId, transportStreamId, serviceId,
                         frequency, ciNumber, rawDisplayNumber);
-                if (uniqueStr == null) {
-                    continue;
-                }
-                channelMap.put(uniqueStr, rowId);
-                String searchMode = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
-                int searchFrequency = extras.getInt(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY, 0);
-                if (!isSearched
-                        || (frequency != 0
-                        && EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL.equals(searchMode)
-                        && searchFrequency != frequency)) {
+                channelMap.add(new Pair<>(uniqueStr, rowId));
+
+                if ((!isSearched || (frequency != 0 && searchFrequency != frequency))
+                        && EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL.equals(searchMode)) {
                     saveRawUseSettingValuesToMap(uniqueStr, channelUseSettingValueMap, internalProviderData);
                 }
             }
@@ -198,12 +209,15 @@ public class TvContractUtils {
 
     //2.find new channel and channels that need to be updated
     private static void handleUpdateOrInsert(
-            ArrayList<ContentProviderOperation> ops, ArrayMap<String, Long> channelMap,
+            ArrayList<ContentProviderOperation> ops, ArrayList<Pair<String, Long>> channelMap,
             ArrayMap<String, ArrayMap<String, String>> channelUseSettingValueMap,
             Context context, String inputId, List<Channel> channels, PersistableBundle extras) {
         int numberToUpdate = 0;
         int numberToInsert = 0;
+        String searchMode = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
         // If a channel exists, update it. If not, insert a new one.
+        int oldDbCount = channelMap.size();
+        int newChannelSeq = 0;
         for (Channel channel : channels) {
             ContentValues values = new ContentValues();
             values.put(Channels.COLUMN_INPUT_ID, inputId);
@@ -253,34 +267,52 @@ public class TvContractUtils {
             String uniqueStr = getUniqueStrForChannel(internalProviderData, channelType,
                     originalNetworkId, transportStreamId, serviceId,
                     frequency, ciNumber, rawDisplayNumber);
-            if (uniqueStr == null) {
-                Log.e(TAG, "updateChannels no uniqueStr, ignore");
-                continue;
-            }
-            String searchMode = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
-            Long rowId = channelMap.get(uniqueStr);
+            Long rowId = null;
             if (EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO.equals(searchMode)) {
-                rowId = null;
+                // need to remove all old channels
+            } else {
+                if (newChannelSeq < oldDbCount) {
+                    // only get first of channelMap is OK, because it is ordered list
+                    String oldUniqueStr = channelMap.get(0).first;
+                    if (TextUtils.equals(uniqueStr, oldUniqueStr)) {
+                        rowId = channelMap.get(0).second;
+                        channelMap.remove(0);
+                        newChannelSeq++;
+                    } else {
+                        // when find first different channel, remove all remaining channels
+                        Log.i(TAG, "_ID=" + channelMap.get(0).second + ","
+                                + oldUniqueStr + "in db is first different from " + uniqueStr);
+                        newChannelSeq = Integer.MAX_VALUE;
+                    }
+                }
+            }
+            if (rowId != null) {
+                if (DEBUG) {
+                    Log.d(TAG, String.format("Mapping %s to %d", uniqueStr, rowId));
+                }
+                restoreRawUseSettingValuesToInternalProviderData(uniqueStr, channelUseSettingValueMap, internalProviderData);
+                ArrayMap<String, String> singleUserSettings = channelUseSettingValueMap.get(uniqueStr);
+                if (singleUserSettings != null && singleUserSettings.size() > 0) {
+                    if ("1".equals(singleUserSettings.get(Channel.KEY_SET_DISPLAYNUMBER))) {
+                        values.put(TvContract.Channels.COLUMN_DISPLAY_NUMBER, singleUserSettings.get(Channel.KEY_NEW_DISPLAYNUMBER));
+                    }
+                    if ("1".equals(singleUserSettings.get(Channel.KEY_SET_DISPLAYNAME))) {
+                        values.put(TvContract.Channels.COLUMN_DISPLAY_NAME, singleUserSettings.get(Channel.KEY_NEW_DISPLAYNAME));
+                    }
+                    if (!TextUtils.isEmpty(singleUserSettings.get(Channels.COLUMN_APP_LINK_ICON_URI))) {
+                        values.put(Channels.COLUMN_APP_LINK_ICON_URI, singleUserSettings.get(Channels.COLUMN_APP_LINK_ICON_URI));
+                    }
+                    if (!TextUtils.isEmpty(singleUserSettings.get(Channels.COLUMN_APP_LINK_INTENT_URI))) {
+                        values.put(Channels.COLUMN_APP_LINK_INTENT_URI, singleUserSettings.get(Channels.COLUMN_APP_LINK_INTENT_URI));
+                    }
+                }
             }
 
-            restoreRawUseSettingValuesToInternalProviderData(uniqueStr, channelUseSettingValueMap, internalProviderData);
             byte[] dataByte = internalProviderData.toString().getBytes();
             if (dataByte != null && dataByte.length > 0) {
                 values.put(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_DATA, dataByte);
             } else {
                 values.putNull(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_DATA);
-            }
-            if (DEBUG) {
-                Log.d(TAG, String.format("Mapping %s to %d", uniqueStr, rowId));
-            }
-            ArrayMap<String, String> singleUserSettings = channelUseSettingValueMap.get(uniqueStr);
-            if (singleUserSettings != null && singleUserSettings.size() > 0) {
-                if ("1".equals(singleUserSettings.get(Channel.KEY_SET_DISPLAYNUMBER))) {
-                    values.put(TvContract.Channels.COLUMN_DISPLAY_NUMBER, singleUserSettings.get(Channel.KEY_NEW_DISPLAYNUMBER));
-                }
-                if ("1".equals(singleUserSettings.get(Channel.KEY_SET_DISPLAYNAME))) {
-                    values.put(TvContract.Channels.COLUMN_DISPLAY_NAME, singleUserSettings.get(Channel.KEY_NEW_DISPLAYNAME));
-                }
             }
             if (rowId == null) {
                 numberToInsert++;
@@ -306,7 +338,6 @@ public class TvContractUtils {
                 if (DEBUG) {
                     Log.d(TAG, "Updating channel " + channel.getDisplayName() + " _ID=" + rowId);
                 }
-                channelMap.remove(uniqueStr);
             }
         }
         Log.i(TAG, "numberToInsert:" + numberToInsert
@@ -314,13 +345,13 @@ public class TvContractUtils {
                         + ", numberToDelete:" + channelMap.size());
     }
 
-    //3.delete channels that don't exist in dtvkit db anymore
-    private static void handleDelete(ArrayMap<String, Long> channelMap, Context context) {
+    //3.delete channels that don't exist in DtvKit db anymore
+    private static void handleChannelDelete(ArrayList<Pair<String, Long>> channelMap, Context context) {
         int size = channelMap.size();
         ArrayList<ContentProviderOperation> deleteOps = new ArrayList<>();
         ContentResolver resolver = context.getContentResolver();
-        for (int i = 0; i < size; ++i) {
-            Long rowId = channelMap.valueAt(i);
+        for (Pair<String, Long> entry : channelMap) {
+            Long rowId = entry.second;
             if (DEBUG) {
                 Log.d(TAG, " dealDelete add Deleting channel " + rowId);
             }
@@ -346,7 +377,7 @@ public class TvContractUtils {
     }
 
     //4.deal insert or update channels to tv.db
-    private static void syncToDb(ArrayList<ContentProviderOperation> ops, Map<Uri, String> logos, Context context) {
+    private static void syncToDb(ArrayList<ContentProviderOperation> ops, Context context) {
         ContentResolver resolver = context.getContentResolver();
         for (int i = 0; i < ops.size(); i += BATCH_OPERATION_COUNT) {
             int toIndex =
@@ -362,10 +393,9 @@ public class TvContractUtils {
                 Log.e(TAG, "updateChannels Failed = " + e.getMessage());
             }
         }
-        ops.clear();
-        if (logos != null && !logos.isEmpty()) {
-            new InsertLogosTask(context).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, logos);
-        }
+//        if (logos != null && !logos.isEmpty()) {
+//            new InsertLogosTask(context).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, logos);
+//        }
     }
 
     //cache use settings
@@ -431,17 +461,18 @@ public class TvContractUtils {
         try {
             if (internalProviderData != null) {
                 result = (String)internalProviderData.get(Channel.KEY_DTVKIT_URI);
-            } else {
-                result = channelType
-                        + "-" + (frequency / 1000000)
-                        + "-" + rawDisplayNumber
-                        + "-" + originalNetworkId
-                        + "-" + transportStreamId
-                        + "-" + serviceId
-                        + "-" + ciNumber;
             }
-        } catch (Exception e) {
-            Log.e(TAG, "getUniqueStrForChannel Exception = " + e.getMessage());
+        } catch (InternalProviderData.ParseException ignored) {
+            // Log.w(TAG, "getUniqueStrForChannel error, use Legacy: ");
+        }
+        if (result == null) {
+             result = channelType
+                    + "-" + (frequency / 1000000)
+                    + "-" + rawDisplayNumber
+                    + "-" + originalNetworkId
+                    + "-" + transportStreamId
+                    + "-" + serviceId
+                    + "-" + ciNumber;
         }
         return result;
     }

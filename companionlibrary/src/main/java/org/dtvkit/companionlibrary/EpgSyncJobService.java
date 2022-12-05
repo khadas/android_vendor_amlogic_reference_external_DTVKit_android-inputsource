@@ -37,7 +37,7 @@ import java.util.List;
 
 public abstract class EpgSyncJobService extends Service {
     private static final String TAG = "EpgSyncJobService";
-    private static final boolean DEBUG = false;
+    protected static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
     public static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
     /** The action that will be broadcast when the job service's status changes. */
     public static final String ACTION_SYNC_STATUS_CHANGED =

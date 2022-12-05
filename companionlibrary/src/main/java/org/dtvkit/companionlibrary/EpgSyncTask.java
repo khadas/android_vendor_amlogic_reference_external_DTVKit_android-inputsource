@@ -10,6 +10,7 @@ import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KE
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_REASON;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL;
+import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.ERROR_DATABASE_INSERT;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.ERROR_EPG_SYNC_CANCELED;
@@ -214,8 +215,10 @@ public class EpgSyncTask {
             boolean updateChannel = mBundle.getBoolean(BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true);
             long currentChannelId = mBundle.getLong(BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, -1);
             int frequency = mBundle.getInt(BUNDLE_KEY_SYNC_FREQUENCY, -1);
+            String searchMode = mBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
             Log.d(TAG, "doInBackground :: syncSignalType:" + syncSignalType
                 + ", frequency:" + frequency
+                + ", searchMode:" + searchMode
                 + ", mInputId:" + mInputId
                 + ", updateChannel:" + updateChannel);
             if (mInputId == null) {
@@ -239,14 +242,13 @@ public class EpgSyncTask {
             }
 
             if (updateChannel) {
-                List<Channel> tvChannels;
                 try {
-                    tvChannels = mMainService.getChannels(syncCurrent);
+                    final List<Channel> tvChannels = mMainService.getChannels(syncCurrent);
+                    TvContractUtils.updateChannels(mMainService, mInputId, mIsSearchedChannel, tvChannels, mBundle);
                 } catch (Exception e) {
-                    Log.e(TAG, e.toString());
+                    e.printStackTrace();
                     return ERROR_EPG_SYNC_CANCELED;
                 }
-                TvContractUtils.updateChannels(mMainService, mInputId, mIsSearchedChannel, tvChannels, EpgSyncJobService.getChannelTypeFilter(), mBundle);
             }
             String selection = null;
             String[] selectionArgs = null;

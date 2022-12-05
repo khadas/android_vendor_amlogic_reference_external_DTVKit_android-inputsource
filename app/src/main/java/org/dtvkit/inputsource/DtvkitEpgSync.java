@@ -13,6 +13,8 @@ import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 import com.droidlogic.dtvkit.companionlibrary.model.Program;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+
+import com.droidlogic.dtvkit.inputsource.parental.ContentRatingsParser;
 import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.fragment.ParameterManager;
 
@@ -40,14 +42,11 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         Log.i(TAG, "Get channels for epg sync, current: " + syncCurrent);
 
         try {
-            JSONArray services = null;
+            JSONArray services = new JSONArray();
             JSONArray param = new JSONArray();
             param.put(false);
-            if (!syncCurrent)
-                param.put("all");//signal_type all
-            else
-                param.put("cur");
-            param.put("all");//tv/radio all
+            param.put(syncCurrent ? "cur" : "all"); // signal_type
+            param.put("all"); // tv/radio all
             JSONObject serviceNumberObj = DtvkitGlueClient.getInstance().request("Dvb.getNumberOfServices", param);
             int channelNumber = serviceNumberObj.optInt("data", 0);
             Log.i(TAG, "Total " + channelNumber + " channels to sync");
@@ -60,37 +59,27 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             int index = 0;
             int remainChannels = channelNumber;
             int maxTransChannelsSize = 512;
-            if ((channelNumber <= maxTransChannelsSize) && syncCurrent) {
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServices", new JSONArray());
-                services = obj.getJSONArray("data");
-            } else {
-                services = new JSONArray();
-                while (remainChannels > 0) {
-                    JSONArray param1 = new JSONArray();
-                    if (syncCurrent)
-                        param1.put("cur");
-                    else
-                        param1.put("all");//signal_type current or all
-                    param1.put("all");//tv_radio type
-                    param1.put(index);
-                    param1.put(maxTransChannelsSize);
-                    JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServicesByIndex", param1);
-                    JSONArray tmpServices = obj.getJSONArray("data");
-                    remainChannels = remainChannels - tmpServices.length();
-                    index = index + tmpServices.length();
-                    for (int i=0;i<tmpServices.length();i++) {
-                        services.put(tmpServices.get(i));
-                    }
-                    Log.i(TAG, "Get " + tmpServices.length() + " channels and cached");
+            while (remainChannels > 0) {
+                JSONArray param1 = new JSONArray();
+                param1.put(syncCurrent ? "cur" : "all"); // signal_type
+                param1.put("all"); // tv_radio type
+                param1.put(index);
+                param1.put(maxTransChannelsSize);
+                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServicesByIndex", param1);
+                JSONArray tmpServices = obj.getJSONArray("data");
+                remainChannels -= maxTransChannelsSize;
+                index += maxTransChannelsSize;
+                for (int i=0;i<tmpServices.length();i++) {
+                    services.put(tmpServices.get(i));
                 }
+                Log.i(TAG, "Get " + tmpServices.length() + " channels and cached");
             }
 
             //Log.i(TAG, "getChannels=" + obj.toString());
             Log.i(TAG, "Finally getChannels size=" + services.length());
             boolean ciTest = PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_ADD_TEST, false);
 
-            for (int i = 0; i < services.length(); i++)
-            {
+            for (int i = 0; i < services.length(); i++) {
                 JSONObject service = services.getJSONObject(i);
                 String uri = service.getString("uri");
 
@@ -185,7 +174,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 if (service.has("category_id")) {
                     data.put("category_id", service.optJSONArray("category_id"));
                 }
-                String signal_type = service.optString("sig_name", "TYPE_OTHER");
+                String signal_type = service.optString("sig_name", TvContract.Channels.TYPE_OTHER);
                 String channelType = TvContractUtils.searchSignalTypeToChannelType(signal_type);
                 channels.add(new Channel.Builder()
                         .setDisplayName(service.getString("name"))
@@ -199,6 +188,9 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setInternalProviderData(data)
                         .setLocked(service.optBoolean("blocked")?1:0)
                         .build());
+                if (DEBUG) {
+                    Log.d(TAG, "-----> " + service.getInt("lcn") + " " + service.getString("name"));
+                }
             }
         } catch (Exception e) {
             Log.e(TAG, "getChannels Exception = " + e.getMessage());
@@ -302,8 +294,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             //starttime\endtime use min and max.
             JSONArray events = DtvkitGlueClient.getInstance().request("Dvb.getListOfEvents", args).getJSONArray("data");
 
-            for (int i = 0; i < events.length(); i++)
-            {
+            for (int i = 0; i < events.length(); i++) {
                 JSONObject event = events.getJSONObject(i);
 
                 InternalProviderData data = new InternalProviderData();
@@ -344,7 +335,9 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             Log.e(TAG, e.getMessage());
         }
         if (programs.size() > 0) {
-            Log.i(TAG, "%% channel[" + channel.getDisplayName() + "], ## programs["+ programs.size() +"] ##, Uri:" + dvbUri);
+            if (DEBUG) {
+                Log.i(TAG, "%% channel[" + channel.getDisplayName() + "], ## programs[" + programs.size() + "] ##, Uri:" + dvbUri);
+            }
         }
 
         return programs;
@@ -503,8 +496,9 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     {
         TvContentRating[] ratings_array;
         String ratingSystemDefinition = "DVB";
-        String ratingDomain = "com.android.tv";
-        String DVB_ContentRating[] = {"DVB_4", "DVB_5", "DVB_6", "DVB_7", "DVB_8", "DVB_9", "DVB_10", "DVB_11", "DVB_12", "DVB_13", "DVB_14", "DVB_15", "DVB_16", "DVB_17", "DVB_18", "DVB_19"};
+        String ratingDomain = ContentRatingsParser.DOMAIN_SYSTEM_RATINGS;
+        String[] DVB_ContentRating = {"DVB_4", "DVB_5", "DVB_6", "DVB_7", "DVB_8", "DVB_9", "DVB_10",
+                "DVB_11", "DVB_12", "DVB_13", "DVB_14", "DVB_15", "DVB_16", "DVB_17", "DVB_18", "DVB_19"};
 
         ratings_array = new TvContentRating[1];
         parentalRating += 3; //minimum age = rating + 3 years
@@ -522,7 +516,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         return ratings_array;
     }
 
-    private boolean tryToPutStringToInternalProviderData(InternalProviderData data, String key1, JSONObject obj, String key2) {
+    private void tryToPutStringToInternalProviderData(InternalProviderData data, String key1, JSONObject obj, String key2) {
         boolean result = false;
         if (data != null && obj != null && key1 != null && key2 != null) {
             try {
@@ -532,10 +526,9 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 //Log.e(TAG, "tryToPutStringToInternalProviderData key2 = " + key2 + "Exception = " + e.getMessage());
             }
         }
-        return result;
     }
 
-    private boolean tryToPutIntToInternalProviderData(InternalProviderData data, String key1, JSONObject obj, String key2) {
+    private void tryToPutIntToInternalProviderData(InternalProviderData data, String key1, JSONObject obj, String key2) {
         boolean result = false;
         if (data != null && obj != null && key1 != null && key2 != null) {
             try {
@@ -545,10 +538,9 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 //Log.e(TAG, "tryToPutIntToInternalProviderData key2 = " + key2 + "Exception = " + e.getMessage());
             }
         }
-        return result;
     }
 
-    private boolean tryToPutBooleanToInternalProviderData(InternalProviderData data, String key1, JSONObject obj, String key2) {
+    private void tryToPutBooleanToInternalProviderData(InternalProviderData data, String key1, JSONObject obj, String key2) {
         boolean result = false;
         if (data != null && obj != null && key1 != null && key2 != null) {
             try {
@@ -558,7 +550,6 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 //Log.e(TAG, "tryToPutBooleanToInternalProviderData key2 = " + key2 + "Exception = " + e.getMessage());
             }
         }
-        return result;
     }
 
     private String getDtvkitChannelUri(Channel channel) {
