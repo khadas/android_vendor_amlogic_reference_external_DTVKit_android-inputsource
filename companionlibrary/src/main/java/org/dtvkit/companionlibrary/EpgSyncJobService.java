@@ -36,8 +36,8 @@ import org.dtvkit.companionlibrary.EpgSyncTask;
 import java.util.List;
 
 public abstract class EpgSyncJobService extends Service {
-    private static final String TAG = "EpgSyncJobService";
-    protected static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final String TAG = "EpgSyncJob";
+    protected static final boolean DEBUG = false;
     public static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
     /** The action that will be broadcast when the job service's status changes. */
     public static final String ACTION_SYNC_STATUS_CHANGED =
@@ -140,8 +140,10 @@ public abstract class EpgSyncJobService extends Service {
      * program starts before this ending time, it should be be included.
      * @return A list of programs for a given channel.
      */
-    public abstract List<Program> getProgramsForChannel(Uri channelUri, Channel channel,
+    public abstract void getProgramsForChannel(List<Program> container, Uri channelUri, Channel channel,
             long startMs, long endMs);
+
+    public abstract int getProgramsForChannelByBatch(List<Program> container, Uri channelUri, Channel channel);
 
     public abstract List<Program> getAllProgramsForChannel(Uri channelUri, Channel channel);
 
@@ -204,7 +206,6 @@ public abstract class EpgSyncJobService extends Service {
         if (mEpgSyncTask != null) {
             mEpgSyncTask.run(null);
         }
-
     }
 
     public static void setChannelTypeFilter(String type) {

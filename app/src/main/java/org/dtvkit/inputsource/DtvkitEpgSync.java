@@ -19,10 +19,12 @@ import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.fragment.ParameterManager;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class DtvkitEpgSync extends EpgSyncJobService {
     private static final String TAG = "EpgSyncJobService";
@@ -211,101 +213,27 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         }
     }
 
-    @Override
-    public List<Program> getProgramsForChannel(Uri channelUri, Channel channel, long startMs, long endMs) {
-        List<Program> programs = new ArrayList<>();
-        long starttime, endtime;
+    private Program parseSingleEvent(JSONObject event, Channel channel, long startMs, long endMs) {
+        long startTime, endTime;
         int parental_rating;
         int content_value;
         String content_level_1;
         String content_level_2;
+        Program pro = null;
         try {
-            String dvbUri = getDtvkitChannelUri(channel);
-
-            Log.i(TAG, String.format("Get channel programs for epg sync. Uri %s, startMs %d, endMs %d",
-                dvbUri, startMs, endMs));
-
-            JSONArray args = new JSONArray();
-            args.put(dvbUri); // uri
-            args.put(startMs/1000);
-            args.put(endMs/1000);
-            JSONArray events = DtvkitGlueClient.getInstance().request("Dvb.getListOfEvents", args).getJSONArray("data");
-
-            for (int i = 0; i < events.length(); i++)
-            {
-                JSONObject event = events.getJSONObject(i);
-
-                InternalProviderData data = new InternalProviderData();
-                data.put("dvbUri", dvbUri);
-                starttime = event.getLong("startutc") * 1000;
-                endtime = event.getLong("endutc") * 1000;
-                parental_rating = event.getInt("rating");
-                content_value = event.optInt("content_value");
-                if (starttime >= endMs || endtime <= startMs) {
-                    Log.i(TAG, "Skip##  startMs:endMs=["+startMs+":"+endMs+"]  event:startT:endT=["+starttime+":"+endtime+"]");
-                    continue;
-                }else{
-                    content_level_1 = event.getString("content_level_1");
-                    content_level_2 = event.getString("content_level_2");
-                    String[] genres = getGenres(event.getString("genre"), content_value);
-                    String genre_str;
-                    if (genres.length == 0) {
-                        genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
-                        if (!TextUtils.isEmpty(genre_str)) {
-                            data.put("genre", genre_str);
-                        }
-                    }
-
-                    if (!TextUtils.isEmpty(event.getString("guidance"))) {
-                        data.put("guidance",event.getString("guidance"));
-                    }
-
-                    Program pro = new Program.Builder()
-                            .setChannelId(channel.getId())
-                            .setTitle(event.getString("name"))
-                            .setStartTimeUtcMillis(starttime)
-                            .setEndTimeUtcMillis(endtime)
-                            .setDescription(event.getString("description"))
-                            .setCanonicalGenres(genres)
-                            .setInternalProviderData(data)
-                            .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name")))
-                            .build();
-                    programs.add(pro);
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-        }
-
-        return programs;
-    }
-
-    @Override
-    public List<Program> getAllProgramsForChannel(Uri channelUri, Channel channel) {
-        List<Program> programs = new ArrayList<>();
-        int parental_rating;
-        String dvbUri = getDtvkitChannelUri(channel);
-
-        try {
-            //Log.i(TAG, String.format("Get channel programs for epg sync. Uri %s", dvbUri));
-
-            JSONArray args = new JSONArray();
-            args.put(dvbUri); // uri
-            //starttime\endtime use min and max.
-            JSONArray events = DtvkitGlueClient.getInstance().request("Dvb.getListOfEvents", args).getJSONArray("data");
-
-            for (int i = 0; i < events.length(); i++) {
-                JSONObject event = events.getJSONObject(i);
-
-                InternalProviderData data = new InternalProviderData();
-                data.put("dvbUri", dvbUri);
-                int content_value = event.optInt("content_value");
-                String content_level_1 = event.getString("content_level_1");
-                String content_level_2 = event.getString("content_level_2");
-
+            InternalProviderData data = new InternalProviderData();
+            data.put("dvbUri", getDtvkitChannelUri(channel));
+            startTime = event.getLong("startutc") * 1000;
+            endTime = event.getLong("endutc") * 1000;
+            parental_rating = event.getInt("rating");
+            content_value = event.optInt("content_value");
+            if (startTime >= endMs || endTime <= startMs) {
+                Log.i(TAG, "Skip##  startMs:endMs=["+startMs+":"+endMs+"]  event:startT:endT=["+startTime+":"+endTime+"]");
+            } else {
+                content_level_1 = event.getString("content_level_1");
+                content_level_2 = event.getString("content_level_2");
                 String[] genres = getGenres(event.getString("genre"), content_value);
                 String genre_str;
-                //Log.e(TAG, "getGenres length = " + genres.length);
                 if (genres.length == 0) {
                     genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
                     if (!TextUtils.isEmpty(genre_str)) {
@@ -314,32 +242,99 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 }
 
                 if (!TextUtils.isEmpty(event.getString("guidance"))) {
-                    data.put("guidance",event.getString("guidance"));
+                    data.put("guidance", event.getString("guidance"));
                 }
 
-                parental_rating = event.getInt("rating");
-                Program pro = new Program.Builder()
+                pro = new Program.Builder()
                         .setChannelId(channel.getId())
-                        .setTitle(event.getString("name"))
-                        .setStartTimeUtcMillis(event.getLong("startutc") * 1000)
-                        .setEndTimeUtcMillis(event.getLong("endutc") * 1000)
-                        .setDescription(event.getString("description"))
-                        .setLongDescription(event.getString("description_extern"))
+                        .setTitle(event.optString("name"))
+                        .setStartTimeUtcMillis(startTime)
+                        .setEndTimeUtcMillis(endTime)
+                        .setDescription(event.optString("description"))
+                        .setLongDescription(event.optString("description_extern"))
                         .setCanonicalGenres(genres)
                         .setInternalProviderData(data)
                         .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name")))
                         .build();
-                programs.add(pro);
+            }
+        } catch (JSONException ignored) {
+            return null;
+        }
+        return pro;
+    }
+
+    @Override
+    public void getProgramsForChannel(List<Program> container, Uri channelUri, Channel channel, long startMs, long endMs) {
+        try {
+            String dvbUri = getDtvkitChannelUri(channel);
+            if (DEBUG) {
+                Log.i(TAG, String.format("Get channel programs for epg sync. Uri %s, startMs %d, endMs %d",
+                        dvbUri, startMs, endMs));
+            }
+            JSONArray args = new JSONArray();
+            args.put(dvbUri); // uri
+            args.put(startMs/1000);
+            args.put(endMs/1000);
+            JSONArray events = DtvkitGlueClient.getInstance()
+                    .request("Dvb.getListOfEvents", args)
+                    .getJSONArray("data");
+            for (int i = 0; i < events.length(); i++)
+            {
+                JSONObject event = events.getJSONObject(i);
+                Program pro = parseSingleEvent(event, channel, startMs, endMs);
+                if (pro != null) {
+                    container.add(pro);
+                }
             }
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "getProgramsForChannel:" + e.getMessage());
         }
-        if (programs.size() > 0) {
-            if (DEBUG) {
-                Log.i(TAG, "%% channel[" + channel.getDisplayName() + "], ## programs[" + programs.size() + "] ##, Uri:" + dvbUri);
-            }
-        }
+    }
 
+    @Override
+    public int getProgramsForChannelByBatch(List<Program> container, Uri channelUri, Channel channel) {
+        /* Get 8-days programs */
+        /* Split 2-3-3 to prevent binder alloc fail when too many programs */
+        long start = PropSettingManager.getCurrentStreamTime(true);
+        long end = start + TimeUnit.DAYS.toMillis(2);
+        int before = container.size();
+        for (int j = 0; j < 3; j++) {
+            // Log.d(TAG, "test " + channelUri + " epg from " + (start/1000) + " to " + (end/1000));
+            getProgramsForChannel(container, channelUri, channel, start, end);
+            // plus 1s to next recycle
+            start = end + 1000;
+            end = start + TimeUnit.DAYS.toMillis(3);
+        }
+        int after = container.size();
+        return after - before;
+    }
+
+    @Override
+    public List<Program> getAllProgramsForChannel(Uri channelUri, Channel channel) {
+        List<Program> programs = new ArrayList<>();
+        String dvbUri = getDtvkitChannelUri(channel);
+
+        try {
+            JSONArray args = new JSONArray();
+            args.put(dvbUri); // uri
+            JSONArray events = DtvkitGlueClient.getInstance()
+                    .request("Dvb.getListOfEvents", args)
+                    .getJSONArray("data");
+            for (int i = 0; i < events.length(); i++) {
+                JSONObject event = events.getJSONObject(i);
+                Program pro = parseSingleEvent(event, channel, 0, Long.MAX_VALUE);
+                if (pro != null) {
+                    programs.add(pro);
+                }
+            }
+        } catch (Exception e) {
+            int size = getProgramsForChannelByBatch(programs, channelUri, channel);
+            Log.i(TAG, "get " + channelUri +" epg number: "+ size);
+        }
+        if (DEBUG && programs.size() > 0) {
+            Log.i(TAG, "%% channel[" + channel.getDisplayName()
+                    + "], ## programs[" + programs.size() + "] ##, Uri:" + dvbUri);
+        }
         return programs;
     }
 
@@ -502,7 +497,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
         ratings_array = new TvContentRating[1];
         parentalRating += 3; //minimum age = rating + 3 years
-        Log.d(TAG, "parseParentalRatings parentalRating:"+ parentalRating + ", title = " + title);
+//        Log.d(TAG, "parseParentalRatings parentalRating:"+ parentalRating + ", title = " + title);
         if (parentalRating >= 4 && parentalRating <= 19) {
             TvContentRating r = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, DVB_ContentRating[parentalRating-4], (String) null);
             if (r != null) {

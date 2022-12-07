@@ -3,19 +3,16 @@ package org.dtvkit.companionlibrary;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.ACTION_SYNC_STATUS_CHANGED;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_ERROR_REASON;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_INPUT_ID;
-import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_CHANNEL_ONLY;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_FROM;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_REASON;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL;
-import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.ERROR_DATABASE_INSERT;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.ERROR_EPG_SYNC_CANCELED;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.ERROR_INPUT_ID_NULL;
-import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.ERROR_NO_CHANNELS;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.ERROR_NO_PROGRAMS;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_BY_OTHER;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_BY_SCAN;
@@ -24,6 +21,8 @@ import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_FINI
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_REASON;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_STARTED;
 import static com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService.SYNC_STATUS;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import android.content.ContentProviderOperation;
 import android.content.Intent;
@@ -52,6 +51,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class EpgSyncTask {
@@ -59,85 +59,91 @@ public class EpgSyncTask {
     private final String TAG = EpgSyncTask.class.getSimpleName();
     private final boolean DEBUG = false;
     private final ThreadFactory sThreadFactory = new NamedThreadFactory("EpgSyncTask");
-    private final ExecutorService EPG_EXECUTOR = Executors.newSingleThreadExecutor(sThreadFactory);
+    private final ExecutorService EPG_EXECUTOR = Executors.newFixedThreadPool(2, sThreadFactory);
     private final EpgSyncJobService mMainService;
-    private final String INVALID_DEFAULT_REASON = "---";
-    private FutureTask<String> mFutureTask;
-    private String mSyncReason = INVALID_DEFAULT_REASON;
+    private FutureTask<String> mChannelTask;
+    private FutureTask<String> mEventTask;
 
     public EpgSyncTask(EpgSyncJobService service) {
         mMainService = service;
     }
 
     public void run(Intent intent) {
-        if (intent != null) {
-            String syncReason = intent.getStringExtra(BUNDLE_KEY_SYNC_FROM);
-//            if (TextUtils.equals(mSyncReason, syncReason)) {
-//                Log.i(TAG, "sync reason is the same from:" + syncReason);
-//                return;
-//            }
-        }
-        if (mFutureTask != null) {
-            Log.i(TAG, "cancel " + mFutureTask.cancel(true));
-        }
-        if (intent == null) {
-            Log.w(TAG, "intent is null, do nothing!");
-            return;
-        }
-        PersistableBundle persistableBundle = new PersistableBundle();
-        if (intent.getStringExtra("inputId") == null) {
-            persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID,
-                    EpgSyncJobService.DTVKIT_INPUTID);
-        } else {
-            persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID,
-                    intent.getStringExtra("inputId"));
-        }
-        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NOW_NEXT,
-                intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NOW_NEXT, false));
-        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_CHANNEL_ONLY,
-                intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_CHANNEL_ONLY, false));
-        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL,
-                intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, false));
-        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_REASON,
-                intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_REASON, false));
-        persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM,
-                intent.getStringExtra(BUNDLE_KEY_SYNC_FROM));
-        persistableBundle.putInt(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY,
-                intent.getIntExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY, -1));
-        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL,
-                intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true));
-        persistableBundle.putLong(EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID,
-                intent.getLongExtra(BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, -1));
-        Bundle parameters = intent.getBundleExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS);
-        if (parameters != null) {
-            Set<String> keySet = parameters.keySet();
-            Object obj;
-            for (String key : keySet) {
-                obj = parameters.get(key);
-                if (obj != null) {
-                    if (obj instanceof Boolean) {
-                        persistableBundle.putBoolean(key, (boolean) obj);
-                    } else if (obj instanceof String) {
-                        persistableBundle.putString(key, (String) obj);
-                    } else if (obj instanceof Long) {
-                        persistableBundle.putLong(key, (long) obj);
-                    } else if (obj instanceof Integer) {
-                        persistableBundle.putInt(key, (int) obj);
-                    } else {
-                        Log.w(TAG, "not support for " + obj);
+        synchronized (this) {
+            if (intent == null) {
+                if (mChannelTask != null) {
+                    mChannelTask.cancel(true);
+                }
+                if (mEventTask != null) {
+                    mEventTask.cancel(true);
+                }
+                Log.w(TAG, "intent is null!");
+                return;
+            }
+            PersistableBundle persistableBundle = new PersistableBundle();
+            if (intent.getStringExtra("inputId") == null) {
+                persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID,
+                        EpgSyncJobService.DTVKIT_INPUTID);
+            } else {
+                persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID,
+                        intent.getStringExtra("inputId"));
+            }
+            persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NOW_NEXT,
+                    intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NOW_NEXT, false));
+            persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL,
+                    intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, false));
+            persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_REASON,
+                    intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_REASON, false));
+            persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM,
+                    intent.getStringExtra(BUNDLE_KEY_SYNC_FROM));
+            persistableBundle.putInt(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY,
+                    intent.getIntExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY, -1));
+            persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL,
+                    intent.getBooleanExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true));
+            persistableBundle.putLong(EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID,
+                    intent.getLongExtra(BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, -1));
+            Bundle parameters = intent.getBundleExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS);
+            if (parameters != null) {
+                Set<String> keySet = parameters.keySet();
+                Object obj;
+                for (String key : keySet) {
+                    obj = parameters.get(key);
+                    if (obj != null) {
+                        if (obj instanceof Boolean) {
+                            persistableBundle.putBoolean(key, (boolean) obj);
+                        } else if (obj instanceof String) {
+                            persistableBundle.putString(key, (String) obj);
+                        } else if (obj instanceof Long) {
+                            persistableBundle.putLong(key, (long) obj);
+                        } else if (obj instanceof Integer) {
+                            persistableBundle.putInt(key, (int) obj);
+                        } else {
+                            Log.w(TAG, "not support for " + obj);
+                        }
                     }
                 }
             }
+            String signalType = persistableBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE);
+            if (TextUtils.isEmpty(signalType)) {
+                String type = TvContractUtils.toSignalType(EpgSyncJobService.getChannelTypeFilter());
+                persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, type);
+                Log.d(TAG, "BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE -> " + type);
+            }
+            boolean syncChannel = intent.getBooleanExtra(BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true);
+            if (syncChannel) {
+                if (mChannelTask != null) {
+                    Log.i(TAG, "cancel ChannelTask " + mChannelTask.cancel(true));
+                }
+                mChannelTask = new FutureTask<>(new EpgCallable(persistableBundle));
+                EPG_EXECUTOR.execute(mChannelTask);
+            } else {
+                if (mEventTask != null) {
+                    Log.i(TAG, "cancel EventTask " + mEventTask.cancel(true));
+                }
+                mEventTask = new FutureTask<>(new EventCallable(persistableBundle));
+                EPG_EXECUTOR.execute(mEventTask);
+            }
         }
-        String signalType = persistableBundle.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE);
-        if (TextUtils.isEmpty(signalType)) {
-            String type = TvContractUtils.toSignalType(EpgSyncJobService.getChannelTypeFilter());
-            persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, type);
-            Log.d(TAG, "BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE -> " + type);
-        }
-
-        mFutureTask = new FutureTask<>(new EpgCallable(persistableBundle));
-        EPG_EXECUTOR.execute(mFutureTask);
     }
 
     private static class NamedThreadFactory implements ThreadFactory {
@@ -158,98 +164,37 @@ public class EpgSyncTask {
         }
     }
 
-    private class EpgCallable implements Callable<String> {
+    private class EventCallable implements Callable<String> {
         private final PersistableBundle mBundle;
-        private boolean mUpdateByScan;
-        private String mInputId;
-        private long mStartTime = 0;
 
-        public EpgCallable(PersistableBundle bundle) {
+        public EventCallable(PersistableBundle bundle) {
             mBundle = bundle;
         }
 
-        private void startCall() {
-            mSyncReason = mBundle.getString(BUNDLE_KEY_SYNC_FROM);
-            Log.i(TAG, "Send SYNC_STARTED broadcast");
-            Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);
-            intent.putExtra(BUNDLE_KEY_INPUT_ID, mBundle.getString(BUNDLE_KEY_INPUT_ID));
-            intent.putExtra(SYNC_STATUS, SYNC_STARTED);
-            LocalBroadcastManager.getInstance(mMainService.getApplicationContext()).sendBroadcast(intent);
-            mStartTime = System.currentTimeMillis();
-        }
-
-        private void endCall(int reason) {
-            mSyncReason = INVALID_DEFAULT_REASON;
-            Log.i(TAG, "finishEpgSync reason = " + reason + ", mUpdateByScan = " + mUpdateByScan);
-            Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);
-            intent.putExtra(BUNDLE_KEY_INPUT_ID, mInputId);
-            intent.putExtra(BUNDLE_KEY_SYNC_FROM, mBundle.getString(BUNDLE_KEY_SYNC_FROM));
-            if (reason != 0) {
-                intent.putExtra(SYNC_STATUS, SYNC_ERROR);
-                intent.putExtra(BUNDLE_KEY_ERROR_REASON, reason);
-            } else {
-                intent.putExtra(SYNC_STATUS, SYNC_FINISHED);
-                if (mUpdateByScan) {
-                    intent.putExtra(SYNC_REASON, SYNC_BY_SCAN);
-                } else {
-                    intent.putExtra(SYNC_REASON, SYNC_BY_OTHER);
-                }
-            }
-            if (mStartTime > 0) {
-                Log.i(TAG, "costTime=" + (System.currentTimeMillis() - mStartTime) + "ms");
-            }
-            Log.i(TAG, "Send SYNC_FINISHED broadcast");
-            LocalBroadcastManager.getInstance(mMainService.getApplicationContext()).sendBroadcast(intent);
-        }
-
-        private boolean isCancelled() {
-            return Thread.currentThread().isInterrupted();
-        }
-
-        public int doInBackground() {
-            mInputId = mBundle.getString(BUNDLE_KEY_INPUT_ID);
-            boolean mIsSearchedChannel = mBundle.getBoolean(BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, false);
-            mUpdateByScan = mBundle.getBoolean(BUNDLE_KEY_SYNC_REASON, false);
+        @Override
+        public String call() {
+            String mInputId = mBundle.getString(BUNDLE_KEY_INPUT_ID);
             String syncSignalType = mBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, null);
             boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
-            boolean updateChannel = mBundle.getBoolean(BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true);
             long currentChannelId = mBundle.getLong(BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, -1);
             int frequency = mBundle.getInt(BUNDLE_KEY_SYNC_FREQUENCY, -1);
-            String searchMode = mBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
-            Log.d(TAG, "doInBackground :: syncSignalType:" + syncSignalType
-                + ", frequency:" + frequency
-                + ", searchMode:" + searchMode
-                + ", mInputId:" + mInputId
-                + ", updateChannel:" + updateChannel);
-            if (mInputId == null) {
-                return ERROR_INPUT_ID_NULL;
-            }
 
             if (isCancelled()) {
-                return ERROR_EPG_SYNC_CANCELED;
+                return "ERROR_EPG_SYNC_CANCELED";
             }
             if (syncCurrent) {
                 if (!TextUtils.isEmpty(syncSignalType) && !mMainService.checkSignalTypesMatch(syncSignalType)) {
                     //dvb source changed, should cancel this job
-                    return ERROR_EPG_SYNC_CANCELED;
+                    return "ERROR_EPG_SYNC_CANCELED";
                 }
 
                 if (!TextUtils.isEmpty(EpgSyncJobService.getChannelTypeFilter())
                         && !mMainService.checkSignalTypesMatch(EpgSyncJobService.getChannelTypeFilter())) {
                     //dvb source changed, should cancel this job
-                    return ERROR_EPG_SYNC_CANCELED;
+                    return "ERROR_EPG_SYNC_CANCELED";
                 }
             }
 
-            if (updateChannel) {
-                try {
-                    final List<Channel> tvChannels = mMainService.getChannels(syncCurrent);
-                    TvContractUtils.updateChannels(mMainService, mInputId, mIsSearchedChannel, tvChannels, mBundle);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    return ERROR_EPG_SYNC_CANCELED;
-                }
-            }
             String selection = null;
             String[] selectionArgs = null;
             if (syncCurrent) {
@@ -260,18 +205,9 @@ public class EpgSyncTask {
                     mMainService.getContentResolver(), mInputId, frequency,
                     selection, selectionArgs, currentChannelId);
             if (channelList == null) {
-                return ERROR_NO_CHANNELS;
+                return "ERROR_NO_CHANNELS";
             }
-
-            /* Get which type of sync this is. Now next or updated event period sync */
-//            boolean nowNext = mBundle.getBoolean(BUNDLE_KEY_SYNC_NOW_NEXT, false);
-
-            boolean channelOnly = mBundle.getBoolean(BUNDLE_KEY_SYNC_CHANNEL_ONLY, false);
-            /* Get the updated event periods if required for this type of sync */
-            /* List<EventPeriod> eventPeriods = new ArrayList<>();
-            if (!nowNext) {
-                eventPeriods = getListOfUpdatedEventPeriods();
-            }*/
+            long startSystemMills = System.currentTimeMillis();
             for (int i = 0; i < channelList.size(); ++i) {
                 if (DEBUG) {
                     Log.d(TAG, "Update channel " + channelList.get(i).toString());
@@ -280,44 +216,34 @@ public class EpgSyncTask {
 
                 /* Check whether the job has been cancelled */
                 if (isCancelled()) {
-                    return ERROR_EPG_SYNC_CANCELED;
+                    return "ERROR_EPG_SYNC_CANCELED";
                 }
-
-                if (!channelOnly) {
-                    /* Get the programs */
-                    List<Program> programs = new ArrayList<>(mMainService.getAllProgramsForChannel(channelUri,  channelList.get(i)));
-
-                    if (!programs.isEmpty()) {
-                        /* Set channel ids if not set */
-                        for (int index = 0; index < programs.size(); index++) {
-                            if (programs.get(index).getChannelId() == -1) {
-                                programs.set(index,
-                                        new Program.Builder(programs.get(index))
-                                                .setChannelId(channelList.get(i).getId())
-                                                .build());
-                            }
-                        }
-
-                        /* Double check whether the job has been cancelled */
-                        if (isCancelled()) {
-                            return ERROR_EPG_SYNC_CANCELED;
-                        }
-                        int ret = updatePrograms(channelUri, programs);
-                        if (ret != 0) {
-                            return ret;
+                /* Get the programs */
+                List<Program> programs = mMainService.getAllProgramsForChannel(channelUri,  channelList.get(i));
+                if (!programs.isEmpty()) {
+                    /* Set channel ids if not set */
+                    for (int index = 0; index < programs.size(); index++) {
+                        if (programs.get(index).getChannelId() == -1) {
+                            programs.set(index,
+                                    new Program.Builder(programs.get(index))
+                                            .setChannelId(channelList.get(i).getId())
+                                            .build());
                         }
                     }
+
+                    /* Double check whether the job has been cancelled */
+                    if (isCancelled()) {
+                        return "ERROR_EPG_SYNC_CANCELED";
+                    }
+                    int ret = updatePrograms(channelUri, programs);
                 }
             }
-            return 0;
+            Log.i(TAG, "EventTask costTime=" + (System.currentTimeMillis() - startSystemMills) + "ms");
+            return "OK";
         }
 
-        @Override
-        public String call() {
-            startCall();
-            int ret = doInBackground();
-            endCall(ret);
-            return Integer.toString(ret);
+        private boolean isCancelled() {
+            return Thread.currentThread().isInterrupted();
         }
 
         /**
@@ -415,6 +341,111 @@ public class EpgSyncTask {
                 }
             }
             return 0;
+        }
+    }
+
+    private class EpgCallable implements Callable<String> {
+        private final PersistableBundle mBundle;
+        private boolean mUpdateByScan;
+        private String mInputId;
+        private long mStartTime = 0;
+
+        public EpgCallable(PersistableBundle bundle) {
+            mBundle = bundle;
+        }
+
+        private void startCall() {
+            Log.i(TAG, "Send SYNC_STARTED broadcast");
+            Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);
+            intent.putExtra(BUNDLE_KEY_INPUT_ID, mBundle.getString(BUNDLE_KEY_INPUT_ID));
+            intent.putExtra(SYNC_STATUS, SYNC_STARTED);
+            LocalBroadcastManager.getInstance(mMainService.getApplicationContext()).sendBroadcast(intent);
+            mStartTime = System.currentTimeMillis();
+        }
+
+        private void endCall(int reason) {
+            Log.i(TAG, "finishEpgSync reason = " + reason + ", mUpdateByScan = " + mUpdateByScan);
+            Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);
+            intent.putExtra(BUNDLE_KEY_INPUT_ID, mInputId);
+            intent.putExtra(BUNDLE_KEY_SYNC_FROM, mBundle.getString(BUNDLE_KEY_SYNC_FROM));
+            if (reason != 0) {
+                intent.putExtra(SYNC_STATUS, SYNC_ERROR);
+                intent.putExtra(BUNDLE_KEY_ERROR_REASON, reason);
+            } else {
+                intent.putExtra(SYNC_STATUS, SYNC_FINISHED);
+                if (mUpdateByScan) {
+                    intent.putExtra(SYNC_REASON, SYNC_BY_SCAN);
+                } else {
+                    intent.putExtra(SYNC_REASON, SYNC_BY_OTHER);
+                }
+            }
+            if (mStartTime > 0) {
+                Log.i(TAG, "costTime=" + (System.currentTimeMillis() - mStartTime) + "ms");
+            }
+            Log.i(TAG, "Send SYNC_FINISHED broadcast");
+            LocalBroadcastManager.getInstance(mMainService.getApplicationContext()).sendBroadcast(intent);
+        }
+
+        private boolean isCancelled() {
+            return Thread.currentThread().isInterrupted();
+        }
+
+        public int doInBackground() {
+            mInputId = mBundle.getString(BUNDLE_KEY_INPUT_ID);
+            boolean mIsSearchedChannel = mBundle.getBoolean(BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, false);
+            mUpdateByScan = mBundle.getBoolean(BUNDLE_KEY_SYNC_REASON, false);
+            String syncSignalType = mBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, null);
+            boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
+            boolean updateChannel = mBundle.getBoolean(BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true);
+            int frequency = mBundle.getInt(BUNDLE_KEY_SYNC_FREQUENCY, -1);
+            Log.d(TAG, "doInBackground :: syncSignalType:" + syncSignalType
+                + ", frequency:" + frequency
+                + ", mInputId:" + mInputId
+                + ", updateChannel:" + updateChannel);
+            if (mInputId == null) {
+                return ERROR_INPUT_ID_NULL;
+            }
+
+            if (isCancelled()) {
+                return ERROR_EPG_SYNC_CANCELED;
+            }
+            if (syncCurrent) {
+                if (!TextUtils.isEmpty(syncSignalType) && !mMainService.checkSignalTypesMatch(syncSignalType)) {
+                    //dvb source changed, should cancel this job
+                    return ERROR_EPG_SYNC_CANCELED;
+                }
+
+                if (!TextUtils.isEmpty(EpgSyncJobService.getChannelTypeFilter())
+                        && !mMainService.checkSignalTypesMatch(EpgSyncJobService.getChannelTypeFilter())) {
+                    //dvb source changed, should cancel this job
+                    return ERROR_EPG_SYNC_CANCELED;
+                }
+            }
+
+            if (updateChannel) {
+                try {
+                    final List<Channel> tvChannels = mMainService.getChannels(syncCurrent);
+                    TvContractUtils.updateChannels(mMainService, mInputId, mIsSearchedChannel, tvChannels, mBundle);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return ERROR_EPG_SYNC_CANCELED;
+                }
+            }
+
+            Intent intent = new Intent();
+            intent.putExtra("inputId", mInputId);
+            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, syncSignalType);
+            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
+            run(intent);
+            return 0;
+        }
+
+        @Override
+        public String call() {
+            startCall();
+            int ret = doInBackground();
+            endCall(ret);
+            return Integer.toString(ret);
         }
     }
 }
