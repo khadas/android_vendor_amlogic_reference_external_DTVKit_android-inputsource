@@ -99,7 +99,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             int progress = getSearchProcess(data);
             if (mThreadHandler != null) {
                 mThreadHandler.removeMessages(MSG_ON_SIGNAL);
-                Message msg = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, (progress/10) * 10, 0, null);
+                Message msg = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, progress, 0, null);
                 boolean info = mThreadHandler.sendMessageDelayed(msg, 0);
             }
         } else if (signal.equals("DiseqcConfirmRequired")) {
