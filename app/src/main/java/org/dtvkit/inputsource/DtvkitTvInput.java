@@ -2151,7 +2151,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             long durationSecs = 0;
             Program program = getProgram(uri);
             startRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);//start record time always is equal to the current stream time
-            startRecordSystemTimeMillis = SystemClock.uptimeMillis();
             dvbUri = getChannelInternalDvbUri(TvContractUtils.getChannel(mContentResolver, mChannel));
             durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
             Log.d(TAG, "startRecordTimeMillis :" + startRecordTimeMillis + "|startRecordSystemTimeMillis :" + startRecordSystemTimeMillis);
@@ -2170,6 +2169,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
                 }
             } else {
+                startRecordSystemTimeMillis = SystemClock.uptimeMillis();
                 mRecordingStarted = true;
                 recordingUri = recordingResponse.toString();
                 Log.i(TAG, "Recording started:" + recordingUri);
