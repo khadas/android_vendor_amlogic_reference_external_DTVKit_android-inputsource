@@ -103,7 +103,6 @@ void DTVKitHidlClient::setListener(const sp<DTVKitListener> &listener)
 }
 
 std::string DTVKitHidlClient::request(const std::string& resource, const std::string& json) {
-    Mutex::Autolock _l(mLock);
     std::string result;
     Return<void> ret = mDTVKitServer->request(resource, json, [&](const std::string& res) {
         result = res;
