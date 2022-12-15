@@ -171,6 +171,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     /*teletext region id*/
     private int mRegionId = 0;
     private String mDynamicDbSyncTag = "";
+    private String mCiTuneServiceUri = "";
 
     // Mutex for all mutable shared state.
     private final Object mLock = new Object();
@@ -1657,7 +1658,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         if (signal.equals("DvbUpdatedChannel")) {
             Log.i(TAG, "DvbUpdatedChannel");
             try {
-                mDynamicDbSyncTag = data.getString("uri");
+                mDynamicDbSyncTag = !TextUtils.equals(data.getString("uri"), mCiTuneServiceUri) ? data.getString("uri") : "";
             } catch (JSONException ignore) {
             }
             Log.d(TAG, "new Uri:" + mDynamicDbSyncTag);
@@ -4671,6 +4672,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.d(TAG, "CiTuneServiceInfo s_id " + s_id + " t_id " + t_id + " onet_id " + onet_id + " tune_type " + tune_type);
                         Channel foundChannelById = TvContractUtils.getChannelByNetworkTransportServiceId(outService.getContentResolver(), onet_id, t_id, s_id);
                         if (foundChannelById != null) {
+                            mCiTuneServiceUri = getChannelInternalDvbUri(foundChannelById);
+                            Log.i(TAG, "mCiTuneServiceUri : " + mCiTuneServiceUri);
+                            removeMessageInInputThreadHandler(MSG_RESET_CI_TUNE_SERVICE_URI);
+                            sendDelayedEmptyMessageToInputThreadHandler(MSG_RESET_CI_TUNE_SERVICE_URI, MSG_RESET_CI_TUNE_SERVICE_URI_DELAY);
                             Bundle channelBundle = new Bundle();
                             channelBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_HOST_CONTROL);
                             channelBundle.putString(ConstantManager.VALUE_CI_PLUS_TUNE_TYPE, ConstantManager.VALUE_CI_PLUS_TUNE_TYPE_SERVICE);
@@ -4985,6 +4990,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_DO_RELEASE_SPECIFIED_SESSION = 17;
         protected static final int MSG_TRY_STOP_TIMESHIFT = 18;
         protected static final int MSG_TS_UPDATE = 19;
+        protected static final int MSG_RESET_CI_TUNE_SERVICE_URI = 20;
 
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
@@ -5007,6 +5013,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_CHECK_RESOLUTION_PERIOD = 1000;//MS
         protected static final int MSG_UPDATE_TRACK_INFO_DELAY = 2000;//MS
         protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 2000;//MS
+        protected static final int MSG_RESET_CI_TUNE_SERVICE_URI_DELAY = 2000;//MS
         protected static final int MSG_BLOCK_MUTE_OR_UNMUTE_PERIOD = 100;//MS
         protected static final int MSG_GET_SIGNAL_STRENGTH_PERIOD = 1000;//MS
         protected static final int MSG_CHECK_REC_PATH_PERIOD = 1000;//MS
@@ -5192,6 +5199,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                            Log.i(TAG, "retune to " + retuneUri);
                            notifyChannelRetuned(retuneUri);
                         }
+                        break;
+                    case MSG_RESET_CI_TUNE_SERVICE_URI:
+                        Log.i(TAG,"reset mCiTuneServiceUri");
+                        mCiTuneServiceUri = "";
                         break;
                     default:
                         Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
