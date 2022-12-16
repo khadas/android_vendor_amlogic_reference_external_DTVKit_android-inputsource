@@ -139,6 +139,7 @@ public class ISO639Data {
                 {"ind", "India"},
                 {"iot", "British Indian Ocean Territory"},
                 {"irl", "Ireland"},
+                {"ire", "Ireland"},
                 {"irn", "Iran"},
                 {"irq", "Iraq"},
                 {"isl", "Iceland"},
