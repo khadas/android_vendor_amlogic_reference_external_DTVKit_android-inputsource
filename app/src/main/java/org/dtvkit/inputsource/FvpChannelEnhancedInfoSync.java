@@ -70,16 +70,18 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
                 int networkId = service.getInt("Onid");
                 int streamId = service.getInt("Tsid");
                 int serviceId = service.getInt("Sid");
+                int onDemand = service.getInt("EnhancedOnDemand");
                 String serviceUrl = service.getString("SeviceURL");
                 String logoUrl = service.getString("MediaUri");
                 channels.add(new Channel.Builder()
                         .setOriginalNetworkId(networkId)
                         .setTransportStreamId(streamId)
+                        .setChannelOnDemand(onDemand)
                         .setServiceId(serviceId)
                         .setAppLinkIntentUri(serviceUrl)
                         .setAppLinkIconUri(logoUrl)
                         .build());
-                if (DEBUG) Log.d(TAG, "Channel nid =" + networkId + "|Tsid = " + streamId + "|Sid = " + serviceId
+                if (DEBUG) Log.d(TAG, "Channel nid =" + networkId + "|Tsid = " + streamId + "|Sid = " + serviceId + "|onDemand = " + onDemand
                     + "|serviceUrl = " + serviceUrl + "|logoUrl = " + logoUrl);
             }
 /*
@@ -90,6 +92,7 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
                 .setServiceId(28703)
                 .setAppLinkIntentUri("hbbtv test uri")
                 .setAppLinkIconUri("logo logo test")
+                .setChannelOnDemand(100)
                 .build());
             channels.add(new Channel.Builder()
                 .setOriginalNetworkId(8945)
@@ -97,6 +100,7 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
                 .setServiceId(5060)
                 .setAppLinkIntentUri("8945 test")
                 .setAppLinkIconUri("5060 test")
+                .setChannelOnDemand(200)
                 .build());
             channels.add(new Channel.Builder()
                 .setOriginalNetworkId(9018)
@@ -104,6 +108,7 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
                 .setServiceId(4168)
                 .setAppLinkIntentUri("9018 test")
                 .setAppLinkIconUri("4168 test")
+                .setChannelOnDemand(300)
                 .build());
 */
         } catch (Exception e) {
@@ -148,12 +153,13 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
             Long channelId = channelsMap.get(channelUniqueStr);
             if (DEBUG) {
                 Log.d(TAG, "updateChannelProvider channelUniqueStr = " + channelUniqueStr + "|channelId = " + channelId
-                    + "|link uri = " + channel.getAppLinkIntentUri() + "|link icon uri = " + channel.getAppLinkIconUri());
+                    + "|link uri = " + channel.getAppLinkIntentUri() + "|link icon uri = " + channel.getAppLinkIconUri() + "|onDemand = " +channel.getOnDemand());
             }
             if (null != channelId) {
                 values.put(Channels._ID, channelId);
                 values.put(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI, channel.getAppLinkIntentUri());
                 values.put(TvContract.Channels.COLUMN_APP_LINK_ICON_URI, channel.getAppLinkIconUri());
+                values.put(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_FLAG1, channel.getOnDemand());
                 ops.add(ContentProviderOperation.newUpdate(
                                     TvContract.buildChannelUri(channelId))
                                     .withValues(values)

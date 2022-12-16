@@ -64,6 +64,7 @@ public final class Channel {
     private String mServiceType;
     private int mIsLocked;
     private int mFrequency;
+    private int mOnDemand;
 
     //sync with ChannelInfo in droidlogic-tv.jar
     public static final String KEY_IS_FAVOURITE = "is_favourite";
@@ -103,6 +104,7 @@ public final class Channel {
         mId = INVALID_CHANNEL_ID;
         mOriginalNetworkId = INVALID_INTEGER_VALUE;
         mServiceType = TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO;
+        mOnDemand = INVALID_INTEGER_VALUE;
     }
 
     /**
@@ -290,6 +292,13 @@ public final class Channel {
         return (mIsLocked == 1);
     }
 
+    /**
+     * @return The value of {@link TvContract.Channels#COLUMN_INTERNAL_PROVIDER_FLAG1} for the channel on demand data.
+     */
+    public int getOnDemand() {
+        return mOnDemand;
+    }
+
     @Override
     public String toString() {
         return "Channel{"
@@ -388,6 +397,7 @@ public final class Channel {
         } else {
             values.putNull(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI);
         }
+        values.put(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_FLAG1, mOnDemand);
         return values;
     }
 
@@ -419,6 +429,7 @@ public final class Channel {
         mSearchable = other.mSearchable;
         mServiceType = other.mServiceType;
         mIsLocked = other.mIsLocked;
+        mOnDemand = other.mOnDemand;
     }
 
     /**
@@ -863,6 +874,18 @@ public final class Channel {
          */
         public Builder setLocked(int isLocked) {
             mChannel.mIsLocked = isLocked;
+            return this;
+        }
+
+        /**
+         * Sets channel enhance On Demand data.
+         *
+         * @param onDemand The value of
+         * {@link TvContract.Channels#COLUMN_INTERNAL_PROVIDER_FLAG1} for save channel on demand data.
+         * @return This Builder object to allow for chaining of calls to builder methods.
+         */
+        public Builder setChannelOnDemand(int onDemand) {
+            mChannel.mOnDemand = onDemand;
             return this;
         }
 

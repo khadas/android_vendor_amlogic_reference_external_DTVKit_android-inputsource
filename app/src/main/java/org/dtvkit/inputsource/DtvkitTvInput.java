@@ -3007,6 +3007,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mCaptioningManager =
                     (CaptioningManager) outService.getSystemService(Context.CAPTIONING_SERVICE);
             initWorkThread();
+            if (!mIsPip) {
+                mProviderSync = new ProviderSync();
+                mProviderSync.run(new FvpChannelEnhancedInfoSync(outService));
+            }
         }
 
         public boolean isPipSession() {
@@ -4975,6 +4979,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 } else if (signal.equals("EWSClose")) {
                     notifySessionEvent(ConstantManager.ACTION_EWS_CLOSE, null);
+                } else if (signal.equals("hbbNotifyAuthUrlUpdated")) {
+                    if (!mIsPip) {
+                        sendAuthUrlUpdateBroadcast(data);
+                    } else {
+                        Log.d(TAG, "Pip Session not handle hbbNotifyAuthUrlUpdated message ");
+                    }
                 }
             }
         };
@@ -6023,6 +6033,30 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     + ", index=" + mCurrentSessionIndex
                     + ", instance=0x" + Integer.toHexString(System.identityHashCode(this))
                     + "]";
+        }
+        private void sendAuthUrlUpdateBroadcast(JSONObject data) {
+            if (null == data) {
+                Log.d(TAG, "sendAuthUrlUpdateBroadcast error not have Auth Url");
+                return;
+            }
+            try {
+                if (true == data.getBoolean("accepted")) {
+                    String authUrl = data.getString("auth_url");
+                    Log.d(TAG, "sendAuthUrlUpdateBroadcast authUrl : " + authUrl);
+                    Intent intent = new Intent();
+                    Bundle fvpData = new Bundle();
+                    fvpData.putString("auth_url", authUrl);
+                    intent.setAction("com.android.tv.fvp.INTENT_ACTION");
+                    intent.setComponent(new ComponentName("com.droidlogic.android.tv", "com.android.tv.fvp.FvpIntentReceiver"));
+                    intent.putExtra("FVP_TYPE", "auth_update");
+                    intent.putExtra("FVP_CONFIG", fvpData);
+                    outService.sendBroadcast(intent);
+                } else {
+                    Log.d(TAG, "sendAuthUrlUpdateBroadcast accepted false ");
+                }
+            } catch (Exception e) {
+                Log.i(TAG, "prepareAuthUrl Exception = " + e.getMessage());
+            }
         }
     }
 
