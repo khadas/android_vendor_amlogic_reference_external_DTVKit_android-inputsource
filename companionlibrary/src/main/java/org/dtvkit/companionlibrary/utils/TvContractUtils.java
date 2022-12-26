@@ -197,8 +197,8 @@ public class TvContractUtils {
                         frequency, ciNumber, rawDisplayNumber);
                 channelMap.add(new Pair<>(uniqueStr, rowId));
 
-                if ((!isSearched || (frequency != 0 && searchFrequency != frequency))
-                        && EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL.equals(searchMode)) {
+                if (!isSearched || (frequency != 0 && searchFrequency != frequency
+                        && EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL.equals(searchMode))) {
                     saveRawUseSettingValuesToMap(uniqueStr, channelUseSettingValueMap, internalProviderData);
                 }
             }
