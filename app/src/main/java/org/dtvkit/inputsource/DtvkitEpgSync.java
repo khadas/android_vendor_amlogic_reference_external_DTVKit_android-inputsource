@@ -74,10 +74,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 for (int i=0;i<tmpServices.length();i++) {
                     services.put(tmpServices.get(i));
                 }
-                Log.i(TAG, "Get " + tmpServices.length() + " channels and cached");
             }
-
-            //Log.i(TAG, "getChannels=" + obj.toString());
             Log.i(TAG, "Finally getChannels size=" + services.length());
             boolean ciTest = PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_ADD_TEST, false);
 
@@ -190,8 +187,14 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setInternalProviderData(data)
                         .setLocked(service.optBoolean("blocked")?1:0)
                         .build());
-                if (DEBUG) {
-                    Log.d(TAG, "-----> " + service.getInt("lcn") + " " + service.getString("name"));
+            }
+            if (channels.size() > 0) {
+                int numberToLog = Math.min(channels.size(), 30);
+                Log.d(TAG, "-----> (DEBUG) Last " + numberToLog + " Channels <-----");
+                for (int i = Math.max(channels.size() - 30, 0); i < channels.size(); i++) {
+                    Log.d(TAG, "** " + channels.get(i).getDisplayNumber()
+                            + " " + channels.get(i).getDisplayName()
+                            + ", " + channels.get(i).getServiceType());
                 }
             }
         } catch (Exception e) {

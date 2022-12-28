@@ -910,10 +910,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private synchronized void initDtvkitTvInput(boolean isCreateSession) {
         int subFlg = getSubtitleFlag();
-        if (mIsInited && isCreateSession) {
-            Log.d(TAG, "initDtvkitTvInput already isCreateSession:"+isCreateSession);
+        Log.d(TAG, "initDtvkitTvInput already isCreateSession:" + isCreateSession);
+        if (isCreateSession) {
             DtvkitGlueClient.getInstance().destroySubtitleCtl();
             DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
+        }
+        if (mIsInited) {
             return;
         }
         Log.d(TAG, "initDtvkitTvInput start");
@@ -2160,14 +2162,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             StringBuffer recordingResponse = new StringBuffer();
             Log.i(TAG, "startRecording path:" + mPath);
             if (!recordingStartRecording(dvbUri, mPath, recordingResponse)) {
+                Log.e(TAG, "record error : " + recordingResponse.toString());
                 if (recordingResponse.toString().equals("Could not start record")) {
-                    Log.i(TAG, "record error Could not start record");
                     notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
                 } else if (recordingResponse.toString().equals("Limited by minimum free disk space")) {
-                    Log.e(TAG, "record error min free limited");
                     notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
                 } else {
-                    Log.e(TAG, "record error unknown");
                     notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
                 }
             } else {
@@ -2386,12 +2386,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     //need update and stop record directly
                     updateRecordingToDb(false, false, b);
                     mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
-                    mRecordingProcessHandler.removeMessages(MSG_RECORD_DO_FINAL_RELEASE);
-                    boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_DO_FINAL_RELEASE);
-                    Log.d(TAG, "doRelease sendMessage result = " + result + ", index = " + mCurrentRecordIndex);
                 } else {
                     Log.i(TAG, "doRelease sendMessage null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
                 }
+            }
+            if (mRecordingProcessHandler != null) {
+                mRecordingProcessHandler.removeMessages(MSG_RECORD_DO_FINAL_RELEASE);
+                boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_DO_FINAL_RELEASE);
+                Log.d(TAG, "doRelease sendMessage result = " + result + ", index = " + mCurrentRecordIndex);
             }
             if (!mRecordingStarted && mTuned) {
                 recordingUnTune(mPath);
