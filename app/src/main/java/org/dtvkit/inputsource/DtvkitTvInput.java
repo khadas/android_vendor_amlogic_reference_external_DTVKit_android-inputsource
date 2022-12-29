@@ -4226,6 +4226,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     keyCode == KeyEvent.KEYCODE_DPAD_UP ||
                     keyCode == KeyEvent.KEYCODE_CHANNEL_DOWN ||
                     keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+                    keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+                    keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
                     keyCode == KeyEvent.KEYCODE_MEDIA_NEXT ||
                     keyCode == KeyEvent.KEYCODE_0 ||
                     keyCode == KeyEvent.KEYCODE_1 ||
@@ -4282,6 +4284,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 case KeyEvent.KEYCODE_DPAD_DOWN:
                     Log.d(TAG, "dealTeletextKeyCode previous_page");
                     playerNotifyTeletextEvent(16);
+                    break;
+                case KeyEvent.KEYCODE_DPAD_LEFT:
+                    playerNotifyTeletextEvent(18);
+                    break;
+                case KeyEvent.KEYCODE_DPAD_RIGHT:
+                    playerNotifyTeletextEvent(17);
                     break;
                 case KeyEvent.KEYCODE_MEDIA_NEXT:
                     if (mParameterManager != null)
