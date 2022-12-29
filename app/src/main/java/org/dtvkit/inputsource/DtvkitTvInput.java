@@ -1888,6 +1888,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
+        if (mCachedRecordingsPrograms.size() < recordingsInDB.size()) {
+            Log.i(TAG,"mCachedRecordingsPrograms is not the latest data");
+            mCachedRecordingsPrograms = getRecordingsDb();
+        }
+
         Log.d(TAG, "recordings: db[" + recordingsInDB.size() + "] dtvkit[" + recordings.length() + "]");
         return updateRecordsFromDisk(recordingsInDB, recordings);
     }
