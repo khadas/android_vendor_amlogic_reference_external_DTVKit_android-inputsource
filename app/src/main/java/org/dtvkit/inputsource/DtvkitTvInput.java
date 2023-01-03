@@ -5347,6 +5347,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             + ", mAudioADVolume = " + mAudioADVolume);
                 playerSetADMixLevel(index, mAudioADMixingLevel);
                 playerSetADVolume(index, mAudioADVolume);
+            } else {
+                // Dolby AD Cert.
+                playerSetADMixLevel(index, 0);
+                playerSetADVolume(index, 0);
             }
             return true;
         }
