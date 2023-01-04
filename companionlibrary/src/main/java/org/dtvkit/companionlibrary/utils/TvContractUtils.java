@@ -52,6 +52,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Static helper methods for working with {@link android.media.tv.TvContract}.
@@ -100,14 +101,34 @@ public class TvContractUtils {
         ArrayMap<String, ArrayMap<String, String>> channelUseSettingValueMap = new ArrayMap<>();
         // Operations to execute
         ArrayList<ContentProviderOperation> ops = new ArrayList<>();
-        // 1.first get existed channels in tv.db
-        cacheRelatedChannel(channelMap, channelUseSettingValueMap,
-            context, inputId, isSearched,channels, extras);
-        // 2.find new channel and channels that need to be updated
-        handleUpdateOrInsert(ops, channelMap, channelUseSettingValueMap,
-                context, inputId, channels, extras);
-        // 3.delete channels that no need
-        handleChannelDelete(channelMap, context);
+        // different source
+        ArrayList<String> sources = new ArrayList<>();
+        // 0.find sources
+        String syncSignalType = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
+        boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
+        if (syncCurrent) {
+            sources.add(syncSignalType);
+        } else {
+            sources.add("DVB-T");
+            sources.add("DVB-C");
+            sources.add("DVB-S");
+            sources.add("ISDB-T");
+        }
+        for (String source : sources) {
+            // 1.first get existed channels in tv.db
+            cacheRelatedChannel(channelMap, channelUseSettingValueMap, context, inputId,
+                    isSearched, source, extras);
+            // 2.find new channel and channels that need to be updated
+            handleUpdateOrInsert(ops, channelMap, channelUseSettingValueMap, context, inputId,
+                    channels.stream()
+                            .filter(channel -> source.equals(toSignalType(channel.getType())))
+                            .collect(Collectors.toList()), source, extras);
+            // 3.delete channels that no need
+            handleChannelDelete(channelMap, context);
+
+            channelMap.clear();
+            channelUseSettingValueMap.clear();
+        }
         //4.deal insert or update channels to tv.db
         syncToDb(ops, context);
 
@@ -115,8 +136,6 @@ public class TvContractUtils {
         if (VERSION.SDK_INT > VERSION_CODES.P + 1 && ops.size() > 0) {
             context.getContentResolver().notifyChange(Channels.CONTENT_URI, null, 1 << 15/*ContentResolver.NOTIFY_NO_DELAY*/);
         }
-        channelUseSettingValueMap.clear();
-        channelMap.clear();
         ops.clear();
     }
 
@@ -124,7 +143,7 @@ public class TvContractUtils {
     private static void cacheRelatedChannel(
             ArrayList<Pair<String, Long>> channelMap,
             ArrayMap<String, ArrayMap<String, String>> channelUseSettingValueMap, Context context,
-            String inputId, boolean isSearched, List<Channel> channels, PersistableBundle extras) {
+            String inputId, boolean isSearched, String signalType, PersistableBundle extras) {
         Uri channelsUri = TvContract.buildChannelsUriForInput(inputId);
         String[] projection = {
                 Channels._ID, Channels.COLUMN_TYPE, Channels.COLUMN_ORIGINAL_NETWORK_ID,
@@ -134,14 +153,10 @@ public class TvContractUtils {
                 Channels.COLUMN_INTERNAL_PROVIDER_DATA};
         String searchMode = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
         ContentResolver resolver = context.getContentResolver();
-        String syncSignalType = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
-        boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
-        String selection = null;
-        String[] selectionArgs = null;
-        if (syncCurrent) {
-            selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
-            selectionArgs = TvContractUtils.searchSignalTypeToSelectionArgs(syncSignalType);
-        }
+
+        String selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
+        String[] selectionArgs = TvContractUtils.searchSignalTypeToSelectionArgs(signalType);
+
         int searchFrequency = extras.getInt(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY,0);
         try (Cursor cursor = resolver.query(channelsUri, projection, selection, selectionArgs, null)) {
             InternalProviderData internalProviderData = null;
@@ -210,8 +225,8 @@ public class TvContractUtils {
     //2.find new channel and channels that need to be updated
     private static void handleUpdateOrInsert(
             ArrayList<ContentProviderOperation> ops, ArrayList<Pair<String, Long>> channelMap,
-            ArrayMap<String, ArrayMap<String, String>> channelUseSettingValueMap,
-            Context context, String inputId, List<Channel> channels, PersistableBundle extras) {
+            ArrayMap<String, ArrayMap<String, String>> channelUseSettingValueMap, Context context,
+            String inputId, List<Channel> channels, String signalType, PersistableBundle extras) {
         int numberToUpdate = 0;
         int numberToInsert = 0;
         String searchMode = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
@@ -281,7 +296,8 @@ public class TvContractUtils {
                     } else {
                         // when find first different channel, remove all remaining channels
                         Log.i(TAG, "_ID=" + channelMap.get(0).second + ","
-                                + oldUniqueStr + "in db is first different from " + uniqueStr);
+                                + oldUniqueStr + "in db is first different from " + uniqueStr
+                                + ", keep number=" + newChannelSeq);
                         newChannelSeq = Integer.MAX_VALUE;
                     }
                 }
@@ -340,14 +356,16 @@ public class TvContractUtils {
                 }
             }
         }
-        Log.i(TAG, "numberToInsert:" + numberToInsert
-                        + ", numberToUpdate:" + numberToUpdate
-                        + ", numberToDelete:" + channelMap.size());
+        if (numberToInsert != 0 || numberToUpdate != 0 || channelMap.size() != 0) {
+            Log.i(TAG, "signalType: " + signalType
+                    + ", numberToInsert:" + numberToInsert
+                    + ", numberToUpdate:" + numberToUpdate
+                    + ", numberToDelete:" + channelMap.size());
+        }
     }
 
     //3.delete channels that don't exist in DtvKit db anymore
     private static void handleChannelDelete(ArrayList<Pair<String, Long>> channelMap, Context context) {
-        int size = channelMap.size();
         ArrayList<ContentProviderOperation> deleteOps = new ArrayList<>();
         ContentResolver resolver = context.getContentResolver();
         for (Pair<String, Long> entry : channelMap) {

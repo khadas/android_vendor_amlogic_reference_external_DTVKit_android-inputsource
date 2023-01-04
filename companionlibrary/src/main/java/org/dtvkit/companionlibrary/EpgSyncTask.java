@@ -132,7 +132,8 @@ public class EpgSyncTask {
             boolean syncChannel = intent.getBooleanExtra(BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, true);
             if (syncChannel) {
                 if (mChannelTask != null) {
-                    Log.i(TAG, "cancel ChannelTask " + mChannelTask.cancel(true));
+                    Log.i(TAG, "cancel ChannelTask " + mChannelTask.cancel(true)
+                            + ", reason:" + intent.getStringExtra(BUNDLE_KEY_SYNC_FROM));
                 }
                 mChannelTask = new FutureTask<>(new EpgCallable(persistableBundle));
                 EPG_EXECUTOR.execute(mChannelTask);
