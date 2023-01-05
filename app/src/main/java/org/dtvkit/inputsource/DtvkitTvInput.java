@@ -2618,8 +2618,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else if (signal.equals("RecordingStatusChanged")) {
                 if (!recordingIsRecordingPathActive(data, mPath)) {
                     Log.d(TAG, "RecordingStatusChanged, stopped[path:" + mPath + "]");
-                    stopRecording(false);
                     if (mRecordingStarted) {
+                        stopRecording(false);
                         doStopRecording();
                     }
                 } else if (checkActiveRecordings(recordingGetActiveRecordings(data),
