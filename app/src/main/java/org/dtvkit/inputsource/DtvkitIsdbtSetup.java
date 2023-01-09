@@ -60,6 +60,7 @@ public class DtvkitIsdbtSetup extends Activity {
     private ParameterManager mParameterManager = null;
     private boolean mStartSync = false;
     private boolean mStartSearch = false;
+    private boolean mSyncFinish = false;
     private boolean mFinish = false;
     private JSONArray mServiceList = null;
     private int mFoundServiceNumber = 0;
@@ -77,7 +78,7 @@ public class DtvkitIsdbtSetup extends Activity {
     private final static int MSG_FINISH = 5;
     private final static int MSG_RELEASE= 6;
 
-    private long clickLastTime;
+    private long clickLastTime = 0;
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -98,7 +99,7 @@ public class DtvkitIsdbtSetup extends Activity {
                 setSearchStatus("Finished", "");
                 setStrengthAndQualityStatus("","");
                 mStartSync = false;
-                //finish();
+                mSyncFinish = true;
                 sendFinish();
             }
         }
@@ -248,11 +249,11 @@ public class DtvkitIsdbtSetup extends Activity {
     public void finish() {
         //send search info to livetv if found any
         Log.d(TAG, "finish");
+        Intent intent = new Intent();
+        intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL_AUTO, mSearchManualAutoType);
+        intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_DVBS_DVBT_DVBC, mSearchDvbcDvbtType);
+        intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_NUMBER, mFoundServiceNumber);
         if (mFoundServiceNumber > 0) {
-            Intent intent = new Intent();
-            intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL_AUTO, mSearchManualAutoType);
-            intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_DVBS_DVBT_DVBC, mSearchDvbcDvbtType);
-            intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_NUMBER, mFoundServiceNumber);
             String serviceListJsonArray = (mServiceList != null && mServiceList.length() > 0) ? mServiceList.toString() : "";
             String firstServiceName = "";
             try {
@@ -273,7 +274,7 @@ public class DtvkitIsdbtSetup extends Activity {
             Log.d(TAG, "finish firstServiceName = " + firstServiceName);
             setResult(RESULT_OK, intent);
         } else {
-            setResult(RESULT_CANCELED);
+            setResult(RESULT_CANCELED, mSyncFinish ? intent : null);
         }
         super.finish();
     }

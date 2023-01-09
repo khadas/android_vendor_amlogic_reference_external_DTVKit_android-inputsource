@@ -268,7 +268,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 if (resultCode == RESULT_OK) {
                     setResult(RESULT_OK, data);
                 } else {
-                    setResult(RESULT_CANCELED);
+                    setResult(RESULT_CANCELED, data);
                 }
                 break;
             default:

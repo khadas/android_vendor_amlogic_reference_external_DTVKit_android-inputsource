@@ -63,6 +63,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     private DataManager mDataManager;
     private boolean mStartSync = false;
     private boolean mStartSearch = false;
+    private boolean mSyncFinish = false;
     private int mFoundServiceNumber = 0;
     private JSONArray mServiceList = null;
     private int mSearchType = -1;// 0 manual 1 auto
@@ -77,7 +78,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     private final static int MSG_FINISH_SEARCH = 1;
     private final static int MSG_ON_SIGNAL = 2;
 
-    private long clickLastTime;
+    private long clickLastTime = 0;
     private final String inputId = com.droidlogic.dtvkit.inputsource.service.DtvkitSettingService.DTVKIT_INPUT_ID;;
     private String pvrStatus;
 
@@ -151,6 +152,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                     || status.equals(EpgSyncJobService.SYNC_ERROR)) {
                 updateSearchUi(true, true, "Finished");
                 mStartSync = false;
+                mSyncFinish = true;
                 finish();
             }
         }
@@ -623,12 +625,11 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     public void finish() {
         //send search info to livetv if found any
         Log.d(TAG, "finish");
+        Intent intent = new Intent();
+        intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL_AUTO, mSearchType);
+        intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_DVBS_DVBT_DVBC, DtvkitDvbScanSelect.SEARCH_TYPE_DVBS);
+        intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_NUMBER, mFoundServiceNumber);
         if (mFoundServiceNumber > 0) {
-            Intent intent = new Intent();
-            intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL_AUTO, mSearchType);
-            intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_DVBS_DVBT_DVBC, DtvkitDvbScanSelect.SEARCH_TYPE_DVBS);
-            intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_NUMBER, mFoundServiceNumber);
-
             String firstServiceName = "";
             try {
                 if (mServiceList != null && mServiceList.length() > 0) {
@@ -655,7 +656,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             Log.d(TAG, "finish firstServiceName = " + firstServiceName);
             getActivity().setResult(RESULT_OK, intent);
         } else {
-            getActivity().setResult(RESULT_CANCELED);
+            getActivity().setResult(RESULT_CANCELED, mSyncFinish ? intent : null);
         }
         getActivity().finish();
     }
