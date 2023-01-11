@@ -369,8 +369,10 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
         /*RuntimeException e = new RuntimeException("setChoosed is here " + mListType);
         e.fillInStackTrace();
         Log.d(TAG, "@@@@@@@@ ", e);*/
-        int color_text_focused = mContext.getResources().getColor(R.color.common_focus);
-        view.setBackgroundColor(color_text_focused);
+        if (view != null) {
+            int color_text_focused = mContext.getResources().getColor(R.color.common_focus);
+            view.setBackgroundColor(color_text_focused);
+        }
     }
 
     public void setListType(String type) {

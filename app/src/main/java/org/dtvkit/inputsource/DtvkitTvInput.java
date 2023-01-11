@@ -4004,6 +4004,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 linkBarkerChannel();
             } else if (TextUtils.equals(ConstantManager.ACTION_LEAVE_BARKER_CHANNEL, action)) {
                 leaveBarkerChannel();
+            } else if (TextUtils.equals("pvr_seek_information", action)) {
+                long seekTime = data.getLong("pvr_seek_time");
+                playerSeekTo(seekTime / 1000);
             }
         }
 
@@ -4407,7 +4410,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             if (!mIsPip) {
                                 playerSetSubtitlesOn(false);
                             }
-                            playerState = PlayerState.BLOCKED;
+                            if (!type.equals("dvbrecording")) {
+                                playerState = PlayerState.BLOCKED;
+                            } else {
+                                setBlockMute(true);
+                            }
                             dvrSubtitleFlag = 0;
                             ContentRatingSystem system = mContentRatingsManager
                                 .getContentRatingSystem("com.android.tv" + "/" + mCurrentRatingSystem);
