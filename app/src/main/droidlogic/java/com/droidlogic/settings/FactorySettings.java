@@ -3,25 +3,39 @@ package com.droidlogic.settings;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
+import android.media.tv.TvContract;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.support.v4.content.LocalBroadcastManager;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import java.util.List;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
+import com.droidlogic.dtvkit.companionlibrary.model.Channel;
+import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.dtvkit.inputsource.R;
 import com.droidlogic.fragment.ParameterManager;
@@ -37,6 +51,7 @@ public class FactorySettings {
     private Handler mHandler = null, mThreadHandler = null;
     private boolean mStartSync = false;
     private String NotifyAppendText = "";
+    private String mImportEditInfo = null;
 
     private final static int MSG_DO_EXPORT_CHANNEL  = 0;
     private final static int MSG_DO_IMPORT_CHANNEL  = 1;
@@ -118,6 +133,9 @@ public class FactorySettings {
                     }
                     case MSG_FINISH: {
                         stopSync();
+                        if (!TextUtils.isEmpty(mImportEditInfo)) {
+                            restoreEditedChannels(mImportEditInfo);
+                        }
                         if (msg.arg1 > 0)
                             updateNotifyMessage("done" + NotifyAppendText);
                         else
@@ -349,7 +367,19 @@ public class FactorySettings {
                 NotifyAppendText = ", No storage exists!";
             } else {
                 if (mParameterManager != null) {
-                    ret = mParameterManager.importChannels(path + "/dtvkit_channels.xml");
+                    JSONObject importRet = mParameterManager.importChannels(path + "/dtvkit_channels.xml");
+                    if (importRet == null)
+                        ret = false;
+                    else {
+                        ret = importRet.optBoolean("ret", false);
+                        int editLength = importRet.optInt("editLength", 0);
+                        if (ret && (editLength > 0)) {
+                            mImportEditInfo = decompress(decode(importRet.optString("editData", null)),
+                                editLength);
+                            Log.v(TAG, "import got edit info, length: " + editLength +
+                                " data: " +mImportEditInfo);
+                        }
+                    }
                     if (ret) {
                         NotifyAppendText = ", successfully import channels from " + path + "/dtvkit_channels.xml";
                     }
@@ -368,8 +398,17 @@ public class FactorySettings {
                 Log.e(TAG, "No external storage exists, faild do export.");
                 NotifyAppendText = ", No storage exists!";
             } else {
+                String editInfo = getTvChannelEditInfo();
+                String encodedEditInfo = null;
+                int editLen = 0;
+                if (!TextUtils.isEmpty(editInfo)) {
+                    encodedEditInfo = encode(compress(editInfo));
+                    editLen = editInfo.length();
+                }
+                Log.v(TAG, "find eidted info length: " + editInfo.length());
                 if (mParameterManager != null) {
-                    ret = mParameterManager.exportChannels(path + "/dtvkit_channels.xml");
+                    ret = mParameterManager.exportChannels(path + "/dtvkit_channels.xml",
+                        encodedEditInfo, editLen);
                     if (ret) {
                         NotifyAppendText = ", Channels have been exported to " + path + "/dtvkit_channels.xml";
                     }
@@ -378,4 +417,233 @@ public class FactorySettings {
         }
         return ret;
     }
+
+    private String getTvChannelEditInfo() {
+        String ret = null;
+        Uri uri = TvContract.buildChannelsUriForInput(mInput);
+        Cursor cursor = null;
+        String selection =
+            "\"internal_provider_data\" LIKE \'%\"set_displaynumber\":\"1\"%\' ESCAPE \'\\'";
+        String[] projection = {
+            TvContract.Channels.COLUMN_TYPE,
+            TvContract.Channels.COLUMN_DISPLAY_NUMBER,
+            TvContract.Channels.COLUMN_SERVICE_TYPE,
+            TvContract.Channels.COLUMN_INTERNAL_PROVIDER_DATA,
+        };
+        try {
+            if (uri != null) {
+                cursor = mContext.getContentResolver().query(uri, projection, selection, null, null);
+            }
+            if (cursor == null || cursor.getCount() == 0) {
+                return null;
+            }
+            Log.v(TAG, "find edited channel count: " + cursor.getCount());
+            JSONArray editInfoArray = new JSONArray();
+            while (cursor != null && cursor.moveToNext()) {
+                String channelType = cursor.getString(0);
+                String displayNumber = cursor.getString(1);
+                String serviceType = cursor.getString(2);
+                int type = cursor.getType(3);
+                if (type != Cursor.FIELD_TYPE_BLOB) {
+                    continue;
+                } else {
+                    byte[] internalProviderByteData = cursor.getBlob(3);
+                    InternalProviderData internalProviderData =
+                        new InternalProviderData(internalProviderByteData);
+                    String rawDisplayNumber =
+                        (String) internalProviderData.get(Channel.KEY_RAW_DISPLAYNUMBER);
+                    String editInfo = createEditInfo(channelType, serviceType,
+                        rawDisplayNumber, displayNumber);
+                    if (TextUtils.isEmpty(editInfo)) {
+                        continue;
+                    }
+                    editInfoArray.put(editInfo);
+                }
+            }
+            ret = editInfoArray.toString();
+        }  catch (Exception ignored) {
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return ret;
+    }
+
+    private String createEditInfo(String channelType, String serviceType,
+                                  String lcn, String displayNumber) {
+        String keyType;
+        String keyServiceType;
+
+        if (TextUtils.isEmpty(channelType)
+            || TextUtils.isEmpty(serviceType)
+            || TextUtils.isEmpty(lcn)
+            || TextUtils.isEmpty(displayNumber)) {
+            return null;
+        }
+        if (TvContract.Channels.TYPE_DVB_T.equals(channelType)
+            || TvContract.Channels.TYPE_DVB_T2.equals(channelType)) {
+            keyType = "T";
+        } else if (TvContract.Channels.TYPE_DVB_S.equals(channelType)
+            || TvContract.Channels.TYPE_DVB_S2.equals(channelType)) {
+            keyType = "S";
+        } else if (TvContract.Channels.TYPE_DVB_C.equals(channelType)) {
+            keyType = "C";
+        } else if (TvContract.Channels.TYPE_ISDB_T.equals(channelType)) {
+            keyType = "I";
+        } else {
+            return null;
+        }
+
+        if (TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO.equals(serviceType)) {
+            keyServiceType = "V";
+        } else if (TvContract.Channels.SERVICE_TYPE_AUDIO.equals(serviceType)) {
+            keyServiceType = "A";
+        } else {
+            keyServiceType = "O";
+        }
+
+        return keyType + "&" + keyServiceType + "&" + lcn + "&" + displayNumber;
+    }
+
+    private void restoreEditedChannels(String editInfo) {
+        String ret = null;
+        Cursor cursor = null;
+        Uri uri = TvContract.buildChannelsUriForInput(mInput);
+        String[] projection = {
+            TvContract.Channels.COLUMN_INTERNAL_PROVIDER_DATA,
+        };
+
+        try {
+            JSONArray editedChannels = new JSONArray(editInfo);
+            for (int i = 0; i < editedChannels.length(); i++) {
+                String edit = (String)(editedChannels.get(i));
+                String[] restoreInfo = getSelectionFromEditInfo(edit);
+                if (restoreInfo != null) {
+                    cursor = mContext.getContentResolver().query(uri,
+                        projection, restoreInfo[0], null, null);
+                    if (cursor != null && cursor.moveToFirst() > 0) {
+                        byte[] internalProviderByteData = cursor.getBlob(0);
+                        InternalProviderData internalProviderData =
+                            new InternalProviderData(internalProviderByteData);
+                        internalProviderData.put("set_displaynumber", "1");
+                        internalProviderData.put("new_displaynumber", "" + restoreInfo[1]);
+                        ContentValues values = new ContentValues();
+                        values.put(TvContract.Channels.COLUMN_DISPLAY_NUMBER, restoreInfo[1]);
+                        values.put(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_DATA,
+                            internalProviderData.toString().getBytes());
+                        mContext.getContentResolver().update(uri, values, restoreInfo[0], null);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    private String[] getSelectionFromEditInfo(String editInfo) {
+        String typeSelection = null;
+        String serviceTypeSelection = null;
+        String lcnSelection = null;
+        String rawDisplayNumberSelection = null;
+
+        if (TextUtils.isEmpty(editInfo))
+            return null;
+
+        String[] infoSplit = editInfo.split("&");
+        if (infoSplit == null || infoSplit.length != 4)
+            return null;
+
+        String signalType = infoSplit[0];
+        String serviceType = infoSplit[1];
+        String rawDisplayNumber = infoSplit[2];
+        String newDisplayNumer = infoSplit[3];
+        if ("T".equals(signalType)) {
+            typeSelection = "(type == \"TYPE_DVB_T\" or type == \"TYPE_DVB_T2\")";
+        } else if ("C".equals(signalType)) {
+            typeSelection = "type == \"TYPE_DVB_C\"";
+        } else if ("S".equals(signalType)) {
+            typeSelection = "(type == \"TYPE_DVB_S\" or type == \"TYPE_DVB_S2\")";
+        } else if ("I".equals(signalType)) {
+            typeSelection = "type == \"TYPE_ISDB_T\"";
+        } else {
+            return null;
+        }
+        if ("V".equals(serviceType)) {
+            serviceTypeSelection = "service_type == \"SERVICE_TYPE_AUDIO_VIDEO\"";
+        } else if ("A".equals(serviceType)) {
+            serviceTypeSelection = "service_type == \"SERVICE_TYPE_AUDIO\"";
+        } else if ("O".equals(serviceType)) {
+            serviceTypeSelection = "service_type == \"SERVICE_TYPE_OTHER\"";
+        } else {
+            return null;
+        }
+
+        lcnSelection = "display_number == " + rawDisplayNumber;
+        rawDisplayNumberSelection = "(\"internal_provider_data\" LIKE \'%\"raw_displaynumber\":\""
+            + rawDisplayNumber + "\"%\')";
+        String selection = typeSelection + " and " +
+            serviceTypeSelection + " and " + lcnSelection + " and " + rawDisplayNumberSelection;
+        return new String[] {selection, newDisplayNumer};
+    }
+
+    private String compress(final String data) {
+        try (final ByteArrayOutputStream resultStream = new ByteArrayOutputStream();
+               final GZIPOutputStream zipper = new GZIPOutputStream(resultStream)) {
+            zipper.write(data.getBytes());
+            zipper.finish();
+            return resultStream.toString("ISO-8859-1");
+        } catch(Exception ignored) {
+        }
+        return null;
+    }
+
+    private String decompress(final String     data, final int expectedSize) {
+        try (final ByteArrayInputStream inputStream = new ByteArrayInputStream(data.getBytes("ISO-8859-1"));
+               final GZIPInputStream unzipper = new GZIPInputStream(inputStream)) {
+           final byte [] result = new byte[expectedSize];
+           int totalReadBytes = 0;
+           while (totalReadBytes < result.length) {
+               final int restBytes = result.length - totalReadBytes;
+               final int readBytes = unzipper.read(result, totalReadBytes, restBytes);
+               if (readBytes < 0) {
+                   break;
+               }
+               totalReadBytes += readBytes;
+           }
+           if (expectedSize != totalReadBytes) {
+               return null;
+           }
+           return new String(result);
+        } catch(Exception ignored) {
+        }
+        return null;
+    }
+
+    private String encode(final String data) {
+        if (TextUtils.isEmpty(data))
+            return null;
+        StringBuilder sbu = new StringBuilder();
+        char[] chars = data.toCharArray();
+        for (char aChar : chars) {
+            sbu.append(String.format("%02x", (int) aChar));
+        }
+        return sbu.toString();
+    }
+
+    private String decode(final String data) {
+        if (TextUtils.isEmpty(data))
+            return null;
+        StringBuilder sbu = new StringBuilder();
+        char[] chars = data.toCharArray();
+        for (int i = 0;i < chars.length; i +=2) {
+            String hexStr = String.valueOf(chars[i]) + chars[i + 1];
+            sbu.append((char)(Integer.parseInt(hexStr, 16)));
+        }
+        return sbu.toString();
+    }
 }
+

@@ -2452,11 +2452,15 @@ public class ParameterManager {
         return result;
     }
 
-    public boolean exportChannels(String path) {
+    public boolean exportChannels(String path, String editInfo, int editLength) {
         boolean result = false;
         try {
             JSONArray args = new JSONArray();
             args.put(path);
+            if (!TextUtils.isEmpty(editInfo)) {
+                args.put(editInfo);
+                args.put(editLength);
+            }
             result = DtvkitGlueClient.getInstance().request("Dvb.exportChannels", args).getBoolean("data");
         } catch (Exception e) {
             Log.e(TAG, "exportChannels = " + e.getMessage());
@@ -2464,12 +2468,12 @@ public class ParameterManager {
         return result;
     }
 
-    public boolean importChannels(String path) {
-        boolean result = false;
+    public JSONObject importChannels(String path) {
+        JSONObject result = null;
         try {
             JSONArray args = new JSONArray();
             args.put(path);
-            result = DtvkitGlueClient.getInstance().request("Dvb.importChannels", args).getBoolean("data");
+            result = (JSONObject)DtvkitGlueClient.getInstance().request("Dvb.importChannelsEx", args).get("data");
         } catch (Exception e) {
             Log.e(TAG, "importChannels = " + e.getMessage());
         }
