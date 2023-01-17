@@ -27,6 +27,8 @@ import android.media.tv.TvInputService;
 import android.os.Build;
 import android.text.TextUtils;
 
+import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
+import com.droidlogic.dtvkit.companionlibrary.model.Program;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 
 import java.util.Objects;
@@ -35,7 +37,6 @@ import java.util.Objects;
  * A convenience class to create and insert information about previously recorded programs into the
  * database.
  */
-@TargetApi(Build.VERSION_CODES.N)
 public class RecordedProgram {
     /**
      * @hide
@@ -418,13 +419,11 @@ public class RecordedProgram {
                 .setThumbnailUri(getThumbnailUri())
                 .setTitle(getTitle())
                 .setInternalProviderData(getInternalProviderData());
-        if (getEpisodeDisplayNumber() != null) {
-            builder.setEpisodeNumber(getEpisodeDisplayNumber(),
-                    Integer.parseInt(getEpisodeDisplayNumber()));
+        if (getEpisodeDisplayNumber() != null && TextUtils.isDigitsOnly(getEpisodeDisplayNumber())) {
+            builder.setEpisodeNumber(Integer.parseInt(getEpisodeDisplayNumber()));
         }
-        if (getSeasonDisplayNumber() != null) {
-            builder.setSeasonNumber(getSeasonDisplayNumber(),
-                    Integer.parseInt(getSeasonDisplayNumber()));
+        if (getSeasonDisplayNumber() != null && TextUtils.isDigitsOnly(getSeasonDisplayNumber())) {
+            builder.setSeasonNumber(Integer.parseInt(getSeasonDisplayNumber()));
         }
         return builder.build();
     }

@@ -228,6 +228,7 @@ public class EpgSyncTask {
                             programs.set(index,
                                     new Program.Builder(programs.get(index))
                                             .setChannelId(channelList.get(i).getId())
+                                            .setSignalType(TvContractUtils.dvbSourceToInt(channelList.get(i).getType()))
                                             .build());
                         }
                     }

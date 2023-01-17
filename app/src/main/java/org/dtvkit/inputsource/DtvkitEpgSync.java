@@ -250,6 +250,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
                 pro = new Program.Builder()
                         .setChannelId(channel.getId())
+                        .setSignalType(TvContractUtils.dvbSourceToInt(channel.getType()))
                         .setTitle(event.optString("name"))
                         .setStartTimeUtcMillis(startTime)
                         .setEndTimeUtcMillis(endTime)
@@ -376,6 +377,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
                 programs.add(new Program.Builder()
                         .setChannelId(channel.getId())
+                        .setSignalType(TvContractUtils.dvbSourceToInt(channel.getType()))
                         .setTitle(now.getString("name"))
                         .setStartTimeUtcMillis(now.getLong("startutc") * 1000)
                         .setEndTimeUtcMillis(now.getLong("endutc") * 1000)
@@ -408,6 +410,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
                 programs.add(new Program.Builder()
                         .setChannelId(channel.getId())
+                        .setSignalType(TvContractUtils.dvbSourceToInt(channel.getType()))
                         .setTitle(next.getString("name"))
                         .setStartTimeUtcMillis(next.getLong("startutc") * 1000)
                         .setEndTimeUtcMillis(next.getLong("endutc") * 1000)

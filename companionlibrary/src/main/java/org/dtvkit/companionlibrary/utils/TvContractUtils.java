@@ -105,6 +105,7 @@ public class TvContractUtils {
         ArrayList<String> sources = new ArrayList<>();
         // 0.find sources
         String syncSignalType = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
+        String searchMode = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
         boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
         if (syncCurrent) {
             sources.add(syncSignalType);
@@ -125,11 +126,14 @@ public class TvContractUtils {
                             .collect(Collectors.toList()), source, extras);
             // 3.delete channels that no need
             handleChannelDelete(channelMap, context);
-
+            // 4.delete old programs
+            if (TextUtils.equals(EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO, searchMode)) {
+                handleProgramDelete(context, source);
+            }
             channelMap.clear();
             channelUseSettingValueMap.clear();
         }
-        //4.deal insert or update channels to tv.db
+        //5.deal insert or update channels to tv.db
         syncToDb(ops, context);
 
         //notify immediately as livetv may be in background and android r sends such contentprovider notification after 10s in ContentService
@@ -366,35 +370,42 @@ public class TvContractUtils {
 
     //3.delete channels that don't exist in DtvKit db anymore
     private static void handleChannelDelete(ArrayList<Pair<String, Long>> channelMap, Context context) {
-        ArrayList<ContentProviderOperation> deleteOps = new ArrayList<>();
-        ContentResolver resolver = context.getContentResolver();
+        ArrayList<Long> ids = new ArrayList<>();
         for (Pair<String, Long> entry : channelMap) {
             Long rowId = entry.second;
             if (DEBUG) {
-                Log.d(TAG, " dealDelete add Deleting channel " + rowId);
+                Log.d(TAG, " handleChannelDelete add _ID=" + rowId);
             }
-            deleteOps.add(ContentProviderOperation.newDelete(
-                                    TvContract.buildChannelUri(rowId))
-                                    .build());
+            ids.add(rowId);
         }
-        for (int i = 0; i < deleteOps.size(); i += BATCH_OPERATION_COUNT) {
-            int toIndex =
-                    Math.min((i + BATCH_OPERATION_COUNT), deleteOps.size());
-            ArrayList<ContentProviderOperation> batchOps =
-                    new ArrayList<>(deleteOps.subList(i, toIndex));
-            if (DEBUG) {
-                Log.d(TAG, "dealDelete deleteChannels from fromIndex " + i + " to " + toIndex);
-            }
-            try {
-                resolver.applyBatch(TvContract.AUTHORITY, batchOps);
-            } catch (Exception e) {
-                Log.e(TAG, "dealDelete deleteChannels updateChannels Failed = " + e.getMessage());
-            }
-        }
-        deleteOps.clear();
+        handleDelete(ids, context, true);
     }
 
-    //4.deal insert or update channels to tv.db
+    // 4.delete old programs
+    private static void handleProgramDelete(Context context, String dvbSource) {
+        ArrayList<Long> ids = new ArrayList<>();
+        ContentResolver resolver = context.getContentResolver();
+        try (Cursor cursor = resolver.query(TvContract.RecordedPrograms.CONTENT_URI,
+                new String[]{TvContract.Programs._ID, TvContract.Programs.COLUMN_INTERNAL_PROVIDER_FLAG4},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    long rowId = cursor.getLong(0);
+                    if (!cursor.isNull(1)) {
+                        int source = cursor.getInt(1);
+                        if (TvContractUtils.dvbSourceToInt(dvbSource) == source) {
+                            ids.add(rowId);
+                        }
+                    }
+                } while (cursor.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "handleProgramDelete Failed = " + e.getMessage());
+        }
+        handleDelete(ids, context, false);
+    }
+
+    //5.deal insert or update channels to tv.db
     private static void syncToDb(ArrayList<ContentProviderOperation> ops, Context context) {
         ContentResolver resolver = context.getContentResolver();
         for (int i = 0; i < ops.size(); i += BATCH_OPERATION_COUNT) {
@@ -414,6 +425,40 @@ public class TvContractUtils {
 //        if (logos != null && !logos.isEmpty()) {
 //            new InsertLogosTask(context).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, logos);
 //        }
+    }
+
+    private static void handleDelete(ArrayList<Long> ids, Context context, boolean channelList) {
+        ArrayList<ContentProviderOperation> deleteOps = new ArrayList<>();
+        ContentResolver resolver = context.getContentResolver();
+        for (Long rowId : ids) {
+            if (DEBUG) {
+                Log.d(TAG, " handleDelete add _ID=" + rowId);
+            }
+            if (channelList) {
+                deleteOps.add(ContentProviderOperation.newDelete(
+                                TvContract.buildChannelUri(rowId))
+                        .build());
+            } else {
+                deleteOps.add(ContentProviderOperation.newDelete(
+                                TvContract.buildProgramUri(rowId))
+                        .build());
+            }
+        }
+        for (int i = 0; i < deleteOps.size(); i += BATCH_OPERATION_COUNT) {
+            int toIndex =
+                    Math.min((i + BATCH_OPERATION_COUNT), deleteOps.size());
+            ArrayList<ContentProviderOperation> batchOps =
+                    new ArrayList<>(deleteOps.subList(i, toIndex));
+            if (DEBUG) {
+                Log.d(TAG, "handleDelete from fromIndex " + i + " to " + toIndex);
+            }
+            try {
+                resolver.applyBatch(TvContract.AUTHORITY, batchOps);
+            } catch (Exception e) {
+                Log.e(TAG, "handleDelete Failed = " + e.getMessage());
+            }
+        }
+        deleteOps.clear();
     }
 
     //cache use settings
