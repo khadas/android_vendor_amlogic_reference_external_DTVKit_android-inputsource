@@ -42,8 +42,6 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.os.Process;
 import android.os.SystemClock;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
@@ -1908,8 +1906,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     class DtvkitRecordingSession extends RecordingSession {
         private static final String TAG = "DtvkitRecordingSession";
-        private Uri mChannel = null;
-        private Uri mProgram = null;
+        private Uri mChannelUri;
+        private Uri mProgramUri;
+        private Channel mChannel = null;
+        private Program mProgram = null;
         private Context mContext;
         private String mInputId;
         private long startRecordTimeMillis = 0;
@@ -1956,7 +1956,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mRecordingHandlerThread.start();
             mRecordingProcessHandler = new Handler(mRecordingHandlerThread.getLooper(), new Handler.Callback() {
                 @Override
-                public boolean handleMessage(@NonNull Message msg) {
+                public boolean handleMessage(Message msg) {
                     if (msg.what >= 0 && MSG_STRING.length > msg.what) {
                         Log.d(TAG, "handleMessage " + MSG_STRING[msg.what] + " start, index = " + mCurrentRecordIndex);
                     } else {
@@ -2017,7 +2017,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         @Override
-        public void onStartRecording(@Nullable Uri uri) {
+        public void onStartRecording(Uri uri) {
             if (mRecordingProcessHandler != null) {
                 mRecordingProcessHandler.removeMessages(MSG_RECORD_ON_START);
                 Message mess = mRecordingProcessHandler.obtainMessage(MSG_RECORD_ON_START, 0, 0, uri);
@@ -2062,7 +2062,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mRecordingStarted = false;
 
             DtvkitTvInputSession session = getMainTunerSession();
-            boolean seiDesign = FeatureUtil.getFeatureSupportNewTvApp();
             if (session != null) {
                 //need to reset record path as path may be set certain playing
                 if (FeatureUtil.getFeatureSupportNewTvApp()) {
@@ -2109,21 +2108,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 return;
             }
 
-            mChannel = uri;
-            Channel channel = TvContractUtils.getChannel(mContentResolver, uri);
+            mChannelUri = uri;
+            mChannel = TvContractUtils.getChannel(mContentResolver, uri);
             PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
             if (!powerManager.isInteractive()) {
                 //In standby mode, schedule recording on other source(for example HDMI), need to call this interface
                 //Otherwise, all interfaces of Dvb cannot return, and an ANR exception occurs.
                 DvbRequestDtvDevice();
             }
-            if (recordingCheckAvailability(getChannelInternalDvbUri(channel))) {
+            if (recordingCheckAvailability(getChannelInternalDvbUri(mChannel))) {
                 Log.i(TAG, "recording path available");
                 StringBuffer tuneResponse = new StringBuffer();
 
                 DtvkitGlueClient.getInstance().registerSignalHandler(mRecordingHandler);
 
-                JSONObject tuneStat = recordingTune(getChannelInternalDvbUri(channel), tuneResponse);
+                JSONObject tuneStat = recordingTune(getChannelInternalDvbUri(mChannel), tuneResponse);
                 if (tuneStat != null) {
                     mTuned = getRecordingTuned(tuneStat);
                     mPath = getRecordingTunePath(tuneStat);
@@ -2152,16 +2151,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        private void doStartRecording(@Nullable Uri uri) {
+        private void doStartRecording(Uri uri) {
             Log.i(TAG, "doStartRecording " + uri);
-            mProgram = uri;
-
-            String dvbUri;
-            long durationSecs = 0;
-            Program program = getProgram(uri);
+            mProgramUri = uri;
+            mProgram = getProgram(uri);
             startRecordTimeMillis = PropSettingManager.getCurrentStreamTime(true);//start record time always is equal to the current stream time
-            dvbUri = getChannelInternalDvbUri(TvContractUtils.getChannel(mContentResolver, mChannel));
-            durationSecs = 3 * 60 * 60; // 3 hours is maximum recording duration for Android
+            String dvbUri = getChannelInternalDvbUri(mChannel);
             Log.d(TAG, "startRecordTimeMillis :" + startRecordTimeMillis + "|startRecordSystemTimeMillis :" + startRecordSystemTimeMillis);
 
             StringBuffer recordingResponse = new StringBuffer();
@@ -2235,10 +2230,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             RecordedProgram.Builder builder = null;
             InternalProviderData data = null;
-            Program program = getProgram(mProgram);
-            Channel channel = TvContractUtils.getChannel(mContentResolver, mChannel);
+            Program program = mProgram;
+            Channel channel = mChannel;
             if (program == null) {
-                program = getCurrentStreamProgram(mChannel, PropSettingManager.getCurrentStreamTime(true));
+                program = getCurrentStreamProgram(mChannelUri, PropSettingManager.getCurrentStreamTime(true));
             }
             if (insert) {
                 if (program == null) {
@@ -2371,10 +2366,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             recordingPending = false;
 
             String uri = "";
-            if (mProgram != null) {
-                uri = getProgramInternalDvbUri(getProgram(mProgram));
-            } else if (mChannel != null) {
-                uri = getChannelInternalDvbUri(TvContractUtils.getChannel(mContentResolver, mChannel)) + ";0000";
+            if (mChannel != null) {
+                uri = getChannelInternalDvbUri(mChannel);
+            } else if (mProgram != null) {
+                uri = getChannelInternalDvbUri(
+                        TvContractUtils.getChannel(mContentResolver,
+                                TvContract.buildChannelUri(mProgram.getChannelId())));
             } else {
                 return;
             }
@@ -2456,7 +2453,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
             if (program == null) {
-                program = getCurrentStreamProgram(mChannel, PropSettingManager.getCurrentStreamTime(true));
+                program = getCurrentStreamProgram(mChannelUri, PropSettingManager.getCurrentStreamTime(true));
             }
 
             if (program != null) {
@@ -2612,13 +2609,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (path == -1 || path == 255 )
                     return;
 
-                switch (state) {
-                    case "ok":
-                        if (!mTuned) {
-                            notifyTuned(mChannel);
-                            mTuned = true;
-                        }
-                        break;
+                if ("ok".equals(state)) {
+                    if (!mTuned) {
+                        notifyTuned(mChannelUri);
+                        mTuned = true;
+                    }
                 }
             } else if (signal.equals("RecordingStatusChanged")) {
                 if (!recordingIsRecordingPathActive(data, mPath)) {
@@ -2633,7 +2628,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             @Override
                             public boolean test(JSONObject recording) {
                                 return TextUtils.equals(recording.optString("serviceuri", "null"),
-                                        getChannelInternalDvbUri(TvContractUtils.getChannel(mContentResolver, mChannel)))
+                                        getChannelInternalDvbUri(mChannel))
                                         && FeatureUtil.getFeatureSupportRecordAVServiceOnly()
                                         && !recording.optBoolean("is_av", true);
                             }
@@ -6128,18 +6123,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         return result;
     }
 
-    private String getProgramInternalDvbUri(Program program) {
-        if (program == null)
-            return "dvb://current";
-        try {
-            String uri = program.getInternalProviderData().get("dvbUri").toString();
-            return uri;
-        } catch (InternalProviderData.ParseException e) {
-            Log.e(TAG, "getChannelInternalDvbUri ParseException = " + e.getMessage());
-            return "dvb://current";
-        }
-    }
-
     private void playerSetVideoCrop(int index, int voff0, int hoff0, int voff1, int hoff1) {
         synchronized (mLock) {
             try {
@@ -8249,7 +8232,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private final ContentObserver mRecordingsContentObserver = new ContentObserver(new Handler()) {
         @Override
-        public void onChange(boolean selfChange, @Nullable Uri uri) {
+        public void onChange(boolean selfChange, Uri uri) {
             if (!TvContract.RecordedPrograms.CONTENT_URI.equals(uri)) {
                 sendGetRecordingListMsg(1, "RecordingsContentObserver",
                         MSG_UPDATE_RECORDING_PROGRAM_DELAY);
