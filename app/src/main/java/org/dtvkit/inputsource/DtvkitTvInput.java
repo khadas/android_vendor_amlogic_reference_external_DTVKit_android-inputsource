@@ -4166,6 +4166,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         currentPosition = length;//use length if recorder length - current play position < 1s
                     }
                     comments = "playing back record program.";
+                    if (length == 0 && e_t_l[3] == -1) {
+                        currentPosition = recordedProgram.getRecordingDurationMillis();
+                        comments = "playback has stopped.";
+                    }
+                } else if (playerState == PlayerState.STOPPED) {
+                    currentPosition = recordedProgram.getRecordingDurationMillis();
+                    comments = "playback has stopped.";
                 }
             } else if (timeshiftRecorderState == RecorderState.RECORDING) {
                 long e_t_l[] = playerGetElapsedAndTruncated();
@@ -7802,7 +7809,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private long[] playerGetElapsedAndTruncated(JSONObject playerStatus) {
-        long[] result = {0, 0, 0};
+        long[] result = {0, 0, 0, 0};
         if (playerStatus != null) {
             try {
                 JSONObject content = playerStatus.getJSONObject("content");
@@ -7814,6 +7821,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 if (content.has("length")) {
                     result[2] = content.getLong("length");
+                }
+                String playerState = playerStatus.optString("state", "");
+                if (!TextUtils.isEmpty(playerState) && "off".equals(playerState)) {
+                    result[3] = -1;
                 }
             } catch (JSONException e) {
                 Log.e(TAG, "playerGetElapsedAndTruncated = " + e.getMessage());
