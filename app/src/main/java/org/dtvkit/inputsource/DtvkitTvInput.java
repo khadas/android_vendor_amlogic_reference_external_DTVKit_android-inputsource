@@ -3055,7 +3055,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.i(TAG, "onSetStreamVolume " + volume);
             int index = Boolean.compare(mIsPip, false);
             if (volume > 0.0f) {
-                playerInitAssociateDualSupport(index);
+                playerInitAssociateDualSupport(index, false);
             }
             playerSetMute(volume == 0.0f, index);
         }
@@ -3924,9 +3924,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }*/
             } else if (TextUtils.equals(DataManager.ACTION_DTV_ENABLE_AUDIO_AD, action)) {
                 mAudioADAutoStart = data.getInt(DataManager.PARA_ENABLE) == 1;
-                Log.d(TAG, "do private cmd: ACTION_DTV_ENABLE_AUDIO_AD: " + mAudioADAutoStart);
-                setAdAssociate(mAudioADAutoStart);
-                playerInitAssociateDualSupport(Boolean.compare(playerGetMute(), false));
+                boolean recover = data.getBoolean("recover", false);
+                Log.d(TAG, "do private cmd: ACTION_DTV_ENABLE_AUDIO_AD: " + mAudioADAutoStart
+                        + ", recover = " + recover);
+                boolean ret = setAdAssociate(mAudioADAutoStart);
+                playerInitAssociateDualSupport(Boolean.compare(ret, false), recover);
                 if (mHbbTvManager != null) {
                     mHbbTvManager.setAudioDescriptions();
                 }
@@ -5336,10 +5338,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             notifyContentAllowed();
         }
 
-        protected boolean playerInitAssociateDualSupport(int index) {
+        protected boolean playerInitAssociateDualSupport(int index, boolean recover) {
             mAudioADMixingLevel = mDataManager.getIntParameters(DataManager.TV_KEY_AD_MIX);
             mAudioADVolume = mDataManager.getIntParameters(DataManager.TV_KEY_AD_VOLUME);
-            if (mAudioADAutoStart) {
+            if (mAudioADAutoStart || recover) {
                 Log.d(TAG, "playerInitAssociateDualSupport path=" + index
                             + ", mAudioADAutoStart = " + mAudioADAutoStart
                             + ", mAudioADMixingLevel = " + mAudioADMixingLevel
@@ -5606,14 +5608,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.d(TAG, "setAdMain result=" + result + ", setAudioStream " + param1);
         }
 
-        private void setAdAssociate(boolean enable) {
-            boolean result;
-            if (playerGetMute()) {
-                result = playerSetAudioDescriptionOn(enable) && playerPipSetAudioDescriptionOn(enable);
+        private boolean setAdAssociate(boolean enable) {
+            boolean result = playerGetMute();
+            if (result) {
+                playerSetAudioDescriptionOn(enable);
+                playerPipSetAudioDescriptionOn(enable);
             } else {
-                result = playerPipSetAudioDescriptionOn(enable) && playerSetAudioDescriptionOn(enable);
+                playerPipSetAudioDescriptionOn(enable);
+                playerSetAudioDescriptionOn(enable);
             }
             Log.d(TAG, "setAdAssociate result=" + result + "setAudioDescriptionOn:" + enable);
+            return result;
         }
 
         private void setTimeshiftPlay(Uri uri) {
@@ -5634,7 +5639,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (playerPlay(INDEX_FOR_MAIN, recordedProgram.getRecordingDataUri(),
                         mAudioADAutoStart, false, 0, "", "").equals("ok")) {
                     notifyChannelRetuned(uri);
-                    playerInitAssociateDualSupport(0);
+                    playerInitAssociateDualSupport(0, false);
                 } else {
                     DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
