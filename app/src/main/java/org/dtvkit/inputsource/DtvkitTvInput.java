@@ -58,6 +58,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.support.annotation.NonNull;
 import com.amlogic.hbbtv.HbbTvManager;
+import com.amlogic.hbbtv.HbbTvManager.HbbTvApplicationStartCallBack;
 import com.droidlogic.app.AudioConfigManager;
 import com.droidlogic.app.AudioSystemCmdManager;
 import com.droidlogic.app.CCSubtitleView;
@@ -3723,14 +3724,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public void notifyVideoUnavailable(final int reason) {
-            runOnMainThread(() -> {
-                if (mHbbTvManager != null ) {
-                    Bundle request = new Bundle();
-                    request.putString("isRunning", mHbbTvManager.isHbbTvApplicationRunning() ? "true" : "false");
-                    sendBundleToAppByTif(ConstantManager.ACTION_HBBTV_APPLICATION_RUNNING, request);
-                }
-            });
-
+            if (mHbbTvManager != null ) {
+                HbbTvManager.HbbTvApplicationStartCallBack hbbTvApplicationCallback = new HbbTvManager.HbbTvApplicationStartCallBack() {
+                    public void onHbbtvApplicationStart(boolean applicationStatus) {
+                        Log.d(TAG,"onHbbtvApplicationStart");
+                        Bundle request = new Bundle();
+                        request.putString("isRunning", applicationStatus ? "true" : "false");
+                        sendBundleToAppByTif(ConstantManager.ACTION_HBBTV_APPLICATION_RUNNING, request);
+                    }
+                };
+                mHbbTvManager.registerHbbtvApplicationStartCallBack(hbbTvApplicationCallback);
+            }
             super.notifyVideoUnavailable(reason);
             if (TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY == reason
                     || TvInputManager.VIDEO_UNAVAILABLE_REASON_WEAK_SIGNAL == reason) {
