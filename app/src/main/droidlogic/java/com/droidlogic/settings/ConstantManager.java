@@ -141,6 +141,8 @@ public class ConstantManager {
     public static final String ACTION_EWS_NOTIFY = "action_ews_notify";
     public static final String ACTION_EWS = "action_ews";
 
+    public static final String ACTION_AUDIO_TRACK_SELECTED = "action_audio_track_selected";
+
     public static final String ACTION_LINK_BARKER_CHANNEL = "action_link_baker_channel";
     public static final String ACTION_LEAVE_BARKER_CHANNEL = "action_leave_baker_channel";
 

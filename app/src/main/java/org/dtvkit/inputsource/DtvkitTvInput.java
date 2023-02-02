@@ -4940,6 +4940,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     } else {
                         Log.d(TAG, "Pip Session not handle hbbNotifyAuthUrlUpdated message ");
                     }
+                } else if (signal.equals("AudioTrackSelected")) {
+                    // after track changed, should update sound mode again
+                    notifySessionEvent(ConstantManager.ACTION_AUDIO_TRACK_SELECTED, null);
                 }
             }
         };
@@ -6499,7 +6502,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else if (videoStatus[3] == 0) {
                     videoFrameFormat = "I";
                 } else {
-                    Log.d(TAG, "getVideoTrackInfoList no videoFrameFormat");
+                    Log.w(TAG, "Invalid videoFrameFormat " + videoStatus[3]);
+                    return tracks;
                 }
                 //set value
                 track.setVideoWidth(videoWidth);
