@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <TextView
+        android:id="@+id/tkgs_title"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintHeight_min="80dp"
+        android:layout_marginTop="60dp"
+        android:layout_gravity="center_horizontal"
+        android:hint="@string/app_name"
+        android:textSize="40sp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <LinearLayout
+        android:layout_width="@dimen/px_800.0"
+        android:layout_height="@dimen/px_80.0"
+        android:layout_gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:layout_marginLeft="@dimen/px_20.0"
+        android:layout_marginTop="@dimen/px_80.0">
+        <TextView
+            android:layout_width="@dimen/px_600.0"
+            android:layout_height="@dimen/px_80.0"
+            android:text="@string/string_tkgs_operate_mode"
+            android:textSize="30sp"/>
+        <Spinner
+            android:id="@+id/operate_mode_spinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@android:color/black"
+            android:entries="@array/tkgs_operate_mode_entries"
+            android:entryValues="@array/tkgs_operate_mode_entry_values" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/locator_list_tv"
+        android:layout_width="@dimen/px_800.0"
+        android:layout_height="@dimen/px_80.0"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:paddingLeft="@dimen/px_20.0"
+        android:paddingEnd="@dimen/px_20.0"
+        android:text="@string/string_tkgs_locator_list"
+        android:background="@drawable/selector_item"
+        android:focusable="true"
+        android:textSize="30sp"/>
+
+    <TextView
+        android:id="@+id/hidden_locator_list_tv"
+        android:layout_width="@dimen/px_800.0"
+        android:layout_height="@dimen/px_80.0"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:paddingLeft="@dimen/px_20.0"
+        android:paddingEnd="@dimen/px_20.0"
+        android:text="@string/string_tkgs_hidden_locator_list"
+        android:background="@drawable/selector_item"
+        android:focusable="true"
+        android:textSize="30sp"
+        android:visibility="gone"/>
+
+    <LinearLayout
+        android:id="@+id/table_version_ll"
+        android:layout_width="@dimen/px_800.0"
+        android:layout_height="@dimen/px_80.0"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:orientation="horizontal"
+        android:background="@drawable/selector_item"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="@dimen/px_600.0"
+            android:layout_height="@dimen/px_80.0"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/px_20.0"
+            android:paddingLeft="@dimen/px_20.0"
+            android:paddingEnd="@dimen/px_20.0"
+            android:text="@string/string_reset_table_version"
+            android:textSize="30sp" />
+
+        <TextView
+            android:id="@+id/table_version_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/px_80.0"
+            android:layout_marginLeft="@dimen/px_30.0"
+            android:gravity="center_vertical"
+            android:textColor="@color/white"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/prefer_ll"
+        android:layout_width="@dimen/px_800.0"
+        android:layout_height="@dimen/px_80.0"
+        android:layout_gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:layout_marginLeft="@dimen/px_20.0">
+        <TextView
+            android:layout_width="@dimen/px_600.0"
+            android:layout_height="@dimen/px_80.0"
+            android:text="@string/string_tkgs_prefer_list"
+            android:textSize="30sp"/>
+        <Spinner
+            android:id="@+id/prefer_spinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/update_tv"
+        android:layout_width="@dimen/px_800.0"
+        android:layout_height="@dimen/px_80.0"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/px_20.0"
+        android:paddingLeft="@dimen/px_20.0"
+        android:paddingEnd="@dimen/px_20.0"
+        android:text="@string/string_tkgs_update"
+        android:background="@drawable/selector_item"
+        android:focusable="true"
+        android:textSize="30sp"/>
+
+    <Button
+        android:id="@+id/bt_scan"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/px_600.0"
+        android:layout_marginTop="@dimen/px_200.0"
+        android:text="@string/strContinue"
+        android:background="@drawable/button"
+        android:layout_gravity="center_horizontal"/>
+
+
+</LinearLayout>

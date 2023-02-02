@@ -11,6 +11,7 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.ContentObserver;
@@ -333,6 +334,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     setCIPlusServiceReady();
                     sendEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY);
                 } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                    updateTKGSAlarmTime();
                     CiPowerMonitor.getInstance(context).onReceiveScreenOff();
                 } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
                     if (mAutomaticSearchingReceiver != null) {
@@ -4957,6 +4959,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else if (signal.equals("AudioTrackSelected")) {
                     // after track changed, should update sound mode again
                     notifySessionEvent(ConstantManager.ACTION_AUDIO_TRACK_SELECTED, null);
+                } else if (signal.equals("TkgsStartTuneUpdate")) {
+                    notifySessionEvent(ConstantManager.ACTION_TKGS_START_TUNE_UPDATE, null);
+                    mMainHandle.post(()->showToast(R.string.string_tune_update_tip));
+                } else if (signal.equals("TkgsFinishTuneUpdate")) {
+                    try {
+                        JSONArray jsonArray = data.getJSONArray("result");
+                        String msg = jsonArray.getJSONObject(0).getString("msg");
+                        mMainHandle.post(()-> showTKGSUserMsgDialog(getApplicationContext(), msg));
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    sendEmptyMessageToInputThreadHandler(MSG_UPDATE_DTVKIT_DATABASE);
                 }
             }
         };
@@ -8614,16 +8628,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private static final String TAG = "AutomaticSearchingReceiver";
         //hold wake lock for 5s to ensure the coming recording schedules
         private static final String WAKE_LOCK_NAME = "AutomaticSearchingReceiver";
+        private Context mContext;
         private PowerManager.WakeLock mWakeLock = null;
         private PendingIntent mAlarmIntent = null;
         private DtvkitBackGroundSearch dtvkitBgSearch = null;
         private boolean isBgScanning = false;
+        private String mUserMsg = "";
 
         @Override
         public void onReceive(Context context, Intent intent) {
             Log.d(TAG, "Automatic searching onReceive");
             if (intent == null) return;
 
+            mContext = context;
             String action = intent.getAction();
             Log.d(TAG, "Automatic searching action =" + action);
             if (action.equals(intentAction)) {
@@ -8631,8 +8648,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 int dvbSource = getCurrentDvbSource();
                 Log.d(TAG, "mode = " + mode + ", signal type= " + dvbSource);
                 if (dvbSource != ParameterManager.SIGNAL_COFDM
-                        && dvbSource != ParameterManager.SIGNAL_QAM) {
-                    Log.d(TAG, "only dvbt/c will do automatic search.");
+                        && dvbSource != ParameterManager.SIGNAL_QAM
+                        && (dvbSource != ParameterManager.SIGNAL_QPSK || !"TKGS".equals(mDataManager.getStringParameters(ParameterManager.DVBS_OPERATOR_MODE)))) {
+                    Log.d(TAG, "only dvbt/c/TKGS will do automatic search.");
                     return;
                 }
                 JSONArray activeRecordings = recordingGetActiveRecordings();
@@ -8641,26 +8659,42 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     return;
                 }
 
-                //if need to light the screen please run the interface below
-                if (mode == 2) {//operate mode
-                    checkSystemWakeUp(context);
+                if (intent.getBooleanExtra("tkgs_standby_search", false)) {
+                    if (dvbSource != ParameterManager.SIGNAL_QPSK) {
+                        Log.i(TAG,"Currently not in DVBS format, finish");
+                        return;
+                    }
                 }
-                //avoid suspend when execute appointed pvr record
-                if (mode == 1) { //standby mode
+                if (dvbSource != ParameterManager.SIGNAL_QPSK) {
+                    //if need to light the screen please run the interface below
+                    if (mode == 2) {//operate mode
+                        checkSystemWakeUp(context);
+                    }
+                    //avoid suspend when execute appointed pvr record
+                    if (mode == 1) { //standby mode
+                        if (isScreenOn(context)) {
+                            Log.i(TAG, "Not in sleep mode, skip standby scan.");
+                            return;
+                        }
+                        acquireWakeLock(context);
+                    }
+
+                    String strRepetition = intent.getStringExtra("repetition");
+                    if (!TextUtils.isEmpty(strRepetition)) {
+                        int repetition = Integer.parseInt(strRepetition);
+                    }
+                    setNextAlarm(context);
+                    if (mode == 2) {
+                        showAutomaticSearchConfirmDialog(context, dvbSource == ParameterManager.SIGNAL_COFDM);
+                        return;
+                    }
+                } else {
                     if (isScreenOn(context)) {
-                        Log.i(TAG, "Not in sleep mode, skip standy scan.");
+                        Log.i(TAG, "Not in sleep mode, skip standby scan.");
                         return;
                     }
                     acquireWakeLock(context);
-                }
-
-                String strRepetition = intent.getStringExtra("repetition");
-                int repetition = Integer.parseInt(strRepetition);
-                setNextAlarm(context);
-
-                if (mode == 2) {
-                    showAutomaticSearchConfirmDialog(context, dvbSource == ParameterManager.SIGNAL_COFDM);
-                    return;
+                    setNextAlarm(context);
                 }
                 final DtvkitBackGroundSearch.BackGroundSearchCallback backGroundSearchCallback = (mess) -> {
                     if (mess != null) {
@@ -8676,11 +8710,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SEARCH_TERMINATE:
                             case DtvkitBackGroundSearch.SINGLE_FREQUENCY_STATUS_SAVE_FINISH: {
                                 Log.d(TAG, "waiting for doing something");
-                                if (mode == 1) { //standby mode
+                                if (mode == 1 || intent.getBooleanExtra("tkgs_standby_search", false)) { //standby mode
                                     isBgScanning = false;
                                     releaseWakeLock();
                                 }
                                 break;
+                            }
+                            case DtvkitBackGroundSearch.SINGLE_FREQUENCY_TKGS_USER_MSG: {
+                                Log.i(TAG,"show TKGS user msg");
+                                mUserMsg = mParameterManager.getTKGSUserMessage();
                             }
 
                         }
@@ -8696,6 +8734,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public void onReceiveScreenOn() {
             if (isBgScanning && dtvkitBgSearch != null) {
                 dtvkitBgSearch.handleScreenOn();
+            }
+            if (!TextUtils.isEmpty(mUserMsg)) {
+                showTKGSUserMsgDialog(mContext, mUserMsg);
+                mUserMsg = "";
             }
         }
 
@@ -8745,6 +8787,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mWakeLock.acquire();
                 }
             }
+            // Deep standby, need to hold lock from kernel
+            if (android.os.SystemProperties.get("persist.sys.power.key.action", "0").equals("3")) {
+                mParameterManager.acquireWakeLock();
+            }
         }
 
 
@@ -8756,6 +8802,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 mWakeLock = null;
             }
+            if (android.os.SystemProperties.get("persist.sys.power.key.action", "0").equals("3")) {
+                mParameterManager.releaseWakeLock();
+            }
         }
 
         private boolean isScreenOn(Context context) {
@@ -8764,30 +8813,42 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         private void setNextAlarm(Context context) {
-            String hour = mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_HOUR);
-            String minute = mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_MINUTE);
-            int mode = mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_MODE);
-            int repetition = mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_REPETITION);
             Intent intent = new Intent(intentAction);
-            intent.putExtra("mode", mode + "");
-            intent.putExtra("repetition", repetition + "");
-            if (mAlarmIntent != null) {
-                mAlarmManager.cancel(mAlarmIntent);
-            }
-            mAlarmIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE);
-            Calendar cal = Calendar.getInstance();
-            long current = System.currentTimeMillis();
-            cal.setTimeInMillis(current);
-            cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hour));
-            cal.set(Calendar.MINUTE, Integer.parseInt(minute));
-            if (repetition == 0) {
-                long alarmTime = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY;
-                Log.d(TAG, "daily =" + new Date(alarmTime));
-                mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime/*wakeAt*/, mAlarmIntent);
-            } else if (repetition == 1) {
-                long alarmTime = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY * 7;
-                Log.d(TAG, "weekly =" + new Date(alarmTime));
-                mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime/*wakeAt*/, mAlarmIntent);
+            if (getCurrentDvbSource()== ParameterManager.SIGNAL_QPSK && "TKGS".equals(mDataManager.getStringParameters(ParameterManager.DVBS_OPERATOR_MODE))) {
+                if (mAlarmIntent != null) {
+                    mAlarmManager.cancel(mAlarmIntent);
+                }
+                intent.putExtra("tkgs_standby_search", true);
+                mAlarmIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+                long current = System.currentTimeMillis();
+                long alarmTime = current + TimeUnit.HOURS.toMillis(8);
+                Log.d(TAG, "setNextAlarm current =" + new Date(current).toString() + "   alarmTime =" + new Date(alarmTime).toString());
+                mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime, mAlarmIntent);
+            } else {
+                String hour = mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_HOUR);
+                String minute = mParameterManager.getStringParameters(mParameterManager.AUTO_SEARCHING_MINUTE);
+                int mode = mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_MODE);
+                int repetition = mParameterManager.getIntParameters(mParameterManager.AUTO_SEARCHING_REPETITION);
+                intent.putExtra("mode", mode + "");
+                intent.putExtra("repetition", repetition + "");
+                if (mAlarmIntent != null) {
+                    mAlarmManager.cancel(mAlarmIntent);
+                }
+                mAlarmIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+                Calendar cal = Calendar.getInstance();
+                long current = System.currentTimeMillis();
+                cal.setTimeInMillis(current);
+                cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hour));
+                cal.set(Calendar.MINUTE, Integer.parseInt(minute));
+                if (repetition == 0) {
+                    long alarmTime = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY;
+                    Log.d(TAG, "daily =" + new Date(alarmTime));
+                    mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime/*wakeAt*/, mAlarmIntent);
+                } else if (repetition == 1) {
+                    long alarmTime = cal.getTimeInMillis() + AlarmManager.INTERVAL_DAY * 7;
+                    Log.d(TAG, "weekly =" + new Date(alarmTime));
+                    mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime/*wakeAt*/, mAlarmIntent);
+                }
             }
         }
     }
@@ -8825,6 +8886,46 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             alert.dismiss();
         });
         alert.setOnDismissListener(dialog -> Log.d(TAG, "showOpSearchConfirmDialog onDismiss"));
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        alert.setView(dialogView);
+        alert.show();
+        WindowManager.LayoutParams params = alert.getWindow().getAttributes();
+        params.width = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
+                500, context.getResources().getDisplayMetrics());
+        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        alert.getWindow().setAttributes(params);
+        alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
+    }
+
+    private void showTKGSUserMsgDialog(final Context context, String msg) {
+        if (context == null) {
+            Log.d(TAG, "showTuneUpdateTipDialog null context");
+            return;
+        }
+        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        final AlertDialog alert = builder.create();
+        final View dialogView = View.inflate(context, R.layout.confirm_search, null);
+        final TextView title = dialogView.findViewById(R.id.dialog_title);
+        final Button confirm = dialogView.findViewById(R.id.confirm);
+        final Button cancel = dialogView.findViewById(R.id.cancel);
+        confirm.setVisibility(View.GONE);
+        cancel.setVisibility(View.GONE);
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                alert.dismiss();
+            }
+        }, 30000);
+
+        alert.setOnKeyListener(new DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface dialogInterface, int i, KeyEvent keyEvent) {
+                alert.dismiss();
+                return false;
+            }
+        });
+
+        title.setText(msg);
         alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         alert.setView(dialogView);
         alert.show();
@@ -8877,5 +8978,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private void setCIPlusServiceReady(){
         PropSettingManager.setProp("vendor.tv.dtv.ciservice.ready","true");
         Log.d(TAG, "CIPlusService initialize: set vendor.tv.dtv.ciservice.ready=true");
+    }
+
+    private void updateTKGSAlarmTime() {
+        if (getCurrentDvbSource()== ParameterManager.SIGNAL_QPSK && "TKGS".equals(mDataManager.getStringParameters(ParameterManager.DVBS_OPERATOR_MODE))) {
+            Intent intent = new Intent(intentAction);
+            intent.putExtra("tkgs_standby_search", true);
+            PendingIntent mAlarmIntent = PendingIntent.getBroadcast(DtvkitTvInput.this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+            if (mAlarmIntent != null) {
+                mAlarmManager.cancel(mAlarmIntent);
+            }
+            long current = System.currentTimeMillis();
+            long alarmTime = current + TimeUnit.MINUTES.toMillis(5);
+            Log.d(TAG, "current =" + new Date(current).toString() + "   alarmTime =" + new Date(alarmTime).toString());
+            mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime, mAlarmIntent);
+        }
     }
 }

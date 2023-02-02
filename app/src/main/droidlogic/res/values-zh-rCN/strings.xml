@@ -77,8 +77,10 @@
     <string name="dialog_diseqc_1_2_quality">质量</string>
     <string name="dialog_add_satellite">添加卫星</string>
     <string name="dialog_add_transponder">添加转发器</string>
+    <string name="dialog_add_locator">添加一个新的定位器</string>
     <string name="dialog_edit_satellite">编辑卫星</string>
     <string name="dialog_edit_transponder">编辑转发器</string>
+    <string name="dialog_edit_locator">编辑定位器</string>
     <string name="dialog_remove_satellite">删除卫星</string>
     <string name="dialog_remove_transponder">删除转发器</string>
     <string name="dialog_add_satellite_name">名称</string>

@@ -33,6 +33,7 @@ import android.util.TypedValue;
 import android.os.Handler;
 
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
+import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -41,6 +42,7 @@ import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.droidlogic.fragment.DvbsParameterManager;
 import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
@@ -57,7 +59,6 @@ public class DtvkitBackGroundSearch {
     private int mFoundServiceNumber = 0;
 
     private Context mContext;
-    private String mCurrentSignalType;
     private int mCurrentDvbSource;
     private int mFrequency = -1;//hz
     private String mInputId;
@@ -74,6 +75,7 @@ public class DtvkitBackGroundSearch {
     public static final String SINGLE_FREQUENCY_STATUS_SAVE_FINISH = "save_finish";
     public static final String SINGLE_FREQUENCY_CHANNEL_NAME = "channel_name";
     public static final String SINGLE_FREQUENCY_CHANNEL_DISPLAY_NUMBER = "display_number";
+    public static final String SINGLE_FREQUENCY_TKGS_USER_MSG = "user_msg";
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -101,16 +103,16 @@ public class DtvkitBackGroundSearch {
         //auto scan mode
         mContext = context;
         mCurrentDvbSource = dvbSource;
-        mCurrentSignalType = "TYPE_" + dvbSourceToSignalType();
         mInputId = inputId;
         mBgCallback = callback;
         mDataManager = new DataManager(context);
     }
 
     boolean isCurrentSignalSupportBackgroundSearch() {
-        boolean ret = (mCurrentDvbSource == ParameterManager.SIGNAL_COFDM
-            || mCurrentDvbSource == ParameterManager.SIGNAL_QAM);
-        return ret;
+        return (mCurrentDvbSource == ParameterManager.SIGNAL_COFDM
+                || mCurrentDvbSource == ParameterManager.SIGNAL_QAM
+                || (mCurrentDvbSource == ParameterManager.SIGNAL_QPSK && "TKGS".equals(mDataManager.getStringParameters(ParameterManager.DVBS_OPERATOR_MODE))));
+
     }
 
     private String getStartSearchCommand(boolean isAutoScan) {
@@ -122,6 +124,10 @@ public class DtvkitBackGroundSearch {
             break;
             case ParameterManager.SIGNAL_QAM: {
                 ret = "Dvbc.startSearchEx";
+            }
+            break;
+            case ParameterManager.SIGNAL_QPSK: {
+                ret = "Dvbs.startDvbUpdate";
             }
             break;
             default:
@@ -141,31 +147,13 @@ public class DtvkitBackGroundSearch {
                 ret = "Dvbc.finishSearch";
             }
             break;
+            case ParameterManager.SIGNAL_QPSK:
+                ret = "Dvbs.finishSearch";
+                break;
             default:
                 break;
         }
         return ret;
-    }
-
-    private String dvbSourceToSignalType() {
-        String result = null;
-
-        switch (mCurrentDvbSource) {
-            case ParameterManager.SIGNAL_COFDM:
-                result = "DVB_T";
-                break;
-            case ParameterManager.SIGNAL_QAM:
-                result = "DVB_C";
-                break;
-            case ParameterManager.SIGNAL_QPSK:
-                result = "DVB_S";
-                break;
-            case ParameterManager.SIGNAL_ISDBT:
-                result = "ISDB_T";
-                break;
-        }
-        return result;
-
     }
 
     private JSONArray initAutoScanParameter() {
@@ -178,6 +166,9 @@ public class DtvkitBackGroundSearch {
             case ParameterManager.SIGNAL_QAM:
                 args.put("full");
                 break;
+            case ParameterManager.SIGNAL_QPSK:
+                args.put("standby");
+                args.put(0x0301);
             default:
                 break;
         }
@@ -240,6 +231,9 @@ public class DtvkitBackGroundSearch {
     private void onSearchFinished() {
         mStartSearch = false;
         stopMonitoringSearch();
+        if (mCurrentDvbSource == ParameterManager.SIGNAL_QPSK && "TKGS".equals(mDataManager.getStringParameters(ParameterManager.DVBS_OPERATOR_MODE))) {
+            showTKGSUserMsg();
+        }
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
@@ -264,7 +258,7 @@ public class DtvkitBackGroundSearch {
         // If the intent that started this activity is from Live Channels app
         Bundle parameters = new Bundle();
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
-        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, dvbSourceToSignalType());
+        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, TvContractUtils.dvbSourceToDbString(mCurrentDvbSource));
 
         Intent intent = new Intent(mContext, com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
         intent.putExtra("inputId", mInputId);
@@ -272,6 +266,18 @@ public class DtvkitBackGroundSearch {
         intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, (mFoundServiceNumber > 0));
         intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
         mContext.startService(intent);
+    }
+
+    private void showTKGSUserMsg() {
+        if (mBgCallback != null) {
+            try {
+                JSONObject mess = new JSONObject();
+                mess.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_TKGS_USER_MSG);
+                mBgCallback.onMessageCallback(mess);
+            } catch (JSONException e) {
+                Log.i(TAG, "showTKGSUserMsg JSONException " + e.getMessage());
+            }
+        }
     }
 
     private void startMonitoringSearch() {
@@ -435,7 +441,7 @@ public class DtvkitBackGroundSearch {
     }
 
     private void responseOnSignal(String signal, JSONObject data) {
-        if (signal.equals("DvbtStatusChanged") || signal.equals("DvbcStatusChanged")) {
+        if (signal.equals("DvbtStatusChanged") || signal.equals("DvbcStatusChanged") || signal.equals("DvbsStatusChanged")) {
             int progress = getSearchProcess(data);
             if (progress < 0 || progress > 100) {
                 Log.d(TAG, "Invalid progress " + progress + ", low level scan has been terminated");

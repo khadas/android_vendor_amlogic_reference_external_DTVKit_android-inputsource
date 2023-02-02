@@ -24,6 +24,7 @@ import com.droidlogic.dtvkit.inputsource.searchguide.OnNextListener;
 import com.droidlogic.dtvkit.inputsource.searchguide.SearchStageFragment;
 import com.droidlogic.dtvkit.inputsource.searchguide.DtvkitScanSelector;
 import com.droidlogic.dtvkit.inputsource.searchguide.SimpleListFragment;
+import com.droidlogic.dtvkit.inputsource.searchguide.TKGSMenuSettingFragment;
 
 import com.droidlogic.dtvkit.inputsource.DataManager;
 import com.droidlogic.dtvkit.inputsource.PvrStatusConfirmManager;
@@ -35,6 +36,7 @@ import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.settings.TimezoneSelect;
 
+import org.dtvkit.inputsource.searchguide.TKGSLocatorListFragment;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -124,6 +126,17 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
             case DataPresenter.FRAGMENT_AUTO_DISEQC:
                 fragment = AutoDiseqc.newInstance(title, this);
                 break;
+            case DataPresenter.FRAGMENT_KTGS:
+                fragment = TKGSMenuSettingFragment.newInstance(title, this);
+                fragment.setDialogManager(mDataPresenter.getDialogManager());
+                fragment.setParameterManager(mDataPresenter.getParameterManager());
+                break;
+            case DataPresenter.FRAGMENT_KTGS_LOCATOR_LIST:
+            case DataPresenter.FRAGMENT_KTGS_HIDDEN_LOCATORS:
+                fragment = TKGSLocatorListFragment.newInstance(title, this);
+                fragment.setDialogManager(mDataPresenter.getDialogManager());
+                fragment.setParameterManager(mDataPresenter.getParameterManager());
+                break;
             default:
                 return null;
         }
@@ -155,6 +168,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 // showNextFragment(DataPresenter.FRAGMENT_SOURCE_SELECTOR);
                 showNextFragment(DataPresenter.FRAGMENT_SPEC);
             } else if (fragment.getTag().equals(DataPresenter.FRAGMENT_SPEC)) {
+                mDataPresenter.getParameterManager().saveStringParameters(ParameterManager.DVBS_OPERATOR_MODE, text);
                 DataPresenter.setOperateType(text);
                 JSONArray operatorList = mDataPresenter.getParameterManager()
                             .getOperatorsTypeList(ParameterManager.SIGNAL_QPSK);
@@ -171,6 +185,8 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 }
                 if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_M7) {
                     showNextFragment(DataPresenter.FRAGMENT_AUTO_DISEQC);
+                } else if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_TKGS) {
+                    showNextFragment(DataPresenter.FRAGMENT_KTGS);
                 } else {
                     startActivityForSource(ParameterManager.SIGNAL_QPSK, 0);
                 }
@@ -188,6 +204,22 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 select = 1;
             }
             startActivityForSource(ParameterManager.SIGNAL_QPSK, select);
+        } else if (fragment instanceof TKGSMenuSettingFragment) {
+            switch (text) {
+                case "TKGS Locator List":
+                    showNextFragment(DataPresenter.FRAGMENT_KTGS_LOCATOR_LIST);
+                    break;
+                case "TKGS Update":
+                    startActivityForSource(ParameterManager.SIGNAL_QPSK, 2);
+                    break;
+                case "Continue":
+                    startActivityForSource(ParameterManager.SIGNAL_QPSK, 0);
+                    break;
+                case "TKGS Hidden Locators":
+                    showNextFragment(DataPresenter.FRAGMENT_KTGS_HIDDEN_LOCATORS);
+                default:
+                    break;
+            }
         } else {
             Log.i(TAG, "default onNext behaviour, finish");
             finish();
@@ -213,7 +245,7 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
             case ParameterManager.SIGNAL_QPSK:
                 className = DataManager.KEY_ACTIVITY_DVBS;
                 requestCode = REQUEST_CODE_START_DVBS_ACTIVITY;
-                intent.putExtra("manual", selector == 1);
+                intent.putExtra("manual", selector);
                 break;
             case ParameterManager.SIGNAL_ISDBT:
                 className = DataManager.KEY_ACTIVITY_ISDBT;
@@ -285,6 +317,11 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
             int pos = mDataPresenter.getDataForFragment(fragment.getTag(), dataList);
             if (pos >= 0) {
                 ((SimpleListFragment) fragment).updateData(dataList, pos);
+            }
+        } else if (fragment instanceof TKGSLocatorListFragment) {
+            int pos = mDataPresenter.getDataForFragment(fragment.getTag(), dataList);
+            if (pos >= 0) {
+                ((TKGSLocatorListFragment) fragment).updateData(dataList, pos);
             }
         }
     }

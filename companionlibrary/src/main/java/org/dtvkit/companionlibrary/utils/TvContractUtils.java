@@ -83,6 +83,7 @@ public class TvContractUtils {
             put(Channel.KEY_RAW_DISPLAYNUMBER, "0");
             put(Channels.COLUMN_APP_LINK_ICON_URI, "");
             put(Channels.COLUMN_APP_LINK_INTENT_URI, "");
+            put(Channel.KEY_SET_MOVE_DISPLAYNUMBER, "0");
         }
     };
 
@@ -520,23 +521,15 @@ public class TvContractUtils {
     public static String getUniqueStrForChannel(InternalProviderData internalProviderData,
         String channelType, int originalNetworkId, int transportStreamId,
         int serviceId, int frequency, String ciNumber, String rawDisplayNumber) {
+
         String result = null;
-        try {
-            if (internalProviderData != null) {
-                result = (String)internalProviderData.get(Channel.KEY_DTVKIT_URI);
-            }
-        } catch (InternalProviderData.ParseException ignored) {
-            // Log.w(TAG, "getUniqueStrForChannel error, use Legacy: ");
-        }
-        if (result == null) {
-             result = channelType
-                    + "-" + (frequency / 1000000)
-                    + "-" + rawDisplayNumber
-                    + "-" + originalNetworkId
-                    + "-" + transportStreamId
-                    + "-" + serviceId
-                    + "-" + ciNumber;
-        }
+        result = channelType
+                + "-" + (frequency / 1000000)
+                + "-" + rawDisplayNumber
+                + "-" + originalNetworkId
+                + "-" + transportStreamId
+                + "-" + serviceId
+                + "-" + ciNumber;
         return result;
     }
 

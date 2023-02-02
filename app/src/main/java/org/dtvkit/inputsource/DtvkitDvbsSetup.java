@@ -37,6 +37,7 @@ public class DtvkitDvbsSetup extends Activity {
     private SearchStageFragment fragment = null;
     private DataPresenter mDataPresenter = null;
     private boolean manualDiseqc = false;
+    private boolean manualTKGS = false;
     private final Handler mHandler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(@NonNull Message msg) {
@@ -51,7 +52,8 @@ public class DtvkitDvbsSetup extends Activity {
         mDataPresenter = new DataPresenter(this);
         String tag = DataPresenter.FRAGMENT_SEARCH_UI;
         if (intent != null) {
-            manualDiseqc = intent.getBooleanExtra("manual", false);
+            manualTKGS = intent.getIntExtra("manual", -1) == 2;
+            manualDiseqc = intent.getIntExtra("manual", -1) == 1;
             if (manualDiseqc) {
                 showFragment(DataPresenter.FRAGMENT_MANUAL_DISEQC);
             }
@@ -95,6 +97,7 @@ public class DtvkitDvbsSetup extends Activity {
                 fragment.setDialogManager(mDataPresenter.getDialogManager());
                 Bundle bundle = new Bundle();
                 bundle.putBoolean("manualDiseqc", manualDiseqc);
+                bundle.putBoolean("manualTKGS", manualTKGS);
                 fragment.setArguments(bundle);
                 break;
             case DataPresenter.FRAGMENT_MANUAL_DISEQC:

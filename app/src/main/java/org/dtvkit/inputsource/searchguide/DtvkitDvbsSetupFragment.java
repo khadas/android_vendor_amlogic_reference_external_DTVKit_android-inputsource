@@ -3,8 +3,10 @@ package com.droidlogic.dtvkit.inputsource.searchguide;
 import static android.app.Activity.RESULT_CANCELED;
 import static android.app.Activity.RESULT_OK;
 
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.tv.TvInputInfo;
@@ -17,15 +19,19 @@ import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -54,6 +60,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -93,6 +100,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
 
     private boolean mHideByDiSEqCMsg = false;
     private boolean mSearchByManualDiSEqC = false;
+    private boolean mSearchByManualTKGS = false;
 
     private final DtvkitGlueClient.SignalHandler mHandler = (signal, data) -> {
         Log.d(TAG, "onSignal = " + signal + ", " + data);
@@ -140,7 +148,30 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                 }
             }
         } else if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_SKY_D) {
-            //
+            //TO DO
+        } else if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_TKGS) {
+            if (signal.equalsIgnoreCase("TkgsServiceListNotify")) {
+                List<String> list = new ArrayList<>();
+                try {
+                    JSONArray result = data.getJSONArray("result");
+                    if (result.length() == 0) {
+                        Log.w(TAG, " result is null");
+                        return;
+                    }
+                    for (int i = 0; i < result.length(); i++) {
+                        list.add(((JSONObject) result.get(i)).getString("servicelist_name"));
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                getActivity().runOnUiThread(() -> {
+                    showSearchInformationDialog(getContext(), "TkgsServiceListNotify", list, null);
+                });
+            } else if (signal.equals("TkgsVersionNotChangedNotify")) {
+                getActivity().runOnUiThread(() -> {
+                    showSearchInformationDialog(getContext(), "TkgsVersionNotChangedNotify", null, null);
+                });
+            }
         }
     };
 
@@ -325,7 +356,9 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "modulationMode onItemSelected position = " + position);
-                mDataManager.saveIntParameters(DataManager.KEY_MODULATION_MODE, position);
+                if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_DEFAULT) {
+                    mDataManager.saveIntParameters(DataManager.KEY_MODULATION_MODE, position);
+                }
             }
 
             @Override
@@ -343,7 +376,9 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         channelTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                updateChannelType(i);
+                if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_DEFAULT) {
+                    updateChannelType(i);
+                }
             }
 
             @Override
@@ -355,7 +390,9 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         serviceTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                updateServiceType(i);
+                if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_DEFAULT) {
+                    updateServiceType(i);
+                }
             }
 
             @Override
@@ -365,6 +402,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
 
         if (getArguments() != null) {
             mSearchByManualDiSEqC = getArguments().getBoolean("manualDiseqc", false);
+            mSearchByManualTKGS = getArguments().getBoolean("manualTKGS", false);
         }
 
         if (DataPresenter.getOperateType() != DvbsParameterManager.OPERATOR_DEFAULT) {
@@ -374,6 +412,12 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             fecMode.setEnabled(false);
             serviceTypeSpinner.setEnabled(false);
             channelTypeSpinner.setEnabled(false);
+
+            //Set default parameters
+            nit.setChecked(Boolean.TRUE);
+            searchMode.setSelection(DataManager.VALUE_SEARCH_MODE_SATELLITE);
+            channelTypeSpinner.setSelection(0);
+            serviceTypeSpinner.setSelection(0);
         }
 
         return view;
@@ -482,6 +526,12 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         setStrengthAndQualityStatus(String.format(Locale.getDefault(), "Strength: %d%%", strengthStatus), String.format(Locale.getDefault(), "Quality: %d%%", qualityStatus), String.format(Locale.getDefault(), "Channel: %d", found));
         if (progress >= 100) {
             sendFinishSearch(true);
+            if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_TKGS) {
+                String msg = mParameterManager.getTKGSUserMessage();
+                getActivity().runOnUiThread(() -> {
+                    showSearchInformationDialog(getContext(), "showUserMsg", null , msg);
+                });
+            }
         }
     }
 
@@ -665,7 +715,8 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     public void onStart() {
         super.onStart();
         Log.i(TAG, "onStart");
-        if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_M7) {
+        if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_M7
+                || (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_TKGS && mSearchByManualTKGS) ) {
             // auto start searching in m7 mode
             if (!mStartSearch) {
                 updateSearchUi(false, false, "Searching");
@@ -705,6 +756,11 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             args.put("quick");
             args.put(opType);
             args.put("fti");
+        } else if(opType == DvbsParameterManager.OPERATOR_TKGS) {
+            Log.i(TAG,"mSearchByManualTKGS " + mSearchByManualTKGS);
+            args.put("quick");
+            args.put(opType);
+            args.put(mSearchByManualTKGS ? "manual" :  "fti");
         } else {
             /*[scanmode, network, {lnblist: [{lnb:1},{lnb:2},..]}]*/
             String searchMode = DataManager.KEY_SEARCH_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_SEARCH_MODE)];
@@ -756,7 +812,8 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                     if (args != null) {
                         Log.i(TAG, "search parameter:" + args);
                         JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.startSearchEx", args);
-                        if (!resultObj.getString("data").equals("true")) {
+                        if (DataPresenter.getOperateType() != DvbsParameterManager.OPERATOR_TKGS &&
+                                !resultObj.getString("data").equals("true")) {
                             throw new IllegalStateException(resultObj.getString("data"));
                         }
                         success = true;
@@ -956,5 +1013,77 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                 mHideByDiSEqCMsg = false;
             }
         }
+    }
+
+    private void showSearchInformationDialog(final Context context, String searchType, List<String> data, String msg) {
+        if (context == null) {
+            return;
+        }
+        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        final AlertDialog alert = builder.create();
+        final View dialogView = View.inflate(context, R.layout.confirm_search, null);
+        final TextView dialogTitle = dialogView.findViewById(R.id.dialog_title);
+        final ListView listView = dialogView.findViewById(R.id.dialog_list);
+        final Button confirm = dialogView.findViewById(R.id.confirm);
+        final Button cancel = dialogView.findViewById(R.id.cancel);
+
+        if ("TkgsVersionNotChangedNotify".equals(searchType)) {
+            dialogTitle.setText(R.string.tkgs_setup_channel_list_change);
+            confirm.requestFocus();
+            alert.setCancelable(false);
+            cancel.setOnClickListener(v -> {
+                mParameterManager.setTKGSVersionCheckReply(false);
+                alert.dismiss();
+            });
+            confirm.setOnClickListener(v -> {
+                mParameterManager.setTKGSVersionCheckReply(true);
+                alert.dismiss();
+            });
+        } else if ("TkgsServiceListNotify".equals(searchType)) {
+            dialogTitle.setText(R.string.tkgs_setup_prefered_list_Type);
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(getActivity(),android.R.layout.simple_list_item_1, data);
+            listView.setAdapter(adapter);
+            listView.setVisibility(View.VISIBLE);
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    mParameterManager.setTKGSServiceList(data.get(position));
+                    alert.dismiss();
+                }
+            });
+            confirm.setVisibility(View.GONE);
+            cancel.setVisibility(View.GONE);
+        } else if ("showUserMsg".equals(searchType)) {
+            if (TextUtils.isEmpty(msg)) {
+                return;
+            }
+            dialogTitle.setText(msg);
+            confirm.setVisibility(View.GONE);
+            cancel.setVisibility(View.GONE);
+            alert.setCancelable(true);
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    alert.dismiss();
+                }
+            }, 30000);
+            alert.setOnKeyListener(new DialogInterface.OnKeyListener() {
+                @Override
+                public boolean onKey(DialogInterface dialogInterface, int i, KeyEvent keyEvent) {
+                    alert.dismiss();
+                    return false;
+                }
+            });
+        }
+
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        alert.setView(dialogView);
+        alert.show();
+        WindowManager.LayoutParams params = alert.getWindow().getAttributes();
+        params.width = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
+                500, context.getResources().getDisplayMetrics());
+        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        alert.getWindow().setAttributes(params);
+        alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
     }
 }

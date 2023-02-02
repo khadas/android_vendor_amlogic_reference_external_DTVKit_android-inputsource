@@ -16,6 +16,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -31,6 +32,10 @@ public class DataPresenter {
     public static final String FRAGMENT_OPERATOR_SUB_LIST = "Operator Sub List";
     public static final String FRAGMENT_SEARCH_UI = "Search UI";
     public static final String FRAGMENT_REGIONAL_CHANNELS = "Regional Channels";
+
+    public static final String FRAGMENT_KTGS = "TKGS";
+    public static final String FRAGMENT_KTGS_LOCATOR_LIST = "TKGS Locator List";
+    public static final String FRAGMENT_KTGS_HIDDEN_LOCATORS = "TKGS Hidden Locators";
 
     public static final String FRAGMENT_SERVICE_LIST = "Service List";
 
@@ -87,6 +92,8 @@ public class DataPresenter {
             mOperateType = DvbsParameterManager.OPERATOR_M7;
         } else if (operateType.contains("Airtel")) {
             mOperateType = DvbsParameterManager.OPERATOR_AIRTEL;
+        } else if (operateType.contains("TKGS")) {
+            mOperateType = DvbsParameterManager.OPERATOR_TKGS;
         } else {
             mOperateType = DvbsParameterManager.OPERATOR_DEFAULT;
         }
@@ -129,6 +136,46 @@ public class DataPresenter {
         return dataList;
     }
 
+    public List<String> getTKGSLocatorListName() {
+        List<String> dataList = new ArrayList<>();
+        JSONArray jsonArray = mParameterManager.getTKGSVisibleLocatorsList();
+        if (jsonArray != null && jsonArray.length() > 0) {
+            JSONObject locatorObj = null;
+            String locatorName = null;
+            for (int i = 0 ;i < jsonArray.length(); i++) {
+                try {
+                    locatorObj = jsonArray.getJSONObject(i);
+                    locatorName = locatorObj.getString("freq") + (locatorObj.getInt("polar") == 0 ? "H" : "V") + locatorObj.getString("symbol_rate") + "  " + locatorObj.getString("tkgspid");
+                    dataList.add(locatorName);
+                } catch (Exception e) {
+                    Log.d(TAG, "get locator data Exception = " + e.getMessage());
+                }
+
+            }
+        }
+        return dataList;
+    }
+
+    public List<String> getTKGSHiddenLocatorsInfo() {
+        List<String> dataList = new ArrayList<>();
+        JSONArray jsonArray = mParameterManager.getTKGSHiddenLocation();
+        if (jsonArray != null && jsonArray.length() > 0) {
+            JSONObject locatorObj = null;
+            String locatorName = null;
+            for (int i = 0 ;i < jsonArray.length(); i++) {
+                try {
+                    locatorObj = jsonArray.getJSONObject(i);
+                    locatorName = locatorObj.getString("freq") + (locatorObj.getInt("polar") == 0 ? "H" : "V") + locatorObj.getString("symbol_rate") + "  " + locatorObj.getString("tkgspid");
+                    dataList.add(locatorName);
+                } catch (Exception e) {
+                    Log.d(TAG, "get locator data Exception = " + e.getMessage());
+                }
+
+            }
+        }
+        return dataList;
+    }
+
     public int getDataForFragment(String idx, List<String> dataList) {
         int pos = -1;
         switch (idx) {
@@ -157,6 +204,14 @@ public class DataPresenter {
             case FRAGMENT_SPEC:
                 pos = 0;
                 dataList.addAll(getOperatorsTypeList(ParameterManager.SIGNAL_QPSK));
+                break;
+            case FRAGMENT_KTGS_LOCATOR_LIST:
+                pos = 0;
+                dataList.addAll(getTKGSLocatorListName());
+                break;
+            case FRAGMENT_KTGS_HIDDEN_LOCATORS:
+                pos = 0;
+                dataList.addAll(getTKGSHiddenLocatorsInfo());
                 break;
             default:
                 break;

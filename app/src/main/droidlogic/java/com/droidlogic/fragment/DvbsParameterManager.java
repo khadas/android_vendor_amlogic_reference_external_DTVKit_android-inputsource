@@ -43,6 +43,7 @@ public class DvbsParameterManager {
     public static final int OPERATOR_SKY_D = 1;
     public static final int OPERATOR_M7 = 2;
     public static final int OPERATOR_AIRTEL = 0x400;
+    public static final int OPERATOR_TKGS = 0x0301;
     public static final int OPERATOR_DEFAULT = 0xFFFF;
 
     public static final int CMD_OPERATOR_M7 = 0x01 << 16;
@@ -58,6 +59,20 @@ public class DvbsParameterManager {
     public static final int CMD_ACTION_SET_REGION = 0x07;
     public static final int CMD_ACTION_GET_SERVICE_LIST = 0x08;
     public static final int CMD_ACTION_SET_SERVICE_LIST = 0x09;
+
+    public static final int CMD_ACTION_GET_TKGS_OPERATION_MODE = 0x00040001;
+    public static final int CMD_ACTION_SET_TKGS_OPERATION_MODE = 0x00040002;
+    public static final int CMD_ACTION_GET_TKGS_LOCATION = 0x00040003;
+    public static final int CMD_ACTION_SET_TKGS_LOCATION = 0x00040004;
+    public static final int CMD_ACTION_GET_TKGS_CATEGORY = 0x00040005;
+    public static final int CMD_ACTION_SET_TKGS_VERSION_CHECK_REPLY = 0x00040006;
+    public static final int CMD_ACTION_GET_TKGS_USER_MESSAGE = 0x00040007;
+    public static final int CMD_ACTION_GET_TKGS_SERVICE_LIST = 0x00040008;
+    public static final int CMD_ACTION_SET_TKGS_SERVICE_LIST = 0x00040009;
+    public static final int CMD_ACTION_GET_TKGS_VERSION = 0x0004000A;
+    public static final int CMD_ACTION_GET_TKGS_HIDDEN_LOCATION = 0x0004000B;
+    public static final int CMD_ACTION_SET_TKGS_HIDDEN_TP_LOCATION = 0x0004000C;
+    public static final int CMD_ACTION_RESET_TKGS = 0x0004000D;
 
     private DvbsParameterManager(Context context) {
         this.mContext = context.getApplicationContext();

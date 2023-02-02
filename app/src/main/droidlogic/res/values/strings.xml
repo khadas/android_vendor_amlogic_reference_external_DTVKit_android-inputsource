@@ -27,6 +27,8 @@
     <string name="transponder_item_symbol">Symbol Rate</string>
     <string name="transponder_item_polarity">Polarity</string>
     <string name="transponder_item_motor">Motor</string>
+    <string name="locator_item_polarization">Polarization</string>
+    <string name="locator_item_pid">PID</string>
     <string name="satellite_item_no">No.</string>
     <string name="satellite_item_name">Satellite Name</string>
     <string name="satellite_item_longitude_direction">Longitude Direction</string>
@@ -82,8 +84,10 @@
     <string name="dialog_diseqc_1_2_quality">Quality</string>
     <string name="dialog_add_satellite">Add Satellite</string>
     <string name="dialog_add_transponder">Add Transponder</string>
+    <string name="dialog_add_locator">Add a new Locator</string>
     <string name="dialog_edit_satellite">Edit Satellite</string>
     <string name="dialog_edit_transponder">Edit Transponder</string>
+    <string name="dialog_edit_locator">Edit locator</string>
     <string name="dialog_remove_satellite">Remove Satellite</string>
     <string name="dialog_remove_transponder">Remove Transponder</string>
     <string name="dialog_add_satellite_name">Name</string>

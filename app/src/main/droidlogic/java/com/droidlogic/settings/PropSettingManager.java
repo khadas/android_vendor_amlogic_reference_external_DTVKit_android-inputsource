@@ -39,6 +39,8 @@ public class PropSettingManager {
     public static final String CI_MENU_ITEM_TEST = "vendor.sys.tv.test.ci_item";
     //EWS simulate test define
     public static final String EWS_TEST = "vendor.sys.tv.test.ews";
+    //TKGS
+    public static final String TKGS_DEBUG_ENABLE = "vendor.sys.tkgs.debug.enable";
 
     public static String getProp(String key) {
         String result = null;

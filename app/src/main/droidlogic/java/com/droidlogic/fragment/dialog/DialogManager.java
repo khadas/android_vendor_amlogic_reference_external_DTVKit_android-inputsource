@@ -85,6 +85,12 @@ public class DialogManager {
         customDialog.initRemoveSatelliteDialog(name);
         return customDialog;
     }
+
+    public CustomDialog buildAddAndEditLocatorDialog(String parameter, int position, String type, DialogCallBack callBack) {
+        CustomDialog customDialog = new CustomDialog(mContext, CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM, callBack, mParameterManager);
+        customDialog.initAddLocatorDialog(parameter, position, type);
+        return customDialog;
+    }
     /*public AlertDialog buildItemDialogByKey(String key, DialogCallBack callBack) {
         CustomDialog customDialog = new CustomDialog(mContext, CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM, callBack, mParameterManager);
         AlertDialog selectSingleItemDialog = customDialog.creatSelectSingleItemDialog(null, key, mParameterManager.getIntParameters(key));

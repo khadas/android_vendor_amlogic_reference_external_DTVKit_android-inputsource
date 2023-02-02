@@ -147,4 +147,18 @@
     <string name="strContinue">Continue</string>
     <string name="strSkip">Skip</string>
     <string name="strNoTeletext">No teletext</string>
+
+    <!-- tkgs strings-->
+    <string name="string_tkgs_operate_mode">Operate Mode</string>
+    <string name="string_tkgs_locator_list">TKGS Locator List</string>
+    <string name="string_tkgs_hidden_locator_list">TKGS Hidden Locators</string>
+    <string name="string_tkgs_prefer_list">Prefer List</string>
+    <string name="string_tkgs_update">TKGS Update</string>
+    <string name="string_tune_update_tip">TKGS tune update</string>
+    <string name="string_reset_table_version">Reset Table Version</string>
+    <string name="string_tkgs_locator_edit">*Keep pressing the OK key to edit locator list</string>
+    <string name="tkgs_setup_prefered_list_Type">Please setup Preferred list Type !</string>
+    <string name="tkgs_setup_channel_list_change">The channel list already up-to-date. Do you wish to continue with the download ?</string>
+    <string name="string_select_edit_method">Please select an editing method</string>
+
 </resources>

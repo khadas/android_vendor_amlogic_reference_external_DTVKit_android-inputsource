@@ -1,9 +1,11 @@
 package com.droidlogic.fragment;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.io.File;
+import java.util.Map;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -130,8 +132,12 @@ public class ParameterManager {
     public static final String KEY_ADD_TRANSPONDER = "add_transponder";
     public static final String KEY_EDIT_TRANSPONDER = "edit_transponder";
     public static final String KEY_REMOVE_TRANSPONDER = "remove_transponder";
+    public static final String KEY_ADD_LOCATOR = "add_locator";
+    public static final String KEY_EDIT_LOCATOR = "edit_locator";
 
     public static final String SECURITY_PASSWORD  = "security_password";
+    public static final String DVBS_OPERATOR_MODE  = "dvbs_operator_mode";
+    public static final String TKGS_OPERATOR_MODE  = "tkgs_operator_mode";
     public static final String TV_KEY_DTVKIT_SYSTEM = "tv_dtvkit_system";
     public static final String KEY_LAST_WATCHED_CHANNEL_ID = "key_last_watched_channel_id";
     public static final String KEY_ACTIVE_RECORD_COUNT = "key_active_record_count";
@@ -2835,6 +2841,217 @@ public class ParameterManager {
             e.printStackTrace();
         }
         return resultObj;
+    }
+
+    public String getTKGSOperatingMode() {
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_GET_TKGS_OPERATION_MODE);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+            if (obj != null) {
+                Log.d(TAG, "getTKGSOperatingMode resultObj:" + obj.toString());
+            } else {
+                Log.d(TAG, "getTKGSOperatingMode then get null");
+                return null;
+            }
+            return obj.getString("data");
+        } catch (Exception e) {
+            Log.i(TAG,"getTKGSOperatingMode fail");
+        }
+        return null;
+    }
+
+    public void setTKGSOperatingMode(String mode) {
+        JSONArray args = new JSONArray();
+        args.put(DvbsParameterManager.CMD_ACTION_SET_TKGS_OPERATION_MODE);
+        args.put(mode);
+        try {
+            DtvkitGlueClient.getInstance().request("Dvbs.scanControl", args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public JSONArray getTKGSVisibleLocatorsList() {
+        JSONArray jsonArray = new JSONArray();
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_GET_TKGS_LOCATION);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+            if (obj == null) {
+                return jsonArray;
+            }
+            return obj.getJSONArray("data");
+        } catch (Exception e) {
+            Log.i(TAG,"getTKGSVisibleLocatorsList fail");
+        }
+        return jsonArray;
+    }
+
+    public void setTKGSVisibleLocators(JSONArray jsonArray) {
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_SET_TKGS_LOCATION);
+            if (jsonArray.length() > 0) {
+                array.put(jsonArray);
+            }
+            DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+        } catch (Exception e) {
+            Log.i(TAG,"setTKGSVisibleLocators fail");
+        }
+    }
+
+    public JSONArray getTKGSHiddenLocation() {
+        JSONArray jsonArray = new JSONArray();
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_GET_TKGS_HIDDEN_LOCATION);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+            if (obj == null) {
+                return jsonArray;
+            }
+            return obj.getJSONArray("data");
+        } catch (Exception e) {
+            Log.i(TAG,"getTKGSLocation fail");
+        }
+        return jsonArray;
+    }
+
+    public void setTKGSHiddenTpLocation() {
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_SET_TKGS_HIDDEN_TP_LOCATION);
+            DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+        } catch (Exception e) {
+            Log.i(TAG,"getTKGSLocation fail");
+        }
+    }
+
+    public List<String> getTKGSAllPreferList() {
+        List<String> dataList = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_GET_TKGS_SERVICE_LIST);
+            array.put("all");
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+            if (obj == null) {
+                return dataList;
+            }
+            for (int i = 0; i < obj.getJSONArray("data").length(); i++) {
+                dataList.add(obj.getJSONArray("data").getJSONObject(i).getString("servicelist_name"));
+            }
+            return dataList;
+        } catch (Exception e) {
+            Log.i(TAG,"getTKGSAllPreferList fail");
+        }
+        return dataList;
+    }
+
+    public String getTKGSSelectPreferList() {
+        String select = null;
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_GET_TKGS_SERVICE_LIST);
+            array.put("selected");
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+            if (obj == null) {
+                return null;
+            }
+            select = obj.getJSONObject("data").getString("selected_servicelist_name");
+            return select;
+        } catch (Exception e) {
+            Log.i(TAG, "getTKGSSelectPreferList fail");
+        }
+        return select;
+    }
+
+    public void setTKGSServiceList(String listName) {
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_SET_TKGS_SERVICE_LIST);
+            array.put(listName);
+            DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+        } catch (Exception e) {
+            Log.i(TAG, "setTKGSServiceList fail");
+        }
+    }
+
+    public Map<Integer, String> getTKGSCategories() {
+        Map<Integer, String> map = new HashMap<>();
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_GET_TKGS_CATEGORY);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+            if (obj == null) {
+                return map;
+            }
+            JSONArray categories = obj.getJSONArray("data");
+            for (int i = 0; i < categories.length(); i++) {
+                JSONObject category = categories.getJSONObject(i);
+                map.put(category.getInt("category_id"), category.getString("name"));
+            }
+        } catch (Exception e) {
+            Log.i(TAG, "getTKGSCategories fail");
+        }
+        return map;
+    }
+
+    public String getTKGSUserMessage() {
+        String msg = null;
+        try {
+            JSONArray array = new JSONArray();
+            array.put(DvbsParameterManager.CMD_ACTION_GET_TKGS_USER_MESSAGE);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", array);
+            JSONArray message = obj.getJSONArray("data");
+            if (message.length() != 0) {
+                msg = message.getJSONObject(0).getString("msg");
+            }
+            return msg;
+        } catch (Exception e) {
+            Log.i(TAG, "getTKGSUserMessage fail");
+        }
+        return msg;
+    }
+
+    public void setTKGSVersionCheckReply(boolean versionCheckReply) {
+        JSONArray args = new JSONArray();
+        args.put(DvbsParameterManager.CMD_ACTION_SET_TKGS_VERSION_CHECK_REPLY);
+        args.put(versionCheckReply);
+        try {
+            DtvkitGlueClient.getInstance().request("Dvbs.scanControl", args);
+        } catch (Exception e) {
+            Log.i(TAG,"setTKGSVersionCheckReply fail");
+            e.printStackTrace();
+        }
+    }
+
+    public int getTKGSVersion() {
+        int version = -1;
+        JSONArray args = new JSONArray();
+        args.put(DvbsParameterManager.CMD_ACTION_GET_TKGS_VERSION);
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", args);
+            version = obj.getInt("data");
+            return version;
+        } catch (Exception e) {
+            Log.i(TAG,"getTKGSVersion fail");
+            e.printStackTrace();
+        }
+        return version;
+    }
+
+    public void resetTKGSVersion(String type) {
+        JSONArray args = new JSONArray();
+        args.put(DvbsParameterManager.CMD_ACTION_RESET_TKGS);
+        args.put(type);
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvbs.scanControl", args);
+
+        } catch (Exception e) {
+            Log.i(TAG,"getTKGSVersion fail");
+            e.printStackTrace();
+        }
+
     }
 
 }

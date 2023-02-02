@@ -33,6 +33,10 @@ import java.util.TimerTask;
 
 import com.droidlogic.dtvkit.inputsource.R;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class CustomDialog/* extends AlertDialog*/ {
 
     private static final String TAG = "CustomDialog";
@@ -1046,6 +1050,164 @@ public class CustomDialog/* extends AlertDialog*/ {
             }
         });
 
+        mAlertDialog.setView(mDialogView);
+    }
+
+    public void initAddLocatorDialog(String parameter, int locatorPosition, String type) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+        mAlertDialog = builder.create();
+        mDialogView = View.inflate(mContext, R.layout.add_locator, null);
+        mDialogTitle = (TextView) mDialogView.findViewById(R.id.dialog_title);
+        if ("Edit".equals(type)) {
+            mDialogTitle.setText(R.string.dialog_edit_locator);
+        } else if ("Add".equals(type)) {
+            mDialogTitle.setText(R.string.dialog_add_locator);
+        }
+        EditText locatorFrequency = (EditText) mDialogView.findViewById(R.id.locator_frequency_et);
+        EditText locatorSystemRate = (EditText) mDialogView.findViewById(R.id.symbol_rate_et);
+        EditText locatorPid = (EditText) mDialogView.findViewById(R.id.locator_pid_et);
+        Spinner polarizationSpinner = (Spinner) mDialogView.findViewById(R.id.polarization_spinner);
+        Button cancel = (Button) mDialogView.findViewById(R.id.cancel);
+        Button confirm = (Button) mDialogView.findViewById(R.id.confirm);
+        final String[] SPINNER_VALUES = {"H", "V"};
+        if (!TextUtils.isEmpty(parameter)) {
+            String[] para = new String[3];
+            String polarity = "";
+            int k = 0;
+            for (int i = 0; i < parameter.length(); i++) {
+                if (Character.isDigit(parameter.charAt(i))) {
+                    int j = i + 1;
+                    for (; j < parameter.length(); j++) {
+                        if (!Character.isDigit(parameter.charAt(j))) {
+                            if ("H".equals(String.valueOf(parameter.charAt(j))) || "V".equals(String.valueOf(parameter.charAt(j)))) {
+                                polarity = String.valueOf(parameter.charAt(j));
+                            }
+                            break;
+                        }
+                    }
+                    para[k++] = parameter.substring(i,j);
+                    i = j - 1;
+                }
+            }
+            locatorFrequency.setText(para[0]);
+            locatorSystemRate.setText(para[1]);
+            locatorPid.setText(para[2]);
+            polarizationSpinner.setSelection("H".equals(polarity) ? 0 : 1);
+            mSpinnerValue = polarity;
+        } else {
+            locatorFrequency.setHint("3000 ~ 4800, 10700 ~ 12750");
+            locatorSystemRate.setHint("1000 ~ 45000");
+            locatorPid.setHint("1 ~ 8191");
+            polarizationSpinner.setSelection(0);
+        }
+
+        polarizationSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int position, long l) {
+                mSpinnerValue = SPINNER_VALUES[position];
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+
+        cancel.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mAlertDialog != null) {
+                    mAlertDialog.dismiss();
+                }
+            }
+        });
+
+        confirm.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Bundle bundle = new Bundle();
+                String freq_edit_str = null;
+                String symbol_edit_str = null;
+                String pid_edit_str = null;
+                if (parameter != null) {
+                    freq_edit_str = !TextUtils.isEmpty(locatorFrequency.getText()) ? locatorFrequency.getText().toString() : (locatorFrequency.getHint() != null ? locatorFrequency.getHint().toString() : "0");
+                    symbol_edit_str = !TextUtils.isEmpty(locatorSystemRate.getText()) ? locatorSystemRate.getText().toString() : (locatorSystemRate.getHint() != null ? locatorSystemRate.getHint().toString() : "0");
+                    pid_edit_str = !TextUtils.isEmpty(locatorPid.getText()) ? locatorPid.getText().toString() : (locatorPid.getHint() != null ? locatorPid.getHint().toString() : "0");
+                } else {
+                    freq_edit_str = locatorFrequency.getText().toString();
+                    symbol_edit_str = locatorSystemRate.getText().toString();
+                    pid_edit_str = locatorPid.getText().toString();
+                }
+
+                int freq_edit = 0;
+                int symbol_edit = 0;
+                int pid_edit = 0;
+                boolean freq_sym_pid_valid = true;
+                try {
+                    freq_edit = Integer.parseInt(freq_edit_str);
+                    symbol_edit = Integer.parseInt(symbol_edit_str);
+                    pid_edit = Integer.parseInt(pid_edit_str);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                if (freq_edit < 3000 || (freq_edit > 4800 && freq_edit < 10700) || freq_edit > 12750) {
+                    freq_sym_pid_valid = false;
+                    locatorFrequency.setText("");
+                }
+                if (symbol_edit < 1000 || symbol_edit > 45000) {
+                    freq_sym_pid_valid = false;
+                    locatorSystemRate.setText("");
+                }
+                if (pid_edit < 1 || pid_edit > 8191) {
+                    freq_sym_pid_valid = false;
+                    locatorPid.setText("");
+                }
+                if (!freq_sym_pid_valid) {
+                    Toast.makeText(mContext, "Frequency or symbol or Pid out of range", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                JSONArray locatorsList = mParameterManager.getTKGSVisibleLocatorsList();
+
+                if (!TextUtils.isEmpty(parameter)) {
+                    try {
+                        JSONObject jsonObject = locatorsList.getJSONObject(locatorPosition);
+                        jsonObject.put("freq", freq_edit);
+                        jsonObject.put("polar","H".equals(mSpinnerValue) ? 0 : 1);
+                        jsonObject.put("symbol_rate", symbol_edit);
+                        jsonObject.put("tkgspid",pid_edit);
+                        locatorsList.put(locatorPosition, jsonObject);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    JSONObject object = new JSONObject();
+                    try {
+                        object.put("east",true);
+                        object.put("fec",0);
+                        object.put("freq",freq_edit);
+                        object.put("modula_system",0);
+                        object.put("modula_type",0);
+                        object.put("onid",0);
+                        object.put("polar","H".equals(mSpinnerValue) ? 0 : 1);
+                        object.put("pos",420);
+                        object.put("pos",420);
+                        object.put("satname","Turksat 42E");
+                        object.put("symbol_rate",symbol_edit);
+                        object.put("tkgspid",pid_edit);
+                        object.put("tsid",0);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    locatorsList.put(object);
+                }
+                mParameterManager.setTKGSVisibleLocators(locatorsList);
+                mDialogCallBack.onStatusChange(confirm, "Edit".equals(type) ? ParameterManager.KEY_EDIT_LOCATOR : ParameterManager.KEY_ADD_LOCATOR, bundle);
+                if (mAlertDialog != null) {
+                    mAlertDialog.dismiss();
+                }
+            }
+        });
         mAlertDialog.setView(mDialogView);
     }
 
