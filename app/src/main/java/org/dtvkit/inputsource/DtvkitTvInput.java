@@ -3900,11 +3900,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }*/
             } else if (TextUtils.equals(DataManager.ACTION_DTV_ENABLE_AUDIO_AD, action)) {
                 mAudioADAutoStart = data.getInt(DataManager.PARA_ENABLE) == 1;
-                boolean recover = data.getBoolean("recover", false);
+                boolean recover = data.getBoolean("recover", true);
                 Log.d(TAG, "do private cmd: ACTION_DTV_ENABLE_AUDIO_AD: " + mAudioADAutoStart
                         + ", recover = " + recover);
                 boolean ret = setAdAssociate(mAudioADAutoStart);
-                playerInitAssociateDualSupport(Boolean.compare(ret, false), recover);
+                int index = Boolean.compare(ret, false);
+                playerInitAssociateDualSupport(index, recover);
+                if (!recover) {
+                    // singlePID Dolby AD Cert.
+                    playerSetADMixLevel(index, 0);
+                    playerSetADVolume(index, 0);
+                }
                 if (mHbbTvManager != null) {
                     mHbbTvManager.setAudioDescriptions();
                 }
@@ -5297,10 +5303,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             + ", mAudioADVolume = " + mAudioADVolume);
                 playerSetADMixLevel(index, mAudioADMixingLevel);
                 playerSetADVolume(index, mAudioADVolume);
-            } else {
-                // Dolby AD Cert.
-                playerSetADMixLevel(index, 0);
-                playerSetADVolume(index, 0);
             }
             return true;
         }
