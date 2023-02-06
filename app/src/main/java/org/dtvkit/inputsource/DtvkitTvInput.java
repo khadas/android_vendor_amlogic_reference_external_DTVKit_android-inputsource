@@ -4463,7 +4463,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 /*trigger the playback exit*/
                                 currentPosition = recordedProgram.getRecordingDurationMillis();
                             }
-
+                            notifySessionEvent(ConstantManager.EVENT_PLAY_STOP, null);
                             break;
                         case "starting":
                             boolean isAv = true;
