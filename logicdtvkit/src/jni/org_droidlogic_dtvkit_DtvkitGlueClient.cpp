@@ -79,6 +79,7 @@ static int teletext_region_id = 0;
 
 #define START_SUB_TYPE_CLOSED_CAPTION -5
 #define CALLBACK_SUB_TYPE_CLOSED_CAPTION 10
+#define SUBTITLE_SUB_TYPE_ARIB 16
 #define TT_EVENT_INDEXPAGE 14
 #define TT_EVENT_GO_TO_PAGE 30
 #define TT_EVENT_GO_TO_SUBTITLE 31
@@ -86,7 +87,7 @@ static int teletext_region_id = 0;
 
 #define FMQ_QUEUE_SIZE 188
 
-static void postSubtitleDataEx(int type, int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, const char *data);
+static void postSubtitleDataEx(int type, int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, const char *data, int size);
 static void clearSubtitleDataEx();
 static void setAFDToDVBCore(int dec_id, uint8_t afd);
 static void postMixVideoEvent(int event);
@@ -101,7 +102,7 @@ void SubtitleDataListenerImpl::onSubtitleEvent(const char *data, int size, int p
             int x, int y, int width, int height,
             int videoWidth, int videoHeight, int cmd) {
     if (cmd) {
-        postSubtitleDataEx(parserType, width, height, x, y, videoWidth, videoHeight, data);
+        postSubtitleDataEx(parserType, width, height, x, y, videoWidth, videoHeight, data, size);
     } else {
         clearSubtitleDataEx();
     }
@@ -199,7 +200,8 @@ static void postPidFilterData(int length, uint8_t* data)
 }
 
 
-static void postSubtitleDataEx(int type, int width, int height, int dst_x, int dst_y, int dst_width, int dst_height,const char *data)
+static void postSubtitleDataEx(int type, int width, int height, int dst_x, int dst_y,
+    int dst_width, int dst_height,const char *data, int size)
 {
     //ALOGD("callback sendSubtitleData data = %p", data);
     bool attached = false;
@@ -223,6 +225,12 @@ static void postSubtitleDataEx(int type, int width, int height, int dst_x, int d
                 //env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, type, 0, 0, dst_x, dst_y, 0, 0, NULL);
                 //env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, type, 0, 0, dst_x, dst_y, 0, 9999, NULL);
                 env->DeleteLocalRef(array);
+            } else if (size > 0 && type == SUBTITLE_SUB_TYPE_ARIB) {
+                jintArray array = env->NewIntArray(size);
+                env->SetIntArrayRegion(array, 0, size, (jint*)data);
+                env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, type, width, height, dst_x, dst_y,
+                   dst_width, dst_height, array);
+                env->DeleteLocalRef(array);
             } else {
                 env->CallVoidMethod(DtvkitObject, notifySubtitleCallbackEx, type, width, height, dst_x, dst_y,
                    dst_width, dst_height, NULL);
@@ -237,7 +245,6 @@ static void postSubtitleDataEx(int type, int width, int height, int dst_x, int d
 
 static void clearSubtitleDataEx()
 {
-    //ALOGD("callback sendSubtitleData data = %p", data);
     bool attached = false;
     JNIEnv *env = getJniEnv(&attached);
 

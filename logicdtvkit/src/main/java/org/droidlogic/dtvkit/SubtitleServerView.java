@@ -3,16 +3,23 @@ package org.droidlogic.dtvkit;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.util.Log;
 import android.view.View;
 
 import org.json.JSONArray;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Vector;
 
 public class SubtitleServerView extends View {
     private final String TAG = "SubtitleServerView";
@@ -24,6 +31,7 @@ public class SubtitleServerView extends View {
     boolean mTtxTransparent = false;
 
     static final int SUBTITLE_SUB_TYPE_TTX = 9;
+    static final int SUBTITLE_SUB_TYPE_ARIB = 16;
     static final int MSG_SUBTITLE_SHOW_CLOSED_CAPTION = 5;
     protected static final int MSG_SET_TELETEXT_MIX_NORMAL = 6;
     protected static final int MSG_SET_TELETEXT_MIX_TRANSPARENT = 7;
@@ -32,7 +40,7 @@ public class SubtitleServerView extends View {
     public final DtvkitGlueClient.SubtitleListener mSubListener = new DtvkitGlueClient.SubtitleListener() {
         @Override
         public void drawEx(int parserType, int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, int[] data) {
-            Log.v(TAG, "SubtitleServiceDraw: type= " + parserType + ", srcw= " + src_width +
+            Log.v(TAG, "SubtitleServerView: type= " + parserType + ", srcw= " + src_width +
                     ", srch= " + src_height + ", x= " + dst_x + ", y= " + dst_y +
                     ", dst_w= " + dst_width + ", dst_h= " + dst_height + ", pause= " + mPauseExDraw);
             mHandler.post(() -> {
@@ -40,7 +48,18 @@ public class SubtitleServerView extends View {
                     return;
                 }
                 /* TODO Temporary private usage of API. Add explicit methods if keeping this mechanism */
-                if (src_width == 0 || src_height == 0) {
+                if (parserType == SUBTITLE_SUB_TYPE_ARIB) {
+                    String text = intArrayToString(data);
+                    //
+                    if (overlay1 == null) {
+                        /* TODO The overlay size should come from the tif (and be updated on onOverlayViewSizeChanged) */
+                        overlay1 = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
+                    }
+                    Canvas canvas = new Canvas(overlay1);
+                    canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+                    drawLinesText(canvas, text);
+                    postInvalidate();
+                } else if (src_width == 0 || src_height == 0) {
                     if (dst_width == 9999 && overlay1 != null) {
                         /* 9999 dst_width indicates the overlay should be cleared */
                         Canvas canvas = new Canvas(overlay1);
@@ -112,6 +131,38 @@ public class SubtitleServerView extends View {
             });
         }
 
+        private String intArrayToString(int[] data) {
+            StringBuilder ss = new StringBuilder();
+            if (data == null) {
+                return "";
+            }
+            byte [] bytes = new byte [data.length];
+            int numberOfValid = data.length / 4;
+            int modOfChar = data.length % 4;
+            for (int i = 0; i <= numberOfValid; i++) {
+                if (i < numberOfValid) {
+                    bytes[i*4] = (byte) (data[i] & 0xFF);
+                    bytes[i*4 + 1] = (byte) ((data[i] >> 8) & 0xFF);
+                    bytes[i*4 + 2] = (byte) ((data[i] >> 16) & 0xFF);
+                    bytes[i*4 + 3] = (byte) ((data[i] >> 24) & 0xFF);
+                } else {
+                    if (modOfChar > 0) {
+                        bytes[i*4] = (byte) (data[i] & 0xFF);
+                        modOfChar--;
+                    }
+                    if (modOfChar > 0) {
+                        bytes[i*4 + 1] = (byte) ((data[i] >> 8) & 0xFF);
+                        modOfChar--;
+                    }
+                    if (modOfChar > 0) {
+                        bytes[i*4 + 2] = (byte) ((data[i] >> 16) & 0xFF);
+                        modOfChar--;
+                    }
+                }
+            }
+            return new String(bytes, StandardCharsets.UTF_8);
+        }
+
         private boolean playerIsTeletextStarted() {
             boolean on = false;
             try {
@@ -134,7 +185,7 @@ public class SubtitleServerView extends View {
             Message msg = mHandler.obtainMessage();
             msg.what = MSG_SUBTITLE_SHOW_CLOSED_CAPTION;
             msg.obj = json;
-            msg.arg1 = bShow == false ? 0 : 1;
+            msg.arg1 = !bShow ? 0 : 1;
             mHandler.sendMessage(msg);
         }
 
@@ -219,5 +270,86 @@ public class SubtitleServerView extends View {
         if (overlay1 != null) {
             canvas.drawBitmap(overlay1, src, dst, null);
         }
+    }
+
+    public Vector<String> getTextLinesVector(TextPaint paint, String content, float maxHeight,
+                                             float maxWidth) {
+        Vector<String> mString = new Vector<>();
+        int mRealLine = 0;
+        char ch;
+        int w = 0;
+        int istart = 0;
+//        float mFontHeight = getFontHeight(paint);
+//        int mMaxLinesNum = (int) (maxHeight / mFontHeight);
+        int mMaxLinesNum = 3;
+        Log.d(TAG, "content:" + content);
+        int count = content.length();
+        for (int i = 0; i < count; i++) {
+            ch = content.charAt(i);
+            float[] widths = new float[1];
+            String str = String.valueOf(ch);
+            paint.getTextWidths(str, widths);
+            if (ch == '\n') {
+                mRealLine++;
+                mString.addElement(content.substring(istart, i));
+                istart = i + 1;
+                w = 0;
+            } else {
+                w += (int) Math.ceil(widths[0]);
+                if (w > maxWidth) {
+                    mRealLine++;
+                    mString.addElement(content.substring(istart, i));
+                    istart = i;
+                    i--;
+                    w = 0;
+                } else {
+                    if (i == count - 1) {
+                        mRealLine++;
+                        mString.addElement(content.substring(istart, count));
+                    }
+                }
+            }
+            if (mRealLine == mMaxLinesNum) {
+                break;
+            }
+        }
+        return mString;
+    }
+
+    private float getFontHeight(TextPaint paint) {
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        return fm.bottom - fm.top;
+    }
+
+    private void drawLinesText(Canvas canvas, String text) {
+        Rect rectF = new Rect(200, 800, 1720, 1000);
+        TextPaint textPaint = new TextPaint();
+        textPaint.setColor(Color.YELLOW);
+        textPaint.setTextSize(40);
+        Vector<String> vector = getTextLinesVector(textPaint, text, rectF.height(), rectF.width());
+//
+//        Paint paint = new Paint();
+//        paint.setColor(Color.BLACK);
+//        paint.setAlpha(200);
+//        canvas.drawRect(rectF, paint);
+        text = vectorToString(vector);
+        //auto wrap
+        StaticLayout layout = new StaticLayout(text, textPaint, (int) rectF.width(),
+                Layout.Alignment.ALIGN_NORMAL, 1.0F, 0.0F, true);
+        canvas.save();
+        textPaint.setTextAlign(Paint.Align.CENTER);
+        // position
+        canvas.translate(rectF.left + rectF.width() / 2,
+                rectF.top + (rectF.height() - getFontHeight(textPaint) * vector.size()) / 2);
+        layout.draw(canvas);
+        canvas.restore();
+    }
+
+    private String vectorToString(Vector<String> strV) {
+        StringBuilder ss = new StringBuilder();
+        for (String s : strV) {
+            ss.append(s).append("\n");
+        }
+        return ss.toString();
     }
 }
