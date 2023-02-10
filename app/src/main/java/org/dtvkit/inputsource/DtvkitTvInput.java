@@ -2884,8 +2884,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 //}
             }
 
-            boolean mainMuteStatus = playerGetMute(); // must before stop
-
+//            boolean mainMuteStatus = playerGetMute(); // must before stop
+            boolean mainMuteStatus = true; //Except for FCC, the Mute status of other scenes is controlled by LiveTV
             onFinish(mhegTune, FeatureUtil.getFeatureSupportFcc() && !getFccBufferUri().isEmpty());
             userDataStatus(false);
 
