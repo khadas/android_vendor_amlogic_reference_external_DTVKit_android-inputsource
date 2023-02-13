@@ -3327,6 +3327,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                    Log.i(TAG, "Cannot find " + channelUri
                         + ", tuneTo _ID = " + firstDbValidChannel.getId()
                         + " " + firstDbValidChannel.getDisplayName());
+                   notifyChannelRetuned(TvContract.buildChannelUri(firstDbValidChannel.getId()));
                 }
                 targetChannel = firstDbValidChannel;
             }
