@@ -700,10 +700,11 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         Log.i(TAG, "initSearchParameter OperateType = " + opType);
         if (opType == DvbsParameterManager.OPERATOR_M7
             || opType == DvbsParameterManager.OPERATOR_ASTRA_HD_PLUS
-            || opType == DvbsParameterManager.OPERATOR_SKY_D) {
+            || opType == DvbsParameterManager.OPERATOR_SKY_D
+            || opType == DvbsParameterManager.OPERATOR_AIRTEL) {
             args.put("quick");
             args.put(opType);
-            args.put(true);
+            args.put("fti");
         } else {
             /*[scanmode, network, {lnblist: [{lnb:1},{lnb:2},..]}]*/
             String searchMode = DataManager.KEY_SEARCH_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_SEARCH_MODE)];

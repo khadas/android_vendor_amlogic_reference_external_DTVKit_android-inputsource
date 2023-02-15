@@ -42,6 +42,7 @@ public class DvbsParameterManager {
     public static final int OPERATOR_ASTRA_HD_PLUS = 0;
     public static final int OPERATOR_SKY_D = 1;
     public static final int OPERATOR_M7 = 2;
+    public static final int OPERATOR_AIRTEL = 0x400;
     public static final int OPERATOR_DEFAULT = 0xFFFF;
 
     public static final int CMD_OPERATOR_M7 = 0x01 << 16;

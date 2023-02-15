@@ -85,6 +85,8 @@ public class DataPresenter {
             mOperateType = DvbsParameterManager.OPERATOR_ASTRA_HD_PLUS;
         } else if (operateType.contains("M7")) {
             mOperateType = DvbsParameterManager.OPERATOR_M7;
+        } else if (operateType.contains("Airtel")) {
+            mOperateType = DvbsParameterManager.OPERATOR_AIRTEL;
         } else {
             mOperateType = DvbsParameterManager.OPERATOR_DEFAULT;
         }
