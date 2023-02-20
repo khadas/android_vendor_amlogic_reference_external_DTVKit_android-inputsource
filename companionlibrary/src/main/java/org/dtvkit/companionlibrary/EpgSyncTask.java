@@ -386,6 +386,10 @@ public class EpgSyncTask {
             }
             Log.i(TAG, "Send SYNC_FINISHED broadcast");
             LocalBroadcastManager.getInstance(mMainService.getApplicationContext()).sendBroadcast(intent);
+
+            if (reason == 0) {
+                getEventList();
+            }
         }
 
         private boolean isCancelled() {
@@ -433,12 +437,6 @@ public class EpgSyncTask {
                     return ERROR_EPG_SYNC_CANCELED;
                 }
             }
-
-            Intent intent = new Intent();
-            intent.putExtra("inputId", mInputId);
-            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, syncSignalType);
-            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
-            run(intent);
             return 0;
         }
 
@@ -448,6 +446,16 @@ public class EpgSyncTask {
             int ret = doInBackground();
             endCall(ret);
             return Integer.toString(ret);
+        }
+
+        private void getEventList() {
+            Intent intent = new Intent();
+            String syncSignalType = mBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, null);
+            intent.putExtra("inputId", mInputId);
+            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, syncSignalType);
+            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
+            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, "finishEpgSync");
+            mMainService.startService(intent);
         }
     }
 }
