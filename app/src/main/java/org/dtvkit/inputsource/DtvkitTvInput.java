@@ -1667,6 +1667,28 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
             startService(intent);
             sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);
+        } else if (signal.equals("CiplusUpdateService")) {
+            //update CiOpSearchRequest search result
+            Log.i(TAG, "CiplusUpdateService");
+            Bundle parameters = new Bundle();
+            parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
+
+            Intent intent = new Intent(this, DtvkitEpgSync.class);
+            intent.putExtra("inputId", mInputId);
+            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
+            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
+            startService(intent);
+            if (TextUtils.isEmpty(mDynamicDbSyncTag)) {
+                mDynamicDbSyncTag = signal;
+                sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);
+            } else if (TextUtils.equals(signal, mDynamicDbSyncTag)) {
+                DtvkitTvInputSession mainSession = getMainTunerSession();
+                if (mainSession != null) {
+                    Bundle bundle = new Bundle();
+                    bundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_CHANNEL_UPDATED);
+                    mainSession.sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, bundle);
+                }
+            }
         }
     };
 
@@ -4703,27 +4725,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
                     startService(intent);
-                } else if (signal.equals("CiplusUpdateService")) {
-                    //update CiOpSearchRequest search result
-                    Log.i(TAG, "CiplusUpdateService");
-                    Bundle parameters = new Bundle();
-                    parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
-
-                    Intent intent = new Intent(outService, DtvkitEpgSync.class);
-                    intent.putExtra("inputId", mInputId);
-                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
-                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
-                    startService(intent);
-                    if (TextUtils.isEmpty(mDynamicDbSyncTag)) {
-                        mDynamicDbSyncTag = signal;
-                        sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);
-                    } else {
-                        //notify update result after 3s
-                        if (mHandlerThreadHandle != null) {
-                            mHandlerThreadHandle.removeMessages(MSG_CI_UPDATE_PROFILE_OVER);
-                            mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CI_UPDATE_PROFILE_OVER, MSG_CI_UPDATE_PROFILE_OVER_DELAY);
-                        }
-                    }
                 } else if (signal.equals("CiTuneServiceInfo")) {
                     //tuned by dtvkit directly and then notify app
                     int s_id = 0, t_id = 0, onet_id = 0;
