@@ -326,7 +326,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     //can't init here as storage may not be ready
                 } else if (action.equals(Intent.ACTION_BOOT_COMPLETED)) {
                     Log.d(TAG, "onReceive ACTION_BOOT_COMPLETED");
-                    setCIPlusServiceReady();
                     sendEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY);
                 } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                     updateTKGSAlarmTime();
@@ -455,6 +454,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 Bundle request = new Bundle();
                                 request.putString(ConstantManager.CI_PLUS_COMMAND,
                                         ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_FINISHED);
+                                request.putBoolean(ConstantManager.VALUE_CI_PLUS_SEARCH_RESULT_IS_OPERATOR_PROFILE_SUPPORTED,
+                                        isOperatorProfileSupported());
                                 mainSession.sendBundleToAppByTif(action, request);
                             }
                             break;
@@ -1198,6 +1199,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             initDtvkitTvInput(true);
             session = new DtvkitMainTvSession(this);
         }
+        setCIPlusServiceReady();
         addTunerSession(session);
         return session;
     }
@@ -4073,10 +4075,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else {
                     Log.e(TAG, "ACTION_START_FVP_APP error  HbbTvManager is null");
                 }
-            } else if (TextUtils.equals(ConstantManager.ACTION_LINK_BARKER_CHANNEL, action)) {
-                linkBarkerChannel();
-            } else if (TextUtils.equals(ConstantManager.ACTION_LEAVE_BARKER_CHANNEL, action)) {
-                leaveBarkerChannel();
             } else if (TextUtils.equals("pvr_seek_information", action)) {
                 long seekTime = data.getLong("pvr_seek_time");
                 playerSeekTo(seekTime / 1000);
@@ -4759,10 +4757,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         channelBundle.putInt(ConstantManager.VALUE_CI_PLUS_TUNE_QUIETLY, 0);
                         sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, channelBundle);
                     }
-                } else if (signal.equals("CIPLUS_PROFILE_SCAN_REQUIRED ")) {
+                } else if (signal.equals("CIPLUS_PROFILE_SCAN_REQUIRED")) {
                     //tell app to search related module
                     try {
-                        int module = data.getInt("data");
+                        int module = data.getInt("value");
                         Log.d(TAG, "Ci operator request, need yes/no. module no. " + module);
                         if (PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_SEARCH_TEST, false)) {
                             if (mMainHandle != null) {
@@ -4786,6 +4784,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             Log.d(TAG, "Ci operator search has finished");
                             Bundle finishBundle = new Bundle();
                             finishBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_SEARCH_FINISHED);
+                            finishBundle.putBoolean(ConstantManager.VALUE_CI_PLUS_SEARCH_RESULT_IS_OPERATOR_PROFILE_SUPPORTED, isOperatorProfileSupported());
                             sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, finishBundle);
                         }
                     } catch (Exception e) {
@@ -7946,24 +7945,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }
 
-    public void linkBarkerChannel() {
-        try {
-            JSONArray args = new JSONArray();
-            DtvkitGlueClient.getInstance().request("Dvb.LinkBarkerChannel", args);
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-        }
-    }
-
-    public void leaveBarkerChannel() {
-        try {
-            JSONArray args = new JSONArray();
-            DtvkitGlueClient.getInstance().request("Dvb.LeaveBarkerChannel", args);
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-        }
-    }
-
     private boolean checkActiveRecording(JSONObject recordingStatus) {
         boolean active = false;
 
@@ -8276,6 +8257,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
         return uri;
+    }
+
+    private boolean isOperatorProfileSupported() {
+        boolean support = false;
+        try {
+            JSONObject jsonObject = DtvkitGlueClient.getInstance()
+                    .request("CIPlus.isOperatorProfileSupported", new JSONArray());
+            if (jsonObject != null) {
+                support = "support".equals(jsonObject.optString("data"));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        return support;
     }
 
     private boolean recordingRemoveScheduledRecording(String uri) {

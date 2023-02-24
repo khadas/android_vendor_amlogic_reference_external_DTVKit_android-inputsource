@@ -114,6 +114,7 @@ public class ConstantManager {
     public static final String VALUE_CI_PLUS_COMMAND_ECI_CONTENT_PROTECTION = "eci_content_protection";
     public static final String VALUE_CI_PLUS_SEARCH_MODULE = "search_module";
     public static final String VALUE_CI_PLUS_CHANNEL = "host_control_channel";
+    public static final String VALUE_CI_PLUS_SEARCH_RESULT_IS_OPERATOR_PROFILE_SUPPORTED = "is_operator_profile_supported";
     public static final String VALUE_CI_PLUS_TUNE_TYPE = "tune_type";
     public static final String VALUE_CI_PLUS_TUNE_TYPE_SERVICE = "service_tune";
     public static final String VALUE_CI_PLUS_TUNE_TYPE_TRANSPORT= "transport_tune";
@@ -143,9 +144,6 @@ public class ConstantManager {
     public static final String ACTION_EWS = "action_ews";
 
     public static final String ACTION_AUDIO_TRACK_SELECTED = "action_audio_track_selected";
-
-    public static final String ACTION_LINK_BARKER_CHANNEL = "action_link_baker_channel";
-    public static final String ACTION_LEAVE_BARKER_CHANNEL = "action_leave_baker_channel";
 
     public static final String ACTION_TKGS_START_TUNE_UPDATE = "action_tkgs_start_tune_update";
 
