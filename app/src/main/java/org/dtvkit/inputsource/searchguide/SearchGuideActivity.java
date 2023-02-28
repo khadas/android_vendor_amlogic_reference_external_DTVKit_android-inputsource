@@ -84,6 +84,11 @@ public class SearchGuideActivity extends Activity implements OnNextListener {
                 default:
                     break;
             }
+            //init pvr set flag when inited
+            String firstPvrFlag = PvrStatusConfirmManager.read(this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
+            if (!PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(firstPvrFlag)) {
+                PvrStatusConfirmManager.store(this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST);
+            }
             startActivityForSource(currentDvbSource, 0);
         }
     }
