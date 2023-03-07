@@ -2,31 +2,36 @@ package org.droidlogic.dtvkit;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.PorterDuff;
 import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.icu.text.SimpleDateFormat;
+import android.icu.util.Calendar;
+import android.icu.util.GregorianCalendar;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.text.Layout;
-import android.text.StaticLayout;
-import android.text.TextPaint;
+import android.os.SystemProperties;
 import android.util.Log;
-import android.view.View;
+import android.view.Gravity;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Vector;
+import java.util.Locale;
 
-public class SubtitleServerView extends View {
+public class SubtitleServerView extends FrameLayout {
     private final String TAG = "SubtitleServerView";
-    Bitmap overlay1 = null;
-    Rect src, dst;
-    private Handler mHandler = null;
-
+    Rect displayRect;
+    private final Handler mHandler;
+    private final ImageView imageView;
+    private final TextView textView;
     int mPauseExDraw = 0;
     boolean mTtxTransparent = false;
 
@@ -37,102 +42,30 @@ public class SubtitleServerView extends View {
     protected static final int MSG_SET_TELETEXT_MIX_TRANSPARENT = 7;
     protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 8;
 
-    public final DtvkitGlueClient.SubtitleListener mSubListener = new DtvkitGlueClient.SubtitleListener() {
+    private final AriBRunnable mAriBRunnable = new AriBRunnable();
+    private final NormalRunnable mNormalRunnable = new NormalRunnable();
+    private final Runnable mClearRunnable = new Runnable() {
         @Override
-        public void drawEx(int parserType, int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, int[] data) {
-            Log.v(TAG, "SubtitleServerView: type= " + parserType + ", srcw= " + src_width +
-                    ", srch= " + src_height + ", x= " + dst_x + ", y= " + dst_y +
-                    ", dst_w= " + dst_width + ", dst_h= " + dst_height + ", pause= " + mPauseExDraw);
-            mHandler.post(() -> {
-                if (mPauseExDraw > 0) {
-                    return;
-                }
-                /* TODO Temporary private usage of API. Add explicit methods if keeping this mechanism */
-                if (parserType == SUBTITLE_SUB_TYPE_ARIB) {
-                    String text = intArrayToString(data);
-                    //
-                    if (overlay1 == null) {
-                        /* TODO The overlay size should come from the tif (and be updated on onOverlayViewSizeChanged) */
-                        overlay1 = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
-                    }
-                    Canvas canvas = new Canvas(overlay1);
-                    canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                    drawLinesText(canvas, text);
-                    postInvalidate();
-                } else if (src_width == 0 || src_height == 0) {
-                    if (dst_width == 9999 && overlay1 != null) {
-                        /* 9999 dst_width indicates the overlay should be cleared */
-                        Canvas canvas = new Canvas(overlay1);
-                        canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                        postInvalidate();
-                    }
-                } else {
-                    if (data.length == 0)
-                        return;
-                    /* Build an array of ARGB_8888 pixels as signed ints and add this part to the region */
-                    if (overlay1 == null) {
-                        /* TODO The overlay size should come from the tif (and be updated on onOverlayViewSizeChanged) */
-                        overlay1 = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888);
-                        /* Clear the overlay that will be drawn initially */
-                        //Canvas canvas = new Canvas(overlay1);
-                        //canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                    }
-                    Canvas canvas = new Canvas(overlay1);
-                    boolean ttxPageTmpTrans = (dst_x == 1);//ttx not use x,y as coords
-                    Rect overlay_dst = new Rect(0, 0, overlay1.getWidth(), overlay1.getHeight());
-                    Bitmap region = Bitmap.createBitmap(data, 0, src_width, src_width, src_height, Bitmap.Config.ARGB_8888);
-                    int x = dst_x;
-                    int y = dst_y;
-                    int w = src_width;
-                    int h = src_height;
-                    int dw = dst_width;
-                    int dh = dst_height;
-                    if (parserType == SUBTITLE_SUB_TYPE_TTX) {
-                        x = 120;//ttx fixed with 480x525 shown in 720x480
-                        y = 0;
-                        w = 480;
-                        h = 525;
-                        dw = 720;
-                        dh = 480;
-                    }
-
-                    if ((dw == 0)
-                            || (dh == 0)
-                            || (dw < (w + x))
-                            || (dh < (h + y))) {
-                        overlay_dst.left = x;
-                        overlay_dst.top = y;
-                        overlay_dst.right = overlay1.getWidth() - overlay_dst.left;
-                        overlay_dst.bottom = overlay1.getHeight() - overlay_dst.top;
-                    } else {
-                        if (x > 0) {
-                            float scaleX = (float) (overlay1.getWidth()) / (float) (dw);
-                            overlay_dst.left = (int) (scaleX * x);
-                            overlay_dst.right = (int) (scaleX * (w + x));
-                        }
-                        if (y > 0) {
-                            float scaleY = (float) (overlay1.getHeight()) / (float) (dh);
-                            overlay_dst.top = (int) (scaleY * y);
-                            overlay_dst.bottom = (int) (scaleY * (h + y));
-                        }
-                    }
-                    if (playerIsTeletextStarted() && !mTtxTransparent && !ttxPageTmpTrans) {
-                        canvas.drawColor(0xFF000000);
-                    } else {
-                        canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                    }
-                    Paint paint = new Paint();
-                    paint.setAntiAlias(true);
-                    paint.setFilterBitmap(true);
-                    canvas.drawBitmap(region, null, overlay_dst, paint);
-                    region.recycle();
-                    postInvalidate();
-                }
-            });
+        public void run() {
+            setBackgroundColor(Color.TRANSPARENT);
+            imageView.setImageBitmap(null);
+            textView.setText(null);
         }
+    };
 
+    private class AriBRunnable implements Runnable {
+        int[] data;
+        public void setData(int[] data) {
+            this.data = data;
+        }
+        @Override
+        public void run() {
+            String text = intArrayToString(data);
+            textView.setText(text);
+            data = null;
+            invalidate();
+        }
         private String intArrayToString(int[] data) {
-            StringBuilder ss = new StringBuilder();
             if (data == null) {
                 return "";
             }
@@ -161,6 +94,149 @@ public class SubtitleServerView extends View {
                 }
             }
             return new String(bytes, StandardCharsets.UTF_8);
+        }
+    }
+
+    private class NormalRunnable implements Runnable {
+        int xStart;
+        int yStart;
+        int srcWidth;
+        int srcHeight;
+        int dstWidth;
+        int dstHeight;
+        int parserType;
+        boolean teletextStarted;
+        Bitmap region;
+
+        public void setRegion(Bitmap region) {
+            this.region = region;
+        }
+
+        public void setData(int parserType, int src_width, int src_height,
+                            int dst_x, int dst_y, int dst_width, int dst_height,
+                            boolean teletextStarted) {
+            this.parserType = parserType;
+            this.srcWidth = src_width;
+            this.srcHeight = src_height;
+            this.xStart = dst_x;
+            this.yStart = dst_y;
+            this.dstWidth = dst_width;
+            this.dstHeight = dst_height;
+            this.teletextStarted = teletextStarted;
+        }
+        @Override
+        public void run() {
+            if (srcWidth == 0 || srcHeight == 0) {
+                return;
+            }
+            boolean ttxPageTmpTrans = (xStart == 1); // ttx use dst_x as transparent flag
+            if (parserType == SUBTITLE_SUB_TYPE_TTX) {
+                xStart = 120;//ttx fixed with 480x525 shown in 720x480
+                yStart = 0;
+                srcWidth = 480;
+                srcHeight = 525;
+                dstWidth = 720;
+                dstHeight = 480;
+            }
+            Rect overlay_dst = new Rect(0, 0, srcWidth, srcHeight);
+            if ((dstWidth == 0)
+                    || (dstHeight == 0)
+                    || (dstWidth < (srcWidth + xStart))
+                    || (dstHeight < (srcHeight + yStart))) {
+                overlay_dst.left = xStart;
+                overlay_dst.top = yStart;
+                overlay_dst.right = displayRect.width() - overlay_dst.left;
+                overlay_dst.bottom = displayRect.height() - overlay_dst.top;
+            } else {
+                float scaleX = (float) (displayRect.width()) / (float) (dstWidth);
+                float scaleY = (float) (displayRect.height()) / (float) (dstHeight);
+                overlay_dst.left = (int) (scaleX * xStart);
+                overlay_dst.right = (int) (scaleX * (srcWidth + xStart));
+                overlay_dst.top = (int) (scaleY * yStart);
+                overlay_dst.bottom = (int) (scaleY * (srcHeight + yStart));
+            }
+            if (teletextStarted && !mTtxTransparent && !ttxPageTmpTrans) {
+                setBackgroundColor(Color.BLACK);
+            } else {
+                setBackgroundColor(Color.TRANSPARENT);
+            }
+            if (overlay_dst.right > displayRect.right
+                    || overlay_dst.bottom > displayRect.bottom) {
+                Log.w(TAG, "Please check, overlay_dst " + overlay_dst);
+            }
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(overlay_dst.width(), overlay_dst.height());
+            imageView.setLayoutParams(lp);
+            if (parserType == SUBTITLE_SUB_TYPE_TTX) {
+                imageView.setScaleType(ImageView.ScaleType.FIT_XY);
+            } else {
+                imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            }
+            imageView.setX(overlay_dst.left);
+            imageView.setY(overlay_dst.top);
+            imageView.setImageBitmap(region);
+            invalidate();
+        }
+    }
+
+    public final DtvkitGlueClient.SubtitleListener mSubListener = new DtvkitGlueClient.SubtitleListener() {
+        @Override
+        public void drawEx(int parserType, int src_width, int src_height,
+                           int dst_x, int dst_y, int dst_width, int dst_height, int[] data) {
+            Log.v(TAG, "type= " + parserType + ", src_w= " + src_width +
+                    ", src_h= " + src_height + ", x= " + dst_x + ", y= " + dst_y +
+                    ", dst_w= " + dst_width + ", dst_h= " + dst_height + ", pause= " + mPauseExDraw +
+                    ", " + mTtxTransparent);
+            if (mPauseExDraw > 0) {
+                return;
+            }
+            if (parserType == SUBTITLE_SUB_TYPE_ARIB) {
+                mHandler.removeCallbacks(mAriBRunnable);
+                mHandler.post(() -> mAriBRunnable.setData(data));
+                mHandler.post(mAriBRunnable);
+            } else if (src_width == 0 || src_height == 0) {
+                if (dst_width == 9999) {
+                    /* 9999 dst_width indicates the overlay should be cleared */
+                    mHandler.removeCallbacks(mClearRunnable);
+                    mHandler.post(mClearRunnable);
+                }
+            } else {
+                Bitmap bitmap = getBitmap(src_width, src_height, data);
+                if (SystemProperties.getBoolean("vendor.dtv.subtitle_save", false)) {
+                    saveBitmap(bitmap, getContext());
+                }
+                final boolean teletextStarted = playerIsTeletextStarted();
+                mHandler.removeCallbacks(mNormalRunnable);
+                mHandler.post(() -> {
+                    mNormalRunnable.setData(parserType, src_width, src_height,
+                            dst_x, dst_y, dst_width, dst_height, teletextStarted);
+                    mNormalRunnable.setRegion(bitmap);
+                });
+                mHandler.post(mNormalRunnable);
+            }
+        }
+
+        private Bitmap getBitmap(int width, int height, int[] data) {
+            Drawable drawable = null;
+            Bitmap bitmap;
+            boolean reuse = false;
+            if (imageView != null) {
+                drawable = imageView.getDrawable();
+            }
+            if (drawable instanceof BitmapDrawable) {
+                bitmap = ((BitmapDrawable) drawable).getBitmap();
+                if (bitmap != null) {
+                    if (!bitmap.isRecycled() && bitmap.getWidth() >= width && bitmap.getHeight() >= height) {
+                        reuse = true;
+                    }
+                }
+                if (!reuse) {
+                    bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                }
+            } else {
+                bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            }
+            bitmap.setPixels(data, 0, width, 0, 0, width, height);
+            return bitmap;
         }
 
         private boolean playerIsTeletextStarted() {
@@ -222,16 +298,47 @@ public class SubtitleServerView extends View {
             throw new SecurityException("Must be MainLooper handler");
         }
         mHandler = mainHandler;
+        imageView = new ImageView(context);
+        addView(imageView);
+        textView = new TextView(context);
+        addView(textView);
         DtvkitGlueClient.getInstance().setSubtileListener(mSubListener);
     }
 
+    private void initTextSubtitle() {
+        float xStart = (float) displayRect.width() / 8;
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(displayRect.width() * 3/4, LayoutParams.WRAP_CONTENT);
+        lp.gravity = Gravity.BOTTOM;
+        lp.bottomMargin = 60;
+        textView.setLayoutParams(lp);
+        textView.setGravity(Gravity.CENTER);
+        textView.setTextColor(Color.YELLOW);
+        textView.setX(xStart);
+        textView.setTextSize(36f);
+    }
+
+    public void showTestSubtitle() {
+        Log.i(TAG, "showTestSubtitle");
+        mHandler.removeCallbacks(mNormalRunnable);
+        Bitmap bitmap = Bitmap.createBitmap(320, 240, Bitmap.Config.RGB_565);
+        bitmap.eraseColor(Color.GREEN);
+        mHandler.post(() -> {
+            mNormalRunnable.setData(5, 160, 120,
+                    0, 0, 1920, 1080, false);
+            mNormalRunnable.setRegion(bitmap);
+        });
+        mHandler.post(mNormalRunnable);
+    }
+
     public void setSize(int width, int height) {
-        dst = new Rect(0, 0, width, height);
+        displayRect = new Rect(0, 0, width, height);
+        initTextSubtitle();
         postInvalidate();
     }
 
     public void setSize(int left, int top, int right, int bottom) {
-        dst = new Rect(left, top, right, bottom);
+        displayRect = new Rect(left, top, right, bottom);
+        initTextSubtitle();
         postInvalidate();
     }
 
@@ -240,12 +347,11 @@ public class SubtitleServerView extends View {
     }
 
     public void clearSubtitle() {
-        mHandler.post(() -> {
-            if (overlay1 != null) {
-                Canvas canvas = new Canvas(overlay1);
-                canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-            }
-        });
+        mNormalRunnable.setRegion(null);
+        imageView.setImageBitmap(null);
+        mHandler.removeCallbacks(mAriBRunnable);
+        mHandler.removeCallbacks(mNormalRunnable);
+        mHandler.post(mClearRunnable);
     }
 
     public void setOverlaySubtitleListener(DtvkitGlueClient.SubtitleListener listener) {
@@ -254,102 +360,40 @@ public class SubtitleServerView extends View {
 
     public void destroy() {
         DtvkitGlueClient.getInstance().removeSubtileListener(mSubListener);
-        mHandler.removeCallbacksAndMessages(null);
-        mHandler.post(() -> {
-            if (overlay1 != null) {
-                overlay1.recycle();
-                overlay1 = null;
+        mNormalRunnable.setRegion(null);
+        imageView.setImageBitmap(null);
+        mHandler.removeCallbacks(mAriBRunnable);
+        mHandler.removeCallbacks(mNormalRunnable);
+        mHandler.removeCallbacks(mClearRunnable);
+    }
+
+    private void saveBitmap(Bitmap bitmap, Context ct) {
+        Calendar now = new GregorianCalendar();
+        SimpleDateFormat simpleDate = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+        String savePath = ct.getExternalFilesDir(null) + simpleDate.format(now.getTime()) + ".jpg";
+        File filePic = new File(savePath);
+        try {
+            if (!filePic.exists()) {
+                filePic.getParentFile().mkdirs();
+                filePic.createNewFile();
             }
-        });
+            Log.i(TAG, "debug: dump subtitle: " + savePath);
+            FileOutputStream fos = new FileOutputStream(filePic);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 50, fos);
+            fos.flush();
+            fos.close();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to saveBitmap: " + e.getMessage());
+        }
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
-        // onDraw is called in mainthread by android framework.
-        super.onDraw(canvas);
-        if (overlay1 != null) {
-            canvas.drawBitmap(overlay1, src, dst, null);
-        }
-    }
-
-    public Vector<String> getTextLinesVector(TextPaint paint, String content, float maxHeight,
-                                             float maxWidth) {
-        Vector<String> mString = new Vector<>();
-        int mRealLine = 0;
-        char ch;
-        int w = 0;
-        int istart = 0;
-//        float mFontHeight = getFontHeight(paint);
-//        int mMaxLinesNum = (int) (maxHeight / mFontHeight);
-        int mMaxLinesNum = 3;
-        Log.d(TAG, "content:" + content);
-        int count = content.length();
-        for (int i = 0; i < count; i++) {
-            ch = content.charAt(i);
-            float[] widths = new float[1];
-            String str = String.valueOf(ch);
-            paint.getTextWidths(str, widths);
-            if (ch == '\n') {
-                mRealLine++;
-                mString.addElement(content.substring(istart, i));
-                istart = i + 1;
-                w = 0;
-            } else {
-                w += (int) Math.ceil(widths[0]);
-                if (w > maxWidth) {
-                    mRealLine++;
-                    mString.addElement(content.substring(istart, i));
-                    istart = i;
-                    i--;
-                    w = 0;
-                } else {
-                    if (i == count - 1) {
-                        mRealLine++;
-                        mString.addElement(content.substring(istart, count));
-                    }
-                }
-            }
-            if (mRealLine == mMaxLinesNum) {
-                break;
-            }
-        }
-        return mString;
-    }
-
-    private float getFontHeight(TextPaint paint) {
-        Paint.FontMetrics fm = paint.getFontMetrics();
-        return fm.bottom - fm.top;
-    }
-
-    private void drawLinesText(Canvas canvas, String text) {
-        Rect rectF = new Rect(200, 800, 1720, 1000);
-        TextPaint textPaint = new TextPaint();
-        textPaint.setColor(Color.YELLOW);
-        textPaint.setTextSize(40);
-        Vector<String> vector = getTextLinesVector(textPaint, text, rectF.height(), rectF.width());
-//
-//        Paint paint = new Paint();
-//        paint.setColor(Color.BLACK);
-//        paint.setAlpha(200);
-//        canvas.drawRect(rectF, paint);
-        text = vectorToString(vector);
-        //auto wrap
-        StaticLayout layout = new StaticLayout(text, textPaint, (int) rectF.width(),
-                Layout.Alignment.ALIGN_NORMAL, 1.0F, 0.0F, true);
-        canvas.save();
-        textPaint.setTextAlign(Paint.Align.CENTER);
-        // position
-        canvas.translate(rectF.left + rectF.width() / 2,
-                rectF.top + (rectF.height() - getFontHeight(textPaint) * vector.size()) / 2);
-        layout.draw(canvas);
-        canvas.restore();
-    }
-
-    private String vectorToString(Vector<String> strV) {
-        StringBuilder ss = new StringBuilder();
-        for (String s : strV) {
-            ss.append(s).append("\n");
-        }
-        return ss.toString();
+    public String toString() {
+        return super.toString() + "\n" +
+                "TAG='" + TAG + '\'' +
+                ", displayRect=" + displayRect +
+                ", imageView=" + imageView +
+                ", textView=" + textView +
+                '}';
     }
 }

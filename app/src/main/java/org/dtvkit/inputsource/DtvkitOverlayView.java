@@ -4,10 +4,8 @@ import android.os.Handler;
 import android.content.Context;
 import android.view.Gravity;
 import android.view.KeyEvent;
-import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -21,13 +19,15 @@ import android.graphics.Typeface;
 import android.util.Log;
 import android.util.TypedValue;
 
+import androidx.annotation.NonNull;
+
 import com.amlogic.hbbtv.HbbTvManager;
 import com.droidlogic.app.CCSubtitleView;
 
 import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
+import com.droidlogic.dtvkit.inputsource.CiMenuView;
+import com.droidlogic.dtvkit.inputsource.HbbTvOverlayView;
 import org.droidlogic.dtvkit.SubtitleServerView;
 import org.droidlogic.dtvkit.MhegOverlayView;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
@@ -225,29 +225,41 @@ public class DtvkitOverlayView extends FrameLayout {
 
     public void showTuningImage(Drawable drawable) {
         if (mTuningImage != null && mRelativeLayout != null) {
-            Log.d(TAG, "showTuningImage");
             if (drawable != null) {
+                Log.d(TAG, "showTuningImage");
                 mTuningImage.setImageDrawable(drawable);
             }
             if (mTuningImage.getVisibility() != View.VISIBLE) {
                 mTuningImage.setVisibility(View.VISIBLE);
             }
         }
+        nativeOverlayView.clear();
+        mSubServerView.clearSubtitle();
     }
 
     //Need check hideTuningImage View
     public void hideTuningImage() {
-        try {
-            mSubServerView.clearSubtitle();
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-        }
-
+        mSubServerView.clearSubtitle();
         if (mTuningImage != null && mRelativeLayout != null) {
             Log.d(TAG, "hideTuningImage");
             if (mTuningImage.getVisibility() != View.GONE) {
                 mTuningImage.setVisibility(View.GONE);
             }
+        }
+    }
+
+    public void test(String[] args) {
+        boolean showSubtitle = false;
+        if (args != null && args.length > 0) {
+            for (String opt : args) {
+                if (opt.equals("testSubtitle")) {
+                    showSubtitle = true;
+                    break;
+                }
+            }
+        }
+        if (showSubtitle) {
+            mSubServerView.showTestSubtitle();
         }
     }
 
@@ -425,4 +437,30 @@ public class DtvkitOverlayView extends FrameLayout {
         }
         return used;
     }
+
+    @NonNull
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        if (mSubServerView != null) {
+            result.append("SubServerView:").append(mSubServerView).append('\n');
+        }
+        if (nativeOverlayView != null) {
+            result.append("nativeOverlayView:").append(nativeOverlayView).append('\n');
+        }
+        if (ciOverlayView != null) {
+            result.append("ciOverlayView:").append(ciOverlayView).append('\n');
+        }
+        if (mRelativeLayout != null) {
+            result.append("RelativeLayout:").append(mRelativeLayout).append('\n');
+        }
+        if (mCCSubView != null) {
+            result.append("CCSubView:").append(mCCSubView).append('\n');
+        }
+        if (mCasOsm != null) {
+            result.append("CasOsm:").append(mCasOsm).append('\n');
+        }
+        return result.toString();
+    }
+
 }

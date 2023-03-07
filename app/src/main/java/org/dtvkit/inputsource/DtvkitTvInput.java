@@ -2984,7 +2984,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private int timeshiftBufferSizeMBs = 0;
         private int timeshiftStartMode = 1; // auto or pause
 
-        protected DtvkitOverlayView mView = null;
+        protected com.droidlogic.dtvkit.inputsource.DtvkitOverlayView mView = null;
 
         private boolean mTeleTextMixNormal = true;
         private int dvrSubtitleFlag = 0;
@@ -3138,7 +3138,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public void onSetStreamVolume(float volume) {
             Log.i(TAG, "onSetStreamVolume " + volume);
             int index = Boolean.compare(mIsPip, false);
-            playerSetMute(volume == 0.0f, index);
+            Message msg = mHandlerThreadHandle.obtainMessage(MSG_SET_STREAM_VOLUME);
+            msg.arg1 = Boolean.compare(volume > 0.0f, false);
+            msg.arg2 = index;
+            mHandlerThreadHandle.sendMessage(msg);
         }
 
         @Override
@@ -3158,7 +3161,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             Log.d(TAG, "onCreateOverlayView");
             if (mView == null) {
-                mView = new DtvkitOverlayView(outService, mMainHandle, checkEnableCC());
+                mView = new com.droidlogic.dtvkit.inputsource.DtvkitOverlayView(outService, mMainHandle, checkEnableCC());
                 mView.setSize(mWinWidth, mWinHeight);
             }
             return mView;
@@ -3390,6 +3393,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             if (mMainHandle != null) {
                 mMainHandle.sendEmptyMessage(MSG_HIDE_BLOCKED_TEXT);
+                mMainHandle.sendEmptyMessage(MSG_SHOW_TUNING_IMAGE);
                 mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
                 mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
             }
@@ -5071,6 +5075,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_TRY_STOP_TIMESHIFT = 18;
         protected static final int MSG_TS_UPDATE = 19;
         protected static final int MSG_RESET_CI_TUNE_SERVICE_URI = 20;
+        protected static final int MSG_SET_STREAM_VOLUME = 21;
 
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
@@ -5154,6 +5159,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     case MSG_BLOCK_MUTE_OR_UNMUTE:
                         boolean mute = msg.arg1 == 0 ? false : true;
                         setBlockMute(mute);
+                        break;
+                    case MSG_SET_STREAM_VOLUME:
+                        if (msg.arg1 != 0) {
+                            playerInitAssociateDualSupport(msg.arg2, false);
+                        }
+                        playerSetMute(msg.arg1 == 0, msg.arg2);
                         break;
                     case MSG_DO_RELEASE:
                         doRelease();
@@ -6051,6 +6062,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             pw.println("Current:" + mTunedChannel);
             if (mView != null) {
                 pw.println("OverlayView:" + mWinWidth + "x" + mWinHeight);
+                pw.println(mView);
+                mView.test(args);
             }
             pw.println("Surface:" + mSurface);
             if (mHbbTvManager != null) {
