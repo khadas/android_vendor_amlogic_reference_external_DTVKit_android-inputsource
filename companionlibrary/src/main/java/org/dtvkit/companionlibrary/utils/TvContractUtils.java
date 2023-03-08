@@ -79,8 +79,8 @@ public class TvContractUtils {
             put(Channel.KEY_NEW_DISPLAYNAME, "");
             put(Channel.KEY_SET_DISPLAYNUMBER, "0");
             put(Channel.KEY_NEW_DISPLAYNUMBER, "0");
-            put(Channel.KEY_RAW_DISPLAYNAME, "0");
-            put(Channel.KEY_RAW_DISPLAYNUMBER, "0");
+            //put(Channel.KEY_RAW_DISPLAYNAME, "0");
+            //put(Channel.KEY_RAW_DISPLAYNUMBER, "0");
             put(Channels.COLUMN_APP_LINK_ICON_URI, "");
             put(Channels.COLUMN_APP_LINK_INTENT_URI, "");
             put(Channel.KEY_SET_MOVE_DISPLAYNUMBER, "0");
@@ -307,25 +307,23 @@ public class TvContractUtils {
                     }
                 }
             }
-            if (rowId != null) {
+            ArrayMap<String, String> singleUserSettings = channelUseSettingValueMap.get(uniqueStr);
+            if (singleUserSettings != null && singleUserSettings.size() > 0) {
                 if (DEBUG) {
                     Log.d(TAG, String.format("Mapping %s to %d", uniqueStr, rowId));
                 }
                 restoreRawUseSettingValuesToInternalProviderData(uniqueStr, channelUseSettingValueMap, internalProviderData);
-                ArrayMap<String, String> singleUserSettings = channelUseSettingValueMap.get(uniqueStr);
-                if (singleUserSettings != null && singleUserSettings.size() > 0) {
-                    if ("1".equals(singleUserSettings.get(Channel.KEY_SET_DISPLAYNUMBER))) {
-                        values.put(TvContract.Channels.COLUMN_DISPLAY_NUMBER, singleUserSettings.get(Channel.KEY_NEW_DISPLAYNUMBER));
-                    }
-                    if ("1".equals(singleUserSettings.get(Channel.KEY_SET_DISPLAYNAME))) {
-                        values.put(TvContract.Channels.COLUMN_DISPLAY_NAME, singleUserSettings.get(Channel.KEY_NEW_DISPLAYNAME));
-                    }
-                    if (!TextUtils.isEmpty(singleUserSettings.get(Channels.COLUMN_APP_LINK_ICON_URI))) {
-                        values.put(Channels.COLUMN_APP_LINK_ICON_URI, singleUserSettings.get(Channels.COLUMN_APP_LINK_ICON_URI));
-                    }
-                    if (!TextUtils.isEmpty(singleUserSettings.get(Channels.COLUMN_APP_LINK_INTENT_URI))) {
-                        values.put(Channels.COLUMN_APP_LINK_INTENT_URI, singleUserSettings.get(Channels.COLUMN_APP_LINK_INTENT_URI));
-                    }
+                if ("1".equals(singleUserSettings.get(Channel.KEY_SET_DISPLAYNUMBER))) {
+                    values.put(TvContract.Channels.COLUMN_DISPLAY_NUMBER, singleUserSettings.get(Channel.KEY_NEW_DISPLAYNUMBER));
+                }
+                if ("1".equals(singleUserSettings.get(Channel.KEY_SET_DISPLAYNAME))) {
+                    values.put(TvContract.Channels.COLUMN_DISPLAY_NAME, singleUserSettings.get(Channel.KEY_NEW_DISPLAYNAME));
+                }
+                if (!TextUtils.isEmpty(singleUserSettings.get(Channels.COLUMN_APP_LINK_ICON_URI))) {
+                    values.put(Channels.COLUMN_APP_LINK_ICON_URI, singleUserSettings.get(Channels.COLUMN_APP_LINK_ICON_URI));
+                }
+                if (!TextUtils.isEmpty(singleUserSettings.get(Channels.COLUMN_APP_LINK_INTENT_URI))) {
+                    values.put(Channels.COLUMN_APP_LINK_INTENT_URI, singleUserSettings.get(Channels.COLUMN_APP_LINK_INTENT_URI));
                 }
             }
 
@@ -480,9 +478,9 @@ public class TvContractUtils {
                 tempStr = entry.getValue();
             }
             child.put(entry.getKey(), tempStr);
-            if (DEBUG) {
-                Log.d(TAG, "saveRawUseSettingValuesToMap uniqueKey:" + uniqueKey + "," + child);
-            }
+        }
+        if (DEBUG) {
+            Log.d(TAG, "saveRawUseSettingValuesToMap uniqueKey:" + uniqueKey + "," + child);
         }
         map.put(uniqueKey, child);
     }
@@ -525,7 +523,6 @@ public class TvContractUtils {
         String result = null;
         result = channelType
                 + "-" + (frequency / 1000000)
-                + "-" + rawDisplayNumber
                 + "-" + originalNetworkId
                 + "-" + transportStreamId
                 + "-" + serviceId
