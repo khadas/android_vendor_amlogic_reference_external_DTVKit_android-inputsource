@@ -3138,9 +3138,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public void onSetStreamVolume(float volume) {
             Log.i(TAG, "onSetStreamVolume " + volume);
             int index = Boolean.compare(mIsPip, false);
-            if (volume > 0.0f) {
-                playerInitAssociateDualSupport(index, false);
-            }
             playerSetMute(volume == 0.0f, index);
         }
 
@@ -5036,6 +5033,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else if (signal.equals("AudioTrackSelected")) {
                     // after track changed, should update sound mode again
                     notifySessionEvent(ConstantManager.ACTION_AUDIO_TRACK_SELECTED, null);
+                    int index = Boolean.compare(mIsPip, false);
+                    playerInitAssociateDualSupport(index, false);
                 } else if (signal.equals("TkgsStartTuneUpdate")) {
                     notifySessionEvent(ConstantManager.ACTION_TKGS_START_TUNE_UPDATE, null);
                     mMainHandle.post(()->showToast(R.string.string_tune_update_tip));
