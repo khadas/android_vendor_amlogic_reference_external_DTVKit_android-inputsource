@@ -3016,6 +3016,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private int mCurrentAudioTrackId = -1;
         private ProviderSync mProviderSync = null;
 
+        private boolean mIsTeletextStarted = false;
+        private boolean mIsMhepAppStarted = false;
+
         private final class AvailableState {
             AvailableState() {
                 state = State.NO;
@@ -3297,6 +3300,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mHandlerThreadHandle.sendMessage(mess);
                 Log.i(TAG, "onTune " + channelUri);
             }
+            mIsTeletextStarted = false;
+            mIsMhepAppStarted = false;
             return true;
         }
 
@@ -4249,7 +4254,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public boolean onKeyDown(int keyCode, KeyEvent event) {
-            boolean used;
+            boolean used = false;
 
             Log.i(TAG, "onKeyDown " + event);
             if (mCiAuthenticatedStatus) {
@@ -4261,12 +4266,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mView == null) {
                 used = super.onKeyDown(keyCode, event);
             } else {
-                if (mView.handleKeyDown(keyCode, event)) {
+                if (mView.handleKeyDown(keyCode, event, mIsMhepAppStarted)) {
                     used = true;
                 } else if (keyCode == KeyEvent.KEYCODE_ZOOM_OUT) {
                     used = true;
-                } else if (isTeletextNeedKeyCode(keyCode) && playerIsTeletextOn()) {
-                    used = true;
+                } else if (isTeletextNeedKeyCode(keyCode) && mIsTeletextStarted) {
+                    if (playerIsTeletextOn()) {
+                        used = true;
+                    }
                 } else {
                     used = super.onKeyDown(keyCode, event);
                 }
@@ -4276,7 +4283,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public boolean onKeyUp(int keyCode, KeyEvent event) {
-            boolean used;
+            boolean used = false;
             Log.i(TAG, "onKeyUp " + event);
             if (mCiAuthenticatedStatus) {
                 Log.i(TAG, "onKeyDown skip as ci Authentication");
@@ -4304,9 +4311,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                     }
                     used = true;
-                } else if (isTeletextNeedKeyCode(keyCode) && playerIsTeletextOn()) {
-                    dealTeletextKeyCode(keyCode);
-                    used = true;
+                } else if (isTeletextNeedKeyCode(keyCode) && mIsTeletextStarted) {
+                    if (playerIsTeletextOn()) {
+                        dealTeletextKeyCode(keyCode);
+                        used = true;
+                    }
                 } else {
                     used = super.onKeyUp(keyCode, event);
                 }
@@ -4719,12 +4728,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     intent.putExtra("inputId", mInputId);
                     intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
                     intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_CURRENT_PLAY_CHANNEL_ID, mTunedChannel != null ? mTunedChannel.getId() : -1);
-                    try {
-                        intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY, data.getInt("frequency"));
-                    } catch (Exception e) {
-
-                    }
-                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FREQUENCY, data.optInt("frequency"));
+                    intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
                     startService(intent);
                 } else if (signal.equals("CiTuneServiceInfo")) {
                     //tuned by dtvkit directly and then notify app
@@ -4862,6 +4867,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     sendUpdateTrackMsg(playerState, false);
                 } else if (signal.equals("MhegAppStarted")) {
                     Log.i(TAG, "MhegAppStarted");
+                    mIsMhepAppStarted = true;
                     if (mTunedChannel != null) {
                         if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
                             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
@@ -5141,9 +5147,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 switch (msg.what) {
                     case MSG_ON_TUNE:
                         Uri channelUri = (Uri) msg.obj;
-                        boolean mhegTune = msg.arg1 == 0 ? false : true;
                         if (channelUri != null) {
-                            onTuneByHandlerThreadHandle(channelUri, mhegTune);
+                            onTuneByHandlerThreadHandle(channelUri, msg.arg1 != 0);
                         }
                         break;
                     case MSG_CHECK_RESOLUTION:
@@ -6103,6 +6108,223 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.i(TAG, "prepareAuthUrl Exception = " + e.getMessage());
             }
         }
+
+        private boolean playerSelectSubtitleTrack(int index) {
+            return playerSelectSubtitleTrackById(INDEX_FOR_MAIN, index);
+        }
+
+        private boolean playerPipSelectSubtitleTrack(int index) {
+            return playerSelectSubtitleTrackById(INDEX_FOR_PIP, index);
+        }
+
+        private boolean playerSelectSubtitleTrackById(int id, int index) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(id);
+                args.put(index);
+                DtvkitGlueClient.getInstance().request("Player.setSubtitleStream", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerSelectSubtitleTrack = " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
+
+        private boolean playerSelectTeletextTrack(int index) {
+            return playerSelectTeletextTrackById(INDEX_FOR_MAIN, index);
+        }
+
+        private boolean playerPipSelectTeletextTrack(int index) {
+            return playerSelectTeletextTrackById(INDEX_FOR_PIP, index);
+        }
+
+        private boolean playerSelectTeletextTrackById(int id, int index) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(id);
+                args.put(index);
+                DtvkitGlueClient.getInstance().request("Player.setTeletextStream", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerSelectTeletextTrack = " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
+
+        private boolean playerStartTeletext(int index) {
+            return playerStartTeletextById(INDEX_FOR_MAIN, index);
+        }
+
+        private boolean playerPipStartTeletext(int index) {
+            return playerStartTeletextById(INDEX_FOR_PIP, index);
+        }
+
+        //called when teletext on
+        private boolean playerStartTeletextById(int id, int index) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(id);
+                args.put(index);
+                mIsTeletextStarted = DtvkitGlueClient.getInstance().request("Player.startTeletext", args).getBoolean("data");
+            } catch (Exception e) {
+                Log.e(TAG, "playerStartTeletext = " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
+
+        private boolean playerStopTeletext() {
+            return playerStopTeletext(INDEX_FOR_MAIN);
+        }
+
+        private boolean playerPipStopTeletext() {
+            return playerStopTeletext(INDEX_FOR_PIP);
+        }
+
+        //called when teletext off
+        private boolean playerStopTeletext(int index) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                DtvkitGlueClient.getInstance().request("Player.stopTeletext", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerStopTeletext = " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
+
+        private boolean playerPauseTeletext() {
+            return playerPauseTeletext(INDEX_FOR_MAIN);
+        }
+
+        private boolean playerPipPauseTeletext() {
+            return playerPauseTeletext(INDEX_FOR_PIP);
+        }
+
+        private boolean playerPauseTeletext(int index) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                DtvkitGlueClient.getInstance().request("Player.pauseTeletext", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerPauseTeletext = " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
+
+        private boolean playerResumeTeletext() {
+            return playerResumeTeletext(INDEX_FOR_MAIN);
+        }
+
+        private boolean playerPipResumeTeletext() {
+            return playerResumeTeletext(INDEX_FOR_PIP);
+        }
+
+        private boolean playerResumeTeletext(int index) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                DtvkitGlueClient.getInstance().request("Player.resumeTeletext", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerResumeTeletext = " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
+
+        private boolean playerIsTeletextDisplayed() {
+            return playerIsTeletextDisplayed(INDEX_FOR_MAIN);
+        }
+
+        private boolean playerPipIsTeletextDisplayed() {
+            return playerIsTeletextDisplayed(INDEX_FOR_PIP);
+        }
+
+        private boolean playerIsTeletextDisplayed(int index) {
+            boolean on = false;
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                on = DtvkitGlueClient.getInstance().request("Player.isTeletextDisplayed", args).getBoolean("data");
+            } catch (Exception e) {
+                Log.e(TAG, "playerResumeTeletext = " + e.getMessage());
+            }
+            return on;
+        }
+
+        private boolean playerIsTeletextStarted() {
+            return playerIsTeletextStarted(INDEX_FOR_MAIN);
+        }
+
+        private boolean playerPipIsTeletextStarted() {
+            return playerIsTeletextStarted(INDEX_FOR_PIP);
+        }
+
+        private boolean playerIsTeletextStarted(int index) {
+            boolean on = false;
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                on = DtvkitGlueClient.getInstance().request("Player.isTeletextStarted", args).getBoolean("data");
+            } catch (Exception e) {
+                Log.e(TAG, "playerIsTeletextStarted = " + e.getMessage());
+            }
+            Log.d(TAG, "playerIsTeletextStarted on = " + on);
+            return on;
+        }
+
+        protected boolean playerSetTeletextOn(boolean on, int index) {
+            return playerSetTeletextOnById(INDEX_FOR_MAIN, on, index);
+        }
+
+        private boolean playerPipSetTeletextOn(boolean on, int index) {
+            return playerSetTeletextOnById(INDEX_FOR_PIP, on, index);
+        }
+
+        private boolean playerSetTeletextOnById(int id, boolean on, int index) {
+            boolean result;
+            if (on) {
+                result = playerStartTeletextById(id, index);
+            } else {
+                result = playerStopTeletext(id);
+            }
+            return result;
+        }
+
+        private boolean playerIsTeletextOn() {
+            return playerIsTeletextOn(INDEX_FOR_MAIN);
+        }
+
+        private boolean playerPipIsTeletextOn() {
+            return playerIsTeletextOn(INDEX_FOR_PIP);
+        }
+
+        private boolean playerIsTeletextOn(int index) {
+            return playerIsTeletextStarted(index);
+        }
+
+        private boolean playerNotifyTeletextEvent(int event) {
+            return playerNotifyTeletextEvent(INDEX_FOR_MAIN, event);
+        }
+
+        private boolean playerPipNotifyTeletextEvent(int event) {
+            return playerNotifyTeletextEvent(INDEX_FOR_PIP, event);
+        }
+
+        private boolean playerNotifyTeletextEvent(int index, int event) {
+            try {
+                JSONArray args = new JSONArray();
+                args.put(index);
+                args.put(event);
+                DtvkitGlueClient.getInstance().request("Player.notifyTeletextEvent", args);
+            } catch (Exception e) {
+                Log.e(TAG, "playerNotifyTeletextEvent = " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
     }
 
     private boolean resetRecordingPath() {
@@ -6282,7 +6504,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }
 
-    private void playerSetSubtitlesOn(boolean on) {
+    protected void playerSetSubtitlesOn(boolean on) {
         playerSetSubtitlesOn(on, INDEX_FOR_MAIN);
     }
 
@@ -7055,223 +7277,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
         return result;
-    }
-
-    private boolean playerSelectSubtitleTrack(int index) {
-        return playerSelectSubtitleTrackById(INDEX_FOR_MAIN, index);
-    }
-
-    private boolean playerPipSelectSubtitleTrack(int index) {
-        return playerSelectSubtitleTrackById(INDEX_FOR_PIP, index);
-    }
-
-    private boolean playerSelectSubtitleTrackById(int id, int index) {
-        try {
-            JSONArray args = new JSONArray();
-            args.put(id);
-            args.put(index);
-            DtvkitGlueClient.getInstance().request("Player.setSubtitleStream", args);
-        } catch (Exception e) {
-            Log.e(TAG, "playerSelectSubtitleTrack = " + e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
-    private boolean playerSelectTeletextTrack(int index) {
-        return playerSelectTeletextTrackById(INDEX_FOR_MAIN, index);
-    }
-
-    private boolean playerPipSelectTeletextTrack(int index) {
-        return playerSelectTeletextTrackById(INDEX_FOR_PIP, index);
-    }
-
-    private boolean playerSelectTeletextTrackById(int id, int index) {
-        try {
-            JSONArray args = new JSONArray();
-            args.put(id);
-            args.put(index);
-            DtvkitGlueClient.getInstance().request("Player.setTeletextStream", args);
-        } catch (Exception e) {
-            Log.e(TAG, "playerSelectTeletextTrack = " + e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
-    private boolean playerStartTeletext(int index) {
-        return playerStartTeletextById(INDEX_FOR_MAIN, index);
-    }
-
-    private boolean playerPipStartTeletext(int index) {
-        return playerStartTeletextById(INDEX_FOR_PIP, index);
-    }
-
-    //called when teletext on
-    private boolean playerStartTeletextById(int id, int index) {
-        try {
-            JSONArray args = new JSONArray();
-            args.put(id);
-            args.put(index);
-            DtvkitGlueClient.getInstance().request("Player.startTeletext", args);
-        } catch (Exception e) {
-            Log.e(TAG, "playerStartTeletext = " + e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
-    private boolean playerStopTeletext() {
-        return playerStopTeletext(INDEX_FOR_MAIN);
-    }
-
-    private boolean playerPipStopTeletext() {
-        return playerStopTeletext(INDEX_FOR_PIP);
-    }
-
-    //called when teletext off
-    private boolean playerStopTeletext(int index) {
-        try {
-            JSONArray args = new JSONArray();
-            args.put(index);
-            DtvkitGlueClient.getInstance().request("Player.stopTeletext", args);
-        } catch (Exception e) {
-            Log.e(TAG, "playerStopTeletext = " + e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
-    private boolean playerPauseTeletext() {
-        return playerPauseTeletext(INDEX_FOR_MAIN);
-    }
-
-    private boolean playerPipPauseTeletext() {
-        return playerPauseTeletext(INDEX_FOR_PIP);
-    }
-
-    private boolean playerPauseTeletext(int index) {
-        try {
-            JSONArray args = new JSONArray();
-            args.put(index);
-            DtvkitGlueClient.getInstance().request("Player.pauseTeletext", args);
-        } catch (Exception e) {
-            Log.e(TAG, "playerPauseTeletext = " + e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
-    private boolean playerResumeTeletext() {
-        return playerResumeTeletext(INDEX_FOR_MAIN);
-    }
-
-    private boolean playerPipResumeTeletext() {
-        return playerResumeTeletext(INDEX_FOR_PIP);
-    }
-
-    private boolean playerResumeTeletext(int index) {
-        try {
-            JSONArray args = new JSONArray();
-            args.put(index);
-            DtvkitGlueClient.getInstance().request("Player.resumeTeletext", args);
-        } catch (Exception e) {
-            Log.e(TAG, "playerResumeTeletext = " + e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
-    private boolean playerIsTeletextDisplayed() {
-        return playerIsTeletextDisplayed(INDEX_FOR_MAIN);
-    }
-
-    private boolean playerPipIsTeletextDisplayed() {
-        return playerIsTeletextDisplayed(INDEX_FOR_PIP);
-    }
-
-    private boolean playerIsTeletextDisplayed(int index) {
-        boolean on = false;
-        try {
-            JSONArray args = new JSONArray();
-            args.put(index);
-            on = DtvkitGlueClient.getInstance().request("Player.isTeletextDisplayed", args).getBoolean("data");
-        } catch (Exception e) {
-            Log.e(TAG, "playerResumeTeletext = " + e.getMessage());
-        }
-        return on;
-    }
-
-    private boolean playerIsTeletextStarted() {
-        return playerIsTeletextStarted(INDEX_FOR_MAIN);
-    }
-
-    private boolean playerPipIsTeletextStarted() {
-        return playerIsTeletextStarted(INDEX_FOR_PIP);
-    }
-
-    private boolean playerIsTeletextStarted(int index) {
-        boolean on = false;
-        try {
-            JSONArray args = new JSONArray();
-            args.put(index);
-            on = DtvkitGlueClient.getInstance().request("Player.isTeletextStarted", args).getBoolean("data");
-        } catch (Exception e) {
-            Log.e(TAG, "playerIsTeletextStarted = " + e.getMessage());
-        }
-        Log.d(TAG, "playerIsTeletextStarted on = " + on);
-        return on;
-    }
-
-    private boolean playerSetTeletextOn(boolean on, int index) {
-        return playerSetTeletextOnById(INDEX_FOR_MAIN, on, index);
-    }
-
-    private boolean playerPipSetTeletextOn(boolean on, int index) {
-        return playerSetTeletextOnById(INDEX_FOR_PIP, on, index);
-    }
-
-    private boolean playerSetTeletextOnById(int id, boolean on, int index) {
-        boolean result;
-        if (on) {
-            result = playerStartTeletextById(id, index);
-        } else {
-            result = playerStopTeletext(id);
-        }
-        return result;
-    }
-
-    private boolean playerIsTeletextOn() {
-        return playerIsTeletextOn(INDEX_FOR_MAIN);
-    }
-
-    private boolean playerPipIsTeletextOn() {
-        return playerIsTeletextOn(INDEX_FOR_PIP);
-    }
-
-    private boolean playerIsTeletextOn(int index) {
-        return playerIsTeletextStarted(index);
-    }
-
-    private boolean playerNotifyTeletextEvent(int event) {
-        return playerNotifyTeletextEvent(INDEX_FOR_MAIN, event);
-    }
-
-    private boolean playerPipNotifyTeletextEvent(int event) {
-        return playerNotifyTeletextEvent(INDEX_FOR_PIP, event);
-    }
-
-    private boolean playerNotifyTeletextEvent(int index, int event) {
-        try {
-            JSONArray args = new JSONArray();
-            args.put(index);
-            args.put(event);
-            DtvkitGlueClient.getInstance().request("Player.notifyTeletextEvent", args);
-        } catch (Exception e) {
-            Log.e(TAG, "playerNotifyTeletextEvent = " + e.getMessage());
-            return false;
-        }
-        return true;
     }
 
     //status has four value: enter exit play

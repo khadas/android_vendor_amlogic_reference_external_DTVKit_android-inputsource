@@ -362,12 +362,12 @@ public class DtvkitOverlayView extends FrameLayout {
     }
 
     //Need double check Key handle
-    public boolean handleKeyDown(int keyCode, KeyEvent event) {
+    public boolean handleKeyDown(int keyCode, KeyEvent event, boolean mhegAppStarted) {
         boolean result;
         if (ciOverlayView.handleKeyDown(keyCode, event)) {
             mhegTookKey = false;
             result = true;
-        } else if (!(checkMhegKeyLimit(event)) && mhegKeypress(keyCode)) {
+        } else if (!(checkMhegKeyLimit(event)) && mhegAppStarted && mhegKeypress(keyCode)) {
             mhegTookKey = true;
             result = true;
             lastMhegKey = event;
