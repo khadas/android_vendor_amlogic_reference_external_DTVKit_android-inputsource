@@ -187,6 +187,7 @@ public class DataManager {
     public static final int VALUE_AD_MIX_LEVEL = 50;
     public static final int VALUE_AD_VOLUME = 100;
     public static final String ACTION_DTV_ENABLE_AUDIO_AD = "dtv_enable_audio_ad";
+    public static final String ACTION_DTV_AUDIO_STREAM_TYPE = "dtv_audio_stream_type";
     public static final String PARA_ENABLE = "enable";
 
     //dtvkit satellite data import flag

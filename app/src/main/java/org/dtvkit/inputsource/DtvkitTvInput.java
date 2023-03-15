@@ -3967,6 +3967,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 /*if (mView != null) {
                     mView.showTuningImage(null);
                 }*/
+            } else if (TextUtils.equals(DataManager.ACTION_DTV_AUDIO_STREAM_TYPE, action)) {
+                playerSetAudioStreamType(data.getInt(action));
             } else if (TextUtils.equals(DataManager.ACTION_DTV_ENABLE_AUDIO_AD, action)) {
                 mAudioADAutoStart = data.getInt(DataManager.PARA_ENABLE) == 1;
                 boolean recover = data.getBoolean("recover", true);
@@ -7215,6 +7217,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return result;
         }
         return result;
+    }
+
+    private void playerSetAudioStreamType(int type) {
+        try {
+            JSONArray array = new JSONArray();
+            array.put(0);
+            array.put(type);
+            DtvkitGlueClient.getInstance().request("Player.setAudioStreamType", array);
+        } catch (Exception e) {
+            Log.e(TAG, "setAudioType failed, " + e.getMessage());
+        }
     }
 
     private boolean playerHasDollyAssociateAudioTrack() {
