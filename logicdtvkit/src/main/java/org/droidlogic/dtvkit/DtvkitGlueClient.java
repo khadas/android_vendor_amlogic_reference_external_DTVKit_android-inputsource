@@ -129,6 +129,22 @@ public class DtvkitGlueClient {
         }
     }
 
+    public void notifyServerStateCallback(int state) {
+        JSONObject object;
+        try {
+            object = new JSONObject();
+            object.put("state", state);
+        } catch (Exception e) {
+            Log.e(TAG, "notifyServerStateCallback " + e.getMessage());
+            return;
+        }
+        synchronized (mSignalHandlers) {
+            for (Pair <Integer, SignalHandler> handler : mSignalHandlers) {
+                handler.second.onSignal("stateOfdtvkit", object);
+            }
+        }
+    }
+
     public void notifyMixVideoEventCallback(int event) {
         Log.d(TAG, "notifyMixVideoEventCallback received!!! event =" + event);
         if (mListener != null) {

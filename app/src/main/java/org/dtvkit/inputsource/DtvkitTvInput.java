@@ -4406,7 +4406,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 Log.i(TAG, "onSignal: " + signal + " : " + data);
 
-                if (signal.equals("PlayerStatusChanged")) {
+                if (signal.equals("stateOfdtvkit")) {
+                   int state = data.optInt("state");
+                   if (state < 0) {
+                        runOnMainThread(this::releaseTvHardware);
+                   } else {
+                        // time gap for dtvkit initialize
+                        mMainHandle.postDelayed(this::acquireTvHardware, 2000);
+                   }
+               } else if (signal.equals("PlayerStatusChanged")) {
                     String state = "off";
                     String dvbUri = "";
                     String type = "dvblive";

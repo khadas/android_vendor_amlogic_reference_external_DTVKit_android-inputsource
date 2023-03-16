@@ -62,6 +62,7 @@ static jmethodID notifySubtitleCallbackEx;
 static jmethodID notifySubtitleCbCtlEx;
 static jmethodID notifyCCSubtitleCallbackEx;
 static jmethodID notifyMixVideoEventCallback;
+static jmethodID notifyServerStateCallback;
 
 sp<amlogic::SubtitleServerClient> mSubContext;
 static jboolean g_bSubStatus = false;
@@ -565,6 +566,18 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
 
 }
 
+void DTVKitClientJni::notifyServerState(int diedOrReconnected) {
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
+
+    if (env != NULL) {
+        env->CallVoidMethod(DtvkitObject, notifyServerStateCallback, diedOrReconnected);
+    }
+    if (attached) {
+        DetachJniEnv();
+    }
+}
+
 static void connectDtvkit(JNIEnv *env, jclass clazz __unused, jobject obj, jobject buffer)
 {
     ALOGI("ref dtvkit");
@@ -978,6 +991,7 @@ int register_org_droidlogic_dtvkit_DtvkitGlueClient(JNIEnv *env)
     GET_METHOD_ID(notifySubtitleCbCtlEx, clazz, "notifySubtitleCbCtlEx", "(I)V");
     GET_METHOD_ID(notifyCCSubtitleCallbackEx, clazz, "notifyCCSubtitleCallbackEx", "(ZLjava/lang/String;)V");
     GET_METHOD_ID(notifyMixVideoEventCallback, clazz, "notifyMixVideoEventCallback", "(I)V");
+    GET_METHOD_ID(notifyServerStateCallback, clazz, "notifyServerStateCallback", "(I)V");
     return rc;
 }
 

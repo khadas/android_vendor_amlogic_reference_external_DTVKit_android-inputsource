@@ -81,14 +81,17 @@ sp<DTVKitHidlClient> DTVKitHidlClient::connect(connect_type_t type)
 
 void DTVKitHidlClient::reconnect()
 {
+    mDTVKitServer = nullptr;
     ALOGI("dtvkit client reconnect");
-    mDTVKitServer.clear();
     //reconnect to server
     mDTVKitServer = getDTVKitService();
     Return<void> ret = mDTVKitServer->setCallback(mDTVKitHidlCallback, static_cast<DTVKitConnectType>(mType));
     if (!ret.isOk()) {
         ALOGE("Failed to reconnect setCallback.");
         return;
+    }
+    if (mListener != NULL) {
+        mListener->notifyServerState(1);
     }
 }
 
@@ -104,6 +107,10 @@ void DTVKitHidlClient::setListener(const sp<DTVKitListener> &listener)
 
 std::string DTVKitHidlClient::request(const std::string& resource, const std::string& json) {
     std::string result;
+    if (mDTVKitServer == nullptr) {
+        ALOGE("can't find dtvkit");
+        return "";
+    }
     Return<void> ret = mDTVKitServer->request(resource, json, [&](const std::string& res) {
         result = res;
     });
@@ -116,6 +123,10 @@ std::string DTVKitHidlClient::request(const std::string& resource, const std::st
 }
 
 void DTVKitHidlClient::setAfd(int player, int afd) {
+    if (mDTVKitServer == nullptr) {
+        ALOGE("can't find dtvkit");
+        return;
+    }
     Return<void> ret = mDTVKitServer->setAfd(player, afd);
     if (!ret.isOk()) {
         ALOGE("Failed to setAfd.");
@@ -123,6 +134,10 @@ void DTVKitHidlClient::setAfd(int player, int afd) {
 }
 
 void DTVKitHidlClient::setSubtitleFlag(int flag) {
+    if (mDTVKitServer == nullptr) {
+        ALOGE("can't find dtvkit");
+        return;
+    }
     Return<void> ret = mDTVKitServer->setSubtitleFlag(flag);
     if (!ret.isOk()) {
         ALOGE("Failed to setSubtitleFlag.");
@@ -130,7 +145,10 @@ void DTVKitHidlClient::setSubtitleFlag(int flag) {
 }
 
 MessageQueueSync *DTVKitHidlClient::getQueue() {
-
+    if (mDTVKitServer == nullptr) {
+        ALOGE("can't find dtvkit");
+        return NULL;
+    }
     MessageQueueSync* fmq = NULL;
     Return<void> ret = mDTVKitServer->getQueue([&fmq](const MQDescriptorSync<uint8_t>& in) {
         fmq = new (std::nothrow) MessageQueueSync(in);
@@ -193,8 +211,10 @@ void DTVKitHidlClient::DTVKitDaemonDeathRecipient::serviceDied(uint64_t cookie _
 {
     ALOGE("DTVKit daemon died.");
     Mutex::Autolock _l(mLock);
-
-    usleep(200*1000);//sleep 200ms
+    sp<DTVKitListener> listener = DKClient->mListener;
+    if (listener != NULL) {
+        listener->notifyServerState(-1);
+    }
     DKClient->reconnect();
 }
 

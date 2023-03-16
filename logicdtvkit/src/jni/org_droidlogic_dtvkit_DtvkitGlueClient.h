@@ -74,6 +74,7 @@ public:
     DTVKitClientJni();
     ~DTVKitClientJni();
     virtual void notify(const parcel_t &parcel);
+    virtual void notifyServerState(int diedOrReconnected);
 
     static DTVKitClientJni *GetInstance();
     std::string request(const std::string& resource, const std::string& json);

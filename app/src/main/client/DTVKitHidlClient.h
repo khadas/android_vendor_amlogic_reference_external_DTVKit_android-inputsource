@@ -91,6 +91,7 @@ typedef struct parcel_s {
 class DTVKitListener : virtual public RefBase {
 public:
     virtual void notify(const parcel_t &parcel) = 0;
+    virtual void notifyServerState(int diedOrReconnected) = 0;
 };
 
 class DTVKitHidlClient : virtual public RefBase {
