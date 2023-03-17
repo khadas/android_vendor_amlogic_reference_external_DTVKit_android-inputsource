@@ -356,7 +356,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "modulationMode onItemSelected position = " + position);
-                if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_DEFAULT) {
+                if (DataPresenter.getOperateType() != DvbsParameterManager.OPERATOR_M7 && DataPresenter.getOperateType() != DvbsParameterManager.OPERATOR_TKGS) {
                     mDataManager.saveIntParameters(DataManager.KEY_MODULATION_MODE, position);
                 }
             }
@@ -376,7 +376,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         channelTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_DEFAULT) {
+                if (DataPresenter.getOperateType() != DvbsParameterManager.OPERATOR_M7 && DataPresenter.getOperateType() != DvbsParameterManager.OPERATOR_TKGS) {
                     updateChannelType(i);
                 }
             }
@@ -390,7 +390,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         serviceTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_DEFAULT) {
+                if (DataPresenter.getOperateType() != DvbsParameterManager.OPERATOR_M7 && DataPresenter.getOperateType() != DvbsParameterManager.OPERATOR_TKGS) {
                     updateServiceType(i);
                 }
             }
@@ -405,7 +405,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             mSearchByManualTKGS = getArguments().getBoolean("manualTKGS", false);
         }
 
-        if (DataPresenter.getOperateType() != DvbsParameterManager.OPERATOR_DEFAULT) {
+        if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_M7 || DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_TKGS) {
             Log.d(TAG, "disable UI widget");
             nit.setEnabled(false);
             searchMode.setEnabled(false);
