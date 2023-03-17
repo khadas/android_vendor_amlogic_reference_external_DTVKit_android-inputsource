@@ -111,7 +111,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
@@ -147,10 +146,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private final int HARDWARE_MAIN_DEVICE_ID = 19;
     private final int HARDWARE_PIP_DEVICE_ID = 119;
 
-    private volatile Semaphore mMainSemaphore = new Semaphore(1);
-    private volatile Semaphore mPipSemaphore = new Semaphore(1);
+    private Hardware mMainHardware = null;
+    private Hardware mPipHardware = null;
 
-    final private static int SEMAPHORE_TIME_OUT = 3000;
+    private TvStreamConfig mMainStreamConfig = null;
+    private TvStreamConfig mPipStreamConfig = null;
 
     /*associate audio*/
     protected boolean mAudioADAutoStart = false;
@@ -250,7 +250,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private ConnectivityManager mConnectivityManager;
 
     private HbbTvManager mHbbTvManager = null;
-    DisplayMetrics mDisplayMetrics = new DisplayMetrics();
     private DtvKitScheduleManager mDtvKitScheduleManager = null;
 
     public DtvkitTvInput() {
@@ -692,9 +691,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         setDnsProp();
         sendEmptyMessageToInputThreadHandler(MSG_START_CA_SETTINGS_SERVICE);
         sendEmptyMessageToInputThreadHandler(MSG_CHECK_TV_PROVIDER_READY);
-
-        WindowManager windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        windowManager.getDefaultDisplay().getMetrics(mDisplayMetrics);
     }
 
     //input work handler define
@@ -1179,6 +1175,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         return used;
     }
 
+    private void createHbbTvManager() {
+        if (mHbbTvManager != null) {
+            return;
+        }
+        if (FeatureUtil.getFeatureSupportHbbTV()) {
+            mHbbTvManager = HbbTvManager.getInstance();
+        }
+    }
+
     @Override
     public void onSetDisplayMode(int mode) {
         Log.i(TAG, "onSetDisplayMode " + mode);
@@ -1188,7 +1193,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     @Override
     public final Session onCreateSession(String inputId) {
         Log.i(TAG, "onCreateSession " + inputId);
-        Log.i(TAG, "onCreateSession " + PropSettingManager.getString("ro.build.fingerprint", "/"));
         DtvkitTvInputSession session = null;
         if (inputId.contains(String.valueOf(HARDWARE_PIP_DEVICE_ID))) {
             if (FeatureUtil.getFeatureSupportPip()) {
@@ -1201,6 +1205,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
         setCIPlusServiceReady();
         addTunerSession(session);
+        createHbbTvManager();
         return session;
     }
 
@@ -1224,12 +1229,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }
 
-    private boolean hasAnotherSession(DtvkitTvInputSession thiz, boolean pip) {
+    private boolean hasAnotherSession(DtvkitTvInputSession thiz) {
         synchronized (mTunerSessionLock) {
             DtvkitTvInputSession session;
             for (Map.Entry<Long, DtvkitTvInputSession> entry : mTunerSessions.entrySet()) {
                 session = entry.getValue();
-                if (thiz != session && session.isPipSession() == pip) {
+                if (thiz != session
+                    && thiz.isPipSession() == session.isPipSession()) {
                     return true;
                 }
             }
@@ -2708,12 +2714,22 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.e(TAG, "resource not ready!");
                 return false;
             }
+            if (surface != null) {
+                acquireTvHardware();
+            } else {
+                if (!hasAnotherSession(this)) {
+                    if (mPipHardware != null) {
+                        mPipHardware.setSurface(null, null);
+                    }
+                    releaseTvHardware();
+                }
+            }
             return super.onSetSurface(surface);
         }
 
         @MainThread
         protected void acquireTvHardware() {
-            if (mHardware != null) {
+            if (mPipHardware != null) {
                 return;
             }
             Hardware hardware = mTvInputManager.acquireTvInputHardware(HARDWARE_PIP_DEVICE_ID,
@@ -2721,21 +2737,31 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (hardware == null) {
                 Log.e(TAG, "Failed to acquire TvHardware:" + HARDWARE_PIP_DEVICE_ID);
             }
-            mHardware = hardware;
+            mPipHardware = hardware;
         }
 
         @MainThread
         protected void releaseTvHardware() {
-            if (mHardware != null) {
-                mTvInputManager.releaseTvInputHardware(HARDWARE_PIP_DEVICE_ID, mHardware);
-                // prevent double release
-                mHardware = null;
+            super.releaseTvHardware();
+            if (mPipHardware != null) {
+                mTvInputManager.releaseTvInputHardware(HARDWARE_PIP_DEVICE_ID, mPipHardware);
+                mPipHardware = null;
             }
         }
 
         @Override
         protected void initSurface() {
             setSurfaceTunnelId(INDEX_FOR_PIP, 2);
+        }
+
+        @Override
+        public boolean readyToPlay() {
+            if (mSurface != null && mPipHardware != null && mPipStreamConfig != null) {
+                return true;
+            }
+            Log.d(TAG, "Surface:" + mSurface + ", PipHardware:" + mPipHardware
+                + "PipStreamConfig:" + mPipStreamConfig);
+            return false;
         }
 
         @Override
@@ -2762,11 +2788,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected void onFinish(boolean ignoreMheg, boolean ignoreFcc) {
             playerPipStop();
         }
-
-        @Override
-        protected Semaphore getControllerSemaphore() {
-            return mPipSemaphore;
-        }
     }
 
     public class DtvkitMainTvSession extends DtvkitTvInputSession {
@@ -2780,7 +2801,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void init() {
             setOverlayViewEnabled(true);
-            if (hasAnotherSession(this, false)) {
+            if (hasAnotherSession(this)) {
                 DtvkitTvInputSession oldSession = getMainTunerSession();
                 // As early as possible to stop oldSession.
                 // bugfix : from launcher to livetv, livetv splash launcher video once.
@@ -2805,7 +2826,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @MainThread
         protected void acquireTvHardware() {
-            if (mHardware != null) {
+            if (mMainHardware != null) {
                 return;
             }
             Hardware hardware = mTvInputManager.acquireTvInputHardware(HARDWARE_MAIN_DEVICE_ID,
@@ -2813,15 +2834,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (hardware == null) {
                 Log.e(TAG, "Failed to acquire TvHardware:" + HARDWARE_MAIN_DEVICE_ID);
             }
-            mHardware = hardware;
+            mMainHardware = hardware;
         }
 
         @MainThread
         protected void releaseTvHardware() {
-            if (mHardware != null) {
-                mTvInputManager.releaseTvInputHardware(HARDWARE_MAIN_DEVICE_ID, mHardware);
-                // prevent double release
-                mHardware = null;
+            super.releaseTvHardware();
+            if (mMainHardware != null) {
+                mTvInputManager.releaseTvInputHardware(HARDWARE_MAIN_DEVICE_ID, mMainHardware);
+                mMainHardware = null;
             }
         }
 
@@ -2838,13 +2859,29 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Log.e(TAG, "resource not ready!");
                 return false;
             }
-            if (surface == null) {
-                writeSysFs("/sys/class/video/video_inuse", "0");
-            } else {
+            if (surface != null) {
                 AudioConfigManager.getInstance(getApplication())
                         .refreshAudioCfgBySrc(AudioConfigManager.AUDIO_OUTPUT_DELAY_SOURCE_DTV);
+                acquireTvHardware();
+            } else {
+                if (!hasAnotherSession(this)) {
+                    if (mMainHardware != null) {
+                        mMainHardware.setSurface(null, null);
+                    }
+                    releaseTvHardware();
+                }
             }
             return super.onSetSurface(surface);
+        }
+
+        @Override
+        public boolean readyToPlay() {
+            if (mSurface != null && mMainHardware != null && mMainStreamConfig != null) {
+                return true;
+            }
+            Log.d(TAG, "Surface:" + mSurface + ", MainHardware:" + mMainHardware
+                + "MainStreamConfig:" + mMainStreamConfig);
+            return false;
         }
 
         @Override
@@ -2961,11 +2998,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             playerSetTeletextOn(false, -1);
         }
 
-        @Override
-        protected Semaphore getControllerSemaphore() {
-            return mMainSemaphore;
-        }
-
     }
 
     public abstract class DtvkitTvInputSession extends Session {
@@ -2997,13 +3029,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private Handler mHandlerThreadHandle = null;
         private Handler mMainHandle = null;
 
-        private int mTuneBarrier = 0;
-        private volatile Semaphore mSessionSemaphore;
         private volatile SessionState mSessionState = SessionState.NONE;
         private boolean mIsPip;
 
-        private Surface mSurface;
-        protected Hardware mHardware;
+        protected Surface mSurface;
 
         private int mWinWidth = 0;
         private int mWinHeight = 0;
@@ -3064,7 +3093,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             super(service.getApplicationContext());
             outService = service;
             mIsPip = isPip;
-            mSessionSemaphore = getControllerSemaphore();
             mCurrentSessionIndex = mDtvkitTvInputSessionCount++;
             Log.i(TAG, "created " + this);
             mAudioSystemCmdManager = AudioSystemCmdManager.getInstance(getApplicationContext());
@@ -3112,28 +3140,49 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         protected final HardwareCallback mHardwareCallback = new HardwareCallback() {
+            final int STREAM_ID_NORMAL = 1;
+            final int STREAM_ID_PIP    = 3;
+            int streamId = 1;
+
             @Override
             public void onReleased() {
                 runOnMainThread(() -> {
-                    mHardware = null;
-                    Log.d(TAG, "mHardware onReleased");
+                    if (streamId == STREAM_ID_NORMAL) {
+                        mMainHardware = null;
+                        mMainStreamConfig = null;
+                        Log.d(TAG, "MainHardware onReleased");
+                    }
+                    if (streamId == STREAM_ID_PIP) {
+                        mPipHardware = null;
+                        mPipStreamConfig = null;
+                        Log.d(TAG, "PipHardware onReleased");
+                    }
                 });
             }
 
             @Override
             public void onStreamConfigChanged(TvStreamConfig[] configs) {
-                if (configs != null) {
-                    runOnMainThread(() -> {
-                        if (mHardware != null) {
-                            Log.d(TAG, "onStreamConfigChanged configs : " + Arrays.toString(configs));
-                            mHardware.setSurface(mSurface, configs[0]);
-                        } else {
-                            Log.e(TAG, "onStreamConfigChanged mHardware is null, may black screen");
-                        }
-                    });
-                } else {
-                    Log.d(TAG, "onStreamConfigChanged null");
+                if (configs == null) {
+                    Log.w(TAG, "onStreamConfigChanged null");
+                    return;
                 }
+                runOnMainThread(() -> {
+                    Log.d(TAG, "onStreamConfigChanged configs : " + Arrays.toString(configs));
+                    streamId = configs[0].getStreamId();
+                    if (streamId == STREAM_ID_NORMAL) {
+                        mMainStreamConfig = configs[0];
+                        Message msg =  mMainHandle.obtainMessage(MSG_SET_SURFACE);
+                        msg.arg1 = INDEX_FOR_MAIN;
+                        mMainHandle.sendMessage(msg);
+                    } else if (streamId == STREAM_ID_PIP) {
+                        mPipStreamConfig = configs[0];
+                        Message msg =  mMainHandle.obtainMessage(MSG_SET_SURFACE);
+                        msg.arg1 = INDEX_FOR_PIP;
+                        mMainHandle.sendMessage(msg);
+                    } else {
+                        Log.e(TAG, "onStreamConfigChanged, SHOULD NOT come here, streamId:" + streamId);
+                    }
+                });
             }
         };
 
@@ -3150,11 +3199,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         @Override
         public void onSetMain(boolean isMain) {
             Log.d(TAG, "onSetMain, isMain: " + isMain);
-            if (!FeatureUtil.getFeatureSupportFullPipFccArchitecture()) {
-                if (isMain) {
-                    writeSysFs("/sys/class/video/video_inuse", "1");
-                }
-            }
         }
 
         @Override
@@ -3167,10 +3211,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mView = new com.droidlogic.dtvkit.inputsource.DtvkitOverlayView(outService, mMainHandle, checkEnableCC());
                 mView.setSize(mWinWidth, mWinHeight);
             }
+            mView.setOverlayTarget();
+            mView.setOverlaySubtitleListener();
+            initHbbtvResource();
             return mView;
         }
 
         private void doDestroyOverlay() {
+            if (mIsPip) {
+                return;
+            }
             if (mView != null) {
                 mView.destroy();
             }
@@ -3179,34 +3229,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public boolean onSetSurface(Surface surface) {
-            mSurface = surface;
             Log.i(TAG, "onSetSurface " + surface);
+            mSurface = surface;
             if (surface != null) {
-                // must be called after "setSurface"
-                /* refer this SOURCE_TYPE_DTV(1) in DroidLogicTvUtils.java */
-                mAudioSystemCmdManager.updateAudioPortGain(1);
-                if (mSystemControlManager != null) {
-                    mSystemControlManager.SetDtvKitSourceEnable(1);
-                    mSystemControlManager.SetCurrentSourceInfo(
-                            SystemControlManager.SourceInput.DTV, 0, 0);
-                }
+                Message msg =  mMainHandle.obtainMessage(MSG_SET_SURFACE);
+                msg.arg1 = mIsPip ? INDEX_FOR_PIP : INDEX_FOR_MAIN;
+                mMainHandle.sendMessage(msg);
             } else {
-                if (mHardware != null) {
-                    mHardware.setSurface(null, null);
-                    releaseTvHardware();
-                }
-                if (hasAnotherSession(this, false)) {
-                    return true;
-                }
-                mAudioSystemCmdManager.updateAudioPortGain(-1);
-                if (mSystemControlManager != null) {
+                if (!mIsPip && !hasAnotherSession(this)) {
+                    mAudioSystemCmdManager.updateAudioPortGain(-1);
                     mSystemControlManager.SetDtvKitSourceEnable(0);
-                    mSystemControlManager.SetCurrentSourceInfo(
-                            SystemControlManager.SourceInput.XXXX, 0, 0);
+                    mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.XXXX, 0, 0);
                 }
-            }
-            if (surface != null) {
-                tunePendingIfNeeded(200);
             }
             return true;
         }
@@ -3278,17 +3312,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mView != null) {
                 mView.setSize(width, height);
             }
-            //playerSetRectangle(Boolean.compare(mIsPip, false), 0, 0, width, height);
         }
 
         @Override
         public boolean onTune(Uri channelUri, Bundle params) {
-            if (null == mSurface) {
-                Log.i(TAG, "onTune " + channelUri + ", Surface is null");
+            if (readyToPlay()) {
+                return onTune(channelUri);
+            } else {
                 mPendingTuneUri = channelUri;
                 return false;
-            } else {
-                return onTune(channelUri);
             }
         }
 
@@ -3305,54 +3337,27 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return true;
         }
 
-        private void createHbbTvManager() {
-            if (FeatureUtil.getFeatureSupportHbbTV()) {
-                Log.d(TAG, "createHbbTvManager mDisplayMetrics.widthPixels = " + mDisplayMetrics.widthPixels
-                        + " mDisplayMetrics.heightPixels = " + mDisplayMetrics.heightPixels);
-                if (mSessionState != SessionState.NONE) {
-                    Log.w(TAG, "invalid session state:" + mSessionState);
-                    return;
-                }
-                if (mView == null) {
-                    Log.e(TAG, "overlayView is null!!!");
-                    return;
-                }
-                if (mDisplayMetrics.widthPixels == mWinWidth
-                        && mDisplayMetrics.heightPixels == mWinHeight) {
-                    mHbbTvManager = HbbTvManager.getInstance();
-                    mHbbTvManager.setHbbTvManagerParams(this, mInputId, outService.getApplicationContext());
-                    runOnMainThread(() -> {
-                        if (mHbbTvManager != null) {
-                            mHbbTvManager.initHbbTvResource();
-                            mHbbTvManager.initBrowser();
-                            mView.addHbbTvView(mHbbTvManager.getHbbTvView(), mHbbTvManager);
-                        }
-                    });
-                } else {
-                    Log.i(TAG, "Don't createHbbTvManager as mWinWidth = " + mWinWidth + " mWinHeight = " + mWinHeight);
-                }
+        private void initHbbtvResource() {
+            if (mIsPip) {
+                return;
+            }
+            if (mHbbTvManager != null && mView != null) {
+                Log.d(TAG, "init HbbtvResource");
+                mHbbTvManager.setHbbTvManagerParams(this, mInputId, outService.getApplicationContext());
+                mHbbTvManager.initHbbTvResource();
+                mHbbTvManager.initBrowser();
+                mView.addHbbTvView(mHbbTvManager.getHbbTvView(), mHbbTvManager);
             }
         }
 
-        private boolean hasTunePermission() {
-            boolean result = false;
-            try {
-                if (isTuned()) {
-                    result = true;
-                } else {
-                    Log.i(TAG, "tryAcquire mSemaphore");
-                    if (mSessionSemaphore.tryAcquire(SEMAPHORE_TIME_OUT, TimeUnit.MILLISECONDS)) {
-                        mTuneBarrier = 1;
-                        result = true;
-                        Log.i(TAG, "tryAcquire mSemaphore OK");
-                    } else {
-                        Log.w(TAG, "tryAcquire mSemaphore timeout, please check");
-                    }
-                }
-            } catch (InterruptedException ignored) {
-                // e.printStackTrace();
+        private void deInitHbbtvResource() {
+            if (mIsPip) {
+                return;
             }
-            return result;
+            if (mHbbTvManager != null) {
+                Log.d(TAG, "deInit HbbtvResource");
+                mHbbTvManager.releaseHbbTvResource();
+            }
         }
 
         boolean stopTimeshiftIfNeeded() {
@@ -3372,29 +3377,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         protected void onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
-            if (!hasTunePermission()) {
-                tunePendingIfNeeded(SEMAPHORE_TIME_OUT);
-                return;
-            }
-
             if (!isSessionAvailable()) {
                 Log.e(TAG, "Abort tune because of mSessionState:" + mSessionState);
                 return;
             }
-            if (mSessionState == SessionState.NONE) {
-                if (mView != null) {
-                    mView.setOverlayTarget();
-                    mView.setOverlaySubtitleListener();
-                    // HBBtv needs overlayView support
-                    createHbbTvManager();
-                }
-                initTimeShift();
-                mMainHandle.sendEmptyMessage(MSG_HARDWARE_ACQUIRE);
-                initSurface();
-            }
+            initTimeShift();
             mSessionState = SessionState.TUNED;
-            mPendingTuneUri = null;
-            Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri + ", mIsPip = " + mIsPip);
+            Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri);
 
             if (mMainHandle != null) {
                 mMainHandle.sendEmptyMessage(MSG_HIDE_BLOCKED_TEXT);
@@ -3476,38 +3465,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 return;
             }
             mSessionState = SessionState.RELEASING;
-            // must destroy mView! we register handle to client when
-            // create ciMenuView,so we need destroy and unregister handle.
-            if (mHbbTvManager != null) {
-                Log.d(TAG, "release the HBBtv resource");
-                mHbbTvManager.releaseHbbTvResource();
-                mHbbTvManager = null;
+            doDestroyOverlay();
+            mMainHandle.removeCallbacksAndMessages(null);
+            mHandlerThreadHandle.removeCallbacksAndMessages(null);
+            if (!hasAnotherSession(this)) {
+                deInitHbbtvResource();
+                // MUST before MSG_DO_RELEASE
+                mHandlerThreadHandle.post(() -> onFinish(false, false));
             }
-            //send MSG_RELEASE_WORK_THREAD after dealing destroy overlay
-            //all case use message to release related resource as semaphore has been applied
-            if (mMainHandle != null) {
-                mMainHandle.removeCallbacksAndMessages(null);
-                mMainHandle.sendEmptyMessage(MSG_HARDWARE_RELEASE);
-                mMainHandle.sendEmptyMessage(MSG_MAIN_HANDLE_DESTROY_OVERLAY);
-            } else {
-                Log.i(TAG, "onRelease mMainHandle == null");
-            }
-            sendDoReleaseMessage();
+            mHandlerThreadHandle.sendEmptyMessage(MSG_DO_RELEASE);
         }
 
         private void doRelease() {
             Log.i(TAG, "doRelease");
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
-            if (mSessionSemaphore.availablePermits() != 0) {
-                Log.e(TAG, "Semaphore permits is unexpected("
-                        + mSessionSemaphore.availablePermits() + ")");
-            }
-            if (mTuneBarrier != 0) {
-                onFinish(false, false);
-                mSessionSemaphore.release();
-            } else {
-                Log.i(TAG, "[debug]session state = " + mSessionState);
-            }
             finalReleaseWorkThread();
             removeTunerSession(this);
             mSessionState = SessionState.RELEASED;
@@ -3522,29 +3493,33 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         protected abstract void onFinish(boolean ignoreMheg, boolean ignoreFcc);
 
-        protected abstract Semaphore getControllerSemaphore();
+        protected abstract boolean readyToPlay();
 
         @MainThread
-        protected abstract void acquireTvHardware();
+        protected void acquireTvHardware() {}
 
         @MainThread
-        protected abstract void releaseTvHardware();
+        protected void releaseTvHardware() {}
 
         protected void initSurface() {}
 
         protected void tunePendingIfNeeded(long delayMillis) {
             if (mPendingTuneUri != null) {
                 Log.d(TAG, "tunePending " + mPendingTuneUri);
-                if (mMainHandle != null) {
-                    mMainHandle.postDelayed(() -> {
-                        onTune(mPendingTuneUri);
-                    }, delayMillis);
+                Uri uri = mPendingTuneUri;
+                if (TvContract.isRecordedProgramUri(mPendingTuneUri)) {
+                    mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_PLAY);
+                    Message mess = mHandlerThreadHandle.obtainMessage(MSG_TIMESHIFT_PLAY, 0, 0, uri);
+                    boolean info = mHandlerThreadHandle.sendMessageDelayed(mess, delayMillis);
+                } else {
+                    mMainHandle.postDelayed(() -> {onTune(uri);}, delayMillis);
                 }
+                mPendingTuneUri = null;
             }
         }
 
         private synchronized void finalReleaseWorkThread() {
-            Log.d(TAG, "finalReleaseWorkThread mIsPip = " + mIsPip);
+            Log.d(TAG, "finalReleaseWorkThread");
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeCallbacksAndMessages(null);
             }
@@ -3554,15 +3529,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (mLivingHandlerThread != null) {
                 mLivingHandlerThread.quitSafely();
                 mLivingHandlerThread = null;
-            }
-        }
-
-        private void sendDoReleaseMessage() {
-            if (mHandlerThreadHandle != null) {
-                boolean result = mHandlerThreadHandle.sendMessage(mHandlerThreadHandle.obtainMessage(MSG_DO_RELEASE));
-                Log.d(TAG, "sendDoReleaseMessage status = " + result);
-            } else {
-                Log.d(TAG, "sendDoReleaseMessage null mHandlerThreadHandle");
             }
         }
 
@@ -4112,13 +4078,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         @Override
         public void onTimeShiftPlay(Uri uri) {
             Log.i(TAG, "onTimeShiftPlay " + uri);
+            if (!readyToPlay()) {
+                mPendingTuneUri = uri;
+                return;
+            }
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_PLAY);
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_TIMESHIFT_PLAY, 0, 0, uri);
                 boolean info = mHandlerThreadHandle.sendMessage(mess);
                 Log.d(TAG, "onTimeShiftPlay sendMessage " + info);
             }
-
         }
 
         @Override
@@ -4357,7 +4326,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     if (!mTeleTextMixNormal) {
                         mTeleTextMixNormal = true;
                         mView.setTeletextMix(TTX_MODE_NORMAL, isSubtitleCTL());
-                        playerSetRectangle(0, 0, mWinWidth, mWinHeight);
+                        Message msg = mHandlerThreadHandle.obtainMessage(MSG_SET_RECTANGLE);
+                        msg.arg1 = 0;
+                        mHandlerThreadHandle.sendMessage(msg);
                     }
 
                     Log.d(TAG, "dealTeletextKeyCode mSubFlagTtxPage:" + mSubFlagTtxPage);
@@ -4428,7 +4399,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (outService == null) {
                     return;
                 }
-                Log.i(TAG, "onSignal: " + signal + " : " + data + ", mIsPip = " + mIsPip);
+                Log.i(TAG, "onSignal: " + signal + " : " + data);
 
                 if (signal.equals("PlayerStatusChanged")) {
                     String state = "off";
@@ -4859,7 +4830,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     playbackBundle.putInt("do_pvr_limited", data.optInt("errcode", 0));
                     sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
                 } else if (signal.equals("DvbNetworkChange") || signal.equals("DvbUpdatedService")) {
-                    Log.i(TAG, "DvbNetworkChange or DvbUpdatedService, IsPip=" + mIsPip);
+                    Log.i(TAG, "DvbNetworkChange or DvbUpdatedService");
                     //this event has been handled in dtvkit, tis should ignore it
                 } else if (signal.equals("DvbUpdatedChannelData")) {
                     Log.i(TAG, "DvbUpdatedChannelData");
@@ -5006,7 +4977,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else if (signal.equals("tt_mix_normal")) {
                     mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
                 } else if (signal.equals("SubtitleOpened")) {
-                    mMainHandle.sendEmptyMessageDelayed(MSG_EVENT_SUBTITLE_OPENED, 2000);
+                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_EVENT_SUBTITLE_OPENED, 2000);
                 } else if (signal.equals("cas")) {
                     processCasEvents(data);
                 } else if (signal.equals("FVP_SERVICE_NID_DONE")) {
@@ -5065,7 +5036,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_CHECK_RESOLUTION = 2;
         protected static final int MSG_CHECK_PARENTAL_CONTROL = 3;
         protected static final int MSG_BLOCK_MUTE_OR_UNMUTE = 4;
-        protected static final int MSG_SET_SURFACE = 5;
+        protected static final int MSG_SET_RECTANGLE = 5;
         protected static final int MSG_DO_RELEASE = 6;
         protected static final int MSG_RELEASE_WORK_THREAD = 7;
         protected static final int MSG_GET_SIGNAL_STRENGTH = 8;
@@ -5077,11 +5048,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_TRY_START_TIMESHIFT = 14;
         protected static final int MSG_UPDATE_TRACKS_AND_SELECT = 15;
         protected static final int MSG_SELECT_TRACK = 16;
-        protected static final int MSG_DO_RELEASE_SPECIFIED_SESSION = 17;
+        // protected static final int MSG_DO_RELEASE_SPECIFIED_SESSION = 17;
         protected static final int MSG_TRY_STOP_TIMESHIFT = 18;
         protected static final int MSG_TS_UPDATE = 19;
         protected static final int MSG_RESET_CI_TUNE_SERVICE_URI = 20;
         protected static final int MSG_SET_STREAM_VOLUME = 21;
+        protected static final int MSG_EVENT_SUBTITLE_OPENED = 22;
 
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
@@ -5119,8 +5091,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_SET_TELETEXT_MIX_TRANSPARENT = 7;
         protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 8;
         protected static final int MSG_FILL_SURFACE = 9;
-        protected static final int MSG_EVENT_SUBTITLE_OPENED = 10;
+        /*protected static final int MSG_EVENT_SUBTITLE_OPENED = 10;*/
         protected static final int MSG_EVENT_SHOW_HIDE_OVERLAY = 11;
+        protected static final int MSG_SET_SURFACE = 12;
 
         protected static final int MSG_SHOW_TUNING_IMAGE = 20;
         protected static final int MSG_HIDE_TUNING_IMAGE = 21;
@@ -5128,10 +5101,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_CAS_OSM_PREPARE_WINDOW = 30;
         protected static final int MSG_CAS_OSM_WINDOW_SHOW = 31;
         protected static final int MSG_CAS_OSM_WINDOW_CLEAR = 32;
-
-        protected static final int MSG_HARDWARE_ACQUIRE = 40;
-        protected static final int MSG_HARDWARE_RELEASE = 41;
-
 
         private void initWorkThread() {
             Log.d(TAG, "initWorkThread");
@@ -5171,11 +5140,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                         playerSetMute(msg.arg1 == 0, msg.arg2);
                         break;
+                    case MSG_EVENT_SUBTITLE_OPENED:
+                        initSubtitleOrTeletextIfNeed();
+                        break;
+                    case MSG_SET_RECTANGLE:
+                        if (msg.arg1 == 1) {
+                            playerSetRectangle(0, mWinHeight / 4, mWinWidth / 2, mWinHeight / 2);
+                        } else {
+                            playerSetRectangle(0, 0, mWinWidth, mWinHeight);
+                        }
+                        break;
                     case MSG_DO_RELEASE:
                         doRelease();
-                        break;
-                    case MSG_RELEASE_WORK_THREAD:
-                        finalReleaseWorkThread();
                         break;
                     case MSG_GET_SIGNAL_STRENGTH:
                         sendCurrentSignalInformation();
@@ -5397,7 +5373,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         private void setBlockMute(boolean mute) {
-            Log.d(TAG, "setBlockMute = " + mute + ", mIsPip = " + mIsPip);
+            Log.d(TAG, "setBlockMute = " + mute);
             if (mIsPip) {
                 playerSetPipMute(mute);
             } else {
@@ -5458,14 +5434,31 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 Log.d(session.TAG, "MainHandler [[[:" + msg.what);
                 switch (msg.what) {
-                    case MSG_MAIN_HANDLE_DESTROY_OVERLAY:
-                        if (!session.mTeleTextMixNormal) {
-                            session.mTeleTextMixNormal = true;
-                            playerSetRectangle(0, 0, session.mWinWidth, session.mWinHeight);
+                    case MSG_SET_SURFACE:
+                        boolean set = false;
+                        if (msg.arg1 == INDEX_FOR_MAIN) {
+                            if (mMainHardware != null && mMainStreamConfig != null) {
+                                Log.i(TAG, "MSG_SET_SURFACE:" + mSurface);
+                                mMainHardware.setSurface(mSurface, mMainStreamConfig);
+                                set = true;
+                            }
                         }
-                        doDestroyOverlay();
-                        if (session.mHandlerThreadHandle != null && session.mLivingHandlerThread != null) {
-                            session.mHandlerThreadHandle.sendEmptyMessage(MSG_RELEASE_WORK_THREAD);
+                        if (msg.arg1 == INDEX_FOR_PIP) {
+                            if (mPipHardware != null && mPipStreamConfig != null) {
+                                mPipHardware.setSurface(mSurface, mPipStreamConfig);
+                                set = true;
+                            }
+                        }
+                        if (set) {
+                            mHandlerThreadHandle.post(() -> initSurface());
+                            if (mSurface != null) {
+                                tunePendingIfNeeded(200);
+                            }
+                            // must be called after "setSurface"
+                            /* refer this SOURCE_TYPE_DTV(1) in DroidLogicTvUtils.java */
+                            mAudioSystemCmdManager.updateAudioPortGain(1);
+                            mSystemControlManager.SetDtvKitSourceEnable(1);
+                            mSystemControlManager.SetCurrentSourceInfo(SystemControlManager.SourceInput.DTV, 0, 0);
                         }
                         break;
                     case MSG_SHOW_BLOCKED_TEXT:
@@ -5501,20 +5494,25 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         if (!session.mTeleTextMixNormal) {
                             session.mTeleTextMixNormal = true;
                             session.mView.setTeletextMix(TTX_MODE_NORMAL, isSubtitleCTL());
-                            playerSetRectangle(0, 0, session.mWinWidth, session.mWinHeight);
+                            Message msg1 = mHandlerThreadHandle.obtainMessage(MSG_SET_RECTANGLE);
+                            msg1.arg1 = 0;
+                            mHandlerThreadHandle.sendMessage(msg1);
                         }
                         break;
                     case MSG_SET_TELETEXT_MIX_TRANSPARENT: {
                         session.mTeleTextMixNormal = false;
                         session.mView.setTeletextMix(TTX_MODE_TRANSPARENT, isSubtitleCTL());
-                        playerSetRectangle(0, 0, session.mWinWidth, session.mWinHeight);
+                        Message msg1 = mHandlerThreadHandle.obtainMessage(MSG_SET_RECTANGLE);
+                        msg1.arg1 = 0;
+                        mHandlerThreadHandle.sendMessage(msg1);
                     }
                     break;
                     case MSG_SET_TELETEXT_MIX_SEPARATE: {
                         session.mTeleTextMixNormal = false;
                         session.mView.setTeletextMix(TTX_MODE_SEPARATE, isSubtitleCTL());
-                        playerSetRectangle(0, session.mWinHeight / 4,
-                                session.mWinWidth / 2, session.mWinHeight / 2);
+                        Message msg1 = mHandlerThreadHandle.obtainMessage(MSG_SET_RECTANGLE);
+                        msg1.arg1 = 1;
+                        mHandlerThreadHandle.sendMessage(msg1);
                     }
                     break;
                     case MSG_SUBTITLE_SHOW_CLOSED_CAPTION:
@@ -5530,9 +5528,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         break;
                     case MSG_FILL_SURFACE:
                         fillSurfaceWithFixColor();
-                        break;
-                    case MSG_EVENT_SUBTITLE_OPENED:
-                        initSubtitleOrTeletextIfNeed();
                         break;
                     case MSG_EVENT_SHOW_HIDE_OVERLAY:
                         if (session.mView != null) {
@@ -5578,12 +5573,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         if (session.mView != null) {
                             session.mView.clearCasView();
                         }
-                        break;
-                    case MSG_HARDWARE_ACQUIRE:
-                        acquireTvHardware();
-                        break;
-                    case MSG_HARDWARE_RELEASE:
-                        releaseTvHardware();
                         break;
                     default:
                         Log.d(session.TAG, "MainHandler default");
@@ -5655,12 +5644,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void setTimeshiftPlay(Uri uri) {
             Log.i(TAG, "setTimeshiftPlay " + uri);
-            if (!hasTunePermission()) {
-                // dvr playback
-                return;
-            }
-            mMainHandle.sendEmptyMessage(MSG_HARDWARE_ACQUIRE);
-            initSurface();
             mSessionState = SessionState.TUNED;
             recordedProgram = getRecordedProgram(uri);
             if (recordedProgram != null) {
@@ -6063,7 +6046,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             pw.println("Session   state:" + mSessionState);
             pw.println("TimeShift state:" + timeshiftRecorderState);
             pw.println("LiveTv    state:" + playerState);
-            pw.println("Semaphore state:" + getControllerSemaphore().availablePermits());
             pw.println("Current:" + mTunedChannel);
             if (mView != null) {
                 pw.println("OverlayView:" + mWinWidth + "x" + mWinHeight);
