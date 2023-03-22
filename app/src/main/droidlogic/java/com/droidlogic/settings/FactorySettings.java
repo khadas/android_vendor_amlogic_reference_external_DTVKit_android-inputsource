@@ -522,7 +522,7 @@ public class FactorySettings {
                 if (restoreInfo != null) {
                     cursor = mContext.getContentResolver().query(uri,
                         projection, restoreInfo[0], null, null);
-                    if (cursor != null && cursor.moveToFirst() > 0) {
+                    if (cursor != null && cursor.moveToFirst()) {
                         byte[] internalProviderByteData = cursor.getBlob(0);
                         InternalProviderData internalProviderData =
                             new InternalProviderData(internalProviderByteData);
