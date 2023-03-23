@@ -2,7 +2,9 @@ package org.droidlogic.dtvkit;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -28,6 +30,7 @@ import java.util.Locale;
 
 public class SubtitleServerView extends FrameLayout {
     private final String TAG = "SubtitleServerView";
+    private final Paint mPaint = new Paint();
     Rect displayRect;
     private final Handler mHandler;
     private final ImageView imageView;
@@ -50,6 +53,7 @@ public class SubtitleServerView extends FrameLayout {
             setBackgroundColor(Color.TRANSPARENT);
             imageView.setImageBitmap(null);
             textView.setText(null);
+            mPaint.setColor(Color.TRANSPARENT);
         }
     };
 
@@ -156,9 +160,9 @@ public class SubtitleServerView extends FrameLayout {
                 overlay_dst.bottom = (int) (scaleY * (srcHeight + yStart));
             }
             if (teletextStarted && !mTtxTransparent && !ttxPageTmpTrans) {
-                setBackgroundColor(Color.BLACK);
+                mPaint.setColor(Color.BLACK);
             } else {
-                setBackgroundColor(Color.TRANSPARENT);
+                mPaint.setColor(Color.TRANSPARENT);
             }
             if (overlay_dst.right > displayRect.right
                     || overlay_dst.bottom > displayRect.bottom) {
@@ -171,8 +175,8 @@ public class SubtitleServerView extends FrameLayout {
             } else {
                 imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
             }
-            imageView.setX(overlay_dst.left);
-            imageView.setY(overlay_dst.top);
+            imageView.setX(overlay_dst.left + displayRect.left);
+            imageView.setY(overlay_dst.top + displayRect.top);
             imageView.setImageBitmap(region);
             invalidate();
         }
@@ -225,7 +229,7 @@ public class SubtitleServerView extends FrameLayout {
             if (drawable instanceof BitmapDrawable) {
                 bitmap = ((BitmapDrawable) drawable).getBitmap();
                 if (bitmap != null) {
-                    if (!bitmap.isRecycled() && bitmap.getWidth() >= width && bitmap.getHeight() >= height) {
+                    if (!bitmap.isRecycled() && bitmap.getWidth() == width && bitmap.getHeight() == height) {
                         reuse = true;
                     }
                 }
@@ -284,6 +288,14 @@ public class SubtitleServerView extends FrameLayout {
             mHandler.sendMessage(msg);
         }
     };
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (displayRect != null) {
+            canvas.drawRect(displayRect, mPaint);
+        }
+    }
 
     public SubtitleServerView(Context context) {
         this(context, new Handler(Looper.getMainLooper()));
