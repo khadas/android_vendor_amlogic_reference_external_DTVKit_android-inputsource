@@ -465,6 +465,7 @@ public class DtvkitDvbSettings extends Activity {
         adSupport.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 mParameterManager.saveIntParameters(ParameterManager.TV_KEY_AD_SWITCH, adSupport.isChecked() ? 1 : 0);
+                mParameterManager.setAudioType(adSupport.isChecked() ? 3 : 0);
             }
         });
         networkUpdate.setOnClickListener(new View.OnClickListener() {

@@ -3055,7 +3055,16 @@ public class ParameterManager {
             Log.i(TAG,"getTKGSVersion fail");
             e.printStackTrace();
         }
-
     }
 
+    public void setAudioType(int index) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(0);
+            args.put(index);
+            DtvkitGlueClient.getInstance().request("Player.setAudioStreamType", args);
+        } catch (Exception e) {
+            Log.e(TAG, "setAudioType = " + e.getMessage());
+        }
+    }
 }
