@@ -15,6 +15,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemProperties;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.widget.FrameLayout;
@@ -66,6 +67,8 @@ public class SubtitleServerView extends FrameLayout {
         public void run() {
             String text = intArrayToString(data);
             textView.setText(text);
+            textView.setBackgroundColor(
+                    TextUtils.isEmpty(text) ? Color.TRANSPARENT : Color.BLACK);
             data = null;
             invalidate();
         }
@@ -319,14 +322,14 @@ public class SubtitleServerView extends FrameLayout {
 
     private void initTextSubtitle() {
         float xStart = (float) displayRect.width() / 8;
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(displayRect.width() * 3/4, LayoutParams.WRAP_CONTENT);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         lp.gravity = Gravity.BOTTOM;
         lp.bottomMargin = 60;
         textView.setLayoutParams(lp);
-        textView.setGravity(Gravity.CENTER);
-        textView.setTextColor(Color.YELLOW);
+        textView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        textView.setTextColor(Color.WHITE);
         textView.setX(xStart);
-        textView.setTextSize(36f);
+        textView.setTextSize(32f);
     }
 
     public void showTestSubtitle() {
