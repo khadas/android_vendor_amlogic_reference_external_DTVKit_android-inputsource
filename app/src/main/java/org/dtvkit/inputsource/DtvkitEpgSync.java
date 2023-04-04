@@ -236,11 +236,19 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 content_level_1 = event.getString("content_level_1");
                 content_level_2 = event.getString("content_level_2");
                 String[] genres = getGenres(event.getString("genre"), content_value);
-                String genre_str;
-                if (genres.length == 0) {
-                    genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
-                    if (!TextUtils.isEmpty(genre_str)) {
-                        data.put("genre", genre_str);
+                if (channel.getType().startsWith("TYPE_ISDB")) {
+                    if (!TextUtils.isEmpty(content_level_1) && !TextUtils.isEmpty(content_level_2)) {
+                        data.put("genre", content_level_1 + " - " + content_level_2);
+                    } else if (!TextUtils.isEmpty(content_level_1) || !TextUtils.isEmpty(content_level_2)) {
+                        data.put("genre", !TextUtils.isEmpty(content_level_1) ? content_level_1 : content_level_2);
+                    }
+                } else {
+                    String genre_str;
+                    if (genres.length == 0) {
+                        genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
+                        if (!TextUtils.isEmpty(genre_str)) {
+                            data.put("genre", genre_str);
+                        }
                     }
                 }
 
@@ -258,7 +266,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setLongDescription(event.optString("description_extern"))
                         .setCanonicalGenres(genres)
                         .setInternalProviderData(data)
-                        .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name")))
+                        .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name"), channel.getType().startsWith("TYPE_ISDB")))
                         .build();
             }
         } catch (JSONException ignored) {
@@ -361,13 +369,20 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 int content_value = now.optInt("content_value");
                 String content_level_1 = now.getString("content_level_1");
                 String content_level_2 = now.getString("content_level_2");
-
                 String[] genres = getGenres(now.getString("genre"), content_value);
-                String genre_str;
-                if (genres.length == 0) {
-                    genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
-                    if (!TextUtils.isEmpty(genre_str)) {
-                        data.put("genre", genre_str);
+                if (channel.getType().startsWith("TYPE_ISDB")) {
+                    if (!TextUtils.isEmpty(content_level_1) && !TextUtils.isEmpty(content_level_2)) {
+                        data.put("genre", content_level_1 + " - " + content_level_2);
+                    } else if (!TextUtils.isEmpty(content_level_1) || !TextUtils.isEmpty(content_level_2)) {
+                        data.put("genre", !TextUtils.isEmpty(content_level_1) ? content_level_1 : content_level_2);
+                    }
+                } else {
+                    String genre_str;
+                    if (genres.length == 0) {
+                        genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
+                        if (!TextUtils.isEmpty(genre_str)) {
+                            data.put("genre", genre_str);
+                        }
                     }
                 }
 
@@ -394,13 +409,20 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 int content_value = next.optInt("content_value");
                 String content_level_1 = next.getString("content_level_1");
                 String content_level_2 = next.getString("content_level_2");
-
                 String[] genres = getGenres(next.getString("genre"), content_value);
-                String genre_str;
-                if (genres.length == 0) {
-                    genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
-                    if (!TextUtils.isEmpty(genre_str)) {
-                        data.put("genre", genre_str);
+                if (channel.getType().startsWith("TYPE_ISDB")) {
+                    if (!TextUtils.isEmpty(content_level_1) && !TextUtils.isEmpty(content_level_2)) {
+                        data.put("genre", content_level_1 + " - " + content_level_2);
+                    } else if (!TextUtils.isEmpty(content_level_1) || !TextUtils.isEmpty(content_level_2)) {
+                        data.put("genre", !TextUtils.isEmpty(content_level_1) ? content_level_1 : content_level_2);
+                    }
+                } else {
+                    String genre_str;
+                    if (genres.length == 0) {
+                        genre_str = (content_value <= 0xff) ? content_level_1 : content_level_2;
+                        if (!TextUtils.isEmpty(genre_str)) {
+                            data.put("genre", genre_str);
+                        }
                     }
                 }
 
@@ -493,25 +515,50 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         }
     }
 
-    private TvContentRating[] parseParentalRatings(int parentalRating, String title)
+    private TvContentRating[] parseParentalRatings(int parentalRating, String title, boolean isISDBType)
     {
-        TvContentRating[] ratings_array;
-        String ratingSystemDefinition = "DVB";
+        TvContentRating[] ratings_array = new TvContentRating[1];
         String ratingDomain = ContentRatingsParser.DOMAIN_SYSTEM_RATINGS;
-        String[] DVB_ContentRating = {"DVB_4", "DVB_5", "DVB_6", "DVB_7", "DVB_8", "DVB_9", "DVB_10",
-                "DVB_11", "DVB_12", "DVB_13", "DVB_14", "DVB_15", "DVB_16", "DVB_17", "DVB_18", "DVB_19"};
-
-        ratings_array = new TvContentRating[1];
-        parentalRating += 3; //minimum age = rating + 3 years
-//        Log.d(TAG, "parseParentalRatings parentalRating:"+ parentalRating + ", title = " + title);
-        if (parentalRating >= 4 && parentalRating <= 19) {
-            TvContentRating r = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, DVB_ContentRating[parentalRating-4], (String) null);
-            if (r != null) {
-                ratings_array[0] = r;
-                Log.d(TAG, "parse ratings add rating:"+r.flattenToString()  + ", title = " + title);
+        if (isISDBType) {
+            String ratingSystemDefinition = "ISDB";
+            int parentalRatingContentIndex = parentalRating / 16;
+            int parentalRatingAge = parentalRating % 16;
+            String[] ISDB_RatingContent = {"Drugs", "Violence", "Violence and Drugs", "Sex", "Sex and Drugs", "Violence and Sex", "Violence, Sex and Drugs"};
+            String[] ISDB_RatingAge = {"ISDB_10", "ISDB_12", "ISDB_14", "ISDB_16", "ISDB_18"};
+            TvContentRating rating;
+            if (parentalRatingContentIndex > 0) {
+                if (parentalRatingAge >= 2 && parentalRatingAge <= 6) {
+                    rating = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, ISDB_RatingContent[parentalRatingContentIndex - 1] + "/" + ISDB_RatingAge[parentalRatingAge - 2] , (String) null);
+                } else {
+                    rating = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, ISDB_RatingContent[parentalRatingContentIndex - 1], (String) null);
+                }
+            } else if (parentalRatingAge >= 2 && parentalRatingAge <= 6) {
+                rating = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, ISDB_RatingAge[parentalRatingAge - 2], (String) null);
+            } else {
+                rating = null;
             }
-        }else {
-            ratings_array = null;
+            if (rating != null) {
+                ratings_array[0] = rating;
+                Log.d(TAG, "parse ratings add rating:" + rating.flattenToString() + ", title = " + title);
+            } else {
+                ratings_array = null;
+            }
+        } else {
+            String ratingSystemDefinition = "DVB";
+            String[] DVB_ContentRating = {"DVB_4", "DVB_5", "DVB_6", "DVB_7", "DVB_8", "DVB_9", "DVB_10",
+                    "DVB_11", "DVB_12", "DVB_13", "DVB_14", "DVB_15", "DVB_16", "DVB_17", "DVB_18", "DVB_19"};
+
+            parentalRating += 3; //minimum age = rating + 3 years
+//        Log.d(TAG, "parseParentalRatings parentalRating:"+ parentalRating + ", title = " + title);
+            if (parentalRating >= 4 && parentalRating <= 19) {
+                TvContentRating r = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, DVB_ContentRating[parentalRating - 4], (String) null);
+                if (r != null) {
+                    ratings_array[0] = r;
+                    Log.d(TAG, "parse ratings add rating:" + r.flattenToString() + ", title = " + title);
+                }
+            } else {
+                ratings_array = null;
+            }
         }
 
         return ratings_array;
