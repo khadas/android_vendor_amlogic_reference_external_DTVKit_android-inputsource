@@ -209,4 +209,12 @@ public class ConstantManager {
             return pid2.compareTo(pid1);
         }
     }
+
+    public static class AUDIO_STREAM_TYPE {
+        public final static int NORMAL = 0;
+        public final static int HEARING_IMPAIRED = 2;
+        public final static int AUDIO_DESCRIPTION = 3;
+        public final static int SPOKEN_SUBTITLE = 4;
+        public final static int AUDIO_DESCRIPTION_SS = 5;
+    }
 }

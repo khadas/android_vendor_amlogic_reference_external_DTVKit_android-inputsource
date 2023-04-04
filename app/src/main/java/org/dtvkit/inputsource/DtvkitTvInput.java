@@ -35,7 +35,6 @@ import android.net.ConnectivityManager;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -46,7 +45,6 @@ import android.os.Process;
 import android.os.SystemClock;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.KeyEvent;
@@ -73,6 +71,7 @@ import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
 import com.droidlogic.dtvkit.companionlibrary.model.Program;
 import com.droidlogic.dtvkit.companionlibrary.model.RecordedProgram;
 import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
+import com.droidlogic.dtvkit.inputsource.DataManager;
 import com.droidlogic.dtvkit.inputsource.parental.ContentRatingSystem;
 import com.droidlogic.dtvkit.inputsource.parental.ContentRatingsManager;
 import com.droidlogic.dtvkit.inputsource.util.FeatureUtil;
@@ -3552,6 +3551,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (type == TvTrackInfo.TYPE_AUDIO) {
                 if (mResourceOwnedByBr) {
                     if (playerSelectAudioTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
+                        playerSetAdParams(0, true);
                         mCurrentAudioTrackId = Integer.parseInt(trackId);
                         notifyTrackSelected(type, trackId);
                         if (mHbbTvManager != null) {
@@ -3740,6 +3740,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(mCurrentAudioTrackId));
             notifyTrackSelected(TvTrackInfo.TYPE_VIDEO, "0");
             initSubtitleOrTeletextIfNeed();
+            playerSetAdParamsWithDelay(Boolean.compare(mIsPip, false), true, mAudioADAutoStart ? 1100 : 0);
         }
 
         @Override
@@ -3967,21 +3968,23 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 /*if (mView != null) {
                     mView.showTuningImage(null);
                 }*/
-            } else if (TextUtils.equals(DataManager.ACTION_DTV_AUDIO_STREAM_TYPE, action)) {
-                playerSetAudioStreamType(data.getInt(action));
-            } else if (TextUtils.equals(DataManager.ACTION_DTV_ENABLE_AUDIO_AD, action)) {
+            } else if (TextUtils.equals(DataManager.ACTION_DTV_AUDIO_STREAM_TYPE, action) && data != null) {
+                int type = data.getInt(action);
+                int version = data.getInt("ver");
+                // 108473 : audioType
+                Log.d(TAG, "do private cmd: ACTION_DTV_AUDIO_STREAM_TYPE: " + type + ", ver=" + version);
+                playerSetAudioStreamType(type);
+                playerSetAdParamsWithDelay(0, true, mAudioADAutoStart ? 1100 : 0);
+            } else if (TextUtils.equals(DataManager.ACTION_DTV_ENABLE_AUDIO_AD, action) && data != null) {
                 mAudioADAutoStart = data.getInt(DataManager.PARA_ENABLE) == 1;
-                boolean recover = data.getBoolean("recover", true);
+                int type = data.getInt("type", -1);
+                boolean recover = type != ConstantManager.AUDIO_STREAM_TYPE.NORMAL;
                 Log.d(TAG, "do private cmd: ACTION_DTV_ENABLE_AUDIO_AD: " + mAudioADAutoStart
-                        + ", recover = " + recover);
+                        + ", type = " + type);
                 boolean ret = setAdAssociate(mAudioADAutoStart);
                 int index = Boolean.compare(ret, false);
-                playerInitAssociateDualSupport(index, recover);
-                if (!recover) {
-                    // singlePID Dolby AD Cert.
-                    playerSetADMixLevel(index, 0);
-                    playerSetADVolume(index, 0);
-                }
+                // give a delay to make playerSetAdParams takes effect after ad_enable is set in audio_hal.
+                playerSetAdParamsWithDelay(index, recover, mAudioADAutoStart ? 1100 : 0);
                 if (mHbbTvManager != null) {
                     mHbbTvManager.setAudioDescriptions();
                 }
@@ -4468,6 +4471,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     notifyVideoAvailable();
                                 }
                             }
+                            playerSetAdParamsWithDelay(Boolean.compare(mIsPip, false), true, mAudioADAutoStart ? 1100 : 0);
                             if (mMainHandle != null) {
                                 mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
                                 Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
@@ -5016,8 +5020,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 } else if (signal.equals("AudioTrackSelected")) {
                     // after track changed, should update sound mode again
                     notifySessionEvent(ConstantManager.ACTION_AUDIO_TRACK_SELECTED, null);
-                    int index = Boolean.compare(mIsPip, false);
-                    playerInitAssociateDualSupport(index, false);
                 } else if (signal.equals("TkgsStartTuneUpdate")) {
                     notifySessionEvent(ConstantManager.ACTION_TKGS_START_TUNE_UPDATE, null);
                     mMainHandle.post(()->showToast(R.string.string_tune_update_tip));
@@ -5137,9 +5139,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         setBlockMute(mute);
                         break;
                     case MSG_SET_STREAM_VOLUME:
-                        if (msg.arg1 != 0) {
-                            playerInitAssociateDualSupport(msg.arg2, false);
-                        }
                         playerSetMute(msg.arg1 == 0, msg.arg2);
                         break;
                     case MSG_EVENT_SUBTITLE_OPENED:
@@ -5389,18 +5388,51 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             notifyContentAllowed();
         }
 
-        private boolean playerInitAssociateDualSupport(int index, boolean recover) {
-            mAudioADMixingLevel = mDataManager.getIntParameters(DataManager.TV_KEY_AD_MIX);
-            mAudioADVolume = mDataManager.getIntParameters(DataManager.TV_KEY_AD_VOLUME);
-            if (mAudioADAutoStart || recover) {
-                Log.d(TAG, "playerInitAssociateDualSupport path=" + index
-                            + ", mAudioADAutoStart = " + mAudioADAutoStart
-                            + ", mAudioADMixingLevel = " + mAudioADMixingLevel
-                            + ", mAudioADVolume = " + mAudioADVolume);
-                playerSetADMixLevel(index, mAudioADMixingLevel);
-                playerSetADVolume(index, mAudioADVolume);
+        private void playerSetAdParams(int index, boolean recover) {
+            playerSetAdParamsWithDelay(index, recover, 0);
+        }
+
+        /* delayMs is workaround*/
+        private void playerSetAdParamsWithDelay(int index, boolean recover, long delayMs) {
+            if (mHandlerThreadHandle == null) {
+                return;
             }
-            return true;
+            Log.d(TAG, "playerSetAdParamsWithDelay recover=" + recover);
+            mHandlerThreadHandle.removeCallbacks(adRunnable);
+            adRunnable.setParams(index, recover);
+            mHandlerThreadHandle.postDelayed(adRunnable, delayMs);
+        }
+
+        private final ADRunnable adRunnable = new ADRunnable();
+        private class ADRunnable implements Runnable {
+            private int index = 0;
+            private boolean recover = true;
+            public ADRunnable() {
+            }
+
+            public void setParams(int index, boolean recover) {
+                this.index = index;
+                this.recover = recover;
+            }
+
+            @Override
+            public void run() {
+                mAudioADMixingLevel = mDataManager.getIntParameters(DataManager.TV_KEY_AD_MIX);
+                mAudioADVolume = mDataManager.getIntParameters(DataManager.TV_KEY_AD_VOLUME);
+                int type = playerGetAudioStreamType();
+                Log.d(TAG, "playerSetAdParams path=" + index
+                        + ", mAudioADAutoStart = " + mAudioADAutoStart
+                        + ", AudioStreamType = " + type
+                        + ", mAudioADMixingLevel = " + mAudioADMixingLevel
+                        + ", mAudioADVolume = " + mAudioADVolume);
+                if (type == ConstantManager.AUDIO_STREAM_TYPE.NORMAL || !recover) {
+                    playerSetADMixLevel(index, 0);
+                    playerSetADVolume(index, 0);
+                } else {
+                    playerSetADMixLevel(index, mAudioADMixingLevel);
+                    playerSetADVolume(index, mAudioADVolume);
+                }
+            }
         }
 
         private void sendUpdateTrackMsg(PlayerState playState, boolean isDvrPlaying) {
@@ -5657,7 +5689,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (playerPlay(INDEX_FOR_MAIN, recordedProgram.getRecordingDataUri(),
                         mAudioADAutoStart, false, 0, "", "").equals("ok")) {
                     notifyChannelRetuned(uri);
-                    playerInitAssociateDualSupport(0, false);
                 } else {
                     DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
@@ -7217,6 +7248,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return result;
         }
         return result;
+    }
+
+    public int playerGetAudioStreamType() {
+        int type = 0;
+
+        try {
+            JSONArray array = new JSONArray();
+            array.put(0);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Player.getAudioStreamType", array);
+            if (obj != null && obj.getBoolean("accepted")) {
+                type = obj.getInt("data");
+            }
+            Log.d(TAG, "getAudioType type = " + type);
+        } catch (Exception e) {
+            Log.e(TAG, "getAudioType failed, " + e.getMessage());
+        }
+
+        return type;
     }
 
     private void playerSetAudioStreamType(int type) {
