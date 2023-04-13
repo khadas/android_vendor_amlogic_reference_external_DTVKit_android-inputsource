@@ -28,13 +28,53 @@ import java.util.concurrent.TimeUnit;
 
 public class DtvkitEpgSync extends EpgSyncJobService {
     private static final String TAG = "EpgSyncJobService";
+    private static final Object mLock = new Object();
+    private static JSONArray mServices = null;
 
     public static final int SIGNAL_QPSK = 1; // digital satellite
     public static final int SIGNAL_COFDM = 2; // digital terrestrial
-    public static final int SIGNAL_QAM   = 4; // digital cable
-    public static final int SIGNAL_ISDBT  = 5;
+    public static final int SIGNAL_QAM = 4; // digital cable
+    public static final int SIGNAL_ISDBT = 5;
     // public static final int SIGNAL_ANALOG = 8;
     boolean mIsUK = false;
+
+    /* called after channel search */
+    public static JSONArray getServicesList() throws Exception {
+        return getServicesList("cur", "all");
+    }
+
+    public static JSONArray getServicesList(String signal_type, String tv_type) throws Exception {
+        JSONArray param = new JSONArray();
+        JSONArray services = new JSONArray();
+        int index = 0;
+        final int maxTransChannelsSize = 512;
+        while (true) {
+            param.put(signal_type); // signal_type
+            param.put(tv_type); // tv_radio type
+            param.put(index);
+            param.put(maxTransChannelsSize);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServicesByIndex", param);
+            JSONArray tmpServices = obj.optJSONArray("data");
+            if (tmpServices == null) {
+                break;
+            } else {
+                for (int i = 0; i < tmpServices.length(); i++) {
+                    services.put(tmpServices.get(i));
+                }
+                index += tmpServices.length();
+                if (tmpServices.length() < maxTransChannelsSize) {
+                    break;
+                }
+            }
+        }
+        return services;
+    }
+
+    public static void setServicesToSync(JSONArray services) {
+        synchronized (mLock) {
+            mServices = services;
+        }
+    }
 
     @Override
     public List<Channel> getChannels(boolean syncCurrent) {
@@ -44,7 +84,6 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         Log.i(TAG, "Get channels for epg sync, current: " + syncCurrent);
 
         try {
-            JSONArray services = new JSONArray();
             JSONArray param = new JSONArray();
             param.put(false);
             param.put(syncCurrent ? "cur" : "all"); // signal_type
@@ -58,22 +97,17 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             if (syncCurrent && TextUtils.isEmpty(getChannelTypeFilter())) {
                 setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(getCurrentDvbSource()));
             }
-            int index = 0;
-            int remainChannels = channelNumber;
-            int maxTransChannelsSize = 512;
-            while (remainChannels > 0) {
-                JSONArray param1 = new JSONArray();
-                param1.put(syncCurrent ? "cur" : "all"); // signal_type
-                param1.put("all"); // tv_radio type
-                param1.put(index);
-                param1.put(maxTransChannelsSize);
-                JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServicesByIndex", param1);
-                JSONArray tmpServices = obj.getJSONArray("data");
-                remainChannels -= maxTransChannelsSize;
-                index += maxTransChannelsSize;
-                for (int i=0;i<tmpServices.length();i++) {
-                    services.put(tmpServices.get(i));
+            JSONArray services = new JSONArray();
+            synchronized (mLock) {
+                if (mServices != null && channelNumber == mServices.length()) {
+                    for (int i = 0; i < channelNumber; i++) {
+                        services.put(mServices.get(i));
+                    }
                 }
+                mServices = null;
+            }
+            if (services.length() == 0) {
+                services = getServicesList(syncCurrent ? "cur" : "all", "all");
             }
             Log.i(TAG, "Finally getChannels size=" + services.length());
             boolean ciTest = PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_ADD_TEST, false);

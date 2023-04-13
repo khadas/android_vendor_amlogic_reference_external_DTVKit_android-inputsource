@@ -2,56 +2,50 @@ package com.droidlogic.dtvkit.inputsource;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.media.tv.TvContract;
 import android.media.tv.TvInputInfo;
 import android.os.Bundle;
-import android.os.SystemClock;
-import android.support.v4.content.LocalBroadcastManager;
-import android.util.Log;
-import android.view.View;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-import android.text.Editable;
-import android.text.TextUtils;
-import android.text.TextWatcher;
-import android.widget.EditText;
-import android.widget.Spinner;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.LinearLayout;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemSelectedListener;
-import android.widget.ArrayAdapter;
-import android.view.KeyEvent;
-import android.widget.Toast;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.view.WindowManager;
-import android.util.TypedValue;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.os.SystemClock;
+import android.support.v4.content.LocalBroadcastManager;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.util.Log;
+import android.view.KeyEvent;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
+import com.droidlogic.dtvkit.inputsource.DataManager;
+import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
+import com.droidlogic.fragment.ParameterManager;
+import com.droidlogic.settings.ConstantManager;
+
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Locale;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
-
-import com.droidlogic.fragment.ParameterManager;
-import com.droidlogic.settings.ConstantManager;
-import org.droidlogic.dtvkit.DtvkitGlueClient;
-import com.droidlogic.dtvkit.inputsource.DataManager;
-
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 public class DtvkitIsdbtSetup extends Activity {
     private static final String TAG = "DtvkitIsdbtSetup";
 
@@ -817,7 +811,10 @@ public class DtvkitIsdbtSetup extends Activity {
             return;
         }
         //update search results as After the search is finished, the lcn will be reordered
-        mServiceList = getServiceList();
+        try {
+            mServiceList = DtvkitEpgSync.getServicesList();
+            DtvkitEpgSync.setServicesToSync(mServiceList);
+        } catch (Exception ignored) {}
         mFoundServiceNumber = getFoundServiceNumber();
         if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
             Log.d(TAG, "mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
@@ -969,23 +966,6 @@ public class DtvkitIsdbtSetup extends Activity {
             Log.e(TAG, "getSearchProcess Exception = " + ignore.getMessage());
         }
         return progress;
-    }
-
-    private JSONArray getServiceList() {
-        JSONArray result = null;
-        try {
-            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServices", new JSONArray());
-            JSONArray services = obj.getJSONArray("data");
-            result = services;
-            for (int i = 0; i < services.length(); i++) {
-                JSONObject service = services.getJSONObject(i);
-                //Log.i(TAG, "getServiceList service = " + service.toString());
-            }
-
-        } catch (Exception e) {
-            Log.e(TAG, "getServiceList Exception = " + e.getMessage());
-        }
-        return result;
     }
 
     private void sendOnSignal(final Map<String, Object> map) {

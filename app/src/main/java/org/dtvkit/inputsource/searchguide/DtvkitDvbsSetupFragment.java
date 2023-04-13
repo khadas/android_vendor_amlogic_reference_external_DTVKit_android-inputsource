@@ -837,7 +837,10 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
 
     private void onSearchFinished() {
         //update search results as After the search is finished, the lcn will be reordered
-        mServiceList = getServiceList();
+        try {
+            mServiceList = DtvkitEpgSync.getServicesList();
+            DtvkitEpgSync.setServicesToSync(mServiceList);
+        } catch (Exception ignored) {}
         mFoundServiceNumber = getFoundServiceNumber();
         if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
             Log.d(TAG, "mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
@@ -944,23 +947,6 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             Log.e(TAG, "getSearchProcess Exception = " + e.getMessage());
         }
         return progress;
-    }
-
-    private JSONArray getServiceList() {
-        JSONArray result = null;
-        try {
-            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServices", new JSONArray());
-            JSONArray services = obj.getJSONArray("data");
-            result = services;
-            for (int i = 0; i < services.length(); i++) {
-                JSONObject service = services.getJSONObject(i);
-                //Log.i(TAG, "getServiceList service = " + service.toString());
-            }
-
-        } catch (Exception e) {
-            Log.e(TAG, "getServiceList Exception = " + e.getMessage());
-        }
-        return result;
     }
 
     private void setStrengthAndQualityStatus(final String strengthStatus, final String qualityStatus, final String channel) {
