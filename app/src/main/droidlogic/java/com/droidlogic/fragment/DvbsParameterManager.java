@@ -35,7 +35,7 @@ public class DvbsParameterManager {
 
     private final String[] lnbKeyList = {"test_satellite",
             "test_transponder", "lnb_type", "unicable_version", "high_lnb_voltage", "high_tone_22k",
-            "tone_burst", "diseqc1.0", "diseqc2.0", "motor"};
+            "tone_burst", "diseqc1.0", "diseqc2.0", "diseqc2_abilities", "motor"};
 
     private int mCurrentOperator = OPERATOR_DEFAULT;
     // sync with DTVKit definition
@@ -319,6 +319,14 @@ public class DvbsParameterManager {
             }
             valueStr = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_1_LIST[u_switch];
         } else if (lnbKeyList[9].equals(paraKey)) {
+            int diseqc2_abilities = lnb.getDiseqc2Abilities();
+            if (diseqc2_abilities == 1 || diseqc2_abilities == 3) {
+                diseqc2_abilities = 1;
+            } else {
+                diseqc2_abilities = 0;
+            }
+            valueStr = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC2_X_LIST[diseqc2_abilities];
+        } else if (lnbKeyList[10].equals(paraKey)) {
             int motor = lnb.getMotor();
             if (motor > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST.length -1)) {
                 motor = 0;
@@ -386,6 +394,13 @@ public class DvbsParameterManager {
                 ret = 0;
             }
         } else if (lnbKeyList[9].equals(paraKey)) {
+            ret = lnb.getDiseqc2Abilities();
+            if (ret == 1 || ret == 3) {
+                ret = 1;
+            } else {
+                ret = 0;
+            }
+        } else if (lnbKeyList[10].equals(paraKey)) {
             ret = lnb.getMotor();
             if (ret > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST.length -1)) {
                 ret = 0;

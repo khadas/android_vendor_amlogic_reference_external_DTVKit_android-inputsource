@@ -82,11 +82,12 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final int DIALOG_SET_SELECT_SINGLE_TONE_BURST = R.string.parameter_tone_burst;
     public static final int DIALOG_SET_SELECT_SINGLE_DISEQC1_0 = R.string.parameter_diseqc1_0;
     public static final int DIALOG_SET_SELECT_SINGLE_DISEQC1_1 = R.string.parameter_diseqc1_1;
+    public static final int DIALOG_SET_SELECT_SINGLE_DISEQC2_X = R.string.parameter_diseqc2_x;
     public static final int DIALOG_SET_SELECT_SINGLE_MOTOR = R.string.parameter_motor;
     public static final int[] ID_DIALOG_TITLE_COLLECTOR = {DIALOG_SET_SELECT_TEST_SATELLITE, DIALOG_SET_SELECT_TEST_TRANSPONDER,
             DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE, DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE, DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER,
             DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ, DIALOG_SET_SELECT_SINGLE_TONE_BURST, DIALOG_SET_SELECT_SINGLE_DISEQC1_0,
-            DIALOG_SET_SELECT_SINGLE_DISEQC1_1, DIALOG_SET_SELECT_SINGLE_MOTOR};
+            DIALOG_SET_SELECT_SINGLE_DISEQC1_1, DIALOG_SET_SELECT_SINGLE_DISEQC2_X, DIALOG_SET_SELECT_SINGLE_MOTOR};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST = {"5150", "9750/10600", "Customize"};
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST = {R.string.parameter_lnb_type_5150, R.string.parameter_lnb_type_5750, R.string.parameter_lnb_type_9750, R.string.parameter_lnb_custom};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_CUSTOM_TYPE_LIST = {"first freq", "second freq"};
@@ -99,10 +100,11 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST = {/*"13V", "18V",*/"off", "on"/*, "13/18V"*/};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {"on", "off"/*, "auto"*/};
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
+    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC2_X_LIST = {"off", "on"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST = {"none", "a", "b"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_0_LIST = {"none", "1/4", "2/4", "3/4", "4/4"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_1_LIST = {"none", "1/16", "2/16", "3/16", "4/16", "5/16", "6/16", "7/16", "8/16", "9/16", "10/16", "11/16", "12/16", "13/16", "14/16", "15/16", "16/16"};
-    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST = {"none", "DiSEqc1.2", "DiSEqc1.3"};
+    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST = {"none", "DiSEqc1.2", "DiSEqc1.3", "DiSEqc2.2", "DiSEqc2.3"};
 
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DISH_LIMITS = R.string.parameter_diseqc1_2_dish_limits_status;
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DISH_LIMITS_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
@@ -112,6 +114,7 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTION_LIST = {R.string.parameter_diseqc1_2_move_direction_east, R.string.parameter_diseqc1_2_move_direction_center, R.string.parameter_diseqc1_2_move_direction_west};
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_STEP = R.string.parameter_diseqc1_2_move_step;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_MOVE = R.string.parameter_diseqc1_2_move;
+    public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_STOP_MOVE = R.string.parameter_diseqc1_2_stop_move;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_POSITION = R.string.parameter_diseqc1_2_current_position;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_SAVE_TO_POSITION = R.string.parameter_diseqc1_2_save_to_position;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_MOVE_TO_POSITION = R.string.parameter_diseqc1_2_move_to_position;
@@ -122,7 +125,7 @@ public class CustomDialog/* extends AlertDialog*/ {
 
     public static final /*String*/int[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST = {DIALOG_SET_SELECT_SINGLE_ITEM_SATELLITE, DIALOG_SET_SELECT_SINGLE_ITEM_TRANSPONDER, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DISH_LIMITS,
             DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_SET_EAST_DISH_LIMITS, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_SET_WEST_DISH_LIMITS, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTION,
-            DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_STEP, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_MOVE,
+            DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_STEP, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_MOVE,DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_STOP_MOVE,
             DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_SAVE_TO_POSITION, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_MOVE_TO_POSITION, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_STRENGTH,
             DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_QUALITY, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_SAVE, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_SCAN
     };
@@ -279,6 +282,17 @@ public class CustomDialog/* extends AlertDialog*/ {
         return items;
     }
 
+    private LinkedList<DialogItemAdapter.DialogItemDetail> buildDiseqc2_x_Item(int select) {
+        LinkedList<DialogItemAdapter.DialogItemDetail> items = new LinkedList<DialogItemAdapter.DialogItemDetail>();
+        DialogItemAdapter.DialogItemDetail item = null;
+        for (int i = 0; i < DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC2_X_LIST.length; i++) {
+            boolean needSelect = select == i ? true : false;
+            item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_SELECT, DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC2_X_LIST[i], "", needSelect);
+            items.add(item);
+        }
+        return items;
+    }
+
     private LinkedList<DialogItemAdapter.DialogItemDetail> buildMotorItem(int select) {
         LinkedList<DialogItemAdapter.DialogItemDetail> items = new LinkedList<DialogItemAdapter.DialogItemDetail>();
         DialogItemAdapter.DialogItemDetail item = null;
@@ -345,6 +359,9 @@ public class CustomDialog/* extends AlertDialog*/ {
                 break;
             case ParameterManager.KEY_DISEQC1_1:
                 items.addAll(buildDiseqc1_1_Item(select));
+                break;
+            case ParameterManager.KEY_DISEQC2_x:
+                items.addAll(buildDiseqc2_x_Item(select));
                 break;
             case ParameterManager.KEY_MOTOR:
                 items.addAll(buildMotorItem(select));
@@ -498,11 +515,11 @@ public class CustomDialog/* extends AlertDialog*/ {
         mAlertDialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
     }
 
-    public void initDiseqc1_2_ItemDialog(boolean isDiseqc1_3) {
-        initDiseqc1_2_ItemDialog(isDiseqc1_3, true);
+    public void initDiseqc1_2_ItemDialog(int position, boolean isDiseqc_x_3) {
+        initDiseqc1_2_ItemDialog(position, isDiseqc_x_3, true);
     }
 
-    public void initDiseqc1_2_ItemDialog(boolean isDiseqc1_3, boolean init) {
+    public void initDiseqc1_2_ItemDialog(int itemPosition, boolean isDiseqc_x_3, boolean init) {
         if (init) {
             AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
             mAlertDialog = builder.create();
@@ -612,11 +629,16 @@ public class CustomDialog/* extends AlertDialog*/ {
                     break;
                 }
                 case 8: {
+                    type = DialogItemAdapter.DialogItemDetail.ITEM_DISPLAY;
+                    value = mContext.getString(R.string.parameter_diseqc1_2_press_to_stop_move);
+                    break;
+                }
+                case 9: {
                     value = mContext.getString(R.string.parameter_diseqc1_2_press_to_save);
                     type = DialogItemAdapter.DialogItemDetail.ITEM_DISPLAY;
                     break;
                 }
-                case 9: {
+                case 10: {
                     type = DialogItemAdapter.DialogItemDetail.ITEM_DISPLAY;
                     value = mContext.getString(R.string.parameter_diseqc1_2_press_to_move);
                     break;
@@ -633,7 +655,7 @@ public class CustomDialog/* extends AlertDialog*/ {
             }
         }
         //add location info for diseqc1.3
-        if (isDiseqc1_3) {
+        if (isDiseqc_x_3) {
             int locationIndex = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("diseqc_location");
             List<String> locations = mParameterManager.getDvbsParaManager().getLnbWrap().getDiseqcLocationNames();
             itemlist.add(new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH,
@@ -673,13 +695,8 @@ public class CustomDialog/* extends AlertDialog*/ {
             return;
         }
 
-        if (isDiseqc1_3) {
-            mDialogTitle.setText(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST[2]);
-            mDialogTitleText = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST[2];
-        } else {
-            mDialogTitle.setText(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST[1]);
-            mDialogTitleText = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST[1];
-        }
+        mDialogTitle.setText(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST[itemPosition]);
+        mDialogTitleText = CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_MOTOR_LIST[itemPosition];
         mListView.setKey(ParameterManager.KEY_DISEQC1_2);
         mDialogKeyText = ParameterManager.KEY_DISEQC1_2;
         mListView.setDialogCallBack(mDialogCallBack);
@@ -704,8 +721,8 @@ public class CustomDialog/* extends AlertDialog*/ {
         mAlertDialog.setView(mDialogView);
     }
 
-    public void updateDiseqc1_2_Dialog(boolean isDiseqc1_3) {
-        initDiseqc1_2_ItemDialog(isDiseqc1_3, false);
+    public void updateDiseqc1_2_Dialog(int itemPosition, boolean isDiseqc_x_3) {
+        initDiseqc1_2_ItemDialog(itemPosition,isDiseqc_x_3, false);
     }
 
     public CustomDialog creatSavingDialog() {

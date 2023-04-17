@@ -61,6 +61,7 @@
     <string name="parameter_tone_burst">ToneBurst</string>
     <string name="parameter_diseqc1_0">DisEqc1.0</string>
     <string name="parameter_diseqc1_1">DisEqc1.1</string>
+    <string name="parameter_diseqc2_x">DisEqc2.x</string>
     <string name="parameter_motor">Motor</string>
     <string name="parameter_diseqc1_2">DisEqc1.2</string>
     <string name="parameter_diseqc1_2_dish_limits_status">Dish Limits Status</string>
@@ -74,7 +75,9 @@
     <string name="parameter_diseqc1_2_move_direction">Move Direction</string>
     <string name="parameter_diseqc1_2_move_step">Move Step</string>
     <string name="parameter_diseqc1_2_move">Move</string>
+    <string name="parameter_diseqc1_2_stop_move">Stop Move</string>
     <string name="parameter_diseqc1_2_press_to_move">Press To Move</string>
+    <string name="parameter_diseqc1_2_press_to_stop_move">Press To Stop Move</string>
     <string name="parameter_diseqc1_2_current_position">Current Position</string>
     <string name="parameter_diseqc1_2_save_to_position">Save To Position</string>
     <string name="parameter_diseqc1_2_press_to_save">Press To Save</string>

@@ -80,6 +80,7 @@ public class ParameterManager {
     public static final String KEY_TONE_BURST = "key_tone_burst";
     public static final String KEY_DISEQC1_0 = "key_diseqc1_0";
     public static final String KEY_DISEQC1_1 = "key_diseqc1_1";
+    public static final String KEY_DISEQC2_x = "key_diseqc2_x";
     public static final String KEY_MOTOR = "key_motor";
     public static final String KEY_DISEQC1_2 = "key_diseqc1_2";
     public static final String KEY_DISEQC1_2_DISH_LIMITS_STATUS = "key_dish_limit_status";
@@ -94,7 +95,7 @@ public class ParameterManager {
 
     public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATELLITE, KEY_TRANSPONDER,
             KEY_LNB_TYPE, KEY_UNICABLE_SWITCH/*KEY_UNICABLE*/, KEY_LNB_POWER,
-            KEY_22_KHZ, KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
+            KEY_22_KHZ, KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_DISEQC2_x, KEY_MOTOR};
     public static final String KEY_LNB_CUSTOM = "key_lnb_custom";
     public static final String KEY_LNB_CUSTOM_SINGLE_DOUBLE = "key_lnb_custom_single_double";
     public static final int DEFAULT_LNB_CUSTOM_SINGLE_DOUBLE = 0;//SINGLE

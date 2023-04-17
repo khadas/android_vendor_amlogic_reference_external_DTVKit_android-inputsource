@@ -56,9 +56,9 @@ public class DialogManager {
         return customDialog;
     }*/
 
-    public CustomDialog buildDiseqc1_2_ItemDialog(boolean isDiseqc1_3, DialogCallBack callBack) {
+    public CustomDialog buildDiseqc1_2_ItemDialog(int position, boolean isDiseqc_x_3, DialogCallBack callBack) {
         CustomDialog customDialog = new CustomDialog(mContext, CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM, callBack, mParameterManager);
-        customDialog.initDiseqc1_2_ItemDialog(isDiseqc1_3);
+        customDialog.initDiseqc1_2_ItemDialog(position, isDiseqc_x_3);
         return customDialog;
     }
 

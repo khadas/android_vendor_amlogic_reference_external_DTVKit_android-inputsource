@@ -659,17 +659,41 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     }
                     break;
                 }
+                case ParameterManager.KEY_DISEQC2_x: {
+                    int position = data.getInt("position");
+                    if ("selected".equals(data.getString("action"))) {
+                        if (position > (CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC2_X_LIST.length - 1)) {
+                            position = 0;
+                        }
+                        if (mCurrentCustomDialog != null) {
+                            mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(),
+                                    mCurrentCustomDialog.getDialogKey(), position);
+                        }
+                        int motor = mParameterManager.getDvbsParaManager()
+                                .getLnbWrap().getLnbById(lnb).getMotor();
+                        position = (motor > 2 && position == 1) ? 3 : (motor <= 2 && position == 1) ? 1 : (motor > 2) ? 2 : 0;
+                        mParameterManager.getDvbsParaManager()
+                                .getLnbWrap().getLnbById(lnb)
+                                .editDiseqc2Abilities(position);
+                        mItemAdapterOption.reFill(mParameterManager.getDvbsParaManager().getLnbParamsWithId());
+                    }
+                    break;
+                }
                 case ParameterManager.KEY_MOTOR:
                     if (data != null && "selected".equals(data.getString("action"))) {
-                        boolean isDiseqc1_3 = false;
+                        boolean isDiseqcX_3 = false;
                         mParameterManager.getDvbsParaManager().getLnbWrap().getLnbById(lnb).editMotor(data.getInt("position"));
+                        int position = data.getInt("position");
+                        int diseqc2_x = mParameterManager.getDvbsParaManager().getLnbWrap().getLnbById(lnb).getDiseqc2Abilities();
+                        diseqc2_x = (position > 2 && diseqc2_x % 2 == 1) ? 3 : (position <= 2 && diseqc2_x % 2 == 1) ? 1 : (position > 2) ? 2 : 0;
+                        mParameterManager.getDvbsParaManager().getLnbWrap().getLnbById(lnb).editDiseqc2Abilities(diseqc2_x);
                         if (data.getInt("position") >= 1 && mCurrentCustomDialog != null && TextUtils.equals(parameterKey, mCurrentCustomDialog.getDialogKey())){
-                            if (data.getInt("position") == 2) {
-                                isDiseqc1_3 = true;
+                            if (position == 2 || position == 4) {
+                                isDiseqcX_3 = true;
                             }
                             String testSatellite = mParameterManager.getDvbsParaManager().getCurrentSatellite();
                             if (!TextUtils.isEmpty(testSatellite)) {
-                                mCurrentSubCustomDialog = mDialogManager.buildDiseqc1_2_ItemDialog(isDiseqc1_3, mSingleSelectDialogCallBack);
+                                mCurrentSubCustomDialog = mDialogManager.buildDiseqc1_2_ItemDialog(position, isDiseqcX_3, mSingleSelectDialogCallBack);
                                 if (mCurrentSubCustomDialog != null) {
                                     mCurrentSubCustomDialog.showDialog();
                                 }
@@ -684,7 +708,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                     break;
                 case ParameterManager.KEY_DISEQC1_2: {
                     int motor = mParameterManager.getDvbsParaManager().getLnbWrap().getLnbById(lnb).getMotor();
-                    boolean isDiseqc1_3 = (motor == 2);
+                    boolean isDiseqcX_3 = (motor == 2 || motor == 4);
                     if (data != null && "selected".equals(data.getString("action"))) {
                         int diseqc1_2_position = data.getInt("position");
                         switch (diseqc1_2_position) {
@@ -700,17 +724,20 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                 mParameterManager.dishMove(direction, dishStep);
                                 break;
                             }
-                            case 8: /*save to position*/ {
+                            case 8: /*stop move*/
+                                mParameterManager.stopDishMove();
+                                break;
+                            case 9: /*save to position*/ {
                                 String sateName = mParameterManager.getDvbsParaManager().getCurrentSatellite();
                                 mParameterManager.storeDishPosition(sateName);
                                 break;
                             }
-                            case 9: /*move to position*/ {
+                            case 10: /*move to position*/ {
                                 String sateName = mParameterManager.getDvbsParaManager().getCurrentSatellite();
                                 mParameterManager.moveDishToPosition(sateName);
                                 break;
                             }
-                            case 15: /*gotoxx*/ {
+                            case 16: /*gotoxx*/ {
                                 String sateName = mParameterManager.getDvbsParaManager().getCurrentSatellite();
                                 int locationIndex = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("diseqc_location");
                                 String locationName = mParameterManager.getDvbsParaManager().getLnbWrap()
@@ -823,7 +850,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                 mParameterManager.getDvbsParaManager().setCurrentDiseqcValue("dish_step", stepValue);
                                 break;
                             }
-                            case 10: /* location city */ {
+                            case 11: /* location city */ {
                                 int index = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("diseqc_location");
                                 List<String> locationNameList = mParameterManager.getDvbsParaManager().getLnbWrap()
                                         .getDiseqcLocationNames();
@@ -844,10 +871,10 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                 mParameterManager.getDvbsParaManager().setCurrentDiseqcValue("diseqc_location", index);
                                 break;
                             }
-                            case 11: /*location longitude direction*/
-                            case 12: /*Location longitude*/
-                            case 13: /*Location latitude direction*/
-                            case 14: /*Location latitude*/{
+                            case 12: /*location longitude direction*/
+                            case 13: /*Location longitude*/
+                            case 14: /*Location latitude direction*/
+                            case 15: /*Location latitude*/{
                                 int index = mParameterManager.getDvbsParaManager().getCurrentDiseqcValue("diseqc_location");
                                 List<String> locationNameList = mParameterManager.getDvbsParaManager().getLnbWrap()
                                         .getDiseqcLocationNames();
@@ -896,7 +923,7 @@ public class ScanDishSetupFragment extends com.droidlogic.dtvkit.inputsource.sea
                                 break;
                         }
                         if (!needBreak && mCurrentSubCustomDialog != null && mCurrentSubCustomDialog.isShowing()) {
-                            mCurrentSubCustomDialog.updateDiseqc1_2_Dialog(isDiseqc1_3);
+                            mCurrentSubCustomDialog.updateDiseqc1_2_Dialog(motor, isDiseqcX_3);
                         } else {
                             Log.d(TAG, "mCurrentSubCustomDialog null or need break or not displayed");
                         }

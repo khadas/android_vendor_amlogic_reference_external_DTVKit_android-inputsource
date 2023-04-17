@@ -467,6 +467,7 @@ public class LnbWrap {
         private int u_switch = 0;
         private int motor    = 0;
         private int unicable_version = 0;
+        private int diseqc2_abilities = 0;
         private LnbInfo lnbInfo = new LnbInfo(this);
 
         public Lnb(){
@@ -481,6 +482,7 @@ public class LnbWrap {
                     c_switch = (int)(json.get("c_switch"));
                     u_switch = (int)(json.get("u_switch"));
                     motor = (int)(json.get("motor_switch"));
+                    diseqc2_abilities = (int)(json.get("diseqc2_abilities"));
                     unicable_version = Integer.parseInt((String)(json.get("unicable_version")));
                     lnbInfo.parseFromJson(json);
                 }
@@ -506,7 +508,10 @@ public class LnbWrap {
                 for (int i = 0; i < tempArray.length(); i ++) {
                     array.put(tempArray.get(i));
                 }
-                array.put("" + unicable_version);
+                if (unicable.onOff) {
+                    array.put("" + unicable_version);
+                }
+                array.put(diseqc2_abilities);
             } catch (Exception e) {
             }
             return array;
@@ -534,6 +539,10 @@ public class LnbWrap {
 
         public int getUSwitch() {
             return u_switch;
+        }
+
+        public int getDiseqc2Abilities() {
+            return diseqc2_abilities;
         }
 
         public int getMotor() {
@@ -582,8 +591,20 @@ public class LnbWrap {
             return true;
         }
 
+        public boolean editDiseqc2Abilities(int val) {
+            if (val > 3 || val < 0) {
+                val = 0;
+            }
+            if (diseqc2_abilities == val) {
+                return false;
+            }
+            diseqc2_abilities = val;
+            updateToDtvkit();
+            return true;
+        }
+
         public boolean editMotor(int val) {
-            if (val > 2 || val < 0) {
+            if (val > 4 || val < 0) {
                 val = 0;
             }
             if (motor == val) {
