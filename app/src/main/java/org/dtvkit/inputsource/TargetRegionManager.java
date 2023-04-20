@@ -44,12 +44,17 @@ public class TargetRegionManager {
         mCallback = cb;
     }
 
-    void start() {
+    void start(boolean isScreenOn) {
         final AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
         final AlertDialog alert = builder.create();
         final View dialogView = View.inflate(mContext, R.layout.region_list_spin, null);
-        Objects.requireNonNull(alert.getWindow()).
-                setType(WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG);
+        if (isScreenOn) {
+            Objects.requireNonNull(alert.getWindow()).
+                    setType(WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG);
+        } else {
+            Objects.requireNonNull(alert.getWindow()).
+                    setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        }
         alert.setView(dialogView);
         mSpinnerCountry = dialogView.findViewById(R.id.spinner_region_country);
         mSpinnerPrimary = dialogView.findViewById(R.id.spinner_region_primary);
@@ -220,7 +225,7 @@ public class TargetRegionManager {
 
     private void updateRegions(int target_id, String[] regions) {
         ArrayAdapter<String> adapter =
-                new ArrayAdapter<>(mContext, android.R.layout.simple_spinner_item, regions);
+                new ArrayAdapter<>(mContext, R.layout.simple_spinner_item, regions);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         switch (target_id) {
             case TARGET_REGION_COUNTRY:

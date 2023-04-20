@@ -21,13 +21,16 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class DtvkitBackGroundSearch {
     private static final String TAG = "DtvkitBackGroundSearch";
     private static final boolean DEBUG = true;
 
     private DataManager mDataManager;
+    private ParameterManager mParameterManager;
     private boolean mStartSync = false;
     private boolean mStartSearch = false;
     private JSONArray mServiceList = null;
@@ -51,6 +54,7 @@ public class DtvkitBackGroundSearch {
     public static final String SINGLE_FREQUENCY_CHANNEL_NAME = "channel_name";
     public static final String SINGLE_FREQUENCY_CHANNEL_DISPLAY_NUMBER = "display_number";
     public static final String SINGLE_FREQUENCY_TKGS_USER_MSG = "user_msg";
+    public static final String SINGLE_FREQUENCY_SET_TARGET_REGION = "set_target_region";
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -81,6 +85,7 @@ public class DtvkitBackGroundSearch {
         mInputId = inputId;
         mBgCallback = callback;
         mDataManager = new DataManager(context);
+        mParameterManager = new ParameterManager(mContext, DtvkitGlueClient.getInstance());
     }
 
     boolean isCurrentSignalSupportBackgroundSearch() {
@@ -254,6 +259,18 @@ public class DtvkitBackGroundSearch {
                 mBgCallback.onMessageCallback(mess);
             } catch (JSONException e) {
                 Log.i(TAG, "showTKGSUserMsg JSONException " + e.getMessage());
+            }
+        }
+    }
+
+    private void sendRegionSetMessage() {
+        if (mBgCallback != null) {
+            try {
+                JSONObject mess = new JSONObject();
+                mess.put(SINGLE_FREQUENCY_STATUS_ITEM, SINGLE_FREQUENCY_SET_TARGET_REGION);
+                mBgCallback.onMessageCallback(mess);
+            } catch (JSONException e) {
+                Log.i(TAG, "sendRegionSetMessage JSONException " + e.getMessage());
             }
         }
     }
@@ -439,7 +456,7 @@ public class DtvkitBackGroundSearch {
                 }
             } else {
                 Log.d(TAG, "onSignal search finished");
-                onSearchFinished();
+                prepareSearchFinished();
             }
         }
     }
@@ -472,6 +489,109 @@ public class DtvkitBackGroundSearch {
            stopSearch(false);
            onSearchTerminate();
         }
+    }
+
+    private void prepareSearchFinished( ) {
+        boolean needSetTargetRegion = false;
+        try {
+            JSONArray countryArray = mParameterManager.getTargetRegions(TargetRegionManager.TARGET_REGION_COUNTRY, -1, -1, -1);
+            JSONArray primaryArray = mParameterManager.getTargetRegions(TargetRegionManager.TARGET_REGION_PRIMARY,
+                    countryArray.length() > 0 ? (int) (((JSONObject) (countryArray.get(0))).get("country_code")) : -1, -1, -1);
+            JSONArray secondaryArray = mParameterManager.getTargetRegions(TargetRegionManager.TARGET_REGION_SECONDARY,
+                    countryArray.length() > 0 ? (int) (((JSONObject) (countryArray.get(0))).get("country_code")) : -1,
+                    primaryArray.length() > 0 ? (int) (((JSONObject) (primaryArray.get(0))).get("region_code")) : -1,
+                    -1);
+            JSONArray tertiaryArray = mParameterManager.getTargetRegions(TargetRegionManager.TARGET_REGION_TERTIARY,
+                    countryArray.length() > 0 ? (int) (((JSONObject) (countryArray.get(0))).get("country_code")) : -1,
+                    primaryArray.length() > 0 ? (int) (((JSONObject) (primaryArray.get(0))).get("region_code")) : -1,
+                    secondaryArray.length() > 0 ? (int) (((JSONObject) (secondaryArray.get(0))).get("region_code")) : -1);
+            if (mParameterManager.needConfirmTargetRegion(countryArray, primaryArray, secondaryArray, tertiaryArray)) {
+                needSetTargetRegion = true;
+                sendRegionSetMessage();
+            }
+        } catch (Exception e) {
+            Log.i(TAG,"getTargetRegions error " + e.getMessage());
+        }
+        if (!needSetTargetRegion) {
+            onSearchFinished();
+        }
+    }
+
+    public void showDialogForSetTargetRegion(Context context) {
+        final TargetRegionManager regionManager = new TargetRegionManager(context);
+        regionManager.setRegionCallback(new TargetRegionManager.TargetRegionsCallbacks() {
+            @Override
+            public Map<String, Integer> requestRegionList(int target_id) {
+                HashMap<String, Integer> map = new HashMap<String, Integer>();
+                JSONArray array = null;
+                switch (target_id) {
+                    case TargetRegionManager.TARGET_REGION_COUNTRY:
+                        array = mParameterManager.getTargetRegions(target_id, -1, -1, -1);
+                        break;
+                    case TargetRegionManager.TARGET_REGION_PRIMARY:
+                        array = mParameterManager.getTargetRegions(target_id,
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
+                                -1, -1);
+                        break;
+                    case TargetRegionManager.TARGET_REGION_SECONDARY:
+                        array = mParameterManager.getTargetRegions(target_id,
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_PRIMARY),
+                                -1);
+                        break;
+                    case TargetRegionManager.TARGET_REGION_TERTIARY:
+                        array = mParameterManager.getTargetRegions(target_id,
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_PRIMARY),
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_SECONDARY));
+                        break;
+                }
+                if (array != null && array.length() > 0) {
+                    JSONObject region = null;
+                    String region_name = null;
+                    int region_code = -1;
+                    for (int i = 0; i < array.length(); i++) {
+                        region = mParameterManager.getJSONObjectFromJSONArray(array, i);
+                        region_name = mParameterManager.getTargetRegionName(target_id, region);
+                        region_code = mParameterManager.getTargetRegionCode(target_id, region);
+                        map.put(region_name, region_code);
+                    }
+                } else {
+                    Log.d(TAG, "No regions for target_id " + target_id);
+                }
+                if (map.size() > 0)
+                    return map;
+                return null;
+            }
+
+            @Override
+            public boolean onRegionSelected(int target_id, int selection_id) {
+                return true;
+            }
+
+            @Override
+            public void onFinishWithSelections(int country, int primary, int secondary, int tertiary) {
+                if (country != -1) {
+                    mParameterManager.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_COUNTRY, country);
+                }
+
+                if (primary != -1) {
+                    mParameterManager.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_PRIMARY, primary);
+                }
+                if (secondary != -1) {
+                    mParameterManager.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_SECONDARY, secondary);
+                }
+                if (tertiary != -1) {
+                    mParameterManager.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_TERTIARY, tertiary);
+                }
+                onSearchFinished();
+            }
+        });
+        regionManager.start(false);
     }
 
     public interface BackGroundSearchCallback {

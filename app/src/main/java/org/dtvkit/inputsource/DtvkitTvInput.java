@@ -2977,6 +2977,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 if (mHbbTvManager != null) {
                     mHbbTvManager.setTuneChannelUri(null);
                 }
+                if (mAutomaticSearchingReceiver.isBackGroundSearching()) {
+                    //Channel switching will fail during background search
+                    Log.i(TAG, "onTuneByHandlerThreadHandle : isBackGroundSearching");
+                    Bundle event = new Bundle();
+                    notifySessionEvent(ConstantManager.EVENT_PLAY_FAILED, event);
+                }
                 DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
             }
             return playResult;
@@ -8735,6 +8741,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private DtvkitBackGroundSearch dtvkitBgSearch = null;
         private boolean isBgScanning = false;
         private String mUserMsg = "";
+        private boolean mNeedSetTargetRegion = false;
 
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -8820,8 +8827,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             case DtvkitBackGroundSearch.SINGLE_FREQUENCY_TKGS_USER_MSG: {
                                 Log.i(TAG,"show TKGS user msg");
                                 mUserMsg = mParameterManager.getTKGSUserMessage();
+                                break;
                             }
-
+                            case DtvkitBackGroundSearch.SINGLE_FREQUENCY_SET_TARGET_REGION: {
+                                mNeedSetTargetRegion = true;
+                                break;
+                            }
                         }
                     }
                 };
@@ -8832,13 +8843,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
+        public boolean isBackGroundSearching() {
+            return isBgScanning;
+        }
+
         public void onReceiveScreenOn() {
-            if (isBgScanning && dtvkitBgSearch != null) {
+            if (isBgScanning && dtvkitBgSearch != null && !mNeedSetTargetRegion) {
                 dtvkitBgSearch.handleScreenOn();
             }
             if (!TextUtils.isEmpty(mUserMsg)) {
                 showTKGSUserMsgDialog(mContext, mUserMsg);
                 mUserMsg = "";
+            }
+            if (mNeedSetTargetRegion) {
+                dtvkitBgSearch.showDialogForSetTargetRegion(mContext);
+                mNeedSetTargetRegion = false;
             }
         }
 

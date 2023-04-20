@@ -1283,7 +1283,7 @@ public class DtvkitDvbtSetup extends Activity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    regionManager.start();
+                    regionManager.start(true);
                 }
             });
         } else {
