@@ -3403,7 +3403,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             if (mMainHandle != null) {
                 mMainHandle.sendEmptyMessage(MSG_HIDE_BLOCKED_TEXT);
-                mMainHandle.sendEmptyMessage(MSG_SHOW_TUNING_IMAGE);
+//                mMainHandle.sendEmptyMessage(MSG_SHOW_TUNING_IMAGE);
                 mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
                 mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
             }
