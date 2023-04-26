@@ -13,6 +13,7 @@ import android.os.Message;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.fragment.ParameterManager;
@@ -260,12 +261,32 @@ public class DtvKitDVBTCScanPresenter {
         }
     }
 
+    private void setCurrentDvbSource() {
+        int source;
+        if (DVB_T == mDVBType) {
+            source = ParameterManager.SIGNAL_COFDM;
+        } else {
+            source = ParameterManager.SIGNAL_QAM;
+        }
+
+        JSONArray array = new JSONArray();
+        try {
+            array.put(source);
+            mDtvkitGlueClient.request("Dvb.SetDvbSource", array);
+            mParameterManager.saveStringParameters(ParameterManager.TV_KEY_DTVKIT_SYSTEM,
+                    TvContractUtils.dvbSourceToDbString(source));
+            EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(source));
+        } catch (Exception e) {
+        }
+    }
+
     private void handleStartAutoScan() {
         Log.d(TAG, "handleStartAutoScan");
 
         startScanMonitor();
         setDataProviderScanStatus(true);
         dtvkitFinishScan(false);
+        setCurrentDvbSource();
         try {
             JSONArray args = prepareAutoScanParam();
             if (null != args) {
