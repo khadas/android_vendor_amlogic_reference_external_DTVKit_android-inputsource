@@ -342,6 +342,35 @@ public class EpgSyncTask {
                     ops.clear();
                 }
             }
+
+            //for hbbtv test case when EIT change not have schedule，need delete schedule event
+            if (oldProgramsIndex < oldPrograms.size()) {
+                Program firstOldProgram = oldPrograms.get(oldProgramsIndex);
+                //Program firstNewProgram = newPrograms.get(0);
+                Program lastNewProgram = newPrograms.get(fetchedProgramsCount -1);
+                Log.i(TAG, "firstOldProgram ：" + firstOldProgram.toString() + " lastNewProgram : " + lastNewProgram.toString());
+                if ((firstOldProgram.getStartTimeUtcMillis() > lastNewProgram.getEndTimeUtcMillis()) ||
+                        ((firstOldProgram.getEndTimeUtcMillis() > lastNewProgram.getStartTimeUtcMillis()) && (firstOldProgram.getTitle() != null))) {
+                    ArrayList<ContentProviderOperation> deleteOldOps = new ArrayList<>();
+                    Log.i(TAG, "match condition, some program will be deleted  ");
+                    for (int i = oldProgramsIndex; i < oldPrograms.size(); i++) {
+                        Program program = oldPrograms.get(i);
+                        if (DEBUG) Log.i(TAG, "delete old program : " + program.toString());
+                        deleteOldOps.add(ContentProviderOperation.newDelete(TvContract.buildProgramUri(program.getId()))
+                                .build());
+                        if ((BATCH_OPERATION_COUNT < deleteOldOps.size()) || ((oldPrograms.size() - 1) == i)) {
+                            Log.i(TAG, "delete old schedule number " + deleteOldOps.size());
+                            try {
+                                mMainService.getContentResolver().applyBatch(TvContract.AUTHORITY, deleteOldOps);
+                            } catch (RemoteException | OperationApplicationException e) {
+                                Log.e(TAG, "Failed to insert programs.", e);
+                                return ERROR_DATABASE_INSERT;
+                            }
+                                deleteOldOps.clear();
+                            }
+                        }
+                }
+            }
             return 0;
         }
     }
