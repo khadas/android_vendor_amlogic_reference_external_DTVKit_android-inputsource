@@ -18,7 +18,11 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libutils
 
+ifeq (1, $(strip $(shell expr $(PLATFORM_VERSION) \< 10)))
 LOCAL_LDLIBS := -lfmq_vendor
+else
+LOCAL_STATIC_LIBRARIES := libfmq
+endif
 
 LOCAL_C_INCLUDES += \
   system/libhidl/transport/include/hidl \
@@ -36,7 +40,6 @@ LOCAL_CPPFLAGS += -std=c++14
 LOCAL_MODULE:= libdtvkithidlclient
 LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0
 LOCAL_LICENSE_CONDITIONS := notice
-LOCAL_MULTILIB := 32
 LOCAL_VENDOR_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)
