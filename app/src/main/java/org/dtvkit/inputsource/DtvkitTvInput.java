@@ -6946,7 +6946,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 //Log.d(TAG, "getAudioTrackInfoList audioStream = " + audioStream.toString());
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_AUDIO, Integer.toString(audioStream.getInt("index")));
                 Bundle bundle = new Bundle();
-                String audioLang = ISO639Data.parse(audioStream.getString("language"));
+                String audioLang = ISO639Data.parse(audioStream.optString("language"));
                 if ((mCusFeatureAudioCfg & 0x04) == 0) {
                     //trunk need trans und to "undefined", qaa to "original", qad and nar to "narrative"
                     if (TextUtils.isEmpty(audioLang) || ConstantManager.CONSTANT_UND_FLAG.equals(audioLang)) {
@@ -6961,20 +6961,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 }
                 track.setLanguage(audioLang);
-                track.setDescription(audioStream.getString("message"));
+                track.setDescription(audioStream.optString("message"));
 
-                boolean audioAd = audioStream.getBoolean("ad");
-                boolean audioSS = audioStream.getBoolean("ss");
-                boolean audioHi = false;
-                if (audioStream.has("hi")) {
-                    audioHi = audioStream.getBoolean("hi");
-                }
+                boolean audioAd = audioStream.optBoolean("ad");
+                boolean audioSS = audioStream.optBoolean("ss");
+                boolean audioHi = audioStream.optBoolean("hi");
                 bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD, audioAd);
                 bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_SS, audioSS);
                 bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD_SS, audioAd && audioSS);
                 bundle.putBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_HI, audioHi);
 
-                String codes = audioStream.getString("codec");
+                String codes = audioStream.optString("codec");
                 int pid = audioStream.getInt("pid");
                 if (!TextUtils.isEmpty(codes)) {
                     bundle.putString(ConstantManager.KEY_AUDIO_CODES_DES, codes);
@@ -7004,7 +7001,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             for (int i = 0; i < audioStreams.length(); i++) {
                 JSONObject audioStream = audioStreams.getJSONObject(i);
-                if (audioStream.getBoolean("selected")) {
+                if (audioStream.optBoolean("selected")) {
                     selectedTrackId = audioStream.getInt("index");
                     Log.i(TAG, "selectedAudioTrack index = " + selectedTrackId);
                     break;
