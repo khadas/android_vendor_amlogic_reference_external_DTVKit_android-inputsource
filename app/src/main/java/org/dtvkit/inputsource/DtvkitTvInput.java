@@ -2755,11 +2755,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public boolean readyToPlay() {
-            if (mSurface != null && mPipHardware != null && mPipStreamConfig != null) {
+            if (mSurface != null && mPipHardware != null && mPipStreamConfig != null && mCanPlay) {
                 return true;
             }
             Log.d(TAG, "Surface:" + mSurface + ", PipHardware:" + mPipHardware
-                + "PipStreamConfig:" + mPipStreamConfig);
+                + ", PipStreamConfig:" + mPipStreamConfig +", ready:" + mCanPlay);
             return false;
         }
 
@@ -2882,11 +2882,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public boolean readyToPlay() {
-            if (mSurface != null && mMainHardware != null && mMainStreamConfig != null) {
+            if (mSurface != null && mMainHardware != null && mMainStreamConfig != null && mCanPlay) {
                 return true;
             }
             Log.d(TAG, "Surface:" + mSurface + ", MainHardware:" + mMainHardware
-                + "MainStreamConfig:" + mMainStreamConfig);
+                + ", MainStreamConfig:" + mMainStreamConfig + ", ready:" + mCanPlay);
             return false;
         }
 
@@ -3049,6 +3049,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private boolean mIsPip;
 
         protected Surface mSurface;
+        protected boolean mCanPlay = false;
 
         private int mWinWidth = 0;
         private int mWinHeight = 0;
@@ -5518,6 +5519,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                         if (set) {
                             mHandlerThreadHandle.post(() -> initSurface());
+                            mCanPlay = true;
                             if (mSurface != null) {
                                 tunePendingIfNeeded(200);
                             }
