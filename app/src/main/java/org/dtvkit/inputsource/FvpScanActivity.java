@@ -52,7 +52,7 @@ public class FvpScanActivity extends Activity implements UpdateScanView {
     Handler mMainThreadHandler = new Handler((Message msg)->{
         switch (msg.what) {
             case MSG_UPDATE_SCAN_PROGRESS:{
-                mScanProgressNumber.setText("%"+String.valueOf(msg.arg1));
+                mScanProgressNumber.setText(String.valueOf(msg.arg1) + "%");
                 mScanProgress.setProgress(msg.arg1, true);
                 break;
             }
