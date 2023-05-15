@@ -4316,6 +4316,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private boolean isTeletextNeedKeyCode(int keyCode) {
             return keyCode == KeyEvent.KEYCODE_BACK ||
+                    keyCode == KeyEvent.KEYCODE_CAPTIONS ||
                     keyCode == KeyEvent.KEYCODE_PROG_RED ||
                     keyCode == KeyEvent.KEYCODE_PROG_GREEN ||
                     keyCode == KeyEvent.KEYCODE_PROG_YELLOW ||
@@ -4390,6 +4391,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     break;
                 case KeyEvent.KEYCODE_DPAD_RIGHT:
                     playerNotifyTeletextEvent(17);
+                    break;
+                case KeyEvent.KEYCODE_CAPTIONS:
+                    playerNotifyTeletextEvent(31);
                     break;
                 case KeyEvent.KEYCODE_MEDIA_NEXT:
                     if (mParameterManager != null)
