@@ -434,7 +434,7 @@ public class DtvkitIsdbtSetup extends Activity {
             frequency_channel_container.setVisibility(View.VISIBLE);
             frequency_channel_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY));
             if (mIsDvbt) {
-                dvbt_bandwidth_container.setVisibility(View.VISIBLE);
+                dvbt_bandwidth_container.setVisibility(View.GONE);
                 dvbt_mode_container.setVisibility(View.VISIBLE);
                 dvbt_type_container.setVisibility(View.GONE);
                 dvbc_symbol_container.setVisibility(View.GONE);

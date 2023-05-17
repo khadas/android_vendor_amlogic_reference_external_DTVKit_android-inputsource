@@ -367,7 +367,8 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             }
         });
         int searchModeValue = mDataManager.getIntParameters(DataManager.KEY_SEARCH_MODE);
-        searchMode.setSelection(searchModeValue);
+        searchMode.setSelection(DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_DEFAULT ? searchModeValue : DataManager.VALUE_SEARCH_MODE_SATELLITE);
+        searchMode.setEnabled(DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_DEFAULT);
 
         fecMode.setSelection(mDataManager.getIntParameters(DataManager.KEY_FEC_MODE));
         modulationMode.setSelection(mDataManager.getIntParameters(DataManager.KEY_MODULATION_MODE));
@@ -408,14 +409,12 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         if (DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_M7 || DataPresenter.getOperateType() == DvbsParameterManager.OPERATOR_TKGS) {
             Log.d(TAG, "disable UI widget");
             nit.setEnabled(false);
-            searchMode.setEnabled(false);
             fecMode.setEnabled(false);
             serviceTypeSpinner.setEnabled(false);
             channelTypeSpinner.setEnabled(false);
 
             //Set default parameters
             nit.setChecked(Boolean.TRUE);
-            searchMode.setSelection(DataManager.VALUE_SEARCH_MODE_SATELLITE);
             channelTypeSpinner.setSelection(0);
             serviceTypeSpinner.setSelection(0);
         }
