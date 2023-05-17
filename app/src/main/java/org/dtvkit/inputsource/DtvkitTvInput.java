@@ -2792,6 +2792,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     public class DtvkitMainTvSession extends DtvkitTvInputSession {
         private Uri mFccPreviousBufferUri = null;
         private Uri mFccNextBufferUri = null;
+        private boolean isDvrSession = false;
 
         DtvkitMainTvSession(DtvkitTvInput service) {
             super(service, false);
@@ -2874,6 +2875,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         @Override
+        public void onTimeShiftPlay(Uri uri) {
+            isDvrSession = true;
+            super.onTimeShiftPlay(uri);
+        }
+
+        @Override
         public boolean readyToPlay() {
             if (mSurface != null && mMainHardware != null && mMainStreamConfig != null) {
                 return true;
@@ -2885,6 +2892,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public boolean onTune(Uri channelUri, Bundle params) {
+            if (isDvrSession) {
+                Log.e(TAG, "onTune isDvrSession, ignore");
+                return false;
+            }
             if (params != null) {
                 String previous = params.getString("previous_buffer_uri");
                 String next = params.getString("next_buffer_uri");
