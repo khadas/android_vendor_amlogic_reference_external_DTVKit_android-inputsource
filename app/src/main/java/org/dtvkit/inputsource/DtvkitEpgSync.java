@@ -44,11 +44,12 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     }
 
     public static JSONArray getServicesList(String signal_type, String tv_type) throws Exception {
-        JSONArray param = new JSONArray();
+        JSONArray param;
         JSONArray services = new JSONArray();
         int index = 0;
         final int maxTransChannelsSize = 512;
         while (true) {
+            param = new JSONArray();
             param.put(signal_type); // signal_type
             param.put(tv_type); // tv_radio type
             param.put(index);
