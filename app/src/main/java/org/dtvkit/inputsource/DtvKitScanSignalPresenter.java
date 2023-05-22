@@ -206,11 +206,12 @@ public class DtvKitScanSignalPresenter {
 
     private int getInputFreq(String inputFreq){
         int freq = 0;
-        if (!TextUtils.isEmpty(inputFreq) && TextUtils.isDigitsOnly(inputFreq)) {
-            float toFloat = Float.valueOf(inputFreq);
-            freq = (int)(toFloat * 1000000.0f);//hz
+        try {
+            freq = (int) (Float.parseFloat(inputFreq) * 1000000.0f);
+            Log.d(TAG, "getInputFreq: " + freq);
+        } catch (NumberFormatException e) {
+            Log.e(TAG, "getInputFreq: " + e.getMessage());
         }
-        Log.d(TAG, "getInputFreq: " + freq);
         return freq;
     }
 
