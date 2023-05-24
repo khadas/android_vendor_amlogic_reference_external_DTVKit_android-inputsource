@@ -1,3 +1,3 @@
 r-amlogic-vewd-client
-commit  80e6fa260026e72d95d2e38168b27b00a9260f6b
-Date:  Sat May 06 17:41:02 2023 +0800
+commit  192485098c4d07bfd01ae1cf2e047c6364dcd8b5
+Date:  Wed May 24 17:03:44 2023 +0800

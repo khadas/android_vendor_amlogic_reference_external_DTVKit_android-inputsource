@@ -3787,6 +3787,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         @Override
         public void notifyVideoUnavailable(final int reason) {
+            boolean broadcastResource = true;
             if (mHbbTvManager != null ) {
                 HbbTvManager.HbbTvApplicationStartCallBack hbbTvApplicationCallback = new HbbTvManager.HbbTvApplicationStartCallBack() {
                     public void onHbbtvApplicationStart(boolean applicationStatus) {
@@ -3797,8 +3798,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                 };
                 mHbbTvManager.registerHbbtvApplicationStartCallBack(hbbTvApplicationCallback);
+                broadcastResource = mHbbTvManager.isResourceOwnedByBr();
             }
-            super.notifyVideoUnavailable(reason);
+            if (broadcastResource) {
+                super.notifyVideoUnavailable(reason);
+            }
             if (TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY == reason
                     || TvInputManager.VIDEO_UNAVAILABLE_REASON_WEAK_SIGNAL == reason) {
                 if (mMainHandle != null) {
