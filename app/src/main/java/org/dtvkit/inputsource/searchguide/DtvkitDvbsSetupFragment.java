@@ -47,6 +47,7 @@ import com.droidlogic.dtvkit.inputsource.PvrStatusConfirmManager;
 import com.droidlogic.dtvkit.inputsource.R;
 import com.droidlogic.fragment.DvbsParameterManager;
 import com.droidlogic.fragment.ParameterManager;
+import com.droidlogic.fragment.SatelliteWrap;
 import com.droidlogic.settings.ConstantManager;
 
 import com.droidlogic.dtvkit.inputsource.searchguide.DataPresenter;
@@ -61,6 +62,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -84,7 +86,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
 
     private final static int MSG_FINISH_SEARCH = 1;
     private final static int MSG_ON_SIGNAL = 2;
-
+    private final StringBuilder mTransponderFrequency = new StringBuilder();
     private long clickLastTime = 0;
     private final String inputId = com.droidlogic.dtvkit.inputsource.service.DtvkitSettingService.DTVKIT_INPUT_ID;;
     private String pvrStatus;
@@ -705,7 +707,9 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             Log.d(TAG, "finish firstServiceName = " + firstServiceName);
             getActivity().setResult(RESULT_OK, intent);
         } else {
-            getActivity().setResult(RESULT_CANCELED, mSyncFinish ? intent : null);
+            if (getActivity() != null) {
+                getActivity().setResult(RESULT_CANCELED, mSyncFinish ? intent : null);
+            }
         }
         getActivity().finish();
     }
@@ -745,6 +749,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
     }
 
     private JSONArray initSearchParameter() {
+        String searchMode = null;
         JSONArray args = new JSONArray();
         int opType = DataPresenter.getOperateType();
         Log.i(TAG, "initSearchParameter OperateType = " + opType);
@@ -762,7 +767,8 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             args.put(mSearchByManualTKGS ? "manual" :  "fti");
         } else {
             /*[scanmode, network, {lnblist: [{lnb:1},{lnb:2},..]}]*/
-            String searchMode = DataManager.KEY_SEARCH_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_SEARCH_MODE)];
+            int id = mDataManager.getIntParameters(DataManager.KEY_SEARCH_MODE);
+            searchMode = DataManager.KEY_SEARCH_MODE_LIST[id];
             Log.i(TAG, "initSearchParameter searchMode = " + searchMode);
             args.put(searchMode);//arg1
             args.put(mDataManager.getIntParameters(DataManager.KEY_DVBS_NIT) == 1);//arg2
@@ -785,6 +791,19 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                 lnbArgs.put("lnblist", lnbArgs_array);
             } else {
                 return null;
+            }
+            if (TextUtils.equals(DataManager.KEY_SEARCH_MODE_LIST[2], searchMode)) {
+                List<SatelliteWrap.Satellite> satellites = mDvbsParameterManager.getSatelliteWrap().getSatelliteList(DvbsParameterManager.OPERATOR_DEFAULT);
+                for (SatelliteWrap.Satellite satellite : satellites) {
+                    if (satellite.getLinkedLnb() != 0) {
+                        List<SatelliteWrap.Transponder> transponders = mDvbsParameterManager.getSatelliteWrap().getTransponderList(satellite.getName());
+                        for (SatelliteWrap.Transponder transponder : transponders) {
+                            if (transponder.isSelected()) {
+                                mTransponderFrequency.append(transponder.getFreq()).append(" ");
+                            }
+                        }
+                    }
+                }
             }
         } catch (Exception e) {
             Log.e(TAG, "initSearchParameter error = " + e.getMessage());
@@ -851,10 +870,19 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
 
         Log.i(TAG, String.format("inputId: %s", inputId));
         Bundle parameters = new Bundle();
-        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "DVB-S");
-
+        parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO);
         Intent intent = new Intent(getActivity(), com.droidlogic.dtvkit.inputsource.DtvkitEpgSync.class);
+
+        String searchMode = DataManager.KEY_SEARCH_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_SEARCH_MODE)];
+        if (mSearchByManualTKGS) {
+            parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
+        }
+        if ("transponder".equals(searchMode)) {
+            parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
+            Log.i(TAG, "Updating guide TransponderFrequency: " + mTransponderFrequency);
+            parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY, mTransponderFrequency.toString());
+        }
         intent.putExtra("inputId", inputId);
         intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, TAG);
         intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, (mFoundServiceNumber > 0));

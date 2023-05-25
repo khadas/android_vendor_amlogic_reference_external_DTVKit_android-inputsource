@@ -161,8 +161,6 @@ public class TvContractUtils {
 
         String selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
         String[] selectionArgs = TvContractUtils.searchSignalTypeToSelectionArgs(signalType);
-
-        int searchFrequency = extras.getInt(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY,0);
         try (Cursor cursor = resolver.query(channelsUri, projection, selection, selectionArgs, null)) {
             InternalProviderData internalProviderData = null;
             String displayName = null;
@@ -216,10 +214,34 @@ public class TvContractUtils {
                         originalNetworkId, transportStreamId, serviceId,
                         frequency, ciNumber, rawDisplayNumber);
                 channelMap.add(new Pair<>(uniqueStr, rowId));
-
-                if (!isSearched || (frequency != 0 && searchFrequency != frequency
-                        && EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL.equals(searchMode))) {
+                if (!isSearched) {
                     saveRawUseSettingValuesToMap(uniqueStr, channelUseSettingValueMap, internalProviderData);
+                    continue;
+                }
+                if (TvContract.Channels.TYPE_DVB_S.equals(EpgSyncJobService.getChannelTypeFilter())) {
+                    // DVB-S transponder search may have several search frequencies
+                    if (EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL.equals(searchMode)) {
+                        String frequencies = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY);
+                        if (!TextUtils.isEmpty(frequencies)) {
+                            String[] freq_str = frequencies.split(" ");
+                            boolean found = false;
+                            for (String s : freq_str) {
+                                if ((frequency != 0 && TextUtils.isDigitsOnly(s) && Integer.parseInt(s) == frequency)) {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) {
+                                saveRawUseSettingValuesToMap(uniqueStr, channelUseSettingValueMap, internalProviderData);
+                            }
+                        }
+                    }
+                } else {
+                    int searchFrequency = extras.getInt(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY, 0);
+                    if ((frequency != 0 && searchFrequency != frequency
+                            && EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL.equals(searchMode))) {
+                        saveRawUseSettingValuesToMap(uniqueStr, channelUseSettingValueMap, internalProviderData);
+                    }
                 }
             }
         } catch (Exception e) {
@@ -294,6 +316,10 @@ public class TvContractUtils {
                 if (newChannelSeq < oldDbCount) {
                     // only get first of channelMap is OK, because it is ordered list
                     String oldUniqueStr = channelMap.get(0).first;
+                    if (DEBUG) {
+                        Log.i(TAG, "uniqueStr=" + uniqueStr + ", oldUniqueStr=" + oldUniqueStr
+                            + ", " + TextUtils.equals(uniqueStr, oldUniqueStr));
+                    }
                     if (TextUtils.equals(uniqueStr, oldUniqueStr)) {
                         rowId = channelMap.get(0).second;
                         channelMap.remove(0);
