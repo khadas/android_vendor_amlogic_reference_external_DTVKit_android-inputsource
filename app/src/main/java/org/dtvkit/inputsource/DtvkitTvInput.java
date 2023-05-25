@@ -8507,14 +8507,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mPipTvInputHardwareInfo = hardwareInfo;
                     tvInputInfo = buildTvInputInfo(hardwareInfo, 1, true, null);
                     mPipTvInputInfo = tvInputInfo;
-                }
-                // always hide PipTvInputInfo as only one source is needed,
-                // app should filter the tvinput.
-                Set<String> hiddenIds =
-                        TvInputInfo.TvInputSettings.getHiddenTvInputIds(getApplicationContext(), 0);
-                if (!hiddenIds.contains(mPipTvInputInfo.getId())) {
-                    hiddenIds.add(mPipTvInputInfo.getId());
-                    TvInputInfo.TvInputSettings.putHiddenTvInputs(getApplicationContext(), hiddenIds, 0);
+                    // always hide PipTvInputInfo as only one source is needed,
+                    // app should filter the tvinput.
+                    Set<String> hiddenIds =
+                            TvInputInfo.TvInputSettings.getHiddenTvInputIds(getApplicationContext(), 0);
+                    if (!hiddenIds.contains(mPipTvInputInfo.getId())) {
+                        hiddenIds.add(mPipTvInputInfo.getId());
+                        TvInputInfo.TvInputSettings.putHiddenTvInputs(getApplicationContext(), hiddenIds, 0);
+                    }
                 }
                 break;
             default:
