@@ -927,6 +927,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         //DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
         DtvkitGlueClient.getInstance().registerSignalHandler(mRecordingManagerHandler);
         DtvkitGlueClient.getInstance().registerSignalHandler(mChannelUpdateHandler);
+        DtvkitGlueClient.getInstance().registerSignalHandler(mCIPLUSCardHandler);
         mParameterManager = new ParameterManager(this, DtvkitGlueClient.getInstance());
         if (null == mDtvKitScheduleManager) {
             mDtvKitScheduleManager = new DtvKitScheduleManager(this, DtvkitGlueClient.getInstance(), true);
@@ -1158,6 +1159,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingManagerHandler);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mChannelUpdateHandler);
+        DtvkitGlueClient.getInstance().unregisterSignalHandler(mCIPLUSCardHandler);
         //DtvkitGlueClient.getInstance().setSystemControlHandler(null);
         mHandlerThread.getLooper().quitSafely();
         mHandlerThread = null;
@@ -1705,6 +1707,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
     };
+
+    private final DtvkitGlueClient.SignalHandler mCIPLUSCardHandler = (signal, data) -> {
+        if (signal.equals("CIPLUS_CARD_INSERT")) {
+            Log.i(TAG, "CIPLUS_CARD_INSERT");
+            PropSettingManager.setProp(PropSettingManager.CIPLUS_CARD_INSERTED_STATE, "insert");
+        } else if (signal.equals("CIPLUS_CARD_REMOVE")) {
+            Log.i(TAG, "CIPLUS_CARD_REMOVE");
+            PropSettingManager.setProp(PropSettingManager.CIPLUS_CARD_INSERTED_STATE, "remove");
+        }
+    };
+
 
     private void sendGetRecordingListMsg(String fromWho) {
         sendGetRecordingListMsg(0, fromWho, MSG_UPDATE_RECORDING_PROGRAM_DELAY);

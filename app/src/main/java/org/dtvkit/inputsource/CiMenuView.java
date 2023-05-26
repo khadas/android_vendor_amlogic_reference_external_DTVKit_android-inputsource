@@ -67,6 +67,7 @@ public class CiMenuView extends LinearLayout {
                                     clearPreviousMenu();
                                     menuCloseHandler("Ci Module is inserted", EXIT_TO_QUIT);
                                     setMenuVisible();
+                                    PropSettingManager.setProp(PropSettingManager.CIPLUS_CARD_INSERTED_STATE, "insert");
                                     break;
                                 case ConstantManager.VALUE_CI_MENU_OPEN_MODULE:
                                     //am broadcast -a ci_menu_info --es command "ci_menu_open_module"
@@ -89,6 +90,7 @@ public class CiMenuView extends LinearLayout {
                                     signalTriggered = true;
                                     menuCloseHandler("Ci Module removed", EXIT_TO_QUIT);
                                     setMenuVisible();
+                                    PropSettingManager.setProp(PropSettingManager.CIPLUS_CARD_INSERTED_STATE, "remove");
                                     break;
                                 case ConstantManager.VALUE_CI_MENU_MMI_SCREEN_REQUEST:
                                     //am broadcast -a ci_menu_info --es command "ci_menu_mmi_screen_request"
