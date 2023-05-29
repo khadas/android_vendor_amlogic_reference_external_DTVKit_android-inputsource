@@ -157,6 +157,8 @@ public class ParameterManager {
     public static final String KEY_GET_TIME_ZONE = "key_get_time_zone";
     public static final String KEY_SET_SUBTITLES_ENABLED = "key_set_subtitles_enabled";
     public static final String KEY_SET_LOCATION_CODE = "key_set_location_code";
+    public static final String KEY_SET_GLOBAL_SUBTITLES_ENABLED = "key_set_global_subtitles_enabled";
+    public static final String KEY_GET_GLOBAL_SUBTITLES_ENABLED = "key_get_global_subtitles_enabled";
 
     //default value that is save by index
     public static final int KEY_SATELLITE_DEFAULT_VALUE_INDEX = 0;
@@ -2190,6 +2192,20 @@ public class ParameterManager {
             case KEY_GET_TIME_ZONE:
                 result = getTimeZone();
                 break;
+            case KEY_SET_SUBTITLES_ENABLED:
+                if (playerGetSubtitlesOn(0)) {
+                    result = "true";
+                } else {
+                    result = "false";
+                }
+                break;
+            case KEY_GET_GLOBAL_SUBTITLES_ENABLED:
+                if (isSubtitleEnabled()) {
+                    result = "true";
+                } else {
+                    result = "false";
+                }
+                break;
             default:
                 result = defaultJsonValue;
                 break;
@@ -2232,9 +2248,32 @@ public class ParameterManager {
             case KEY_SET_LOCATION_CODE:
                 setLocationCode(Integer.parseInt(newJsonValues));
                 break;
+            case KEY_SET_GLOBAL_SUBTITLES_ENABLED:
+                enableGlobalSubtitle(Boolean.valueOf(newJsonValues));
+                break;
             default:
                 break;
         }
+    }
+
+    private void enableGlobalSubtitle(boolean enable) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(enable);
+            DtvkitGlueClient.getInstance().request("Player.setSubtitleGlobalOnOff", args);
+        } catch (Exception e) {
+        }
+    }
+
+    private boolean isSubtitleEnabled() {
+        boolean ret = true;
+        try {
+            JSONArray args = new JSONArray();
+            ret = DtvkitGlueClient.getInstance()
+                    .request("Player.getSubtitleGlobalOnOff", args).getBoolean("data");
+        } catch (Exception e) {
+        }
+        return ret;
     }
 
     public boolean playerGetSubtitlesOn(int index) {
