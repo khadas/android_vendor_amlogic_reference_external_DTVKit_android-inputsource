@@ -321,15 +321,16 @@ public class SubtitleServerView extends FrameLayout {
     }
 
     private void initTextSubtitle() {
+        float ratio = (float) displayRect.width() / 1920; // small window
         float xStart = (float) displayRect.width() / 8;
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         lp.gravity = Gravity.BOTTOM;
-        lp.bottomMargin = 60;
+        lp.bottomMargin = (int) (60 * ratio);
         textView.setLayoutParams(lp);
-        textView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        textView.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         textView.setTextColor(Color.WHITE);
-        textView.setX(xStart);
-        textView.setTextSize(32f);
+        textView.setX(xStart * ratio);
+        textView.setTextSize(32f * ratio);
     }
 
     public void showTestSubtitle() {
