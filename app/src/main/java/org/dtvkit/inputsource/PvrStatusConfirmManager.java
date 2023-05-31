@@ -110,7 +110,7 @@ public class PvrStatusConfirmManager {
     public void registerCommandReceiver() {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ConstantManager.ACTION_DVR_RESPONSE);
-        mContext.registerReceiver(mDvrCommandReceiver, intentFilter);
+        mContext.registerReceiver(mDvrCommandReceiver, intentFilter, 2/*RECEIVER_EXPORTED*/);
     }
 
     public void unRegisterCommandReceiver() {

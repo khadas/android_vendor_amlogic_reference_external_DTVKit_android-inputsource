@@ -409,7 +409,7 @@ public class CiMenuView extends LinearLayout {
         startListeningForCamSignal();
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ConstantManager.ACTION_CI_MENU_INFO);
-        mContext.registerReceiver(mCiMenuItemTestBroadcastReceiver, intentFilter);
+        mContext.registerReceiver(mCiMenuItemTestBroadcastReceiver, intentFilter, 4/*Context.RECEIVER_NOT_EXPORTED*/);
     }
 
     public void destroy() {

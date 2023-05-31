@@ -655,7 +655,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         IntentFilter parentalControl = new IntentFilter();
         parentalControl.addAction(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED);
         parentalControl.addAction(TvInputManager.ACTION_PARENTAL_CONTROLS_ENABLED_CHANGED);
-        registerReceiver(mParentalControlsBroadcastReceiver, parentalControl);
+        registerReceiver(mParentalControlsBroadcastReceiver, parentalControl, 2/*RECEIVER_EXPORTED*/);
 
         IntentFilter boot = new IntentFilter();
         boot.addAction(Intent.ACTION_LOCKED_BOOT_COMPLETED);
@@ -668,11 +668,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mAutomaticSearchingReceiver = new AutomaticSearchingReceiver();
         IntentFilter automaticSearch = new IntentFilter();
         automaticSearch.addAction(intentAction);
-        registerReceiver(mAutomaticSearchingReceiver, automaticSearch);
+        registerReceiver(mAutomaticSearchingReceiver, automaticSearch, 4/*RECEIVER_NOT_EXPORTED*/);
 
         IntentFilter ciTest = new IntentFilter();
         ciTest.addAction(ConstantManager.ACTION_CI_PLUS_INFO);
-        registerReceiver(mCiTestBroadcastReceiver, ciTest);
+        registerReceiver(mCiTestBroadcastReceiver, ciTest, 4/*RECEIVER_NOT_EXPORTED*/);
 
         IntentFilter storage = new IntentFilter();
         storage.addAction(Intent.ACTION_MEDIA_MOUNTED);
@@ -685,7 +685,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         IntentFilter ewsTest = new IntentFilter();
         ewsTest.addAction(ConstantManager.ACTION_EWS);
-        registerReceiver(mEwsTestBroadcastReceiver, ewsTest);
+        registerReceiver(mEwsTestBroadcastReceiver, ewsTest, 4/*RECEIVER_NOT_EXPORTED*/);
 
         setDnsProp();
         sendEmptyMessageToInputThreadHandler(MSG_START_CA_SETTINGS_SERVICE);
