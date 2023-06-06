@@ -4897,7 +4897,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.d(TAG, "hbbNotifyWindowSizeChanged x= " + x + ", y = " + y + ",  width = " + width + ", height = " + height);
                         runOnMainThread(() -> {
                             if (mView != null) {
-                                mView.setSize(x, y, width, height);
+                                mView.setSize(x, y, x+width, y+height);
                             }
                         });
                     } catch (JSONException e) {
