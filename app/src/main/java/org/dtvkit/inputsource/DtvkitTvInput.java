@@ -3165,12 +3165,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             public void onReleased() {
                 runOnMainThread(() -> {
                     if (streamId == STREAM_ID_NORMAL) {
-                        mMainHardware = null;
                         mMainStreamConfig = null;
                         Log.d(TAG, "MainHardware onReleased");
                     }
                     if (streamId == STREAM_ID_PIP) {
-                        mPipHardware = null;
                         mPipStreamConfig = null;
                         Log.d(TAG, "PipHardware onReleased");
                     }
