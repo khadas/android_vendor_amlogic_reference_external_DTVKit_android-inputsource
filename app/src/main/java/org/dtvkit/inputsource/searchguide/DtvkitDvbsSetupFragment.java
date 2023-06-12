@@ -1070,7 +1070,7 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
             if (TextUtils.isEmpty(msg)) {
                 return;
             }
-            dialogTitle.setText(msg);
+            dialogTitle.setText(mSearchByManualTKGS ? "Update has been successfully completed.\n" + msg : msg);
             confirm.setVisibility(View.GONE);
             cancel.setVisibility(View.GONE);
             alert.setCancelable(true);
