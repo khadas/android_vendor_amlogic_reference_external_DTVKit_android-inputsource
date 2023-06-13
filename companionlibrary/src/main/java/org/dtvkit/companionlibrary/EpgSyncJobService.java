@@ -190,9 +190,9 @@ public abstract class EpgSyncJobService extends Service {
         // new program. The test logic is just an example and you can modify this. E.g. check
         // whether the both programs have the same program ID if your EPG supports any ID for
         // the programs.
-        return oldProgram.getTitle() != null
+        return /*oldProgram.getTitle() != null*/
                 /*&& oldProgram.getTitle().equals(newProgram.getTitle())*/
-                && oldProgram.getStartTimeUtcMillis() < newProgram.getEndTimeUtcMillis()
+                oldProgram.getStartTimeUtcMillis() < newProgram.getEndTimeUtcMillis()
                 && newProgram.getStartTimeUtcMillis() < oldProgram.getEndTimeUtcMillis();
     }
 
