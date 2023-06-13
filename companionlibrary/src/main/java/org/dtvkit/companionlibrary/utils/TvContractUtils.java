@@ -191,7 +191,13 @@ public class TvContractUtils {
                     if (DEBUG) Log.i(TAG, "COLUMN_INTERNAL_PROVIDER_DATA other type");
                 }
                 if (internalProviderData != null) {
-                    frequency = Integer.parseInt((String) internalProviderData.get(Channel.KEY_FREQUENCY));
+                    try {
+                        frequency = Integer.parseInt((String)internalProviderData.get(Channel.KEY_FREQUENCY));
+                    } catch (Exception e) {
+                        Log.d(TAG, "cacheRelatedChannel no frequency info Exception = " + e.getMessage());
+                    }
+
+                    //frequency = Integer.parseInt((String) internalProviderData.get(Channel.KEY_FREQUENCY));
                     ciNumber = (String) internalProviderData.get(Channel.KEY_CHANNEL_CI_NUMBER);
                     rawDisplayName = (String) internalProviderData.get(Channel.KEY_RAW_DISPLAYNAME);
                     rawDisplayNumber = (String) internalProviderData.get(Channel.KEY_RAW_DISPLAYNUMBER);

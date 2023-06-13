@@ -84,4 +84,10 @@ public class FeatureUtil {
         }
         return result;
     }
+
+    public static boolean getFeatureSupportFvp() {
+        boolean isSupport = PropSettingManager.getBoolean("vendor.tv.dtv.fvp.enable", false);
+        Log.d(TAG, "getFeatureSupportFvp: " + isSupport);
+        return isSupport;
+    }
 }

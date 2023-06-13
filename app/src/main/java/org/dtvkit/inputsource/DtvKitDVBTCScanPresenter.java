@@ -1,5 +1,6 @@
 package com.droidlogic.dtvkit.inputsource;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -20,6 +21,7 @@ import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.app.DataProviderManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 
+import org.dtvkit.inputsource.fvp.ClmManager;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -70,6 +72,7 @@ public class DtvKitDVBTCScanPresenter {
     private int  mManualFreqScan = DataManager.VALUE_FREQUENCY_MODE;
     private boolean mStartSyncChannelProvider = false;
     private boolean mStartScanProcess = false;
+    private Activity mActivity = null;
 
     private final DtvkitGlueClient.SignalHandler mDtvKitSignalHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -103,13 +106,14 @@ public class DtvKitDVBTCScanPresenter {
         }
     };
 
-    public DtvKitDVBTCScanPresenter(Context context, int dvbType, String inputId, UpdateScanView updateScanView){
-        mContext = context;
+    public DtvKitDVBTCScanPresenter(Activity activity, int dvbType, String inputId, UpdateScanView updateScanView){
+        mActivity = activity;
+        mContext = (Context)activity;
         mDVBType = dvbType;
         mInputId = inputId;
         mDtvkitGlueClient = DtvkitGlueClient.getInstance();
-        mParameterManager = new ParameterManager(context, mDtvkitGlueClient);
-        mDataManager = new DataManager(context);
+        mParameterManager = new ParameterManager(mContext, mDtvkitGlueClient);
+        mDataManager = new DataManager(mContext);
         mUpdateScanView = updateScanView;
         initScanWorkHandler();
     }
@@ -352,11 +356,31 @@ public class DtvKitDVBTCScanPresenter {
 
     private void handleFinishScan(boolean skipConfirmNetwork) {
         Log.d(TAG, "handleFinishScan skipConfirmNetwork = " + skipConfirmNetwork);
-        if ((DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) && !skipConfirmNetwork && notifyShowTargetRegion()) {
-            Log.d(TAG, "finish scan flow after TargetRegion flow");
-            return;
+        ClmManager clmManager = new ClmManager(mActivity);
+        if (clmManager.checkNeedIpScan() && (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode)) {
+            clmManager.addFinishCallback(new ClmManager.ClmFinishCallback() {
+                @Override
+                public void onClmFinishSuccess() {
+                    finishScanProcess(true);
+                }
+                @Override
+                public void onClmFinishFailed(boolean needRevert) {
+                    finishScanProcess(true);
+                }
+            });
+            mActivity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    clmManager.clmHandleStart(ClmManager.FTI_SCAN);
+                }
+            });
         } else {
-            finishScanProcess(skipConfirmNetwork);
+            if ((DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mScanMode) && !skipConfirmNetwork && notifyShowTargetRegion()) {
+                Log.d(TAG, "finish scan flow after TargetRegion flow");
+                return;
+            } else {
+                finishScanProcess(skipConfirmNetwork);
+            }
         }
     }
 

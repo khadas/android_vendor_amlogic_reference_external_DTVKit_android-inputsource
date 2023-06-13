@@ -15,6 +15,7 @@ import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 import com.droidlogic.dtvkit.inputsource.parental.ContentRatingsParser;
+import com.droidlogic.dtvkit.inputsource.util.FeatureUtil;
 import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.fragment.ParameterManager;
 
@@ -93,6 +94,10 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             int channelNumber = serviceNumberObj.optInt("data", 0);
             Log.i(TAG, "Total " + channelNumber + " channels to sync");
             if (channelNumber <= 0) {
+                List<Channel> ipChannelList = getIpChannel();
+                if ((null != ipChannelList) && (0 < ipChannelList.size())) {
+                    channels.addAll(ipChannelList);
+                }
                 return channels;
             }
             if (syncCurrent && TextUtils.isEmpty(getChannelTypeFilter())) {
@@ -237,6 +242,10 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             throw new UnsupportedOperationException("getChannels Failed");
         }
 
+        List<Channel> ipChannelList = getIpChannel();
+        if ((null != ipChannelList) && (0 < ipChannelList.size())) {
+            channels.addAll(ipChannelList);
+        }
         return channels;
     }
 
@@ -265,6 +274,24 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             endTime = event.getLong("endutc") * 1000;
             parental_rating = event.getInt("rating");
             content_value = event.optInt("content_value");
+            //for parse fvp event info
+            int eventId = parseEventId(event.optString("uri"));
+            data.put("ad", event.optBoolean("ad", false));
+            data.put("subtitles", event.optBoolean("subtitles", false));
+
+/*
+            //parse fvp forward event info
+            if (null != forwardEvents) {
+                JSONObject forwardEvent = forwardEvents.optJSONObject(i);
+                if (null != forwardEvent) {
+                    if (eventId == parseEventId(forwardEvent.optString("uri"))) {
+                        data.put("caption_language", forwardEvent.optBoolean("caption_language", false));
+                        data.put("sign_language", forwardEvent.optBoolean("sign_language", false));
+                        data.put("audio_description", forwardEvent.optBoolean("audio_description", false));
+                    }
+                }
+            }
+*/
             if (startTime >= endMs || endTime <= startMs) {
                 Log.i(TAG, "Skip##  startMs:endMs=["+startMs+":"+endMs+"]  event:startT:endT=["+startTime+":"+endTime+"]");
             } else {
@@ -302,6 +329,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setCanonicalGenres(genres)
                         .setInternalProviderData(data)
                         .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name"), channel.getType().startsWith("TYPE_ISDB")))
+                        .setEventId(eventId)
                         .build();
             }
         } catch (JSONException ignored) {
@@ -325,8 +353,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             JSONArray events = DtvkitGlueClient.getInstance()
                     .request("Dvb.getListOfEvents", args)
                     .getJSONArray("data");
-            for (int i = 0; i < events.length(); i++)
-            {
+            for (int i = 0; i < events.length(); i++) {
                 JSONObject event = events.getJSONObject(i);
                 Program pro = parseSingleEvent(event, channel, startMs, endMs);
                 if (pro != null) {
@@ -367,6 +394,8 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             JSONArray events = DtvkitGlueClient.getInstance()
                     .request("Dvb.getListOfEvents", args)
                     .getJSONArray("data");
+
+            //JSONArray forwardEvents = getFvpForwardProgramInfo(events); //get fvp forward event and parse
             for (int i = 0; i < events.length(); i++) {
                 JSONObject event = events.getJSONObject(i);
                 Program pro = parseSingleEvent(event, channel, 0, Long.MAX_VALUE);
@@ -706,5 +735,109 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 break;
         }
         return mod;
+    }
+
+    private List<Channel> getIpChannel() {
+        if (!mIsUK || !FeatureUtil.getFeatureSupportFvp()) {
+            Log.e(TAG, "not support get Ip channel ");
+            return null;
+        }
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Fvp.FvpGetClmIpServicesInfo", new JSONArray()).getJSONObject("data");
+            if (null == obj) {
+                Log.e(TAG, "getIpChannel error no ip channel data ");
+                return null;
+            }
+            int vnid = obj.getInt("ondemand_vnid");
+            int virtualNetworkId = obj.getInt("virtual_network_id");
+            JSONArray ipChannelArray = obj.getJSONArray("ip_service_details");
+            if ((null == ipChannelArray) || (0 == ipChannelArray.length())) {
+                Log.e(TAG, "getIpChannel no ip channel array ");
+                return null;
+            }
+            List<Channel> ipChannelList = new ArrayList<>();
+            Log.d(TAG, "IP Channel number : " + ipChannelArray.length());
+            for (int i = 0; i < ipChannelArray.length(); i ++) {
+                JSONObject ipChannelInfo = ipChannelArray.getJSONObject(i);
+                if (null == ipChannelInfo) {
+                    continue;
+                }
+                Log.d(TAG, "Index : " + i + " IP Channel info : " + ipChannelInfo);
+                //prepare ip channel private data
+                InternalProviderData data = new InternalProviderData();
+                data.put("ondemand_vnid", vnid);
+                data.put("virtual_network_id", virtualNetworkId);
+                data.put("mds_service_name", ipChannelInfo.getString("mds_service_name"));
+                data.put("service_type", ipChannelInfo.getString("service_type"));
+                data.put("service_attributes", ipChannelInfo.getString("service_attributes"));
+                if (TextUtils.equals("Hidden and not selectable", ipChannelInfo.getString("service_attributes"))) {
+                    Log.d(TAG, "This ip channel not save");
+                    continue;
+                } else if (TextUtils.equals("Hidden but selectable", ipChannelInfo.getString("service_attributes"))) {
+                    data.put("hidden", "true");
+                }
+                //Save Ip channel to List
+                ipChannelList.add(new Channel.Builder()
+                        .setDisplayName(ipChannelInfo.getString("short_service_name"))
+                        .setDisplayNumber(String.format(Locale.ENGLISH, "%d", ipChannelInfo.getInt("Lcn")))
+                        .setOriginalNetworkId(ipChannelInfo.getInt("Onid"))
+                        .setTransportStreamId(ipChannelInfo.getInt("Tsid"))
+                        .setServiceId(ipChannelInfo.getInt("Sid"))
+                        .setSearchable(TextUtils.equals(ipChannelInfo.getString("service_attributes"), "Visible and selectable"))
+                        .setInternalProviderData(data)
+                        .setServiceType(TvContract.Channels.SERVICE_TYPE_OTHER)
+                        .setType(TvContract.Channels.TYPE_DVB_T)
+                        .build());
+            }
+            Log.d(TAG, "ipChannelList size : " + ipChannelList.size());
+            return ipChannelList;
+        } catch (Exception e) {
+            Log.d(TAG, "getIpChannel error : " + e.getMessage());
+        }
+        return null;
+    }
+
+    private JSONArray getFvpForwardProgramInfo(JSONArray events) {
+        JSONArray forwardEvents = null;
+
+        if (TextUtils.equals(EpgSyncJobService.getChannelTypeFilter(), "TYPE_DVB_T") && FeatureUtil.getFeatureSupportFvp()) {
+            try {
+                JSONArray args = new JSONArray();
+                for (int i = 0; i < events.length(); i++) {
+                    JSONObject event = events.getJSONObject(i);
+                    String eventUri = event.getString("uri");
+                    args.put(i, eventUri);
+                }
+                if (0 != args.length()) {
+                    forwardEvents = DtvkitGlueClient.getInstance().request("Fvp.FvpGetForwardProgramInfo", args).getJSONArray("data");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+        }
+
+        if (null != forwardEvents) {
+            Log.d(TAG, "getFvpForwardProgramInfo |events length = " + events.length() + "|forwardEvents = " + forwardEvents.length());
+        } else {
+            Log.d(TAG, "getFvpForwardProgramInfo not have fvp info");
+        }
+        return forwardEvents;
+    }
+
+    private int parseEventId(String eventUri) {
+        int eventId = 0;
+        if (null != eventUri) {
+            String temp[];
+            temp = eventUri.split(";");
+            try{
+                if ((null != temp[1])) {
+                    eventId = Integer.parseInt(temp[1], 16);
+                }
+            } catch(Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+        }
+        //Log.d(TAG, "|eventUri = " + eventUri + "|eventId = " + eventId);
+        return eventId;
     }
 }

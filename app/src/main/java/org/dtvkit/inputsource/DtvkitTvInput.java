@@ -2978,9 +2978,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mHbbTvManager.setTuneChannelUri(channelUri);
             }
             mTunedChannel = newChannel; // before play
-
-            boolean playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart,
-                    mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
+            boolean playResult = false;
+            if (null == dvbUri) {
+                Log.d(TAG, "Do Ip Channel Tune : " + newChannel.getAppLinkIntentUri());
+                //Ip channel load url
+                if (null != mHbbTvManager) {
+                    mHbbTvManager.playIpChannel(channelUri, newChannel.getAppLinkIntentUri());
+                    playResult = true;
+                } else {
+                    Log.d(TAG, "Do Ip Channel Tune error, hbbtv not init");
+                }
+            } else {
+                playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart,
+                                mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
+            }
             if (playResult) {
                 userDataStatus(true);
             } else {
@@ -3118,7 +3129,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             initWorkThread();
             if (!mIsPip) {
                 mProviderSync = new ProviderSync();
-                mProviderSync.run(new FvpChannelEnhancedInfoSync(outService));
+                mProviderSync.run(new FvpChannelEnhancedInfoSync(outService, FvpChannelEnhancedInfoSync.FVP_SYNC_ALL_INFO));
             }
         }
 
@@ -3445,6 +3456,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 dvbUri = getChannelInternalDvbUri(targetChannel);
             }
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
+
+            if (isIpChannel(targetChannel)) {
+                Log.d(TAG, "do IP channel tune");
+                dvbUri = null;
+            }
 
             //comment it as need add pip
             //writeSysFs("/sys/class/video/video_global_output", "0");
@@ -4088,9 +4104,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 onUnblockContent(TvContentRating.createRating("com.android.tv", "DVB", "DVB_0"));
             } else if (TextUtils.equals(ConstantManager.ACTION_START_FVP_APP, action) && null != data) {
                 String appUrl = data.getString("app_url");
-                Log.d(TAG, "ACTION_START_FVP_APP appUrl = " + appUrl);
-                if (null != mHbbTvManager && null != appUrl) {
-                    mHbbTvManager.loadUrlApplication(appUrl);
+                if (null != appUrl) {
+                    if (null != mHbbTvManager) {
+                        mHbbTvManager.loadUrlApplication(appUrl);
+                    } else {
+                        HbbTvManager.getInstance().registerHbbTvViewInitCallback(()->{
+                            if ((null != mHbbTvManager) && (null != appUrl)) {
+                                mHbbTvManager.loadUrlApplication(appUrl);
+                            } else {
+                                Log.e(TAG, "ACTION_START_FVP_APP load fail");
+                            }
+                        });
+                        Log.d(TAG, "ACTION_START_FVP_APP HbbTvManager not init, need register callback");
+                    }
                 } else {
                     Log.e(TAG, "ACTION_START_FVP_APP error  HbbTvManager is null");
                 }
@@ -5023,7 +5049,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         if (null == mProviderSync) {
                             mProviderSync = new ProviderSync();
                         }
-                        mProviderSync.run(new FvpChannelEnhancedInfoSync(outService));
+                        mProviderSync.run(new FvpChannelEnhancedInfoSync(outService, FvpChannelEnhancedInfoSync.FVP_SYNC_CHANNEL_ENCHANCE_INFO));
                     }
                 } else if (signal.equals("EWSNotify")) {
                     Bundle EWSEvent = new Bundle();
@@ -5064,6 +5090,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         e.printStackTrace();
                     }
                     sendEmptyMessageToInputThreadHandler(MSG_UPDATE_DTVKIT_DATABASE);
+                } else if (signal.equals("FVP_LINER_IP_SERVICE_DONE")) {
+                    //TBD: to sync IP Channel URI
+                     if (!mIsPip) {
+                        if (null == mProviderSync) {
+                            mProviderSync = new ProviderSync();
+                        }
+                        mProviderSync.run(new FvpChannelEnhancedInfoSync(outService, FvpChannelEnhancedInfoSync.FVP_SYNC_IP_CHANNEL_INFO));
+                    }
                 }
             }
         };
@@ -6147,6 +6181,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     + ", instance=0x" + Integer.toHexString(System.identityHashCode(this))
                     + "]";
         }
+
         private void sendAuthUrlUpdateBroadcast(JSONObject data) {
             if (null == data) {
                 Log.d(TAG, "sendAuthUrlUpdateBroadcast error not have Auth Url");
@@ -6170,6 +6205,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } catch (Exception e) {
                 Log.i(TAG, "prepareAuthUrl Exception = " + e.getMessage());
             }
+        }
+
+        private boolean isIpChannel(Channel channel) {
+            boolean isIpChannel = false;
+            InternalProviderData data = channel.getInternalProviderData();
+            if (null != data) {
+                try {
+                    isIpChannel = TextUtils.equals(data.get("service_type").toString(), "IP");
+                } catch (Exception e) {
+                    Log.d(TAG, "isIpChannel Exception : " + e);
+                }
+            }
+            return isIpChannel;
         }
 
         private boolean playerSelectSubtitleTrack(int index) {

@@ -70,6 +70,7 @@ public final class Program implements Comparable<Program> {
     private int mSearchable;
     private String mSeasonTitle;
     private int mSignal;
+    private int mEventId;
 
     private Program() {
         mChannelId = INVALID_LONG_VALUE;
@@ -79,6 +80,7 @@ public final class Program implements Comparable<Program> {
         mVideoWidth = INVALID_INT_VALUE;
         mVideoHeight = INVALID_INT_VALUE;
         mSearchable = IS_SEARCHABLE;
+        mEventId = INVALID_INT_VALUE;
     }
 
     /**
@@ -257,6 +259,14 @@ public final class Program implements Comparable<Program> {
         return mSeasonTitle;
     }
 
+    /**
+     * @return The value of {@link TvContract.Programs#COLUMN_EVENT_ID} for the
+     * channel.
+     */
+    public int getEventId() {
+        return mEventId;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(mChannelId, mStartTimeUtcMillis, mEndTimeUtcMillis,
@@ -347,6 +357,7 @@ public final class Program implements Comparable<Program> {
         mSeasonTitle = other.mSeasonTitle;
         mSignal = other.mSignal;
         mInternalProviderData = other.mInternalProviderData;
+        mEventId = other.mEventId;
     }
 
     /**
@@ -461,6 +472,12 @@ public final class Program implements Comparable<Program> {
             values.putNull(TvContract.Programs.COLUMN_SEASON_TITLE);
         }
         values.put(TvContract.Programs.COLUMN_RECORDING_PROHIBITED, mRecordingProhibited);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            values.put(TvContract.Programs.COLUMN_RECORDING_PROHIBITED, mRecordingProhibited);
+        }
+        if (mEventId != INVALID_INT_VALUE) {
+            values.put(TvContract.Programs.COLUMN_EVENT_ID, mEventId);
+        }
         return values;
     }
 
@@ -901,6 +918,18 @@ public final class Program implements Comparable<Program> {
          */
         public Builder setSeasonTitle(String seasonTitle) {
             mProgram.mSeasonTitle = seasonTitle;
+            return this;
+        }
+
+        /**
+         * Sets The event ID of this TV program.
+         *
+         * @param event id The value of {@link TvContract.Programs#COLUMN_EVENT_ID} for
+         * the program.
+         * @return This Builder object to allow for chaining of calls to builder methods.
+         */
+        public Builder setEventId(int eventId) {
+            mProgram.mEventId = eventId;
             return this;
         }
 

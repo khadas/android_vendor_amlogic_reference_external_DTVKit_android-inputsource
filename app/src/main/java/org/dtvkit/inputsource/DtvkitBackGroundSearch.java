@@ -17,6 +17,7 @@ import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.fragment.ParameterManager;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+import org.dtvkit.inputsource.fvp.ClmManager;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -456,7 +457,27 @@ public class DtvkitBackGroundSearch {
                 }
             } else {
                 Log.d(TAG, "onSignal search finished");
-                prepareSearchFinished();
+                ClmManager clmManager = new ClmManager(null);
+                if (clmManager.checkNeedIpScan() && (ParameterManager.SIGNAL_COFDM  == mCurrentDvbSource)) {
+                    Log.d(TAG, "need ip scan");
+                    clmManager.addFinishCallback(new ClmManager.ClmFinishCallback() {
+                        @Override
+                        public void onClmFinishSuccess() {
+                            prepareSearchFinished();
+                        }
+                        @Override
+                        public void onClmFinishFailed(boolean needRevert) {
+                            prepareSearchFinished();
+                        }
+                    });
+                    Handler handler = new Handler(mContext.getMainLooper());
+                    handler.post(()->{
+                        clmManager.clmHandleStart(ClmManager.BACKGROUND_SCAN);
+                    });
+                } else {
+                    prepareSearchFinished();
+                    Log.d(TAG, "not need ip scan");
+                }
             }
         }
     }

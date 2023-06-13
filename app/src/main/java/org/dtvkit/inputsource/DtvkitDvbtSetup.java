@@ -43,7 +43,8 @@ import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.settings.ConstantManager;
 import com.droidlogic.settings.PropSettingManager;
-
+import org.dtvkit.inputsource.fvp.ClmDialogFragment;
+import org.dtvkit.inputsource.fvp.ClmManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -54,6 +55,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.HashMap;
+
 
 public class DtvkitDvbtSetup extends Activity {
     private static final String TAG = "DtvkitDvbtSetup";
@@ -92,6 +95,7 @@ public class DtvkitDvbtSetup extends Activity {
     private long clickLastTime = 0;
     private JSONArray mChannelFreqTable = null;
     private int isFrequencyMode = 0;
+    private boolean mUpdateSearchFlag = false;
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -483,6 +487,17 @@ public class DtvkitDvbtSetup extends Activity {
             if (mParameterManager.checkIsFvpUkCountry()) {
                 checkBoxLcn.setVisibility(View.GONE);
                 checkBoxLcn.setChecked(true);
+                nit.setText("Update Search");
+                nit.setVisibility(View.VISIBLE);
+                nit.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        if (nit.isChecked()) {
+                            mUpdateSearchFlag = true;
+                        } else {
+                            mUpdateSearchFlag = false;
+                        }
+                    }
+                });
             } else {
                 checkBoxLcn.setVisibility(View.VISIBLE);
                 checkBoxLcn.setChecked(mParameterManager.getAutomaticOrderingEnabled());
@@ -1207,6 +1222,53 @@ public class DtvkitDvbtSetup extends Activity {
         } catch (Exception e) {
             Log.i(TAG,"getTargetRegions error " + e.getMessage());
         }
+
+        ClmManager clmManager = new ClmManager(this);
+        if (clmManager.checkNeedIpScan() && autoSearch) {
+            Log.i(TAG,"handle ip scan");
+            final boolean finalNeedSetTargetRegion = needSetTargetRegion;
+            clmManager.addFinishCallback(new ClmManager.ClmFinishCallback() {
+                @Override
+                public void onClmFinishSuccess() {
+                    onSearchFinished(true);
+                }
+
+                @Override
+                public void onClmFinishFailed(boolean needRevert) {
+                    Log.i(TAG,"onClmFinishFailed needRevert : " + needRevert + " finalNeedSetTargetRegion = " + finalNeedSetTargetRegion
+                         + " autoSearch :" + autoSearch + " skipConfirmNetwork : " + skipConfirmNetwork);
+                    if (needRevert) {
+                        if (autoSearch && finalNeedSetTargetRegion && !skipConfirmNetwork) {
+                            regionSetup();
+                        } else {
+                            onSearchFinished(true);
+                        }
+                    } else {
+                        onSearchFinished(true);
+                    }
+                }
+            });
+            setSearchStatus("Handle IP Scan", "");
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (true == mUpdateSearchFlag) {
+                        clmManager.clmHandleStart(ClmManager.INTERACTIVE_RETUNE_SCAN);
+                    } else {
+                        clmManager.clmHandleStart(ClmManager.FTI_SCAN);
+                    }
+                }
+            });
+        } else {
+            Log.i(TAG,"not handle ip scan");
+            if (autoSearch && needSetTargetRegion && !skipConfirmNetwork) {
+                regionSetup();
+            } else {
+                onSearchFinished(skipConfirmNetwork);
+            }
+        }
+
+ /*
         if (autoSearch && needSetTargetRegion && !skipConfirmNetwork) {
             final TargetRegionManager regionManager = new TargetRegionManager(DtvkitDvbtSetup.this);
             regionManager.setRegionCallback(new TargetRegionManager.TargetRegionsCallbacks() {
@@ -1287,10 +1349,11 @@ public class DtvkitDvbtSetup extends Activity {
                     regionManager.start(true);
                 }
             });
+
         } else {
             onSearchFinished(skipConfirmNetwork);
         }
-
+  */
     }
 
     private void onSearchFinished(boolean skipConfirmNetwork) {
@@ -1906,6 +1969,90 @@ public class DtvkitDvbtSetup extends Activity {
         }
         return false;
     }
+
+    private void regionSetup() {
+        Log.d(TAG, "regionSetup start");
+        final TargetRegionManager regionManager = new TargetRegionManager(DtvkitDvbtSetup.this);
+        regionManager.setRegionCallback(new TargetRegionManager.TargetRegionsCallbacks() {
+            @Override
+            public Map<String, Integer> requestRegionList(int target_id) {
+                HashMap<String, Integer> map = new HashMap<String, Integer>();
+                JSONArray array = null;
+                switch (target_id) {
+                    case TargetRegionManager.TARGET_REGION_COUNTRY:
+                        array = mParameterManager.getTargetRegions(target_id, -1, -1, -1);
+                        break;
+                    case TargetRegionManager.TARGET_REGION_PRIMARY:
+                        array = mParameterManager.getTargetRegions(target_id,
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
+                                -1, -1);
+                        break;
+                    case TargetRegionManager.TARGET_REGION_SECONDARY:
+                        array = mParameterManager.getTargetRegions(target_id,
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_PRIMARY),
+                                -1);
+                        break;
+                    case TargetRegionManager.TARGET_REGION_TERTIARY:
+                        array = mParameterManager.getTargetRegions(target_id,
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_COUNTRY),
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_PRIMARY),
+                                regionManager.getRegionCode(regionManager.TARGET_REGION_SECONDARY));
+                        break;
+                }
+                if (array != null && array.length() > 0) {
+                    JSONObject region = null;
+                    String region_name = null;
+                    int region_code = -1;
+                    for (int i = 0; i < array.length(); i++) {
+                        region = mParameterManager.getJSONObjectFromJSONArray(array, i);
+                        region_name = mParameterManager.getTargetRegionName(target_id, region);
+                        region_code = mParameterManager.getTargetRegionCode(target_id, region);
+                        map.put(region_name, region_code);
+                    }
+                } else {
+                    Log.d(TAG, "No regions for target_id " + target_id);
+                }
+                if (map.size() > 0)
+                    return map;
+                return null;
+            }
+
+            @Override
+            public boolean onRegionSelected(int target_id, int selection_id) {
+                return true;
+            }
+
+            @Override
+            public void onFinishWithSelections(int country, int primary, int secondary, int tertiary) {
+                if (country != -1) {
+                    mParameterManager.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_COUNTRY, country);
+                }
+
+                if (primary != -1) {
+                    mParameterManager.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_PRIMARY, primary);
+                }
+                if (secondary != -1) {
+                    mParameterManager.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_SECONDARY, secondary);
+                }
+                if (tertiary != -1) {
+                    mParameterManager.setTargetRegionSelection(
+                            TargetRegionManager.TARGET_REGION_TERTIARY, tertiary);
+                }
+                onSearchFinished(false);
+            }
+        });
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                regionManager.start(true);
+            }
+        });
+    }
+
     /*private boolean hasSelectToEnd(JSONArray lcnConflictArray, int selectEndIndex) {
         boolean result = false;
         if (lcnConflictArray != null && lcnConflictArray.length() > 0) {

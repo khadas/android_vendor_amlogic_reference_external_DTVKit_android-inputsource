@@ -21,30 +21,49 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import com.droidlogic.dtvkit.companionlibrary.model.Channel;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+import com.droidlogic.dtvkit.inputsource.fvp.DtvkitFvp;
 
 
 public class FvpChannelEnhancedInfoSync implements Runnable {
     private static final String TAG = "FvpChannelEnhancedInfoSync";
-    public static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
     private static final boolean DEBUG = true;
+
+    public static final String DTVKIT_INPUTID = "com.droidlogic.dtvkit.inputsource/.DtvkitTvInput/HW19";
+
+    public static final int FVP_SYNC_CHANNEL_ENCHANCE_INFO = 0;
+    public static final int FVP_SYNC_IP_CHANNEL_INFO = 1;
+    public static final int FVP_SYNC_ALL_INFO = 2;
+
     private static final int BATCH_OPERATION_COUNT = 50;
     private Context mContext = null;
+    private int mSyncType = FVP_SYNC_CHANNEL_ENCHANCE_INFO;
 
-    public FvpChannelEnhancedInfoSync(Context context) {
+    public FvpChannelEnhancedInfoSync(Context context, int syncType) {
         mContext = context;
+        mSyncType = syncType;
     }
 
     @Override
     public void run() {
         ArrayMap<String, Long> channelsMap = new ArrayMap<>();
         List<Channel> channels = new ArrayList<>();
-        int needUpdateChannelNumber = parseDataToChannelList(getChannelEnhancedInfo(), channels);
+        int needUpdateChannelNumber = 0;
+
+        if (FVP_SYNC_CHANNEL_ENCHANCE_INFO == mSyncType) {
+            needUpdateChannelNumber = parseChannelEnhancedDataToChannelList(DtvkitFvp.getInstance().getChannelEnhancedInfo(), channels);
+        } else if (FVP_SYNC_IP_CHANNEL_INFO == mSyncType) {
+            needUpdateChannelNumber = parseIpChannelEnhancedDataToChannelList(DtvkitFvp.getInstance().getIpChannelEnhancedInfo(), channels);
+        } else if (FVP_SYNC_ALL_INFO == mSyncType) {
+            needUpdateChannelNumber = parseChannelEnhancedDataToChannelList(DtvkitFvp.getInstance().getChannelEnhancedInfo(), channels);
+            needUpdateChannelNumber += parseIpChannelEnhancedDataToChannelList(DtvkitFvp.getInstance().getIpChannelEnhancedInfo(), channels);
+        }
+
         if (0 != needUpdateChannelNumber) {
             cacheProviderChannel(channelsMap);
             updateChannelProvider(channels, channelsMap);
         }
     }
-
+/*
     private JSONArray getChannelEnhancedInfo () {
         JSONArray channelEnhancedArray = null;
         try {
@@ -56,15 +75,16 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
         }
         return channelEnhancedArray;
     }
-
-    private int parseDataToChannelList (JSONArray channelEnhancedArray,  List<Channel> channels) {
+*/
+    private int parseChannelEnhancedDataToChannelList (JSONArray channelEnhancedArray,  List<Channel> channels) {
         int needUpdateChannelNumber = 0;
         if (null == channelEnhancedArray) {
-            Log.e(TAG, "parseDataToChannelList can't get channel enhanced data");
+            Log.e(TAG, "parseChannelEnhancedDataToChannelList can't get channel enhanced data");
             return needUpdateChannelNumber;
         }
 
         try {
+
             for (int i = 0; i < channelEnhancedArray.length(); i++) {
                 JSONObject service = channelEnhancedArray.getJSONObject(i);
                 int networkId = service.getInt("Onid");
@@ -78,7 +98,6 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
                         .setTransportStreamId(streamId)
                         .setChannelOnDemand(onDemand)
                         .setServiceId(serviceId)
-                        .setAppLinkIntentUri(serviceUrl)
                         .setAppLinkIconUri(logoUrl)
                         .build());
                 if (DEBUG) Log.d(TAG, "Channel nid =" + networkId + "|Tsid = " + streamId + "|Sid = " + serviceId + "|onDemand = " + onDemand
@@ -87,25 +106,25 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
 /*
             //Test
             channels.add(new Channel.Builder()
-                .setOriginalNetworkId(1)
-                .setTransportStreamId(65283)
-                .setServiceId(28703)
+                .setOriginalNetworkId(8468)
+                .setTransportStreamId(61697)
+                .setServiceId(770)
                 .setAppLinkIntentUri("hbbtv test uri")
                 .setAppLinkIconUri("logo logo test")
                 .setChannelOnDemand(100)
                 .build());
             channels.add(new Channel.Builder()
-                .setOriginalNetworkId(8945)
-                .setTransportStreamId(1021)
-                .setServiceId(5060)
+                .setOriginalNetworkId(8468)
+                .setTransportStreamId(61697)
+                .setServiceId(771)
                 .setAppLinkIntentUri("8945 test")
                 .setAppLinkIconUri("5060 test")
                 .setChannelOnDemand(200)
                 .build());
             channels.add(new Channel.Builder()
-                .setOriginalNetworkId(9018)
-                .setTransportStreamId(4168)
-                .setServiceId(4168)
+                .setOriginalNetworkId(8468)
+                .setTransportStreamId(61697)
+                .setServiceId(773)
                 .setAppLinkIntentUri("9018 test")
                 .setAppLinkIconUri("4168 test")
                 .setChannelOnDemand(300)
@@ -115,7 +134,60 @@ public class FvpChannelEnhancedInfoSync implements Runnable {
             Log.e(TAG, "parseToChannelList Exception = " + e.getMessage());
         }
         needUpdateChannelNumber = channels.size();
-        Log.d(TAG, "parseDataToChannelList needUpdateChannelNumber = " + needUpdateChannelNumber);
+        Log.d(TAG, "parseChannelEnhancedDataToChannelList needUpdateChannelNumber = " + needUpdateChannelNumber);
+        return needUpdateChannelNumber;
+    }
+
+    private int parseIpChannelEnhancedDataToChannelList (JSONArray ipChannelEnhancedArray,  List<Channel> channels) {
+        int needUpdateChannelNumber = 0;
+        if (null == ipChannelEnhancedArray) {
+            Log.e(TAG, "parseIpChannelEnhancedDataToChannelList can't get channel enhanced data");
+            return needUpdateChannelNumber;
+        }
+
+        try {
+
+            for (int i = 0; i < ipChannelEnhancedArray.length(); i++) {
+                JSONObject service = ipChannelEnhancedArray.getJSONObject(i);
+                int networkId = service.getInt("Onid");
+                int streamId = service.getInt("Tsid");
+                int serviceId = service.getInt("Sid");
+                String serviceUrl = service.getString("MediaUri");
+                channels.add(new Channel.Builder()
+                        .setOriginalNetworkId(networkId)
+                        .setTransportStreamId(streamId)
+                        .setServiceId(serviceId)
+                        .setAppLinkIntentUri(serviceUrl)
+                        .build());
+                if (DEBUG) Log.d(TAG, "IP Channel nid =" + networkId + "|Tsid = " + streamId + "|Sid = " + serviceId
+                    + "|serviceUrl = " + serviceUrl);
+            }
+/*
+            //Test
+            channels.add(new Channel.Builder()
+                .setOriginalNetworkId(8468)
+                .setTransportStreamId(61697)
+                .setServiceId(1030)
+                .setAppLinkIntentUri("//hbbtv ip channel tune url")
+                .build());
+            channels.add(new Channel.Builder()
+                .setOriginalNetworkId(8468)
+                .setTransportStreamId(61697)
+                .setServiceId(1571)
+                .setAppLinkIntentUri("//hbbtv ip channel tune url")
+                .build());
+            channels.add(new Channel.Builder()
+                .setOriginalNetworkId(8468)
+                .setTransportStreamId(61697)
+                .setServiceId(1742)
+                .setAppLinkIntentUri("//hbbtv ip channel tune url")
+                .build());
+*/
+        } catch (Exception e) {
+            Log.e(TAG, "parseToChannelList Exception = " + e.getMessage());
+        }
+        needUpdateChannelNumber = channels.size();
+        Log.d(TAG, "parseIpChannelEnhancedDataToChannelList needUpdateChannelNumber = " + needUpdateChannelNumber);
         return needUpdateChannelNumber;
     }
 

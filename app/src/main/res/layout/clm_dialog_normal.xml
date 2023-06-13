@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="@dimen/px_855.0"
+    android:layout_height="wrap_content"
+    android:minHeight="@dimen/px_346.0"
+    android:orientation="vertical"
+    android:id="@+id/ll_dialog_container"
+    android:background="@color/clm_dialog_bg"
+    android:layout_gravity="center">
+
+    <TextView
+        android:id="@+id/clm_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:text="Cancel Collection"
+        android:layout_marginTop="@dimen/px_18.0"
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/dp_18" />
+
+    <TextView
+        android:id="@+id/clm_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="@dimen/px_190.0"
+        android:gravity="center"
+        android:visibility="gone"
+        android:text="Would you like extra channels included with Freeview delivered over the internet? If so, youĐll need a broadband speed over 2Mbps and this will count towards any broadband data allowance you have."/>
+
+    <EditText
+        android:id="@+id/post_code_input"
+        android:layout_width="@dimen/px_400.0"
+        android:layout_height="@dimen/px_60.0"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/px_80.0"
+        android:background="@drawable/selector_edit"
+        android:gravity="center"
+        android:visibility="gone"
+        android:maxLength="5"
+        android:textColor="@color/white" />
+
+    <Spinner
+        android:id="@+id/spinner_fvp_region"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:spinnerMode="dropdown"
+        android:layout_gravity="center_horizontal" />
+
+    <LinearLayout
+        android:id="@+id/button_set"
+        android:layout_width="match_parent"
+        android:layout_marginBottom="@dimen/px_16.0"
+        android:gravity="center"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btn_ok"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/dp_18"
+            android:text="Yes"
+            android:gravity="center"
+            android:focusable="true"
+            android:clickable="true"
+            android:layout_width="@dimen/px_200.0"
+            android:background="@drawable/bottom_btn_sel"
+            android:layout_height="@dimen/px_72.0"/>
+
+        <Button
+            android:id="@+id/btn_cancel"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/dp_18"
+            android:text="No"
+            android:gravity="center"
+            android:focusable="true"
+            android:clickable="true"
+            android:background="@drawable/bottom_btn_sel"
+            android:layout_marginStart="@dimen/px_69.0"
+            android:layout_width="@dimen/px_200.0"
+            android:layout_height="@dimen/px_72.0"/>
+    </LinearLayout>
+
+</LinearLayout>
