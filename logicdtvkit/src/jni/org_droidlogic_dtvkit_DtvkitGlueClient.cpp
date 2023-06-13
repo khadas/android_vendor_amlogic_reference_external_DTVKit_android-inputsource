@@ -519,7 +519,10 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
     AutoMutex _l(mLock);
 
     ALOGD("notify msgType = %d  this:%p", parcel.msgType, this);
-
+    if (!gJNIReady) {
+        ALOGE("notify gJNIReady false");
+        return;
+    }
     if (parcel.msgType == DTVKIT_DRAW) {
         datablock_t datablock;
         datablock.width      = parcel.bodyInt[0];
