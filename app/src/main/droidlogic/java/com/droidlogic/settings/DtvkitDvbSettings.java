@@ -87,6 +87,7 @@ public class DtvkitDvbSettings extends Activity {
     protected static final int MSG_FORMAT_DONE = 2;
     protected static final int MSG_HIDE_DIALOG = 3;
     protected static final int MSG_REFRESH_UI = 4;
+    protected static final int MSG_SELECT_COUNTRY = 5;
 
     protected static final int PERIOD_SHOW_DONE = 1000;
     protected static final int PERIOD_SHOW_DONE_TIME_OUT = 10000;
@@ -128,6 +129,25 @@ public class DtvkitDvbSettings extends Activity {
                 case MSG_REFRESH_UI:
                     updateStorageList();
                     initLayout(true);
+                    break;
+                case MSG_SELECT_COUNTRY:
+                    int position = msg.arg1;
+                    String previousMainAudioName = mParameterManager.getCurrentMainAudioLangName();
+                    String previousAssistAudioName = mParameterManager.getCurrentSecondAudioLangName();
+                    mParameterManager.setCountryCodeByIndex(position);
+                    mParameterManager.setDaylightSavingMode(2);
+                    updatingHbbtvCountryId();
+                    //updatingGuide();
+                    needSyncChannels = true;
+                    initLayout(true);
+                    String currentMainAudioName = mParameterManager.getCurrentMainAudioLangName();
+                    String currentAssistAudioName = mParameterManager.getCurrentSecondAudioLangName();
+                    if (!TextUtils.equals(previousMainAudioName, currentMainAudioName) || !TextUtils.equals(previousAssistAudioName, currentAssistAudioName)) {
+                        needClearAudioLangSetting = true;
+                    }
+                    String iso = mParameterManager.getCurrentCountryIso3Name();
+                    TimezoneSelect timezone = new TimezoneSelect(DtvkitDvbSettings.this);
+                    timezone.selectTimeZone(iso);
                     break;
                 default:
                     Log.d(TAG, "default");
@@ -199,22 +219,24 @@ public class DtvkitDvbSettings extends Activity {
         startService(intent);
     }
 
-    private void checkPassWordInfo() {
-        String pinCode = mParameterManager.getStringParameters(ParameterManager.SECURITY_PASSWORD);
-        String countryCode = mParameterManager.getCurrentCountryIso3Name();
-        if ("fra".equals(countryCode)) {
+    private void checkPassWordInfo(int position) {
+        if ("fra".equals(mParameterManager.getCountryIso3NameByIndex(position))) {
+            String pinCode = mParameterManager.getStringParameters(ParameterManager.SECURITY_PASSWORD);
             if (TextUtils.isEmpty(pinCode) || "0000".equals(pinCode)) {
+                mHandler.removeMessages(MSG_SELECT_COUNTRY);
                 PasswordCheckUtil passwordDialog = new PasswordCheckUtil(pinCode);
                 passwordDialog.setCurrent_mode(PasswordCheckUtil.PIN_DIALOG_TYPE_ENTER_NEW1_PIN);
                 passwordDialog.showPasswordDialog(this, new PasswordCheckUtil.PasswordCallback() {
                     @Override
                     public void passwordRight(String password) {
                         Log.d(TAG, "password is right");
+                        sendMessageToHandler(MSG_SELECT_COUNTRY, position, 0, null, 0);
                         mParameterManager.saveStringParameters(mParameterManager.SECURITY_PASSWORD, password);
                         getContentResolver().notifyChange(
-                            Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
-                            null, ContentResolver.NOTIFY_SYNC_TO_NETWORK);
+                                Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
+                                null, ContentResolver.NOTIFY_SYNC_TO_NETWORK);
                     }
+
                     @Override
                     public void onKeyBack() {
                         Log.d(TAG, "onKeyBack");
@@ -225,9 +247,11 @@ public class DtvkitDvbSettings extends Activity {
                             finish();
                         }
                     }
+
                     @Override
                     public void otherKeyHandler(int key_code) {
                     }
+
                     @Override
                     public boolean checkNewPasswordValid(String value) {
                         Log.d(TAG, "checkNewPasswordValid: " + value);
@@ -276,29 +300,12 @@ public class DtvkitDvbSettings extends Activity {
                 Log.d(TAG, "country onItemSelected position = " + position);
                 int saveCountryCode = mParameterManager.getCurrentCountryCode();
                 int selectCountryCode = mParameterManager.getCountryCodeByIndex(position);
-                String previousMainAudioName = mParameterManager.getCurrentMainAudioLangName();
-                String previousAssistAudioName = mParameterManager.getCurrentSecondAudioLangName();
                 if (saveCountryCode == selectCountryCode) {
                     Log.d(TAG, "country onItemSelected same position");
                     return;
                 }
-                mParameterManager.setCountryCodeByIndex(position);
-                mParameterManager.setDaylightSavingMode(2);
-                updatingHbbtvCountryId();
-                //updatingGuide();
-                needSyncChannels = true;
-                initLayout(true);
-                String currentMainAudioName = mParameterManager.getCurrentMainAudioLangName();
-                String currentAssistAudioName = mParameterManager.getCurrentSecondAudioLangName();
-                if (!TextUtils.equals(previousMainAudioName, currentMainAudioName) || !TextUtils.equals(previousAssistAudioName, currentAssistAudioName)) {
-                    needClearAudioLangSetting = true;
-                }
-
-                String iso = mParameterManager.getCurrentCountryIso3Name();
-                TimezoneSelect timezone = new TimezoneSelect(DtvkitDvbSettings.this);
-                timezone.selectTimeZone(iso);
-
-                checkPassWordInfo();
+                sendMessageToHandler(MSG_SELECT_COUNTRY, position, 0, null, 100);
+                checkPassWordInfo(position);
             }
 
             @Override

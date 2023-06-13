@@ -1060,6 +1060,32 @@ public class ParameterManager {
         return countrycode;
     }
 
+    public String getCountryIso3NameByIndex(int index) {
+        String countryIso3Name = null;
+        JSONObject resultObj = null;
+        try {
+            resultObj = getCountries();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return countryIso3Name;
+                }
+                resultObj = (JSONObject)(data.get(index));
+                if (resultObj != null) {
+                    Log.d(TAG, "getCountryIso3NameByIndex resultObj = " + resultObj.toString());
+                    countryIso3Name = ((String)resultObj.get("country_name"));
+                }
+            } else {
+                Log.d(TAG, "getCountryIso3NameByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCountryIso3NameByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return countryIso3Name;
+    }
+
     private JSONObject setCountry(int countryCode) {
         JSONObject resultObj = null;
         try {
