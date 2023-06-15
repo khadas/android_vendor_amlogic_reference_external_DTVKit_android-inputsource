@@ -1098,6 +1098,7 @@ public class DtvkitDvbtSetup extends Activity {
 
     private void startSearch() {
         setSearchStatus("Searching", "");
+        DataProviderManager.putIntValue(this, ConstantManager.KEY_LCN_STATE, mParameterManager.getAutomaticOrderingEnabled() ? 1 : 0);
         DataProviderManager.putBooleanValue(this,ConstantManager.KEY_IS_SEARCHING, true);
         setSearchProgressIndeterminate(false);
         startMonitoringSearch();
