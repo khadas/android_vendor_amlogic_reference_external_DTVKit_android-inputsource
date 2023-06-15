@@ -5303,12 +5303,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             id = channel.getId();
                             Log.d(TAG, "id = "+ id);
                         }
-                        if (found)
-                        {
-                           retuneUri = Uri.parse("content://android.media.tv/channel");
-                           retuneUri = ContentUris.withAppendedId(retuneUri,id);
-                           Log.i(TAG, "retune to " + retuneUri);
-                           notifyChannelRetuned(retuneUri);
+                        if (found) {
+                            retuneUri = Uri.parse("content://android.media.tv/channel");
+                            retuneUri = ContentUris.withAppendedId(retuneUri,id);
+                            Log.i(TAG, "retune to " + retuneUri);
+                            notifyChannelRetuned(retuneUri);
+                            //sync
+                            if (mHbbTvManager != null) {
+                                mHbbTvManager.setTuneChannelUri(retuneUri);
+                            }
+                            mTunedChannel = channel;
+                            if (playerState == PlayerState.PLAYING) {
+                                Log.i(TAG, "re-notifyVideoAvailable");
+                                if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
+                                    notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
+                                } else {
+                                    notifyVideoAvailable();
+                                }
+                            }
                         }
                         break;
                     case MSG_RESET_CI_TUNE_SERVICE_URI:
