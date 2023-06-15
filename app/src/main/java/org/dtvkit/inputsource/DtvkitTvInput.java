@@ -5176,13 +5176,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     case MSG_EVENT_SUBTITLE_OPENED:
                         initSubtitleOrTeletextIfNeed();
                         break;
-                    case MSG_SET_RECTANGLE:
+                    case MSG_SET_RECTANGLE: {
+                        //dtvkit use 1920x1080 as virtual display resolution
+                        //Rectangle to dtvkit need calculated base of 1920x1080
                         if (msg.arg1 == 1) {
-                            playerSetRectangle(0, mWinHeight / 4, mWinWidth / 2, mWinHeight / 2);
+                            playerSetRectangle(0, 1080/4, 1920/2, 1080/2);
                         } else {
-                            playerSetRectangle(0, 0, mWinWidth, mWinHeight);
+                            playerSetRectangle(0, 0, 1920, 1080);
                         }
                         break;
+                    }
                     case MSG_DO_RELEASE:
                         doRelease();
                         break;

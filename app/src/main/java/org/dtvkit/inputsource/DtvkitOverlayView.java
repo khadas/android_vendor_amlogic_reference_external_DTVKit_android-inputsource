@@ -164,14 +164,14 @@ public class DtvkitOverlayView extends FrameLayout {
         if (subFlag) {
             mSubServerView.setTeletextTransparent(status == Constant.TTX_MODE_TRANSPARENT);
             if (status == Constant.TTX_MODE_SEPARATE) {
-                mSubServerView.setSize(1920 / 2, 0, 1920, 1080);
+                mSubServerView.setSize(w/2, 0, w, h);
             } else {
-                mSubServerView.setSize(0, 0, 1920, 1080);
+                mSubServerView.setSize(0, 0, w, h);
             }
         } else if (status == Constant.TTX_MODE_SEPARATE) {
-            nativeOverlayView.setSize(1920 / 2, 0, 1920, 1080);
+            nativeOverlayView.setSize(w/2, 0, w, h);
         } else {
-            nativeOverlayView.setSize(0, 0, 1920, 1080);
+            nativeOverlayView.setSize(0, 0, w, h);
         }
     }
 
@@ -272,6 +272,8 @@ public class DtvkitOverlayView extends FrameLayout {
 
     public void setSize(int x, int y, int width, int height) {
         Log.i(TAG, "setSize for hbbtv in");
+        w = width;
+        h = height;
         nativeOverlayView.setSize(x, y, width, height);
         mSubServerView.setSize(x, y, width, height);
         Log.i(TAG, "setSize for hbbtv out");
