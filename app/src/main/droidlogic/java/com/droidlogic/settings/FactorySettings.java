@@ -404,8 +404,8 @@ public class FactorySettings {
                 if (!TextUtils.isEmpty(editInfo)) {
                     encodedEditInfo = encode(compress(editInfo));
                     editLen = editInfo.length();
+                    Log.v(TAG, "find eidted info length: " + editLen);
                 }
-                Log.v(TAG, "find eidted info length: " + editInfo.length());
                 if (mParameterManager != null) {
                     ret = mParameterManager.exportChannels(path + "/dtvkit_channels.xml",
                         encodedEditInfo, editLen);
