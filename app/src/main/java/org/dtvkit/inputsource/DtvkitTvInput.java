@@ -554,6 +554,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 mainSession.sendBundleToAppByTif(action, request);
                             }
                             break;
+                        case ConstantManager.VALUE_CI_PLUS_COMMAND_TRICK_CONTROL:
+                            //CIPLUS_HAS_TRICK_CONTROL
+                            //am broadcast -a "ci_plus_info" --es command "track_control"
+                            if (mainSession != null) {
+                                Bundle playbackBundle = new Bundle();
+                                playbackBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_TRICK_CONTROL);
+                                mainSession.sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
+                            }
+                            break;
                         default:
                             break;
                     }
@@ -4838,6 +4847,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     } catch (Exception e) {
                         Log.e(TAG, "CiOpSearchFinished Exception = " + e.getMessage());
                     }
+                } else if (signal.equals("CIPLUS_HAS_TRICK_CONTROL")) {
+                    Bundle playbackBundle = new Bundle();
+                    playbackBundle.putString(ConstantManager.CI_PLUS_COMMAND, ConstantManager.VALUE_CI_PLUS_COMMAND_TRICK_CONTROL);
+                    sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, playbackBundle);
                 } else if (signal.equals("ignore_input")) {
                     //tell app to disable key event
                     try {

@@ -111,6 +111,7 @@ public class ConstantManager {
     public static final String VALUE_CI_PLUS_COMMAND_RECEIVE_INPUT = "receive_input";
     public static final String VALUE_CI_PLUS_COMMAND_PVR_PLAYBACK_STATUS = "PvrPlaybackStatus";
     public static final String VALUE_CI_PLUS_COMMAND_TRICK_LIMIT = "trick_limit";
+    public static final String VALUE_CI_PLUS_COMMAND_TRICK_CONTROL = "track_control";
     public static final String VALUE_CI_PLUS_COMMAND_DO_PVR_LIMITED = "DoPVRLimited";
     public static final String VALUE_CI_PLUS_COMMAND_ECI_CONTENT_PROTECTION = "eci_content_protection";
     public static final String VALUE_CI_PLUS_SEARCH_MODULE = "search_module";
