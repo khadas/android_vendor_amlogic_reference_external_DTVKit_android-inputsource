@@ -101,7 +101,7 @@ static void subtitleTune(int type, int param1, int param2, int param3);
 
 void SubtitleDataListenerImpl::onSubtitleEvent(const char *data, int size, int parserType,
             int x, int y, int width, int height,
-            int videoWidth, int videoHeight, int cmd) {
+            int videoWidth, int videoHeight, int cmd, int objectSegmentId) {
     if (cmd) {
         postSubtitleDataEx(parserType, width, height, x, y, videoWidth, videoHeight, data, size);
     } else {

@@ -97,7 +97,7 @@ class SubtitleDataListenerImpl : public SubtitleListener {
 
         virtual void onSubtitleEvent(const char *data, int size, int parserType,
                 int x, int y, int width, int height,
-                int videoWidth, int videoHeight, int cmd);
+                int videoWidth, int videoHeight, int cmd,int objectSegmetnId);
         virtual void onSubtitleDataEvent(int event, int id) {}
         void onSubtitleAvail(int avail) {};
         void onSubtitleAfdEvent(int dec_id, int afd);
