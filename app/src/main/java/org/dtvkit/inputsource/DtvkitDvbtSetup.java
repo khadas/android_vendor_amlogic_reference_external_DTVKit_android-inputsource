@@ -1593,7 +1593,14 @@ public class DtvkitDvbtSetup extends Activity {
         JSONObject data = (JSONObject) map.get("data");
         int strengthStatus = mParameterManager.getStrengthStatus();
         int qualityStatus = mParameterManager.getQualityStatus();
-        int found = getFoundServiceNumberOnSearch();
+        int found = 0;
+        if (mSearchManualAutoType == DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL) {
+            if (getSearchProcess(data) >= 100) {
+                found = getFoundServiceNumberOnSearch();
+            }
+        } else {
+            found = getFoundServiceNumberOnSearch();
+        }
         if (signal != null && ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged")))) {
             int progress = getSearchProcess(data);
             Log.d(TAG, "onSignal progress = " + progress);
@@ -1604,9 +1611,6 @@ public class DtvkitDvbtSetup extends Activity {
                 //onSearchFinished();
                 sendFinishSearch(false);
             }
-        } else if (signal != null && ((mIsDvbt && signal.equals("UpdateMsgStatus")) || (!mIsDvbt && signal.equals("UpdateMsgStatus")))) {
-            Log.d(TAG, "UpdateMsgStatus: StrengthStatus = " + strengthStatus + "%, qualityStatus = " + qualityStatus + "%");
-            setStrengthAndQualityStatus(String.format(Locale.getDefault(), "Strength: %d%%", strengthStatus), String.format(Locale.getDefault(), "Quality: %d%%", qualityStatus), String.format(Locale.ENGLISH, "Channel: %d", found));
         }
     }
 
