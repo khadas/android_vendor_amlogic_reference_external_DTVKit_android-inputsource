@@ -19,17 +19,13 @@
 package com.droidlogic.dtvkit.companionlibrary.model;
 
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 import android.util.Log;
 
-import com.droidlogic.dtvkit.companionlibrary.utils.TvContractUtils;
-
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * This is a serialized class used for storing and retrieving serialized data from
@@ -45,7 +41,7 @@ public class InternalProviderData {
     private static final String KEY_CUSTOM_DATA = "custom";
 
     private JSONObject mJsonObject;
-
+    private String mSignalType = null;
     /**
      * Creates a new empty object
      */
@@ -53,6 +49,10 @@ public class InternalProviderData {
         mJsonObject = new JSONObject();
     }
 
+    public InternalProviderData(String type) {
+        mJsonObject = new JSONObject();
+        mSignalType = type;
+    }
     /**
      * Creates a new object and attempts to populate by obtaining the String representation of the
      * provided byte array
@@ -68,6 +68,11 @@ public class InternalProviderData {
             Log.i(TAG, "InternalProviderData JSONException = " + e.getMessage());
             throw new ParseException(e.getMessage());
         }
+    }
+
+    public InternalProviderData(@NonNull byte[] bytes, @NonNull String type) throws ParseException {
+        this(bytes);
+        mSignalType = type;
     }
 
     private int jsonHash(JSONObject jsonObject) {
@@ -153,10 +158,14 @@ public class InternalProviderData {
      */
     public InternalProviderData put(String key, Object value) throws ParseException {
         try {
-            if (!mJsonObject.has(KEY_CUSTOM_DATA)) {
-                mJsonObject.put(KEY_CUSTOM_DATA, new JSONObject());
+            if (TextUtils.equals(mSignalType, "ATV")) {
+                mJsonObject.put(key, String.valueOf(value));
+            } else {
+                if (!mJsonObject.has(KEY_CUSTOM_DATA)) {
+                    mJsonObject.put(KEY_CUSTOM_DATA, new JSONObject());
+                }
+                mJsonObject.getJSONObject(KEY_CUSTOM_DATA).put(key, String.valueOf(value));
             }
-            mJsonObject.getJSONObject(KEY_CUSTOM_DATA).put(key, String.valueOf(value));
         } catch (JSONException e) {
             Log.i(TAG, "put JSONException = " + e.getMessage());
             throw new ParseException(e.getMessage());
@@ -172,11 +181,16 @@ public class InternalProviderData {
      * @throws ParseException If there is a problem getting custom data
      */
     public Object get(String key) throws ParseException {
-        if (! mJsonObject.has(KEY_CUSTOM_DATA)) {
-            return null;
-        }
         try {
-            return mJsonObject.getJSONObject(KEY_CUSTOM_DATA).opt(key);
+            if (TextUtils.equals(mSignalType, "ATV")) {
+                return mJsonObject.opt(key);
+            } else {
+                if (mJsonObject.has(KEY_CUSTOM_DATA)) {
+                    return mJsonObject.getJSONObject(KEY_CUSTOM_DATA).opt(key);
+                } else {
+                    return null;
+                }
+            }
         } catch (JSONException e) {
             Log.i(TAG, "get JSONException = " + e.getMessage());
             throw new ParseException(e.getMessage());

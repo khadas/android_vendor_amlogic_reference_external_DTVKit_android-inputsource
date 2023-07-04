@@ -96,6 +96,16 @@
         <item>Channel Number</item>
     </string-array>
 
+    <string-array name="public_antenna_type_entries">
+        <item>Air</item>
+        <item>Cable</item>
+    </string-array>
+
+    <string-array name="public_adtv_type_entries">
+        <item>ATV</item>
+        <item>DTV</item>
+    </string-array>
+
     <string-array name="dvbs_channel_type">
         <item>All</item>
         <item>Free</item>

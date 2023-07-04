@@ -72,6 +72,8 @@
     <string name="cable">Cable</string>
 
     <!-- manual search -->
+    <string name="adtv_type">TV Type:</string>
+    <string name="antenna_type">Antenna Type:</string>
     <string name="search_method">Search Method:</string>
     <string name="search_frequency">Channel Frequency:</string>
     <string name="search_frequency_hint">MHz</string>

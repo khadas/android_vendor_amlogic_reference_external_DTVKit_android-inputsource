@@ -41,10 +41,10 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
     /* called after channel search */
     public static JSONArray getServicesList() throws Exception {
-        return getServicesList("cur", "all");
+        return getDvbServicesList("cur", "all");
     }
 
-    public static JSONArray getServicesList(String signal_type, String tv_type) throws Exception {
+    private static JSONArray getDvbServicesList(String signal_type, String tv_type) throws Exception {
         JSONArray param;
         JSONArray services = new JSONArray();
         int index = 0;
@@ -72,6 +72,33 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         return services;
     }
 
+    public static JSONArray getAtvServicesList() throws Exception {
+        JSONArray param;
+        JSONArray services = new JSONArray();
+        int index = 0;
+        final int maxTransChannelsSize = 512;
+        while (true) {
+            param = new JSONArray();
+            param.put(index);
+            param.put(maxTransChannelsSize);
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Atv.getListOfServicesByIndex", param);
+            JSONArray tmpServices = obj.optJSONArray("data");
+            if (tmpServices == null) {
+                break;
+            } else {
+                for (int i = 0; i < tmpServices.length(); i++) {
+                    services.put(tmpServices.get(i));
+                }
+                index += tmpServices.length();
+                if (tmpServices.length() < maxTransChannelsSize) {
+                    break;
+                }
+            }
+        }
+        Log.i(TAG, "Get Atv channels : " + services.length());
+        return services;
+    }
+
     public static void setServicesToSync(JSONArray services) {
         synchronized (mLock) {
             mServices = services;
@@ -80,6 +107,104 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
     @Override
     public List<Channel> getChannels(boolean syncCurrent) {
+        if (syncCurrent && TextUtils.isEmpty(getChannelTypeFilter())) {
+            setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(getCurrentDvbSource()));
+        }
+        List<Channel> channels = new ArrayList<>(getDvbChannels(syncCurrent));
+        if (TvContractUtils.dvbSourceToInt(getChannelTypeFilter()) == SIGNAL_ISDBT) {
+            channels.addAll(getAtvChannels());
+        }
+        return channels;
+    }
+
+    public List<Channel> getAtvChannels() {
+        List<Channel> channels = new ArrayList<>();
+        Log.i(TAG, "Get atvChannels for db sync");
+        try {
+            JSONObject serviceNumberObj = DtvkitGlueClient.getInstance().request("Atv.getNumberOfServices", new JSONArray());
+            int channelNumber = serviceNumberObj.optInt("data", 0);
+            Log.i(TAG, "Total " + channelNumber + " atv channels to sync");
+            if (channelNumber <= 0) {
+                return channels;
+            }
+            JSONArray services = getAtvServicesList();
+            Log.i(TAG, "Finally getAtvChannels size=" + services.length());
+
+            for (int i = 0; i < services.length(); i++) {
+                JSONObject service = services.getJSONObject(i);
+                String ATVName = service.getString("Name");
+                String ATVDisplayNumber = null;
+                int vstd = service.getInt("VStd");
+                if (ATVName.length() == 0)
+                    ATVName = "xxxATV Program";
+                if (ATVName.startsWith("xxxATV Program"))
+                    ATVName = ATVName;
+                if (service.getInt("Lcn") != -1)
+                    ATVDisplayNumber=""+service.getInt("Lcn")+"-"+0;
+
+                InternalProviderData data = new InternalProviderData("ATV");
+                data.put("vfmt", service.getInt("VFmt"));
+                data.put("frequency", service.getInt("Freq"));
+                data.put("video_std", service.getInt("VStd"));
+                data.put("audio_std", service.getInt("AStd"));
+                data.put("is_auto_std", service.optInt("isAutoStd"));
+                data.put("fine_tune", 0);
+                data.put("audio_compensation", 0);
+                data.put("is_favourite", 0);
+                data.put("multi_name", ATVName);
+                JSONObject feMap = new JSONObject();
+                feMap.put("vtd", service.getInt("VStd"));
+                feMap.put("atd", service.getInt("AStd"));
+                feMap.put("vfmt", service.getInt("VFmt"));
+                feMap.put("freq", service.getInt("Freq"));
+                data.put("unikey", service.getInt("Unikey"));
+                feMap.put("mode", 0);
+                feMap.put("soundsys", -1);
+                data.put("fe", feMap.toString());
+                data.put("majorNum", service.getInt("Lcn"));
+                data.put("minorNum", 0);
+                data.put("srcId", -1);
+                data.put("access", 0);
+                data.put("hidden", false);
+                data.put("set_hidden", 0);
+                data.put("hideGuide", 0);
+                data.put("audio_pids", null);
+                data.put("AUDIO_FORMATS", null);
+                data.put("audio_exts", null);
+                data.put("audio_langs", null);
+                data.put("audio_track_index", 0);
+                data.put("audio_out_mode", -1);
+                data.put("audio_channel", 0);
+                data.put("subt_types", 0);
+                data.put("subt_pids", null);
+                data.put("subt_stypes", null);
+                data.put("subt_id1s", null);
+                data.put("subt_id2s", null);
+                data.put("subt_langs", null);
+                data.put("subt_track_index", -1);
+                data.put("content_ratings", "");
+                data.put("signal_type", service.getInt("SigType") == 0 ? TvContract.Channels.TYPE_ATSC_T :TvContract.Channels.TYPE_ATSC_C);
+
+                channels.add(new Channel.Builder()
+                        .setDisplayName(ATVName)
+                        .setType(TvContractUtils.videoStdToType(vstd))
+                        .setDisplayNumber(ATVDisplayNumber)
+                        .setServiceType(TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO)
+                        .setOriginalNetworkId(0)
+                        .setTransportStreamId(0)
+                        .setServiceId(0)
+                        .setInternalProviderData(data)
+                        .setLocked(0)
+                        .setChannelAntennaType(service.getInt("SigType"))
+                        .build());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "allowed getAtvChannels Exception = " + e.getMessage());
+        }
+        return channels;
+    }
+
+    public List<Channel> getDvbChannels(boolean syncCurrent) {
         mIsUK = "gbr".equals(ParameterManager.getCurrentCountryIso3Name());
         List<Channel> channels = new ArrayList<>();
 
@@ -92,16 +217,13 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             param.put("all"); // tv/radio all
             JSONObject serviceNumberObj = DtvkitGlueClient.getInstance().request("Dvb.getNumberOfServices", param);
             int channelNumber = serviceNumberObj.optInt("data", 0);
-            Log.i(TAG, "Total " + channelNumber + " channels to sync");
+            Log.i(TAG, "Total " + channelNumber + " Dtv channels to sync");
             if (channelNumber <= 0) {
                 List<Channel> ipChannelList = getIpChannel();
                 if ((null != ipChannelList) && (0 < ipChannelList.size())) {
                     channels.addAll(ipChannelList);
                 }
                 return channels;
-            }
-            if (syncCurrent && TextUtils.isEmpty(getChannelTypeFilter())) {
-                setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(getCurrentDvbSource()));
             }
             JSONArray services = new JSONArray();
             synchronized (mLock) {
@@ -113,7 +235,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 mServices = null;
             }
             if (services.length() == 0) {
-                services = getServicesList(syncCurrent ? "cur" : "all", "all");
+                services = getDvbServicesList(syncCurrent ? "cur" : "all", "all");
             }
             Log.i(TAG, "Finally getChannels size=" + services.length());
             boolean ciTest = PropSettingManager.getBoolean(PropSettingManager.CI_PROFILE_ADD_TEST, false);

@@ -156,6 +156,58 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/public_antenna_type_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/public_antenna_type_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFamily="sans-serif"
+                    android:text="@string/antenna_type"
+                    android:textColor="@color/ut_scan_description_text"
+                    android:textSize="@dimen/ut_scan_description_text_size" />
+
+                <Spinner
+                    android:id="@+id/public_antenna_type_spinner"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/px_15.0"
+                    android:entries="@array/public_antenna_type_entries"
+                    android:fontFamily="sans-serif" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/public_adtv_type_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/public_adtv_type_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFamily="sans-serif"
+                    android:text="@string/adtv_type"
+                    android:textColor="@color/ut_scan_description_text"
+                    android:textSize="@dimen/ut_scan_description_text_size" />
+
+                <Spinner
+                    android:id="@+id/public_adtv_type_spinner"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/px_15.0"
+                    android:entries="@array/public_adtv_type_entries"
+                    android:fontFamily="sans-serif" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/frequency_channel_container"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

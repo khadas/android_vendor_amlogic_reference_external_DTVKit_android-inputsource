@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.media.tv.TvContract;
 import android.os.Build;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
 import com.droidlogic.dtvkit.companionlibrary.model.InternalProviderData;
@@ -65,6 +66,7 @@ public final class Channel {
     private int mIsLocked;
     private int mFrequency;
     private int mOnDemand;
+    private int mAntennaType;
 
     //sync with ChannelInfo in droidlogic-tv.jar
     public static final String KEY_IS_FAVOURITE = "is_favourite";
@@ -106,6 +108,7 @@ public final class Channel {
         mOriginalNetworkId = INVALID_INTEGER_VALUE;
         mServiceType = TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO;
         mOnDemand = INVALID_INTEGER_VALUE;
+        mAntennaType = INVALID_INTEGER_VALUE;
     }
 
     /**
@@ -249,7 +252,11 @@ public final class Channel {
     public InternalProviderData getInternalProviderData() {
         if (mInternalProviderData != null) {
             try {
-                return new InternalProviderData(mInternalProviderData);
+                if (isATV(this)) {
+                    return new InternalProviderData(mInternalProviderData, "ATV");
+                } else {
+                    return new InternalProviderData(mInternalProviderData);
+                }
             } catch (InternalProviderData.ParseException e) {
                 return null;
             }
@@ -300,6 +307,20 @@ public final class Channel {
         return mOnDemand;
     }
 
+    public int getAntennaType() {
+        return mAntennaType;
+    }
+
+    public static boolean isATV(Channel channel) {
+        if (channel == null) {
+            return false;
+        }
+        return TvContract.Channels.TYPE_NTSC.equals(channel.mType)
+                || TvContract.Channels.TYPE_PAL.equals(channel.mType)
+                || TvContract.Channels.TYPE_SECAM.equals(channel.mType);
+    }
+
+    @NonNull
     @Override
     public String toString() {
         return "Channel{"
@@ -315,7 +336,9 @@ public final class Channel {
                 + ", videoFormat=" + mVideoFormat
                 + ", mVideoCodec=" + mVideoCodec
                 + ", mIsLocked="   + mIsLocked
-                + ", appLinkText=" + mAppLinkText + "}";
+                + ", appLinkText=" + mAppLinkText
+                + ", flag3=" + mAntennaType
+                + "}";
     }
 
     /**
@@ -399,6 +422,9 @@ public final class Channel {
             values.putNull(TvContract.Channels.COLUMN_APP_LINK_INTENT_URI);
         }
         values.put(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_FLAG1, mOnDemand);
+        if (isATV(this)) {
+            values.put(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_FLAG3, mAntennaType);
+        }
         return values;
     }
 
@@ -431,6 +457,7 @@ public final class Channel {
         mServiceType = other.mServiceType;
         mIsLocked = other.mIsLocked;
         mOnDemand = other.mOnDemand;
+        mAntennaType = other.mAntennaType;
     }
 
     /**
@@ -508,6 +535,9 @@ public final class Channel {
             if (!cursor.isNull(++index)) {
                 builder.setAppLinkText(cursor.getString(index));
             }
+            if (!cursor.isNull(++index)) {
+                builder.setChannelAntennaType(cursor.getInt(index));
+            }
         }
         InternalProviderData data = builder.mChannel.getInternalProviderData();
         if (data != null) {
@@ -545,7 +575,8 @@ public final class Channel {
                     TvContract.Channels.COLUMN_APP_LINK_ICON_URI,
                     TvContract.Channels.COLUMN_APP_LINK_INTENT_URI,
                     TvContract.Channels.COLUMN_APP_LINK_POSTER_ART_URI,
-                    TvContract.Channels.COLUMN_APP_LINK_TEXT
+                    TvContract.Channels.COLUMN_APP_LINK_TEXT,
+                    TvContract.Channels.COLUMN_INTERNAL_PROVIDER_FLAG3
             };
             return CollectionUtils.concatAll(baseColumns, marshmallowColumns);
         }
@@ -890,6 +921,10 @@ public final class Channel {
             return this;
         }
 
+        public Builder setChannelAntennaType(int antennaType) {
+            mChannel.mAntennaType = antennaType;
+            return this;
+        }
         /**
          * Takes the values of the Builder object and creates a Channel object.
          * @return Channel object with values from the Builder.

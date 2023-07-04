@@ -196,15 +196,22 @@ public class EpgSyncTask {
                 }
             }
 
-            String selection = null;
+            String sector = " OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
+            StringBuilder selection = new StringBuilder(TvContract.Channels.COLUMN_TYPE + " =? ");
             String[] selectionArgs = null;
             if (syncCurrent) {
-                selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
                 selectionArgs = TvContractUtils.searchSignalTypeToSelectionArgs(syncSignalType);
+                if (selectionArgs != null) {
+                    int length = selectionArgs.length - 1;
+                    while (length > 0) {
+                        selection.append(sector);
+                        length--;
+                    }
+                }
             }
             LinkedList<Channel> channelList = TvContractUtils.buildChannelMap(
                     mMainService.getContentResolver(), mInputId, frequency,
-                    selection, selectionArgs, currentChannelId);
+                    selection.toString(), selectionArgs, currentChannelId);
             if (channelList == null) {
                 return "ERROR_NO_CHANNELS";
             }

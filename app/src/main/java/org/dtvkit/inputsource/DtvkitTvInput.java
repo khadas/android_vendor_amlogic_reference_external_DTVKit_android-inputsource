@@ -148,7 +148,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private Hardware mMainHardware = null;
     private Hardware mPipHardware = null;
 
-    private TvStreamConfig mMainStreamConfig = null;
+    private TvStreamConfig[] mMainStreamConfig = null;
     private TvStreamConfig mPipStreamConfig = null;
 
     /*associate audio*/
@@ -2900,7 +2900,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 return true;
             }
             Log.d(TAG, "Surface:" + mSurface + ", MainHardware:" + mMainHardware
-                + ", MainStreamConfig:" + mMainStreamConfig + ", ready:" + mCanPlay);
+                + ", MainStreamConfig:" + Arrays.toString(mMainStreamConfig) + ", ready:" + mCanPlay);
             return false;
         }
 
@@ -3003,8 +3003,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.d(TAG, "Do Ip Channel Tune error, hbbtv not init");
                 }
             } else {
-                playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart,
-                                mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
+                if (!isPipSession()) {
+                    mMainHardware.setSurface(mSurface, Channel.isATV(mTunedChannel) ? mMainStreamConfig[1] : mMainStreamConfig[0]);
+                }
+                if (Channel.isATV(mTunedChannel)) {
+                    playResult = playerPlay_ATV(mTunedChannel);
+                } else {
+                    playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart,
+                            mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
+                }
             }
             if (playResult) {
                 userDataStatus(true);
@@ -3037,8 +3044,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
+            if (Channel.isATV(mTunedChannel)) {
+                atvPlayerStop();
+            }
         }
-
     }
 
     public abstract class DtvkitTvInputSession extends Session {
@@ -3210,7 +3219,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     Log.d(TAG, "onStreamConfigChanged configs : " + Arrays.toString(configs));
                     streamId = configs[0].getStreamId();
                     if (streamId == STREAM_ID_NORMAL) {
-                        mMainStreamConfig = configs[0];
+                        mMainStreamConfig = configs;
                         Message msg =  mMainHandle.obtainMessage(MSG_SET_SURFACE);
                         msg.arg1 = INDEX_FOR_MAIN;
                         mMainHandle.sendMessage(msg);
@@ -4479,13 +4488,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                    }
                } else if (signal.equals("PlayerStatusChanged")) {
                     String state = "off";
-                    String dvbUri = "";
                     String type = "dvblive";
                     try {
                         state = data.getString("state");
-                        dvbUri = data.getString("uri");
                         type = data.getString("type");
-                    } catch (JSONException ignore) {
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.getMessage());
+                    }
+                    if (mTunedChannel != null) {
+                        if ((Channel.isATV(mTunedChannel) && !type.equals("ATV"))
+                            || (!Channel.isATV(mTunedChannel) && type.equals("ATV"))) {
+                            Log.i(TAG, "Ignore signal: " + state);
+                            return;
+                        }
                     }
                     Log.i(TAG, "signal: " + state);
                     switch (state) {
@@ -4496,10 +4511,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                              * type: "dvbtimeshifting" -> timeshift streaming
                              */
                             playerState = PlayerState.PLAYING;
+                            if (mTunedChannel == null) {
+                                return;
+                            }
                             if (type.equals("dvblive")) {
-                                if (mTunedChannel == null) {
-                                    return;
-                                }
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
                                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
                                 } else {
@@ -4533,16 +4548,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 });
                                 sendUpdateTrackMsg(PlayerState.PLAYING, true);
                             } else if (type.equals("dvbtimeshifting")) {
-                                if (mTunedChannel == null) {
-                                    return;
-                                }
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
                                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
                                 } else {
                                     notifyVideoAvailable();
                                 }
+                            } else {
+                                notifyVideoAvailable();
                             }
-                            playerSetAdParamsWithDelay(Boolean.compare(mIsPip, false), true, mAudioADAutoStart ? 1100 : 0);
+                            if (!Channel.isATV(mTunedChannel)) {
+                                playerSetAdParamsWithDelay(Boolean.compare(mIsPip, false), true, mAudioADAutoStart ? 1100 : 0);
+                            }
                             if (mMainHandle != null) {
                                 mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
                                 Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
@@ -5241,7 +5257,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         setBlockMute(mute);
                         break;
                     case MSG_SET_STREAM_VOLUME:
-                        playerSetMute(msg.arg1 == 0, msg.arg2);
+                        if (Channel.isATV(mTunedChannel)) {
+                            if (msg.arg1 == 0) {
+                                mAudioSystemCmdManager.closeTvAudio();
+                            } else {
+                                mAudioSystemCmdManager.openTvAudio(0);
+                            }
+                        } else {
+                            playerSetMute(msg.arg1 == 0, msg.arg2);
+                        }
                         break;
                     case MSG_EVENT_SUBTITLE_OPENED:
                         initSubtitleOrTeletextIfNeed();
@@ -5590,7 +5614,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         if (msg.arg1 == INDEX_FOR_MAIN) {
                             if (mMainHardware != null && mMainStreamConfig != null) {
                                 Log.i(TAG, "MSG_SET_SURFACE:" + mSurface);
-                                mMainHardware.setSurface(mSurface, mMainStreamConfig);
+                                mMainHardware.setSurface(mSurface, mMainStreamConfig[0]);
                                 set = true;
                             }
                         }
@@ -6671,6 +6695,33 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }
 
+
+    // atv player code start
+    private boolean playerPlay_ATV(Channel channel) {
+        JSONArray array = new JSONArray();
+        InternalProviderData data = channel.getInternalProviderData();
+        if (data == null) {
+            return false;
+        }
+        try {
+            array.put(Integer.parseInt((String) data.get("unikey"))); //unikey
+            array.put(channel.getAntennaType()); //atv_sigtype
+            array.put(Integer.parseInt((String) data.get("frequency"))); //freq
+            array.put(Integer.parseInt((String) data.get("video_std"))); //vstd
+            array.put(Integer.parseInt((String) data.get("audio_std"))); //astd
+            array.put(Integer.parseInt((String) data.get("vfmt"))); //vfmt
+            Log.i(TAG, "AtvPlayer playerPlay:" + channel);
+            DtvkitGlueClient.getInstance().request("AtvPlayer.play", array);
+        } catch (Exception e) {
+            Log.d(TAG, "[debug]channel : " + channel);
+            Log.d(TAG, "[debug]data : " + data);
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+    // atv player code end
+
     private String playerPlay(int index, String dvbUri, boolean ad_enable, boolean disable_audio, int surface, String uri_cache1, String uri_cache2) {
         synchronized (mLock) {
             try {
@@ -6709,6 +6760,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         } catch (Exception e) {
             Log.e(TAG, "setSurfaceTunnelId = " + e.getMessage());
         }
+    }
+
+    private void atvPlayerStop() {
+        try {
+            Log.i(TAG, "AtvPlayer.stop");
+            DtvkitGlueClient.getInstance().request("AtvPlayer.stop", new JSONArray());
+        } catch (Exception ignored) {}
     }
 
     private void playerStop() {

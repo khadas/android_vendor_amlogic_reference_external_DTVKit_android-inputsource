@@ -59,14 +59,16 @@ import java.util.stream.Collectors;
  */
 public class TvContractUtils {
     private static final String TAG = "TvContractUtils";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final int BATCH_OPERATION_COUNT = 50;
 
     private static final int SIGNAL_QPSK  = 1; // digital satellite
     private static final int SIGNAL_COFDM = 2; // digital terrestrial
     private static final int SIGNAL_QAM   = 4; // digital cable
     private static final int SIGNAL_ISDBT = 5;
-
+    private static final int ATV_VIDEO_STD_PAL  = 1;
+    private static final int ATV_VIDEO_STD_NTSC = 2;
+    private static final int ATV_VIDEO_STD_SECAM = 3;
     private static final Map<String, String> CHANNEL_SETTINGS_DEFAULT = new HashMap<String, String>() {
         {
             put(Channel.KEY_SET_FAVOURITE, "0");
@@ -110,11 +112,15 @@ public class TvContractUtils {
         boolean syncCurrent = !TextUtils.equals("full", syncSignalType);
         if (syncCurrent) {
             sources.add(syncSignalType);
+            if (!syncSignalType.contains("DVB")) {
+                sources.add("ATV");
+            }
         } else {
             sources.add("DVB-T");
             sources.add("DVB-C");
             sources.add("DVB-S");
             sources.add("ISDB-T");
+            sources.add("ATV");
         }
         for (String source : sources) {
             // 1.first get existed channels in tv.db
@@ -159,9 +165,17 @@ public class TvContractUtils {
         String searchMode = extras.getString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, null);
         ContentResolver resolver = context.getContentResolver();
 
-        String selection = TvContract.Channels.COLUMN_TYPE + " =? OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
+        String sector = " OR " + TvContract.Channels.COLUMN_TYPE + " =? ";
+        StringBuilder selection = new StringBuilder(Channels.COLUMN_TYPE + " =? ");
         String[] selectionArgs = TvContractUtils.searchSignalTypeToSelectionArgs(signalType);
-        try (Cursor cursor = resolver.query(channelsUri, projection, selection, selectionArgs, null)) {
+        if (selectionArgs != null) {
+            int length = selectionArgs.length - 1;
+            while (length > 0) {
+                selection.append(sector);
+                length--;
+            }
+        }
+        try (Cursor cursor = resolver.query(channelsUri, projection, selection.toString(), selectionArgs, null)) {
             InternalProviderData internalProviderData = null;
             String displayName = null;
             String displayNumber = null;
@@ -185,7 +199,7 @@ public class TvContractUtils {
                 if (type == Cursor.FIELD_TYPE_BLOB) {
                     byte[] internalProviderByteData = cursor.getBlob(9);
                     if (internalProviderByteData != null) {
-                        internalProviderData = new InternalProviderData(internalProviderByteData);
+                        internalProviderData = new InternalProviderData(internalProviderByteData, signalType);
                     }
                 } else {
                     if (DEBUG) Log.i(TAG, "COLUMN_INTERNAL_PROVIDER_DATA other type");
@@ -288,7 +302,8 @@ public class TvContractUtils {
             int originalNetworkId = channel.getOriginalNetworkId();
             int transportStreamId = channel.getTransportStreamId();
             int serviceId = channel.getServiceId();
-            InternalProviderData internalProviderData = channel.getInternalProviderData();
+            InternalProviderData internalProviderData;
+            internalProviderData = channel.getInternalProviderData();
             int frequency = 0;
             String ciNumber = null;
             String rawDisplayNumber = null;
@@ -445,12 +460,14 @@ public class TvContractUtils {
             ArrayList<ContentProviderOperation> batchOps =
                     new ArrayList<>(ops.subList(i, toIndex));
             if (DEBUG) {
-                Log.d(TAG, "updateChannels from fromIndex " + i + " to " + toIndex);
+                Log.d(TAG, "syncToDb from fromIndex " + i + " to " + toIndex);
             }
             try {
                 resolver.applyBatch(TvContract.AUTHORITY, batchOps);
             } catch (Exception e) {
-                Log.e(TAG, "updateChannels Failed = " + e.getMessage());
+                Log.e(TAG, "syncToDb Failed = " + e.getMessage());
+            } finally {
+                Log.d(TAG, "syncToDb size: " + ops.size());
             }
         }
 //        if (logos != null && !logos.isEmpty()) {
@@ -933,6 +950,10 @@ public class TvContractUtils {
                 return "ISDB-T";
             case Channels.TYPE_ISDB_C:
                 return "ISDB-C";
+            case Channels.TYPE_NTSC:
+            case Channels.TYPE_PAL:
+            case Channels.TYPE_SECAM:
+                return "ATV";
             default:
                 return type;
         }
@@ -1000,10 +1021,12 @@ public class TvContractUtils {
                 return new String[]{Channels.TYPE_DVB_S, Channels.TYPE_DVB_S2};
             case "ISDB-T":
             case "ISDB_T":
-                return new String[]{Channels.TYPE_ISDB_T, Channels.TYPE_ISDB_T};
+                return new String[]{Channels.TYPE_ISDB_T};
             case "ISDB-C":
             case "ISDB_C":
-                return new String[]{Channels.TYPE_ISDB_C, Channels.TYPE_ISDB_C};
+                return new String[]{Channels.TYPE_ISDB_C};
+            case "ATV":
+                return new String[]{Channels.TYPE_NTSC, Channels.TYPE_PAL, Channels.TYPE_SECAM};
             default:
                 break;
         }
@@ -1045,6 +1068,22 @@ public class TvContractUtils {
         }
         return source;
     }
+
+    public static String videoStdToType(int vStd) {
+        String type;
+        switch (vStd) {
+            case ATV_VIDEO_STD_NTSC:
+                type = TvContract.Channels.TYPE_NTSC;
+                break;
+            case ATV_VIDEO_STD_SECAM:
+                type = TvContract.Channels.TYPE_SECAM;
+                break;
+            default:
+                type = TvContract.Channels.TYPE_PAL;
+        }
+        return type;
+    }
+
 
     /* tv_dtvkit_system in database.db is DVB-T format, NOT TYPE_DVB_T */
     public static String dvbSourceToDbString(int source) {
