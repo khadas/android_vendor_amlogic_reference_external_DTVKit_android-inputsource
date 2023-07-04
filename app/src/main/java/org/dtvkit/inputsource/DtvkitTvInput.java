@@ -388,7 +388,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     String command = intent.getStringExtra("ews_command");
                     DtvkitTvInputSession mainSession = getMainTunerSession();
                     if (ConstantManager.ACTION_EWS_NOTIFY.equals(command)) {
-                        //am broadcast -a "action_ews" --es ews_command "action_ews_notify" --ei disaster_code 6 --ei  authority 2 --ei location_type_code 3
+                        //am broadcast -a "action_ews" --es ews_command "action_ews_notify"
                         if (mainSession != null) {
                             Bundle EWSEvent = new Bundle();
                             EWSEvent.putInt("disaster_code", intent.getIntExtra("disaster_code", 0));
@@ -5082,8 +5082,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         EWSEvent.putString("information_message",data.getString("information_message"));
                         notifySessionEvent(ConstantManager.ACTION_EWS_NOTIFY, EWSEvent);
                     } catch (Exception e) {
-
+                        Log.i(TAG,"EWSNotify error");
                     }
+                } else if (signal.equals("EWBSNotify")) {
+                    Bundle EWBSEvent = new Bundle();
+                    EWBSEvent.putString("EWBSNotify", data.toString());
+                    notifySessionEvent(ConstantManager.ACTION_EWBS_NOTIFY, EWBSEvent);
                 } else if (signal.equals("EWSClose")) {
                     notifySessionEvent(ConstantManager.ACTION_EWS_CLOSE, null);
                 } else if (signal.equals("hbbNotifyAuthUrlUpdated")) {
