@@ -3425,7 +3425,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 Channel firstDbValidChannel = getFirstChannel();
                 if (firstDbValidChannel == null) {
                     //if no channel,stop play
-                    playerSetServiceMute(true, Boolean.compare(mIsPip, false));
                     onFinish(false, false);
                     Log.e(TAG, "error:no channel.");
                     if (mMainHandle != null) {
