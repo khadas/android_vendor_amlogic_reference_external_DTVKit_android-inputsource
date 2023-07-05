@@ -1802,13 +1802,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         ArrayList<ContentProviderOperation> ops = new ArrayList();
-        InternalProviderData data = new InternalProviderData();
-        try {
-            data.put(RecordedProgram.RECORD_FILE_PATH,
-                    mDataManager.getStringParameters(DataManager.KEY_PVR_RECORD_PATH));
-        } catch (InternalProviderData.ParseException e) {
-            Log.w(TAG, e.getMessage());
-        }
+        InternalProviderData data;
+
 
         Map<Long, String> currentActiveRecordings = null;
         if (mRecordingStarted) {
@@ -1844,6 +1839,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 String title = recordings.getJSONObject(i).getString("name");
                 if (TextUtils.isEmpty(title)) {
                     title = recordings.getJSONObject(i).getString("service");
+                }
+
+                data = new InternalProviderData();
+                try {
+                    data.put(RecordedProgram.RECORD_FILE_PATH,
+                            mDataManager.getStringParameters(DataManager.KEY_PVR_RECORD_PATH));
+                    data.put(RecordedProgram.RECORD_SERVICE_TYPE,
+                            recordings.getJSONObject(i).getBoolean("audio_only") ? TvContract.Channels.SERVICE_TYPE_AUDIO : TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO);
+                } catch (InternalProviderData.ParseException e) {
+                    Log.w(TAG, e.getMessage());
                 }
 
                 RecordedProgram recording = new RecordedProgram.Builder()
@@ -2298,9 +2303,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 try {
                     data.put(RecordedProgram.RECORD_FILE_PATH, currentPath);
                     data.put(RecordedProgram.RECORD_STORAGE_EXIST, pathExist);
-                    if (channel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
-                        data.put(RecordedProgram.RECORD_SERVICE_TYPE, "audio_only");
-                    }
+                    data.put(RecordedProgram.RECORD_SERVICE_TYPE,
+                            channel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO) ? TvContract.Channels.SERVICE_TYPE_AUDIO : TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO);
+
                 } catch (Exception e) {
                     Log.e(TAG, "updateRecordingToDb update InternalProviderData Exception = " + e.getMessage());
                 }
