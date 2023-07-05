@@ -75,7 +75,14 @@
                 android:textColor="@color/ut_scan_description_text"
                 android:textSize="18sp"
                 tools:text="Searching (41%)" />
-
+            <TextView
+                android:id="@+id/tv_scan_ch_number"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:textColor="@color/ut_scan_description_text"
+                android:textSize="18sp"
+                tools:text="222" />
         </LinearLayout>
 
         <CheckBox

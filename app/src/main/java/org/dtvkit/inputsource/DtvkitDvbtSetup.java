@@ -1496,8 +1496,12 @@ public class DtvkitDvbtSetup extends Activity {
                 }
                 Log.i(TAG, String.format("Strength: %s", strengthStatus));
                 Log.i(TAG, String.format("Quality: %s", qualityStatus));
-                TextView channelInfo = (TextView) findViewById(R.id.tv_scan_info);
-                channelInfo.setText(strengthStatus + "\t\t" + qualityStatus + "\t\t" + channel);
+                TextView channelInfo = findViewById(R.id.tv_scan_info);
+                TextView channelNumber = findViewById(R.id.tv_scan_ch_number);
+                channelInfo.setText(strengthStatus + "\t\t" + qualityStatus + "\t\t");
+                if (channel != null) {
+                    channelNumber.setText(channel);
+                }
             }
         });
     }
@@ -1611,6 +1615,9 @@ public class DtvkitDvbtSetup extends Activity {
                 //onSearchFinished();
                 sendFinishSearch(false);
             }
+        } else if (signal != null && ((mIsDvbt && signal.equals("UpdateMsgStatus")) || (!mIsDvbt && signal.equals("UpdateMsgStatus")))) {
+            Log.d(TAG, "UpdateMsgStatus: StrengthStatus = " + strengthStatus + "%, qualityStatus = " + qualityStatus + "%");
+            setStrengthAndQualityStatus(String.format(Locale.getDefault(), "Strength: %d%%", strengthStatus), String.format(Locale.getDefault(), "Quality: %d%%", qualityStatus), null /* don't update channel */);
         }
     }
 
