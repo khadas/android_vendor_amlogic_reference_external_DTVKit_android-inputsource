@@ -711,7 +711,11 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
                 getActivity().setResult(RESULT_CANCELED, mSyncFinish ? intent : null);
             }
         }
-        getActivity().finish();
+        if (getActivity() != null) {
+            getActivity().finish();
+        } else if (getListener() != null) {
+            getListener().onNext(DtvkitDvbsSetupFragment.this, "finish");
+        }
     }
 
     @Override

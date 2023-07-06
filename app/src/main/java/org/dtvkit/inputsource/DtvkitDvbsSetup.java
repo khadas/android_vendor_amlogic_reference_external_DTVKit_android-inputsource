@@ -239,7 +239,9 @@ public class DtvkitDvbsSetup extends Activity {
                 String finalNextFragment = nextFragment;
                 if (finalNextFragment != null) {
                     showFragment(finalNextFragment);
-                } else {
+                } else if ("finish".equals(text)) {
+                    finish();
+                }else {
                     Log.e(TAG, "wrong text:" + text);
                 }
             } else if (fragment instanceof SearchStageFragment) {
