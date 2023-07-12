@@ -970,10 +970,13 @@ public class DtvkitIsdbtSetup extends Activity {
 
     private void sendOnSignal(final Map<String, Object> map) {
         if (mThreadHandler != null) {
-            mThreadHandler.removeMessages(MSG_ON_SIGNAL);
-            Message mess = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, 0, 0, map);
-            boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
-            Log.d(TAG, "sendMessage MSG_ON_SIGNAL " + info);
+            String signal = (String) map.get("signal");
+            if (TextUtils.equals("IsdbtStatusChanged", signal)) {
+                mThreadHandler.removeMessages(MSG_ON_SIGNAL);
+                Message mess = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, 0, 0, map);
+                boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
+                Log.d(TAG, "sendMessage MSG_ON_SIGNAL " + info);
+            }
         }
     }
 
@@ -983,22 +986,19 @@ public class DtvkitIsdbtSetup extends Activity {
             Log.d(TAG, "dealOnSignal null map");
             return;
         }
-        String signal = (String) map.get("signal");
         JSONObject data = (JSONObject) map.get("data");
-        if (signal != null && signal.equals("IsdbtStatusChanged")) {
-            int progress = getSearchProcess(data);
-            Log.d(TAG, "onSignal progress = " + progress);
-            int strengthStatus = mParameterManager.getStrengthStatus();
-            int qualityStatus = mParameterManager.getQualityStatus();
-            if (progress < 100) {
-                int found = getFoundServiceNumberOnSearch();
-                setSearchProgress(progress);
-                setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
-                setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", strengthStatus), String.format(Locale.ENGLISH, "Quality: %d%%", qualityStatus), String.format(Locale.ENGLISH, "Channel: %d", found));
-            } else {
-                //onSearchFinished();
-                sendFinishSearch();
-            }
+        int progress = getSearchProcess(data);
+        Log.d(TAG, "onSignal progress = " + progress);
+        int strengthStatus = mParameterManager.getStrengthStatus();
+        int qualityStatus = mParameterManager.getQualityStatus();
+        if (progress < 100) {
+            int found = getFoundServiceNumberOnSearch();
+            setSearchProgress(progress);
+            setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
+            setStrengthAndQualityStatus(String.format(Locale.ENGLISH, "Strength: %d%%", strengthStatus), String.format(Locale.ENGLISH, "Quality: %d%%", qualityStatus), String.format(Locale.ENGLISH, "Channel: %d", found));
+        } else {
+            //onSearchFinished();
+            sendFinishSearch();
         }
     }
 

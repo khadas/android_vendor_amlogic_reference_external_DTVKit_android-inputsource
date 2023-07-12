@@ -1580,10 +1580,15 @@ public class DtvkitDvbtSetup extends Activity {
 
     private void sendOnSignal(final Map<String, Object> map) {
         if (mThreadHandler != null) {
-            mThreadHandler.removeMessages(MSG_ON_SIGNAL);
-            Message mess = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, 0, 0, map);
-            boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
-            Log.d(TAG, "sendMessage MSG_ON_SIGNAL " + info);
+            String signal = (String) map.get("signal");
+            if (TextUtils.equals("DvbtStatusChanged", signal)
+                || TextUtils.equals("DvbcStatusChanged", signal)
+                || TextUtils.equals("UpdateMsgStatus", signal)) {
+                mThreadHandler.removeMessages(MSG_ON_SIGNAL);
+                Message mess = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, 0, 0, map);
+                boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
+                Log.d(TAG, "sendMessage MSG_ON_SIGNAL " + info);
+            }
         }
     }
 
