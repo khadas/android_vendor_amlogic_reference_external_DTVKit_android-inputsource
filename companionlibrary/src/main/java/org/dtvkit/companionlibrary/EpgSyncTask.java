@@ -478,13 +478,22 @@ public class EpgSyncTask {
         }
 
         private void getEventList() {
-            Intent intent = new Intent();
             String syncSignalType = mBundle.getString(BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, null);
-            intent.putExtra("inputId", mInputId);
-            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, syncSignalType);
-            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
-            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, "finishEpgSync");
-            mMainService.startService(intent);
+            PersistableBundle persistableBundle = new PersistableBundle();
+            if (TextUtils.isEmpty(mInputId)) {
+                persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID,
+                        EpgSyncJobService.DTVKIT_INPUTID);
+            } else {
+                persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID, mInputId);
+            }
+            persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, syncSignalType);
+            persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NEED_UPDATE_CHANNEL, false);
+            persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, "finishEpgSync");
+            if (mEventTask != null) {
+                Log.i(TAG, "cancel EventTask " + mEventTask.cancel(true));
+            }
+            mEventTask = new FutureTask<>(new EventCallable(persistableBundle));
+            EPG_EXECUTOR.execute(mEventTask);
         }
     }
 }
