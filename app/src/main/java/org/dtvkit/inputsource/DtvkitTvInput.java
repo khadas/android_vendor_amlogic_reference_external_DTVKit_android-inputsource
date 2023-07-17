@@ -4550,6 +4550,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 mMainHandle.sendMessageDelayed(msg, 100);
                             }
                             break;
+                        case "audio_only_playing":
+                            if (type.equals("dvblive")) {
+                                if (mTunedChannel == null) {
+                                    return;
+                                }
+                                notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
+                                sendUpdateTrackMsg(PlayerState.PLAYING, false);
+                            }
+                            if (mMainHandle != null) {
+                                mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                                Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                                msg.arg1 = 1;
+                                mMainHandle.sendMessageDelayed(msg, 100);
+                            }
+                            break;
                         case "blocked":
                             String Rating = "";
                             int ratingAge = 4;
