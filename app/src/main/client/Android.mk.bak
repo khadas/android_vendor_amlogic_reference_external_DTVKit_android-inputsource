@@ -18,19 +18,13 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libutils
 
-ifeq (1, $(strip $(shell expr $(PLATFORM_VERSION) \< 10)))
-LOCAL_LDLIBS := -lfmq_vendor
-else
 LOCAL_STATIC_LIBRARIES := libfmq
-endif
 
 LOCAL_C_INCLUDES += \
   system/libhidl/transport/include/hidl \
   system/libhidl/libhidlmemory/include \
-  system/libfmq/include
-
-LOCAL_C_INCLUDES += \
-   external/libcxx/include
+  system/libfmq/include \
+  external/libcxx/include
 
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)

@@ -3211,7 +3211,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             @Override
             public void onStreamConfigChanged(TvStreamConfig[] configs) {
-                if (configs == null) {
+                if (configs == null || configs.length == 0) {
                     Log.w(TAG, "onStreamConfigChanged null");
                     return;
                 }
