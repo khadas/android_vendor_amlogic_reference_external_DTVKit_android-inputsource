@@ -221,6 +221,20 @@ public class DtvkitOverlayView extends FrameLayout {
     //Need check HBBTV View
     public void addHbbTvView(View view, HbbTvManager hbbTvManager) {
         mHbbTvFrameLayout.addHbbTvView(view, hbbTvManager);
+        if (hbbTvManager != null) {
+            HbbTvManager.HbbTvWindowSizeChangeCallback hbbTvWindowSizeChangeCallback= new HbbTvManager.HbbTvWindowSizeChangeCallback() {
+                public void onHbbTvWindowSizeChange(boolean isFullScreen) {
+                    Log.d(TAG,"the isFullScreen = " + isFullScreen);
+                    if (isFullScreen) {
+                        mSubServerView.setVisibility(View.VISIBLE);
+                    } else {
+                        mSubServerView.setVisibility(View.INVISIBLE);
+                    }
+                }
+           };
+           hbbTvManager.registerHbbTvWindowSizeChangeCallback(hbbTvWindowSizeChangeCallback);
+        }
+
     }
 
     public void showTuningImage(Drawable drawable) {
