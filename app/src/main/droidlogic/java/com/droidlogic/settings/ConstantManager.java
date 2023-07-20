@@ -37,6 +37,7 @@ public class ConstantManager {
     public static final String EVENT_PLAY_FAILED = "event_play_failed";
     public static final String KEY_PIP_ACTION = "event_pip_action";
     public static final String EVENT_CHANNEL_LIST_UPDATED = "event_channel_list_updated";
+    public static final String EVENT_NO_CHANNEL_FOUND = "event_no_channel_found";
     public static final String VALUE_PIP_ACTION_TUNE_NEXT = "tune_next";
 
     //show or hide overlay

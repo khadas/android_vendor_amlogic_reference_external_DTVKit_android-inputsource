@@ -3455,13 +3455,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             Channel targetChannel = TvContractUtils.getChannel(mContentResolver, channelUri);
             if (targetChannel == null) {
-                sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, new Bundle());
                 Log.w(TAG, "Cannot find " + channelUri + ", try tuneToFirst");
                 Channel firstDbValidChannel = getFirstChannel();
                 if (firstDbValidChannel == null) {
                     //if no channel,stop play
                     onFinish(false, false);
                     Log.e(TAG, "error:no channel.");
+                    sendBundleToAppByTif(ConstantManager.EVENT_NO_CHANNEL_FOUND, new Bundle());
                     if (mMainHandle != null) {
                         mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
                         Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
