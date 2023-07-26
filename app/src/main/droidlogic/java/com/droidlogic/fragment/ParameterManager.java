@@ -183,7 +183,7 @@ public class ParameterManager {
     public static final int DTV_TYPE_DVBT = 0;
     public static final int DTV_TYPE_DVBC = 1;
     public static final int DTV_TYPE_ISDBT = 2;
-
+    public static final int DTV_TYPE_ATV = 3;
 
     public static final int SIGNAL_QPSK = 1; // digital satellite
     public static final int SIGNAL_COFDM = 2; // digital terrestrial
@@ -1532,6 +1532,9 @@ public class ParameterManager {
             } else if (dtvType == DTV_TYPE_ISDBT) {
                 args.put(countryCode);
                 resultObj = DtvkitGlueClient.getInstance().request("Isdbt.getIsdbRfChannelTable", args);
+            } else if (dtvType == DTV_TYPE_ATV) {
+                args.put(countryCode);
+                resultObj = DtvkitGlueClient.getInstance().request("Atv.getRfChannelTable", args);
             }
 
             if (resultObj != null) {

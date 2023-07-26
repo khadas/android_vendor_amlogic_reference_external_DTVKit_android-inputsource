@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
  */
 public class TvContractUtils {
     private static final String TAG = "TvContractUtils";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     private static final int BATCH_OPERATION_COUNT = 50;
 
     private static final int SIGNAL_QPSK  = 1; // digital satellite

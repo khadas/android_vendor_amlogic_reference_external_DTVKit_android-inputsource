@@ -37,6 +37,8 @@ import com.droidlogic.dtvkit.inputsource.DtvkitEpgSync;
 import com.droidlogic.dtvkit.inputsource.PvrStatusConfirmManager;
 import com.droidlogic.fragment.ParameterManager;
 import com.droidlogic.settings.ConstantManager;
+import com.droidlogic.settings.PropSettingManager;
+
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -51,8 +53,6 @@ import java.util.Map;
 public class DtvkitIsdbtSetup extends Activity {
     private static final String TAG = "DtvkitIsdbtSetup";
 
-    private boolean mIsDvbt = false;
-
     private SEARCH_STAGE mSearchingStage = SEARCH_STAGE.NOT_START;
     private enum SEARCH_STAGE {
         NOT_START,
@@ -61,10 +61,12 @@ public class DtvkitIsdbtSetup extends Activity {
         ATV_STARTING,
         ATV_FINISH,
     }
-    private String mManualSearchTvType = "ATV";
     private int mSearchMode = DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO;
+    private boolean mIsHybridSearch = false;
+    private int mManualSearchTvType = 0; // atv: 0, dtv: 1
     private DataManager mDataManager;
     private ParameterManager mParameterManager = null;
+    private int mAntennaType = 0;
     private boolean mStartSync = false;
     private boolean mStartSearch = false;
     private boolean mSyncFinish = false;
@@ -72,7 +74,6 @@ public class DtvkitIsdbtSetup extends Activity {
     private JSONArray mServiceList = null;
     private int mFoundServiceNumber = 0;
     private int mSearchManualAutoType = -1;// 0 manual 1 auto
-    private int mSearchDvbcDvbtType = -1;
     private PvrStatusConfirmManager mPvrStatusConfirmManager = null;
 
     protected HandlerThread mHandlerThread = null;
@@ -87,14 +88,11 @@ public class DtvkitIsdbtSetup extends Activity {
 
     private long clickLastTime = 0;
 
-    private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
-        @Override
-        public void onSignal(String signal, JSONObject data) {
-            Map<String, Object> map = new HashMap<>();
-            map.put("signal", signal);
-            map.put("data", data);
-            sendOnSignal(map);
-        }
+    private final DtvkitGlueClient.SignalHandler mHandler = (signal, data) -> {
+        Map<String, Object> map = new HashMap<>();
+        map.put("signal", signal);
+        map.put("data", data);
+        sendOnSignal(map);
     };
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -114,24 +112,22 @@ public class DtvkitIsdbtSetup extends Activity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        Log.i(TAG, "key " + keyCode);
+        Log.i(TAG, "key " + KeyEvent.keyCodeToString(keyCode));
         if (mStartSync) {
             Toast.makeText(DtvkitIsdbtSetup.this, R.string.sync_tv_provider, Toast.LENGTH_SHORT).show();
             return true;
         }
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (mStartSearch) {
-                //onSearchFinished();
                 sendFinishSearch();
-                return true;
             } else {
                 stopMonitoringSearch();
                 //stopSearch();
                 sendStopSearch();
                 //finish();
                 sendFinish();
-                return true;
             }
+            return true;
         }
 
         return super.onKeyDown(keyCode, event);
@@ -140,58 +136,44 @@ public class DtvkitIsdbtSetup extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.auto_setup);
-        final String inputId;
-        final String pvrStatus;
-        Intent cIntent = getIntent();
-        if (cIntent != null) {
-            inputId = cIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
-            pvrStatus = cIntent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
-        } else {
-            inputId = null;
-            pvrStatus = null;
-        }
+        setContentView(R.layout.isdb_setup);
+
+        mIsHybridSearch = PropSettingManager.getBoolean("vendor.tv.hybrid.search", false);
+        Log.i(TAG, "HybridSearch:" + mIsHybridSearch);
         mParameterManager = new ParameterManager(this, DtvkitGlueClient.getInstance());
         final Button optionSet = findViewById(R.id.option_set_btn);
-        optionSet.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intentSet = new Intent();
-                if (inputId != null) {
-                    intentSet.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
-                }
-                String pvrFlag = PvrStatusConfirmManager.read(DtvkitIsdbtSetup.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
-                if (pvrStatus != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
-                    intentSet.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
-                } else {
-                    intentSet.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
-                }
-                intentSet.setClassName(DataManager.KEY_PACKAGE_NAME, DataManager.KEY_ACTIVITY_SETTINGS);
-                startActivity(intentSet);
-                mDataManager.saveIntParameters(DataManager.KEY_SELECT_SEARCH_ACTIVITY, DataManager.SELECT_SETTINGS);
+        optionSet.setOnClickListener(v -> {
+            Intent intentSet = new Intent(getIntent());
+            String pvrStatus = intentSet.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
+            String pvrFlag = PvrStatusConfirmManager.read(DtvkitIsdbtSetup.this, PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG);
+            if (pvrStatus != null && PvrStatusConfirmManager.KEY_PVR_CLEAR_FLAG_FIRST.equals(pvrFlag)) {
+                intentSet.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, pvrStatus);
+            } else {
+                intentSet.putExtra(ConstantManager.KEY_LIVETV_PVR_STATUS, "");
             }
+            intentSet.setClassName(DataManager.KEY_PACKAGE_NAME, DataManager.KEY_ACTIVITY_SETTINGS);
+            startActivity(intentSet);
+            mDataManager.saveIntParameters(DataManager.KEY_SELECT_SEARCH_ACTIVITY, DataManager.SELECT_SETTINGS);
         });
         final View startSearch = findViewById(R.id.btn_terrestrial_start_search);
-        EditText public_type_edit = (EditText)findViewById(R.id.edtTxt_public_type_in);
+        EditText public_type_edit = findViewById(R.id.edtTxt_public_type_in);
 
         startSearch.setEnabled(true);
-        startSearch.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                long currentTime = SystemClock.elapsedRealtime();
-                if (currentTime - clickLastTime > 500) {
-                    clickLastTime = currentTime;
-                    boolean autoSearch = isAutoSearch();
-                    mPvrStatusConfirmManager.setSearchType(autoSearch ? ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO : ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
-                    boolean checkPvr = mPvrStatusConfirmManager.needDeletePvrRecordings();
-                    if (checkPvr) {
-                        mPvrStatusConfirmManager.showDialogToAppoint(DtvkitIsdbtSetup.this, autoSearch);
+        startSearch.setOnClickListener(v -> {
+            long currentTime = SystemClock.elapsedRealtime();
+            if (currentTime - clickLastTime > 500) {
+                clickLastTime = currentTime;
+                boolean autoSearch = isAutoSearch();
+                mPvrStatusConfirmManager.setSearchType(autoSearch ? ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO : ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
+                boolean checkPvr = mPvrStatusConfirmManager.needDeletePvrRecordings();
+                if (checkPvr) {
+                    mPvrStatusConfirmManager.showDialogToAppoint(DtvkitIsdbtSetup.this, autoSearch);
+                } else {
+                    if (mStartSearch) {
+                        sendFinishSearch();
                     } else {
-                        if (mStartSearch) {
-                            sendFinishSearch();
-                        } else {
-                            mPvrStatusConfirmManager.sendDvrCommand(DtvkitIsdbtSetup.this);
-                            sendStartSearch();
-                        }
+                        mPvrStatusConfirmManager.sendDvrCommand(DtvkitIsdbtSetup.this);
+                        sendStartSearch();
                     }
                 }
             }
@@ -201,13 +183,10 @@ public class DtvkitIsdbtSetup extends Activity {
         mPvrStatusConfirmManager = new PvrStatusConfirmManager(this, mDataManager);
         Intent intent = getIntent();
         if (intent != null) {
-            mIsDvbt = intent.getBooleanExtra(DataManager.KEY_IS_DVBT, false);
             String status = intent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
             mPvrStatusConfirmManager.setPvrStatus(status);
-            Log.d(TAG, "onCreate mIsDvbt = " + mIsDvbt + ", status = " + status);
+            Log.d(TAG, "onCreate status = " + status);
         }
-        ((TextView)findViewById(R.id.dvb_search)).setText(R.string.strSearchIsdbtDescription);
-
         initHandler();
 
         public_type_edit.addTextChangedListener(new TextWatcher(){
@@ -229,7 +208,9 @@ public class DtvkitIsdbtSetup extends Activity {
                 if (!mText.equals("") && mCursor == 0) {
                     public_type_edit.removeTextChangedListener(this);
                     int index = public_type_edit.getSelectionStart();
-                    if (TextUtils.equals(mManualSearchTvType, "DTV")) {
+                    if (isInManualATV()) {
+                        s.insert(index, ".25");
+                    } else {
                         s.insert(index, ".143");
                     }
                     public_type_edit.addTextChangedListener(this);
@@ -260,16 +241,15 @@ public class DtvkitIsdbtSetup extends Activity {
         Log.d(TAG, "finish");
         Intent intent = new Intent();
         intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL_AUTO, mSearchManualAutoType);
-        intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_DVBS_DVBT_DVBC, mSearchDvbcDvbtType);
+        intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_DVBS_DVBT_DVBC, DtvkitDvbScanSelect.SEARCH_TYPE_DVBT);
         intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_NUMBER, mFoundServiceNumber);
         if (mFoundServiceNumber > 0) {
-            String serviceListJsonArray = (mServiceList != null && mServiceList.length() > 0) ? mServiceList.toString() : "";
             String firstServiceName = "";
             try {
                 if (mServiceList != null && mServiceList.length() > 0) {
                     firstServiceName = mServiceList.getJSONObject(0).getString("name");
                     for (int i = 0; i < mServiceList.length(); i++) {
-                        if (mServiceList.getJSONObject(i).getBoolean("hidden") == false) {
+                        if (!mServiceList.getJSONObject(i).optBoolean("hidden")) {
                             firstServiceName = mServiceList.getJSONObject(i).getString("name");
                             break;
                         }
@@ -278,7 +258,6 @@ public class DtvkitIsdbtSetup extends Activity {
             } catch (JSONException e) {
                 Log.e(TAG, "finish JSONException = " + e.getMessage());
             }
-            intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_LIST, serviceListJsonArray);
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_FIRST_SERVICE, firstServiceName);
             Log.d(TAG, "finish firstServiceName = " + firstServiceName);
             setResult(RESULT_OK, intent);
@@ -293,11 +272,9 @@ public class DtvkitIsdbtSetup extends Activity {
         super.onStop();
         Log.d(TAG, "onStop");
         if (mStartSearch) {
-            //onSearchFinished();
             sendFinishSearch();
         } else if (!mFinish) {
             stopMonitoringSearch();
-            //stopSearch();
             sendStopSearch();
         }
     }
@@ -315,62 +292,47 @@ public class DtvkitIsdbtSetup extends Activity {
         Log.d(TAG, "initHandler");
         mHandlerThread = new HandlerThread("DtvkitIsdbtSetup");
         mHandlerThread.start();
-        mThreadHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
-            @Override
-            public boolean handleMessage(Message msg) {
-                Log.d(TAG, "mThreadHandler handleMessage " + msg.what + " start");
-                switch (msg.what) {
-                    case MSG_START_SEARCH: {
-                        startSearch();
-                        break;
-                    }
-                    case MSG_STOP_SEARCH: {
-                        stopSearch();
-                        break;
-                    }
-                    case MSG_FINISH_SEARCH: {
-                        onSearchFinished();
-                        break;
-                    }
-                    case MSG_ON_SIGNAL: {
-                        dealOnSignal((Map<String, Object>)msg.obj);
-                        break;
-                    }
-                    case MSG_FINISH: {
-                        finish();
-                        break;
-                    }
-                    case MSG_RELEASE: {
-                        releaseInThread();
-                        break;
-                    }
-                    default:
-                        break;
+        mThreadHandler = new Handler(mHandlerThread.getLooper(), msg -> {
+            Log.d(TAG, "mThreadHandler handleMessage " + msg.what + " start");
+            switch (msg.what) {
+                case MSG_START_SEARCH: {
+                    startSearch();
+                    break;
                 }
-                Log.d(TAG, "mThreadHandler handleMessage " + msg.what + " over");
-                return true;
+                case MSG_STOP_SEARCH: {
+                    stopSearch();
+                    break;
+                }
+                case MSG_FINISH_SEARCH: {
+                    onSearchFinished();
+                    break;
+                }
+                case MSG_ON_SIGNAL: {
+                    dealOnSignal((Map<String, Object>)msg.obj);
+                    break;
+                }
+                case MSG_FINISH: {
+                    finish();
+                    break;
+                }
+                case MSG_RELEASE: {
+                    releaseInThread();
+                    break;
+                }
+                default:
+                    break;
             }
+            Log.d(TAG, "mThreadHandler handleMessage " + msg.what + " over");
+            return true;
         });
-    }
-
-    private void sendRelease() {
-        if (mThreadHandler != null) {
-            mThreadHandler.removeMessages(MSG_RELEASE);
-            Message mess = mThreadHandler.obtainMessage(MSG_RELEASE, 0, 0, null);
-            boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
-            Log.d(TAG, "sendMessage MSG_RELEASE " + info);
-        }
     }
 
     private void releaseInThread() {
         Log.d(TAG, "releaseInThread");
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Log.d(TAG, "releaseInThread start");
-                releaseHandler();
-                Log.d(TAG, "releaseInThread end");
-            }
+        new Thread(() -> {
+            Log.d(TAG, "releaseInThread start");
+            releaseHandler();
+            Log.d(TAG, "releaseInThread end");
         }).start();
     }
 
@@ -383,38 +345,61 @@ public class DtvkitIsdbtSetup extends Activity {
     }
 
     private void initOrUpdateView(boolean init) {
-        LinearLayout public_type_in_container = (LinearLayout)findViewById(R.id.public_type_in_container);
-        TextView dvb_search = (TextView)findViewById(R.id.dvb_search);
-        View channel_holder = findViewById(R.id.channel_holder);
-        TextView public_type_in = (TextView)findViewById(R.id.public_type_in_text);
-        EditText public_type_edit = (EditText)findViewById(R.id.edtTxt_public_type_in);
-        LinearLayout dvbt_bandwidth_container = (LinearLayout)findViewById(R.id.dvbt_bandwidth_container);
-        Spinner dvbt_bandwidth_spinner = (Spinner)findViewById(R.id.dvbt_bandwidth_spinner);
-        LinearLayout dvbt_mode_container = (LinearLayout)findViewById(R.id.dvbt_mode_container);
-        Spinner dvbt_mode_spinner = (Spinner)findViewById(R.id.dvbt_mode_spinner);
-        LinearLayout dvbt_type_container = (LinearLayout)findViewById(R.id.dvbt_type_container);
-        Spinner dvbt_type_spinner = (Spinner)findViewById(R.id.dvbt_type_spinner);
-        LinearLayout dvbc_mode_container = (LinearLayout)findViewById(R.id.dvbc_mode_container);
-        Spinner dvbc_mode_spinner = (Spinner)findViewById(R.id.dvbc_mode_spinner);
-        LinearLayout dvbc_symbol_container = (LinearLayout)findViewById(R.id.dvbc_symbol_container);
-        EditText dvbc_symbol_edit = (EditText)findViewById(R.id.dvbc_symbol_edit);
-        LinearLayout public_search_mode_container = (LinearLayout)findViewById(R.id.public_search_mode_container);
-        Spinner public_search_mode_spinner = (Spinner)findViewById(R.id.public_search_mode_spinner);
-        LinearLayout frequency_channel_container = (LinearLayout)findViewById(R.id.frequency_channel_container);
-        Spinner frequency_channel_spinner = (Spinner)findViewById(R.id.frequency_channel_spinner);
-        LinearLayout public_search_channel_name_container = (LinearLayout)findViewById(R.id.public_search_channel_container);
-        Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
-        Button search = (Button)findViewById(R.id.btn_terrestrial_start_search);
-        CheckBox nit = (CheckBox)findViewById(R.id.network);
+        LinearLayout manual_frequency_search = findViewById(R.id.manual_frequency_search);
+        TextView public_type_in = findViewById(R.id.public_type_in_text);
+        EditText public_type_edit = findViewById(R.id.edtTxt_public_type_in);
+        LinearLayout dvbt_bandwidth_container = findViewById(R.id.dvbt_bandwidth_container);
+        Spinner dvbt_bandwidth_spinner = findViewById(R.id.dvbt_bandwidth_spinner);
+        LinearLayout dvbt_mode_container = findViewById(R.id.dvbt_mode_container);
+        Spinner dvbt_mode_spinner = findViewById(R.id.dvbt_mode_spinner);
 
-        LinearLayout public_antenna_type_container = findViewById(R.id.public_antenna_type_container);
+        Spinner public_search_mode_spinner = findViewById(R.id.public_search_mode_spinner);
+        LinearLayout frequency_channel_container = findViewById(R.id.frequency_channel_container);
+        Spinner frequency_channel_spinner = findViewById(R.id.frequency_channel_spinner);
+        LinearLayout manual_number_search = findViewById(R.id.manual_number_search);
+        Spinner public_search_channel_name_spinner = findViewById(R.id.public_search_channel_spinner);
+        Button search = findViewById(R.id.btn_terrestrial_start_search);
+        CheckBox nit = findViewById(R.id.network);
+
+        LinearLayout public_antenna_type_container = findViewById(R.id.antenna_type_container);
         public_antenna_type_container.setVisibility(View.VISIBLE);
 
-        Spinner antenna_type_spinner = findViewById(R.id.public_antenna_type_spinner);
+        LinearLayout public_adtv_type_container = findViewById(R.id.adtv_type_container);
+        Spinner public_adtv_type_spinner = findViewById(R.id.adtv_type_spinner);
+        public_adtv_type_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (position == 0) {
+                    dvbt_mode_container.setVisibility(View.GONE);
+                    mSearchingStage = SEARCH_STAGE.DTV_FINISH;
+                } else {
+                    dvbt_mode_container.setVisibility(View.VISIBLE);
+                    mSearchingStage = SEARCH_STAGE.NOT_START;
+                }
+                Log.i(TAG, "reset Stage:" + mSearchingStage);
+                mManualSearchTvType = position;
+                updateChannelNameContainer(position == 0);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        Spinner antenna_type_spinner = findViewById(R.id.antenna_type_spinner);
         antenna_type_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_ISDB_ANTENNA_TYPE));
         antenna_type_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (position == 1) {
+                    // cable
+                    public_adtv_type_spinner.setSelection(0);
+                    public_adtv_type_spinner.setEnabled(false);
+                } else {
+                    public_adtv_type_spinner.setEnabled(true);
+                }
+                mAntennaType = position;
                 if (position == mDataManager.getIntParameters(DataManager.KEY_ISDB_ANTENNA_TYPE)) {
                     Log.d(TAG, "antenna_type_spinner select same position = " + position);
                     return;
@@ -428,84 +413,49 @@ public class DtvkitIsdbtSetup extends Activity {
                 // TODO Auto-generated method stub
             }
         });
-        LinearLayout public_adtv_type_container = findViewById(R.id.public_adtv_type_container);
-        Spinner public_adtv_type_spinner = findViewById(R.id.public_adtv_type_spinner);
-        public_adtv_type_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position == 0) {
-                    mManualSearchTvType = "ATV";
-                } else {
-                    mManualSearchTvType = "DTV";
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
 
         int isFrequencyMode = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
         if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
             public_type_in.setText(R.string.search_frequency);
             public_type_edit.setHint(R.string.search_frequency_hint);
-            public_type_in_container.setVisibility(View.VISIBLE);
-            public_search_channel_name_container.setVisibility(View.GONE);
+            manual_frequency_search.setVisibility(View.VISIBLE);
+            manual_number_search.setVisibility(View.GONE);
         } else {
-            //public_type_in.setText(R.string.search_number);
-            //public_type_edit.setHint(R.string.search_number_hint);//not needed
-            public_type_in_container.setVisibility(View.GONE);
-            public_search_channel_name_container.setVisibility(View.VISIBLE);
-            updateChannelNameContainer();
+            manual_frequency_search.setVisibility(View.GONE);
+            manual_number_search.setVisibility(View.VISIBLE);
         }
         public_type_edit.setText("");
         int value = mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE);
         public_search_mode_spinner.setSelection(value);
         nit.setChecked(mDataManager.getIntParameters(DataManager.KEY_NIT) == 1);
         if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == value) {
-            public_type_in_container.setVisibility(View.GONE);
+            manual_frequency_search.setVisibility(View.GONE);
             dvbt_bandwidth_container.setVisibility(View.GONE);
             dvbt_mode_container.setVisibility(View.GONE);
-            dvbt_type_container.setVisibility(View.GONE);
-            dvbc_mode_container.setVisibility(View.GONE);
-            dvbc_symbol_container.setVisibility(View.GONE);
             frequency_channel_container.setVisibility(View.GONE);
-            public_search_channel_name_container.setVisibility(View.GONE);
+            manual_number_search.setVisibility(View.GONE);
             public_adtv_type_container.setVisibility(View.GONE);
             nit.setVisibility(View.VISIBLE);
             search.setText(R.string.strAutoSearch);
         } else {
+            updateChannelNameContainer(isInManualATV());
             search.setText(R.string.strManualSearch);
             if (isFrequencyMode == DataManager.VALUE_FREQUENCY_MODE) {
-                public_type_in_container.setVisibility(View.VISIBLE);
-                public_search_channel_name_container.setVisibility(View.GONE);
-                nit.setVisibility(View.VISIBLE);
+                manual_frequency_search.setVisibility(View.VISIBLE);
+                manual_number_search.setVisibility(View.GONE);
             } else {
-                public_type_in_container.setVisibility(View.GONE);
-                public_search_channel_name_container.setVisibility(View.VISIBLE);
-                nit.setVisibility(View.GONE);
+                manual_frequency_search.setVisibility(View.GONE);
+                manual_number_search.setVisibility(View.VISIBLE);
             }
+            nit.setVisibility(View.GONE);
             public_adtv_type_container.setVisibility(View.VISIBLE);
             frequency_channel_container.setVisibility(View.VISIBLE);
             frequency_channel_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY));
-            if (mIsDvbt) {
-                dvbt_bandwidth_container.setVisibility(View.GONE);
+            dvbt_bandwidth_container.setVisibility(View.GONE);
+            dvbt_bandwidth_spinner.setSelection(1);
+            if (public_adtv_type_spinner.getSelectedItemPosition() == 1) {
                 dvbt_mode_container.setVisibility(View.VISIBLE);
-                dvbt_type_container.setVisibility(View.GONE);
-                dvbc_symbol_container.setVisibility(View.GONE);
-                dvbc_mode_container.setVisibility(View.GONE);
-                dvbt_bandwidth_spinner.setSelection(1);
                 dvbt_mode_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_MODE));
-                dvbt_type_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE));
-            } else {
-                dvbt_bandwidth_container.setVisibility(View.GONE);
-                dvbt_mode_container.setVisibility(View.GONE);
-                dvbt_type_container.setVisibility(View.GONE);
-                dvbc_symbol_container.setVisibility(View.VISIBLE);
-                dvbc_mode_container.setVisibility(View.VISIBLE);
-                dvbc_mode_spinner.setSelection(mDataManager.getIntParameters(DataManager.KEY_DVBC_MODE));
-                dvbc_symbol_edit.setText(mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE) + "");
             }
         }
         if (init) {//init one time
@@ -533,41 +483,18 @@ public class DtvkitIsdbtSetup extends Activity {
                     // TODO Auto-generated method stub
                 }
             });
-            dvbt_type_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    if (mDataManager.getIntParameters(DataManager.KEY_DVBT_TYPE) == position) {
-                        Log.d(TAG, "dvbt_type_spinner same position = " + position);
-                        return;
-                    }
-                    Log.d(TAG, "dvbt_type_spinner onItemSelected position = " + position);
-                    mDataManager.saveIntParameters(DataManager.KEY_DVBT_TYPE, position);
-                    initOrUpdateView(false);
-                }
-
-                @Override
-                public void onNothingSelected(AdapterView<?> parent) {
-                    // TODO Auto-generated method stub
-                }
-            });
-            dvbc_mode_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    Log.d(TAG, "dvbc_mode_spinner onItemSelected position = " + position);
-                    mDataManager.saveIntParameters(DataManager.KEY_DVBC_MODE, position);
-                }
-
-                @Override
-                public void onNothingSelected(AdapterView<?> parent) {
-                    // TODO Auto-generated method stub
-                }
-            });
             public_search_mode_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    mSearchMode = position;
                     if (position == mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE)) {
                         Log.d(TAG, "public_search_mode_spinner select same position = " + position);
                         return;
+                    }
+                    if (position == DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO) {
+                        // reset Stage
+                        mSearchingStage = SEARCH_STAGE.NOT_START;
+                        Log.i(TAG, "Reset stage to " + mSearchingStage);
                     }
                     Log.d(TAG, "public_search_mode_spinner onItemSelected position = " + position);
                     mDataManager.saveIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE, position);
@@ -600,11 +527,7 @@ public class DtvkitIsdbtSetup extends Activity {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     Log.d(TAG, "public_search_channel_name_spinner onItemSelected position = " + position);
-                    if (mIsDvbt) {
-                        mDataManager.saveIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME, position);
-                    } else {
-                        mDataManager.saveIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME, position);
-                    }
+                    mDataManager.saveIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME, position);
                 }
 
                 @Override
@@ -612,28 +535,29 @@ public class DtvkitIsdbtSetup extends Activity {
                     // TODO Auto-generated method stub
                 }
             });
-            nit.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    if (nit.isChecked()) {
-                        mDataManager.saveIntParameters(DataManager.KEY_NIT, 1);
-                    } else {
-                        mDataManager.saveIntParameters(DataManager.KEY_NIT, 0);
-                    }
+            nit.setOnClickListener(v -> {
+                if (nit.isChecked()) {
+                    mDataManager.saveIntParameters(DataManager.KEY_NIT, 1);
+                } else {
+                    mDataManager.saveIntParameters(DataManager.KEY_NIT, 0);
                 }
             });
         }
     }
 
-    private void updateChannelNameContainer() {
-        LinearLayout public_search_channel_name_container = (LinearLayout)findViewById(R.id.public_search_channel_container);
-        Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
+    private void updateChannelNameContainer(boolean isAtv) {
+        Spinner public_search_channel_name_spinner = findViewById(R.id.public_search_channel_spinner);
 
-        JSONArray list = null;
-        List<String> newList = new ArrayList<String>();
-        ArrayAdapter<String> adapter = null;
+        JSONArray list;
+        List<String> newList = new ArrayList<>();
+        ArrayAdapter<String> adapter;
         int select = mDataManager.getIntParameters(DataManager.KEY_SEARCH_ISDBT_CHANNEL_NAME);
         int county_code_Brazil = ('b' << 16 | 'r' << 8 | 'a') & 0xFFFFFF;
-        list = mParameterManager.getIsdbtChannelTable(county_code_Brazil);
+        if (isAtv) {
+            list = mParameterManager.getRfChannelTable(mAntennaType, ParameterManager.DTV_TYPE_ATV, false);
+        } else {
+            list = mParameterManager.getIsdbtChannelTable(county_code_Brazil);
+        }
 
         if (list == null || list.length() == 0) {
             Log.d(TAG, "updateChannelNameContainer can't find channel freq table");
@@ -646,73 +570,96 @@ public class DtvkitIsdbtSetup extends Activity {
                 int freq = channelTable.optInt("freq", 0);
                 int channelNumber = channelTable.optInt("index", 0);
                 String name = channelTable.optString("name", "ch" + channelNumber);
-                StringBuilder builder =
-                    new StringBuilder("NO." + channelNumber + " " + name + " " + freq + "Hz");
-                newList.add(builder.toString());
+                newList.add("NO." + channelNumber + " " + name + " " + freq + "Hz");
             }
         } catch (Exception e) {
             Log.d(TAG, "got invalid channel freq table");
         }
 
-        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, newList);
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, newList);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         public_search_channel_name_spinner.setAdapter(adapter);
         select = (select < list.length()) ? select : 0;
         public_search_channel_name_spinner.setSelection(select);
     }
 
-    private JSONArray initSearchParameter(JSONArray args) {
-        Log.d(TAG, "mManualSearchTvType:" + mManualSearchTvType);
-        int antennaType = mDataManager.getIntParameters(DataManager.KEY_ISDB_ANTENNA_TYPE);
-        if (antennaType == 1) {
-            // only atv
-            args.put(1);
+    private boolean isInManualATV() {
+        Spinner spinner = findViewById(R.id.adtv_type_spinner);
+        if (spinner != null && spinner.getVisibility() == View.VISIBLE) {
+            return 0 == spinner.getSelectedItemPosition();
         } else {
-            // air atv/dtv
-            if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
-                args.put(true);
-            } else {
-                args.put(0);
-            }
-        }
-        if (!isAutoSearch()) {
-            String parameter = getParameter();
-            if (!TextUtils.isEmpty(parameter)) {
-                int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
-                if (DataManager.VALUE_FREQUENCY_MODE == isFrequencySearch) {
-                    if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
-                        args.put(mDataManager.getIntParameters(DataManager.KEY_NIT) > 0);
-                        args.put(Integer.parseInt(parameter) * 1000);//khz to hz
-                        args.put("6MHZ");
-                        args.put(DataManager.VALUE_DVBT_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_MODE)]);
-                    } else {
-                        args.put(Integer.parseInt(parameter) * 1000);//khz to hz
-                    }
-                } else {
-                    parameter = getChannelIndex();
-                    if (parameter == null) {
-                        Log.d(TAG, "initSearchParameter Isdbt search can't find channel index");
-                        return null;
-                    }
-                    args.put(Integer.valueOf(parameter));
-                }
-                return args;
-            } else {
-                return null;
-            }
-        } else {
-            if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
-                 args.put(mDataManager.getIntParameters(DataManager.KEY_NIT) > 0);
-            } else {
-                args.put(2000000);
-            }
-            return args;
+            return false;
         }
     }
 
-    private String getParameter() {
-        String parameter = null;
-        EditText public_type_edit = (EditText)findViewById(R.id.edtTxt_public_type_in);
+    private boolean initSearchParameter(JSONArray args, int antennaType, boolean isAtvType, int isFrequencySearch) {
+        Log.d(TAG, "initSearchParameter autoSearch:" + isAutoSearch()
+                + ", antennaType:" + antennaType
+                + ", isAtvType:" + isAtvType
+                + ", isFrequencySearch:" + isFrequencySearch);
+        // antennaType == 1, cable atv
+        // antennaType == 0, air dtv&atv
+        if (isAutoSearch()) {
+            if (mIsHybridSearch) {
+                args.put(mAntennaType == 1 ? "CABLE" : "AIR");
+            } if (antennaType == 0 && mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
+                // ISDB-T DTV
+                args.put(true); // reTune
+                args.put(mDataManager.getIntParameters(DataManager.KEY_NIT) > 0);
+            } else {
+                // ATV
+                args.put(antennaType);
+                args.put(2000000);
+            }
+            return true;
+        } else {
+            if (mIsHybridSearch) {
+                Log.e(TAG, "atv channel list not ready;");
+                return false;
+            } else if (antennaType == 0 &&  !isAtvType) {
+                // manual DTV
+                int parameter = getParameter();
+                if (parameter >= 0) {
+                    args.put(true); // reTune
+                    if (DataManager.VALUE_FREQUENCY_MODE == isFrequencySearch) {
+                        if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
+                            args.put(mDataManager.getIntParameters(DataManager.KEY_NIT) > 0);
+                            args.put(parameter * 1000);//khz to hz
+                            args.put("6MHZ");
+                            args.put(DataManager.VALUE_DVBT_MODE_LIST[mDataManager.getIntParameters(DataManager.KEY_DVBT_MODE)]);
+                        } else {
+                            args.put(parameter * 1000);//khz to hz
+                        }
+                    } else {
+                        int index = getChannelIndex();
+                        if (index < 0) {
+                            Log.e(TAG, "initSearchParameter Isdbt search can't find channel index");
+                            return false;
+                        }
+                        args.put(index);
+                    }
+                    return true;
+                }
+            } else {
+                int parameter = getParameter();
+                if (parameter >= 0) {
+                    // manual ATV
+                    args.put(antennaType);
+                    if (DataManager.VALUE_FREQUENCY_MODE == isFrequencySearch) {
+                        args.put(parameter * 1000);//khz to hz
+                    } else {
+                        args.put(parameter); // chname
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int getParameter() {
+        int parameter = -1;
+        EditText public_type_edit = findViewById(R.id.edtTxt_public_type_in);
         Editable editable = public_type_edit.getText();
         int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
         if (DataManager.VALUE_FREQUENCY_MODE != isFrequencySearch) {
@@ -721,55 +668,29 @@ public class DtvkitIsdbtSetup extends Activity {
             String value = editable.toString();
             if (!TextUtils.isEmpty(value)/* && TextUtils.isDigitsOnly(value)*/) {
                 //float for frequency
-                float toFloat = Float.valueOf(value);
-                int toInt = (int)(toFloat * 1000.0f);//khz
-                parameter = String.valueOf(toInt);
+                float toFloat = Float.parseFloat(value);
+                parameter = (int)(toFloat * 1000.0f);//khz
             }
         }
-
         return parameter;
     }
 
-    private int getUpdatedDvbcSymbolRate() {
-        int parameter = DataManager.VALUE_DVBC_SYMBOL_RATE;
-        EditText symbolRate = (EditText)findViewById(R.id.dvbc_symbol_edit);
-        Editable editable = symbolRate.getText();
-        int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE);
-        if (editable != null) {
-            String value = editable.toString();
-            if (!TextUtils.isEmpty(value) && TextUtils.isDigitsOnly(value)) {
-                parameter = Integer.parseInt(value);
-                mDataManager.saveIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE, parameter);
+    private int getChannelIndex() {
+        int index = -1;
+        Spinner public_search_channel_name_spinner = findViewById(R.id.public_search_channel_spinner);
+        String chName = (String) public_search_channel_name_spinner.getSelectedItem();
+        if (!TextUtils.isEmpty(chName)) {
+            if (mManualSearchTvType == 0) {
+                index = Integer.parseInt(chName.substring(chName.indexOf(" ") + 1, chName.lastIndexOf(" "))); // chName
+            } else {
+                index = Integer.parseInt(chName.substring(chName.indexOf(".") + 1, chName.indexOf(" ")));
             }
-        } else {
-            mDataManager.saveIntParameters(DataManager.KEY_DVBC_SYMBOL_RATE, DataManager.VALUE_DVBC_SYMBOL_RATE);
+            int freq = Integer.parseInt(chName.substring(chName.lastIndexOf(" ") + 1, chName.indexOf("Hz")));
+            Log.d(TAG, "getChannelIndex channel index = " + index
+                    + ", freq = " + freq/1000 + "kHz");
         }
 
-        return parameter;
-    }
-
-    private String getChannelIndex() {
-        String result = null;
-        JSONArray list = null;
-        JSONObject channelInfo = null;
-
-        int index = mIsDvbt ? mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBT_CHANNEL_NAME) :
-                mDataManager.getIntParameters(DataManager.KEY_SEARCH_DVBC_CHANNEL_NAME);
-        int county_code_Brazil = ('b' << 16 | 'r' << 8 | 'a') & 0xFFFFFF;
-        list = mParameterManager.getIsdbtChannelTable(county_code_Brazil);
-
-        try {
-            channelInfo = (index < list.length()) ? (JSONObject)(list.get(index)) : null;
-        } catch (Exception e) {
-        }
-        if (channelInfo != null) {
-            result = "" + channelInfo.optInt("index");
-            Log.d(TAG, "getChannelIndex channel index = " +result +
-                ", name = " + channelInfo.optString("name", "ch" +result) +
-                ", freq = " + channelInfo.optInt("freq", 0)/1000 + "kHz");
-        }
-
-        return result;
+        return index;
     }
 
     private void sendStartSearch() {
@@ -786,76 +707,46 @@ public class DtvkitIsdbtSetup extends Activity {
         setSearchProgressIndeterminate(false);
         startMonitoringSearch();
         mFoundServiceNumber = 0;
-        mSearchMode = mDataManager.getIntParameters(DataManager.KEY_PUBLIC_SEARCH_MODE);
         updateSearchButton(false);
         runOnUiThread(() -> findViewById(R.id.btn_terrestrial_start_search).setEnabled(true));
-        if (!isAutoSearch() && TextUtils.equals(mManualSearchTvType, "ATV")) {
-            mSearchingStage = SEARCH_STAGE.DTV_FINISH;
-        }
-        try {
-            JSONArray args = new JSONArray();
-            args.put(false); // Commit
-            if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
-                DtvkitGlueClient.getInstance().request("Isdbt.finishSearch", args);
-            } else {
-                DtvkitGlueClient.getInstance().request("Atv.finishSearch", args);
-            }
-        } catch (Exception e) {
-            setSearchStatus("Failed to finish search", e.getMessage());
+        if (!doFinishSearch()) {
             return;
         }
-
-        try {
-            JSONArray args = new JSONArray();
-            args = initSearchParameter(args);
-            if (args != null) {
-                String command = null;
-                int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
-                if (!isAutoSearch()) {
-                    if (isFrequencySearch == DataManager.VALUE_FREQUENCY_MODE) {
-                        if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
-                            command = ("Isdbt.startManualSearchByFreq");
-                        } else {
-                            command = ("Atv.startManualSearchByFreq");
-                        }
-                    } else {
-                        if (mSearchingStage.ordinal() <= SEARCH_STAGE.DTV_FINISH.ordinal()) {
-                            command = ("Isdbt.startManualSearchById");
-                        } else {
-                            command = ("Atv.startManualSearchById");
-                        }
-                    }
-                    mSearchManualAutoType = DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL;
-                } else {
-                    if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
-                        command = ("Isdbt.startSearch");
-                    } else {
-                        command = ("Atv.startAutoSearch");
-                    }
-                    mSearchManualAutoType = DtvkitDvbScanSelect.SEARCH_TYPE_AUTO;
-                }
-                if (mIsDvbt) {
-                    mSearchDvbcDvbtType = DtvkitDvbScanSelect.SEARCH_TYPE_DVBT;
-                } else {
-                    mSearchDvbcDvbtType = DtvkitDvbScanSelect.SEARCH_TYPE_DVBC;
-                }
-                Log.d(TAG, "command = " + command + ", args = " + args);
-                DtvkitGlueClient.getInstance().request(command, args);
-                mStartSearch = true;
-                if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
+        if (isAutoSearch()) {
+            if (mAntennaType == 1 || mSearchingStage == SEARCH_STAGE.DTV_STARTING) {
+                // start to atv search
+                mSearchingStage = SEARCH_STAGE.DTV_FINISH;
+            }
+        }
+        int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
+        JSONArray args = new JSONArray();
+        if (initSearchParameter(args, mAntennaType, isInManualATV(), isFrequencySearch)) {
+            boolean result;
+            if (isAutoSearch()) {
+                result = doStartAutoSearch(args);
+            } else {
+                result = doStartManualSearch(args, isFrequencySearch == DataManager.VALUE_FREQUENCY_MODE);
+            }
+            mStartSearch = result;
+            if (result) {
+                if (mSearchingStage == SEARCH_STAGE.NOT_START) {
                     mSearchingStage = SEARCH_STAGE.DTV_STARTING;
-                } else {
+                } else if (mSearchingStage == SEARCH_STAGE.DTV_FINISH) {
                     mSearchingStage = SEARCH_STAGE.ATV_STARTING;
+                } else {
+                    Log.e(TAG, "error : mSearchingStage:" + mSearchingStage);
+                    stopMonitoringSearch();
+                    setSearchStatus("Failed to start search", "error:" + mSearchingStage);
+                    stopSearch();
                 }
-                mParameterManager.saveChannelIdForSource(-1);
             } else {
                 stopMonitoringSearch();
-                setSearchStatus("parameter not complete", "");
+                setSearchStatus("Failed to start search", "");
                 stopSearch();
             }
-        } catch (Exception e) {
+        } else {
             stopMonitoringSearch();
-            setSearchStatus("Failed to start search", e.getMessage());
+            setSearchStatus("parameter not complete", "");
             stopSearch();
         }
     }
@@ -883,8 +774,81 @@ public class DtvkitIsdbtSetup extends Activity {
         } catch (Exception e) {
             setSearchStatus("Failed to finish search", e.getMessage());
         } finally {
-            mSearchingStage = SEARCH_STAGE.ATV_FINISH;;
+            mSearchingStage = SEARCH_STAGE.ATV_FINISH;
         }
+    }
+
+
+    private boolean doFinishSearch() {
+        String command;
+        JSONArray args = new JSONArray();
+        if (mIsHybridSearch) {
+            command = "Tv.stopSearch";
+        } else {
+            if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
+                command = "Isdbt.finishSearch";
+            } else {
+                command = "Atv.finishSearch";
+            }
+        }
+        try {
+            DtvkitGlueClient.getInstance().request(command, args);
+        } catch (Exception e) {
+            setSearchStatus("Failed to finish search", e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    private boolean doStartAutoSearch(JSONArray args) {
+        String command;
+        if (mIsHybridSearch) {
+            command = "Tv.startAutoSearch";
+        } else {
+            if (mSearchingStage == SEARCH_STAGE.NOT_START) {
+                command = "Isdbt.startSearch";
+            } else {
+                command = "Atv.startAutoSearch";
+            }
+        }
+        try {
+            DtvkitGlueClient.getInstance().request(command, args);
+            Log.d(TAG, "command = " + command + ", args = " + args);
+            mParameterManager.saveChannelIdForSource(-1);
+        } catch (Exception e) {
+            setSearchStatus("Failed to finish search", e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    private boolean doStartManualSearch(JSONArray args, boolean byFreq) {
+        String command;
+        if (mIsHybridSearch) {
+            command = "Tv.startManualSearchByChannelId";
+        } else {
+            if (byFreq) {
+                if (mManualSearchTvType == 1) {
+                    command = "Isdbt.startManualSearchByFreq";
+                } else {
+                    command = "Atv.startManualSearchByFreq";
+                }
+            } else {
+                if (mManualSearchTvType == 1) {
+                    command = ("Isdbt.startManualSearchById");
+                } else {
+                    command = ("Atv.startManualSearchById");
+                }
+            }
+        }
+        try {
+            DtvkitGlueClient.getInstance().request(command, args);
+            Log.d(TAG, "command = " + command + ", args = " + args);
+        } catch (Exception e) {
+            setSearchStatus("Failed to finish search", e.getMessage());
+            return false;
+        }
+        return true;
     }
 
     private void sendFinishSearch() {
@@ -904,22 +868,7 @@ public class DtvkitIsdbtSetup extends Activity {
         setStrengthAndQualityStatus("","");
         setSearchProgressIndeterminate(true);
         stopMonitoringSearch();
-        try {
-            JSONArray args = new JSONArray();
-            args.put(true); // Commit
-            if (mSearchingStage.ordinal() < SEARCH_STAGE.DTV_FINISH.ordinal()) {
-                mSearchingStage = SEARCH_STAGE.DTV_FINISH;
-                DtvkitGlueClient.getInstance().request("Isdbt.finishSearch", args);
-                if (DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mSearchMode) {
-                    sendStartSearch();
-                    return;
-                }
-            } else {
-                mSearchingStage = SEARCH_STAGE.ATV_FINISH;
-                DtvkitGlueClient.getInstance().request("Atv.finishSearch", args);
-            }
-        } catch (Exception e) {
-            setSearchStatus("Failed to finish search", e.getMessage());
+        if (!doFinishSearch()) {
             return;
         }
         //update search results as After the search is finished, the lcn will be reordered
@@ -943,7 +892,7 @@ public class DtvkitIsdbtSetup extends Activity {
         Bundle parameters = new Bundle();
         int isFrequencySearch = mDataManager.getIntParameters(DataManager.KEY_IS_FREQUENCY);
         if (DataManager.VALUE_FREQUENCY_MODE == isFrequencySearch && DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO != mSearchMode) {
-            parameters.putInt(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY, Integer.parseInt(getParameter()) * 1000);
+            parameters.putInt(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_FREQUENCY, getParameter() * 1000);
         }
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_MODE, DataManager.VALUE_PUBLIC_SEARCH_MODE_AUTO == mSearchMode ? EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO : EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_MANUAL);
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "ISDB-T");
@@ -976,58 +925,57 @@ public class DtvkitIsdbtSetup extends Activity {
     }
 
     private void setSearchStatus(final String status, final String description) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Log.i(TAG, String.format("Search status \"%s\"", status));
-                final TextView text = (TextView) findViewById(R.id.tv_search_status);
-                text.setText(String.format("%s\t%s",status,description));
-            }
+        runOnUiThread(() -> {
+            Log.i(TAG, String.format("Search status \"%s\"", status));
+            final TextView text = findViewById(R.id.tv_search_status);
+            text.setText(String.format("%s\t%s",status,description));
         });
     }
 
     private void setStrengthAndQualityStatus(final String strengthStatus, final String qualityStatus) {
-        setStrengthAndQualityStatus(strengthStatus, qualityStatus, "");
+        runOnUiThread(() -> {
+            if (TextUtils.isEmpty(strengthStatus) && TextUtils.isEmpty(qualityStatus)) {
+                findViewById(R.id.channel_holder).setVisibility(View.GONE);
+            } else {
+                findViewById(R.id.channel_holder).setVisibility(View.VISIBLE);
+            }
+            Log.i(TAG, String.format("Strength: %s", strengthStatus));
+            Log.i(TAG, String.format("Quality: %s", qualityStatus));
+            TextView channelInfo = findViewById(R.id.tv_scan_info);
+            channelInfo.setText(String.format("%s\t\t%s\t\t", strengthStatus, qualityStatus));
+        });
     }
 
-    private void setStrengthAndQualityStatus(final String strengthStatus, final String qualityStatus, final String channel) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (TextUtils.isEmpty(strengthStatus) && TextUtils.isEmpty(qualityStatus)) {
-                    findViewById(R.id.channel_holder).setVisibility(View.GONE);
-                } else {
-                    findViewById(R.id.channel_holder).setVisibility(View.VISIBLE);
-                }
-                Log.i(TAG, String.format("Strength: %s", strengthStatus));
-                Log.i(TAG, String.format("Quality: %s", qualityStatus));
-                TextView channelInfo = findViewById(R.id.tv_scan_info);
-                TextView channelNumber = findViewById(R.id.tv_scan_ch_number);
-                channelInfo.setText(strengthStatus + "\t\t" + qualityStatus + "\t\t");
-                if (channel != null) {
-                    channelNumber.setText(channel);
-                }
+    private void setTvChannelNumber(int number, boolean isAtv) {
+        runOnUiThread(() -> {
+            if (isAtv) {
+                final TextView atvText = findViewById(R.id.atv_number);
+                atvText.setText(String.format("\tATV :\t%s", number));
+            } else {
+                final TextView dtvText = findViewById(R.id.dtv_number);
+                dtvText.setText(String.format("\tDTV :\t%s", number));
             }
         });
     }
 
-    private void setSearchProgress(final int progress) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                final ProgressBar bar = (ProgressBar) findViewById(R.id.proBar_search_progress);
-                bar.setProgress(progress);
+    private void setSearchProgress(final int progress, final boolean isAtv) {
+        runOnUiThread(() -> {
+            final ProgressBar bar;
+            if (isAtv) {
+                bar = findViewById(R.id.atv_search_progress);
+            } else {
+                bar = findViewById(R.id.dtv_search_progress);
             }
+            bar.setProgress(progress);
         });
     }
 
     private void setSearchProgressIndeterminate(final Boolean indeterminate) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                final ProgressBar bar = (ProgressBar) findViewById(R.id.proBar_search_progress);
-                bar.setIndeterminate(indeterminate);
-            }
+        runOnUiThread(() -> {
+            final ProgressBar bar1 = findViewById(R.id.dtv_search_progress);
+            bar1.setIndeterminate(indeterminate);
+            final ProgressBar bar2 = findViewById(R.id.atv_search_progress);
+            bar2.setIndeterminate(indeterminate);
         });
     }
 
@@ -1036,12 +984,8 @@ public class DtvkitIsdbtSetup extends Activity {
     }
 
     private void updateSearchButton(final boolean strStart) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                ((Button) findViewById(R.id.btn_terrestrial_start_search)).setText(strStart ? (isAutoSearch() ? R.string.strStartSearch : R.string.strManualSearch) : R.string.strStopSearch);
-            }
-        });
+        runOnUiThread(() -> ((Button) findViewById(R.id.btn_terrestrial_start_search))
+                .setText(strStart ? (isAutoSearch() ? R.string.strStartSearch : R.string.strManualSearch) : R.string.strStopSearch));
     }
 
     private int getFoundServiceNumber() {
@@ -1050,8 +994,8 @@ public class DtvkitIsdbtSetup extends Activity {
             JSONObject obj = DtvkitGlueClient.getInstance().request("Atv.getNumberOfServices", new JSONArray());
             found = obj.getInt("data");
             Log.i(TAG, "getFoundServiceNumber found = " + found);
-        } catch (Exception ignore) {
-            Log.e(TAG, "getFoundServiceNumber Exception = " + ignore.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "getFoundServiceNumber Exception = " + e.getMessage());
         }
         return found;
     }
@@ -1071,25 +1015,32 @@ public class DtvkitIsdbtSetup extends Activity {
         return found;
     }
 
-    private int getSearchProcess(JSONObject data) {
-        int progress = 0;
+    private int[] getSearchProcess(JSONObject data) {
+        int[] result = {-1, 0};
         if (data == null) {
-            return progress;
+            return result;
         }
         try {
-            //Log.e("SearchProcess", "" + data.toString());
-            progress = data.getInt("progress");
-        } catch (JSONException ignore) {
-            Log.e(TAG, "getSearchProcess Exception = " + ignore.getMessage());
+            result[0] = data.getInt("progress");
+            result[1] = data.optInt("number");
+        } catch (JSONException e) {
+            Log.e(TAG, "getSearchProcess Exception = " + e.getMessage());
         }
-        return progress;
+        return result;
     }
 
     private void sendOnSignal(final Map<String, Object> map) {
         if (mThreadHandler != null) {
             String signal = (String) map.get("signal");
-            if (TextUtils.equals("IsdbtStatusChanged", signal)
-                || TextUtils.equals("AtvSearchProgress", signal)) {
+            boolean valid;
+            if (mIsHybridSearch) {
+                valid = TextUtils.equals("TVStatusChanged", signal)
+                        || TextUtils.equals("TVProgressChanged", signal);
+            } else {
+                valid = TextUtils.equals("IsdbtStatusChanged", signal)
+                        || TextUtils.equals("AtvSearchProgress", signal);
+            }
+            if (valid) {
                 mThreadHandler.removeMessages(MSG_ON_SIGNAL);
                 Message mess = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, 0, 0, map);
                 boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
@@ -1104,22 +1055,43 @@ public class DtvkitIsdbtSetup extends Activity {
             Log.d(TAG, "dealOnSignal null map");
             return;
         }
+        String signal = (String) map.get("signal");
         JSONObject data = (JSONObject) map.get("data");
-        int progress = getSearchProcess(data);
-        Log.d(TAG, "onSignal progress = " + progress);
+        assert signal != null;
+        assert data != null;
+        int[] result = getSearchProcess(data);
+        if (result[0] < 0) {
+            return;
+        }
+        Log.d(TAG, "onSignal progress = " + result[0]);
         int strengthStatus = mParameterManager.getStrengthStatus();
         int qualityStatus = mParameterManager.getQualityStatus();
-        if (progress < 100) {
-            int[] found = getFoundServiceNumberOnSearch();
-            setSearchProgress(progress);
-            setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), "");
-            setStrengthAndQualityStatus(
-                    String.format(Locale.ENGLISH, "Strength: %d%%", strengthStatus),
-                    String.format(Locale.ENGLISH, "Quality: %d%%", qualityStatus),
-                    String.format(Locale.ENGLISH, "DTV Channel: %d, ATV Channel: %d, ", found[0], found[1]));
+        boolean isAtvSignal = signal.toUpperCase().contains("ATV")
+                || (signal.equals("TVProgressChanged") && data.optString("name").contains("atv_"));
+        setSearchProgress(result[0], isAtvSignal);
+        setStrengthAndQualityStatus(
+                String.format(Locale.ENGLISH, "Strength: %d%%", strengthStatus),
+                String.format(Locale.ENGLISH, "Quality: %d%%", qualityStatus));
+        setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", result[0]), "");
+        if (mIsHybridSearch) {
+            setTvChannelNumber(result[1], isAtvSignal);
         } else {
-            //onSearchFinished();
-            sendFinishSearch();
+            int[] found = getFoundServiceNumberOnSearch();
+            setTvChannelNumber(isAtvSignal ? found[1] : found[0], isAtvSignal);
+        }
+        if (result[0] == 100) {
+            if (isAutoSearch()) {
+                if (isAtvSignal) {
+                    sendFinishSearch();
+                } else {
+                    /* continue atv search */
+                    if (!mIsHybridSearch) {
+                        sendStartSearch();
+                    }
+                }
+            } else {
+                sendFinishSearch();
+            }
         }
     }
 
