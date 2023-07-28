@@ -4536,6 +4536,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     Log.d(TAG, "dvblive PIP only need video status");
                                     return;
                                 }
+                                try {
+                                    if (!data.getJSONObject("content").getBoolean("is_av")) {
+                                        timeshiftAvailable.setNo(false);
+                                    }
+                                } catch (JSONException e) {
+                                    Log.d(TAG, "playing is_av JSONException = " + e.getMessage());
+                                }
                                 sendUpdateTrackMsg(PlayerState.PLAYING, false);
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO)) {
                                     if (mHandlerThreadHandle != null) {
@@ -4688,14 +4695,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     notifyChannelRetuned(null);
                                 }
                                 return;
-                            } else {
-                                if (!isAv) {
-                                    timeshiftAvailable.setNo(false);
-                                }
-                                //Log.i(TAG, "starting mhegStart " + dvbUri);
-                                //if (mHandlerThreadHandle != null) {
-                                //    mHandlerThreadHandle.obtainMessage(MSG_START_MHEG5, 0/*mhegSupend*/, 0, dvbUri).sendToTarget();
-                                //}
                             }
                             if (mTunedChannel != null) {
                                 if (TvContractUtils.getBooleanFromChannelInternalProviderData(
