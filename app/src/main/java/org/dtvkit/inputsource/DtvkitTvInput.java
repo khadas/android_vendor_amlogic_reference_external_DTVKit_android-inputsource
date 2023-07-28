@@ -677,7 +677,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         mAutomaticSearchingReceiver = new AutomaticSearchingReceiver();
         IntentFilter automaticSearch = new IntentFilter();
         automaticSearch.addAction(intentAction);
-        registerReceiver(mAutomaticSearchingReceiver, automaticSearch, 4/*RECEIVER_NOT_EXPORTED*/);
+        registerReceiver(mAutomaticSearchingReceiver, automaticSearch, 2/*RECEIVER_EXPORTED*/);
 
         IntentFilter ciTest = new IntentFilter();
         ciTest.addAction(ConstantManager.ACTION_CI_PLUS_INFO);
