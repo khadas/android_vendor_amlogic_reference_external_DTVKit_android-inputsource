@@ -2798,7 +2798,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         @Override
-        protected void onFinish(boolean ignoreMheg, boolean ignoreFcc) {
+        protected void onFinish(boolean tuneToATv, boolean ignoreFcc) {
             playerPipStop();
         }
     }
@@ -2971,7 +2971,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
 //            boolean mainMuteStatus = playerGetMute(); // must before stop
             boolean mainMuteStatus = true; //Except for FCC, the Mute status of other scenes is controlled by LiveTV
-            onFinish(mhegTune, FeatureUtil.getFeatureSupportFcc() && !getFccBufferUri().isEmpty());
+            onFinish(Channel.isATV(newChannel), FeatureUtil.getFeatureSupportFcc() && !getFccBufferUri().isEmpty());
             userDataStatus(false);
 
             // start tune flow
@@ -3032,20 +3032,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         @Override
-        protected void onFinish(boolean ignoreMheg, boolean ignoreFcc) {
-            Log.i(TAG, "onFinish ignoreMheg:" + ignoreMheg + ", ignoreFcc:" + ignoreFcc);
-            boolean doStop = stopTimeshiftIfNeeded();
-            if (!ignoreMheg) {
-                //mhegStop();
-            }
-
-            if (!ignoreFcc) {
-                playerStop();
-            }
-            playerSetSubtitlesOn(false);
-            playerSetTeletextOn(false, -1);
-            if (Channel.isATV(mTunedChannel)) {
+        protected void onFinish(boolean tuneToATv, boolean ignoreFcc) {
+            Log.i(TAG, "onFinish tuneToATv:" + tuneToATv + ", ignoreFcc:" + ignoreFcc);
+            if (tuneToATv && Channel.isATV(mTunedChannel)) {
+                Log.d(TAG, "onFinish No need to stop!");
+            } else if (Channel.isATV(mTunedChannel)) {
                 atvPlayerStop();
+            } else {
+                stopTimeshiftIfNeeded();
+                if (!ignoreFcc) {
+                    playerStop();
+                }
+                playerSetSubtitlesOn(false);
+                playerSetTeletextOn(false, -1);
             }
         }
     }
@@ -3544,7 +3543,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected abstract boolean doTune(Channel oldChannel, Channel newChannel,
                                           Uri channelUri, String dvbUri, boolean mhegTune);
 
-        protected abstract void onFinish(boolean ignoreMheg, boolean ignoreFcc);
+        protected abstract void onFinish(boolean tuneToATv, boolean ignoreFcc);
 
         protected abstract boolean readyToPlay();
 
@@ -5824,7 +5823,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             recordedProgram = getRecordedProgram(uri);
             if (recordedProgram != null) {
                 playerState = PlayerState.PLAYING;
-                onFinish(true, true);
+                onFinish(false, true);
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 mAudioADAutoStart = mDataManager.getIntParameters(DataManager.TV_KEY_AD_SWITCH) == 1;
                 mIsTimeshiftingPlayed = true;
