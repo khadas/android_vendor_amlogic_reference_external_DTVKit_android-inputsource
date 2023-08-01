@@ -3458,20 +3458,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
             Channel targetChannel = TvContractUtils.getChannel(mContentResolver, channelUri);
             if (targetChannel == null) {
-                Log.w(TAG, "Cannot find " + channelUri + ", try tuneToFirst");
-                Channel firstDbValidChannel = getFirstChannel();
+                int dvbSource = getCurrentDvbSource();
+                Channel firstDbValidChannel = getFirstChannel(dvbSource);
                 if (firstDbValidChannel == null) {
-                    //if no channel,stop play
-                    onFinish(false, false);
-                    Log.e(TAG, "error:no channel.");
-                    sendBundleToAppByTif(ConstantManager.EVENT_NO_CHANNEL_FOUND, new Bundle());
-                    if (mMainHandle != null) {
-                        mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
-                        Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
-                        msg.arg1 = 1;
-                        mMainHandle.sendMessageDelayed(msg, 100);
+                    if (ParameterManager.SIGNAL_ISDBT == dvbSource) {
+                        firstDbValidChannel = createDummyATvChannel();
+                    } else {
+                        //if no channel,stop play
+                        onFinish(false, false);
+                        Log.e(TAG, "error:no channel.");
+                        sendBundleToAppByTif(ConstantManager.EVENT_NO_CHANNEL_FOUND, new Bundle());
+                        if (mMainHandle != null) {
+                            mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                            Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                            msg.arg1 = 1;
+                            mMainHandle.sendMessageDelayed(msg, 100);
+                        }
+                        return;
                     }
-                    return;
                 } else {
                    Log.i(TAG, "Cannot find " + channelUri
                         + ", tuneTo _ID = " + firstDbValidChannel.getId()
@@ -3604,6 +3608,36 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 mLivingHandlerThread.quitSafely();
                 mLivingHandlerThread = null;
             }
+        }
+
+        private Channel createDummyATvChannel() {
+            InternalProviderData data = new InternalProviderData("ATV");
+            try {
+                data.put("vfmt", 0);
+                data.put("frequency", 470000000);
+                data.put("video_std", 0);
+                data.put("audio_std", 0);
+                data.put("is_auto_std", 0);
+                data.put("fine_tune", 0);
+                data.put("audio_compensation", 0);
+                data.put("is_favourite", 0);
+                data.put("multi_name", "");
+                data.put("unikey", 0);
+            } catch (InternalProviderData.ParseException e) {
+                Log.e(TAG, e.getMessage());
+            }
+
+            return new Channel.Builder()
+                    .setType(TvContract.Channels.TYPE_NTSC)
+                    .setDisplayNumber("0")
+                    .setServiceType(TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO)
+                    .setOriginalNetworkId(0)
+                    .setTransportStreamId(0)
+                    .setServiceId(0)
+                    .setInternalProviderData(data)
+                    .setLocked(0)
+                    .setChannelAntennaType(0)
+                    .build();
         }
 
         public void onSetCaptionEnabled(boolean enabled) {
@@ -6203,11 +6237,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return result;
         }
 
-        private Channel getFirstChannel() {
+        private Channel getFirstChannel(int dvbSource) {
             Channel channel = null;
             Cursor cursor = null;
             Uri uri = TvContract.buildChannelsUriForInput(mInputId);
-            int dvbSource = getCurrentDvbSource();
             String signalType = TvContractUtils.dvbSourceToChannelTypeString(dvbSource);
             String signalSelection = createQuerySelection(dvbSource);
             try {
