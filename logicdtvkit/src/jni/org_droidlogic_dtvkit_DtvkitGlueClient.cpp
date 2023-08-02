@@ -625,6 +625,7 @@ static void setSubtitleOff()
         mSubContext->close();
     }
     clearSubtitleDataEx();
+    clearCCSubtitleData();
 }
 
 static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int magazine, int page, int demuxId)
@@ -644,7 +645,11 @@ static void setSubtitleOn(int pid, uint16_t onid, uint16_t tsid, int type, int m
         mSubContext->setSubType(type + DTVKIT_SUBTITLE_ADD_OFFSET);
     }
     if (type == START_SUB_TYPE_CLOSED_CAPTION) {
-        mSubContext->selectCcChannel(pid);
+        int ccId = pid;
+        bool isAtv = (demuxId == -1);
+        if (!isAtv && ccId < 9) ccId = 9;
+        int sourceFlag = isAtv ? 1 : 0;
+        mSubContext->selectCcChannel(pid | (sourceFlag << 8));
     } else {
         mSubContext->setSubPid(pid, onid, tsid);
     }

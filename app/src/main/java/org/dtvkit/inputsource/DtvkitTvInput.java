@@ -85,6 +85,8 @@ import com.google.common.collect.Lists;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.droidlogic.dtvkit.IndentingPrintWriter;
+import org.dtvkit.inputsource.caption.AtvCcTool;
+import org.dtvkit.inputsource.caption.CustomerFont;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -209,9 +211,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     SystemControlManager mSystemControlManager;
 
-    private static String unZipDirStr = "vendorfont";
-    private static String uncryptDirStr = "font";
-    private static String fonts = "font";
     private String intentAction = "com.droidlogic.dtvkit.inputsource.AutomaticSearching";
     private AutomaticSearchingReceiver mAutomaticSearchingReceiver = null;
     public final int SUBTITLE_CTL_HK_DVB_SUB = 0x02;
@@ -907,6 +906,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
     private synchronized void initDtvkitTvInput(boolean isCreateSession) {
         int subFlg = getSubtitleFlag();
+        boolean hasInitFont = false;
         Log.d(TAG, "initDtvkitTvInput already isCreateSession:" + isCreateSession);
         if (isCreateSession) {
             DtvkitGlueClient.getInstance().destroySubtitleCtl();
@@ -940,7 +940,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         if (subFlg >= SUBTITLE_CTL_HK_DVB_SUB) {
             DtvkitGlueClient.getInstance().attachSubtitleCtl(subFlg & 0xFF);
             if ((subFlg & SUBTITLE_CTL_HK_CC) == SUBTITLE_CTL_HK_CC) {
-                initFont(); //init closed caption font
+                CustomerFont.initFontInTread(getApplicationContext());
+                hasInitFont = true;
+            }
+        }
+        if (AtvCcTool.getInstance().supportAtv()) {
+            AtvCcTool.getInstance().startInit(getApplicationContext());
+            if (!hasInitFont) {
+                CustomerFont.initFontInTread(getApplicationContext());
             }
         }
         mParameterManager.initTextCharSet();
@@ -975,80 +982,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         firstSync();
         Log.d(TAG, "initDtvkitTvInput end");
         mIsInited = true;
-    }
-
-    private void initFont() {
-        File uncryteDir = new File(this.getDataDir(), uncryptDirStr);
-        File[] lists = uncryteDir.listFiles();
-        if (lists == null || lists.length == 0) {
-            unzipUncry(uncryteDir);
-        }
-    }
-
-    private void unzipUncry(File uncryteDir) {
-        File zipFile = new File(this.getDataDir(), "fonts.zip");
-        File unZipDir = new File(this.getDataDir(), unZipDirStr);
-        try {
-            copyToFileOrThrow(this.getAssets().open(fonts), zipFile);
-            upZipFile(zipFile, unZipDir.getCanonicalPath());
-            uncryteDir.mkdirs();
-            DtvkitGlueClient.getInstance().doUnCrypt(unZipDir.getCanonicalPath() + "/",
-                    uncryteDir.getCanonicalPath() + "/");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    private void copyToFileOrThrow(InputStream inputStream, File destFile)
-            throws IOException {
-        if (destFile.exists()) {
-            destFile.delete();
-        }
-        FileOutputStream out = new FileOutputStream(destFile);
-        try {
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) >= 0) {
-                out.write(buffer, 0, bytesRead);
-            }
-        } finally {
-            out.flush();
-            try {
-                out.getFD().sync();
-            } catch (IOException e) {
-            }
-            out.close();
-        }
-    }
-
-    private void upZipFile(File zipFile, String folderPath) throws IOException {
-        File desDir = new File(folderPath);
-        if (!desDir.exists()) {
-            desDir.mkdirs();
-        }
-        ZipFile zf = new ZipFile(zipFile);
-        for (Enumeration<?> entries = zf.entries(); entries.hasMoreElements(); ) {
-            ZipEntry entry = ((ZipEntry) entries.nextElement());
-            InputStream in = zf.getInputStream(entry);
-            String str = folderPath;
-            File desFile = new File(str, java.net.URLEncoder.encode(
-                    entry.getName(), "UTF-8"));
-            if (!desFile.exists()) {
-                File fileParentDir = desFile.getParentFile();
-                if (!fileParentDir.exists()) {
-                    fileParentDir.mkdirs();
-                }
-            }
-            OutputStream out = new FileOutputStream(desFile);
-            byte buffer[] = new byte[1024 * 1024];
-            int realLength = in.read(buffer);
-            while (realLength != -1) {
-                out.write(buffer, 0, realLength);
-                realLength = in.read(buffer);
-            }
-            out.close();
-            in.close();
-        }
     }
 
     private synchronized void updateRecorderNumber() {
@@ -3671,47 +3604,52 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mHbbTvManager.selectBroadbandTracksAndNotify(type, trackId);
                 }
             } else if (type == TvTrackInfo.TYPE_SUBTITLE) {
-                String sourceTrackId = trackId;
-                int subType = 4;//default sub
-                int isTele = 0;//default subtitle
-                if (!TextUtils.isEmpty(trackId) && !TextUtils.isDigitsOnly(trackId)) {
-                    String[] nameValuePairs = trackId.split("&");
-                    if (nameValuePairs.length >= 3) {
-                        String[] nameValue = nameValuePairs[0].split("=");
-                        String[] typeValue = nameValuePairs[1].split("=");
-                        String[] teleValue = nameValuePairs[2].split("=");
-                        if (nameValue.length == 2 && TextUtils.equals(nameValue[0], "id")
-                                && TextUtils.isDigitsOnly(nameValue[1])) {
-                            trackId = nameValue[1];//parse id
-                        }
-                        if (typeValue.length == 2 && TextUtils.equals(typeValue[0], "type")
-                                && TextUtils.isDigitsOnly(typeValue[1])) {
-                            subType = Integer.parseInt(typeValue[1]);//parse type
-                        }
-                        if (teleValue.length == 2 && TextUtils.equals(teleValue[0], "teletext")
-                                && TextUtils.isDigitsOnly(teleValue[1])) {
-                            isTele = Integer.parseInt(teleValue[1]);//parse type
-                        }
-                    }
-                    if (TextUtils.isEmpty(trackId) || !TextUtils.isDigitsOnly(trackId)) {
-                        //notifyTrackSelected(type, sourceTrackId);
-                        Log.d(TAG, "need trackId that only contains number sourceTrackId = "
-                                + sourceTrackId + ", trackId = " + trackId);
-                        return;
-                    }
-                }
-                if ((!FeatureUtil.getFeatureSupportCaptioningManager()
-                        || (mCaptioningManager != null && mCaptioningManager.isEnabled()))
-                        && selectSubtitleOrTeletext(isTele, subType, trackId)) {
-                    notifyTrackSelected(type, sourceTrackId);
-                    if (mHbbTvManager != null) {
-                        mHbbTvManager.notifyTrackSelectedToHbbtv(type, sourceTrackId);
-                    }
+                if (Channel.isATV(mTunedChannel)) {
+                    AtvCcTool.getInstance().selectCCTrack(getApplicationContext(), trackId);
+                    notifyTrackSelected(type, trackId);
                 } else {
-                    Log.d(TAG, "onSelectTrack mCaptioningManager closed or invalid sub");
-                    notifyTrackSelected(type, null);
-                    if (mHbbTvManager != null) {
-                        mHbbTvManager.notifyTrackSelectedToHbbtv(type, null);
+                    String sourceTrackId = trackId;
+                    int subType = 4;//default sub
+                    int isTele = 0;//default subtitle
+                    if (!TextUtils.isEmpty(trackId) && !TextUtils.isDigitsOnly(trackId)) {
+                        String[] nameValuePairs = trackId.split("&");
+                        if (nameValuePairs.length >= 3) {
+                            String[] nameValue = nameValuePairs[0].split("=");
+                            String[] typeValue = nameValuePairs[1].split("=");
+                            String[] teleValue = nameValuePairs[2].split("=");
+                            if (nameValue.length == 2 && TextUtils.equals(nameValue[0], "id")
+                                    && TextUtils.isDigitsOnly(nameValue[1])) {
+                                trackId = nameValue[1];//parse id
+                            }
+                            if (typeValue.length == 2 && TextUtils.equals(typeValue[0], "type")
+                                    && TextUtils.isDigitsOnly(typeValue[1])) {
+                                subType = Integer.parseInt(typeValue[1]);//parse type
+                            }
+                            if (teleValue.length == 2 && TextUtils.equals(teleValue[0], "teletext")
+                                    && TextUtils.isDigitsOnly(teleValue[1])) {
+                                isTele = Integer.parseInt(teleValue[1]);//parse type
+                            }
+                        }
+                        if (TextUtils.isEmpty(trackId) || !TextUtils.isDigitsOnly(trackId)) {
+                            //notifyTrackSelected(type, sourceTrackId);
+                            Log.d(TAG, "need trackId that only contains number sourceTrackId = "
+                                    + sourceTrackId + ", trackId = " + trackId);
+                            return;
+                        }
+                    }
+                    if ((!FeatureUtil.getFeatureSupportCaptioningManager()
+                            || (mCaptioningManager != null && mCaptioningManager.isEnabled()))
+                            && selectSubtitleOrTeletext(isTele, subType, trackId)) {
+                        notifyTrackSelected(type, sourceTrackId);
+                        if (mHbbTvManager != null) {
+                            mHbbTvManager.notifyTrackSelectedToHbbtv(type, sourceTrackId);
+                        }
+                    } else {
+                        Log.d(TAG, "onSelectTrack mCaptioningManager closed or invalid sub");
+                        notifyTrackSelected(type, null);
+                        if (mHbbTvManager != null) {
+                            mHbbTvManager.notifyTrackSelectedToHbbtv(type, null);
+                        }
                     }
                 }
             }
@@ -3828,28 +3766,44 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         private void updateTrackAndSelect(int isDvrPlaying, boolean clear) {
-            boolean retSubtitle = (isDvrPlaying != 1) || (dvrSubtitleFlag != 1);
-
-            if (clear) {
-                Log.w(TAG, "updateTrackAndSelect: clear Tracks, because not playing status");
-                mTunedTracks.clear();
-                notifyTracksChanged(mTunedTracks);
-                return;
-            }
-            if (retSubtitle && (!FeatureUtil.getFeatureSupportCaptioningManager()
-                    || (mCaptioningManager != null && mCaptioningManager.isEnabled()))) {
-                playerSetSubtitlesOn(true);
-                if (isDvrPlaying == 1) {
-                    dvrSubtitleFlag = 1;
+            if (Channel.isATV(mTunedChannel)) {
+                List<TvTrackInfo> info = AtvCcTool.getInstance().getAtvCcTracks();
+                notifyTracksChanged(info);
+                if (info.isEmpty()) {
+                    AtvCcTool.getInstance().stopCC();
+                    notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
+                } else {
+                    int selected = AtvCcTool.getInstance().getSavedCcChannel();
+                    if (selected != -1) {
+                        String trackId = AtvCcTool.getInstance().startCC(getApplicationContext(),
+                                selected);
+                        notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, trackId);
+                    }
                 }
+            } else {
+                boolean retSubtitle = (isDvrPlaying != 1) || (dvrSubtitleFlag != 1);
+
+                if (clear) {
+                    Log.w(TAG, "updateTrackAndSelect: clear Tracks, because not playing status");
+                    mTunedTracks.clear();
+                    notifyTracksChanged(mTunedTracks);
+                    return;
+                }
+                if (retSubtitle && (!FeatureUtil.getFeatureSupportCaptioningManager()
+                        || (mCaptioningManager != null && mCaptioningManager.isEnabled()))) {
+                    playerSetSubtitlesOn(true);
+                    if (isDvrPlaying == 1) {
+                        dvrSubtitleFlag = 1;
+                    }
+                }
+                mCurrentAudioTrackId = playerGetTracks(mTunedTracks, mTunedChannel, false);
+                notifyTracksChanged(mTunedTracks);
+                Log.i(TAG, "updateTrackAndSelect audio track selected: " + mCurrentAudioTrackId);
+                notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(mCurrentAudioTrackId));
+                notifyTrackSelected(TvTrackInfo.TYPE_VIDEO, "0");
+                initSubtitleOrTeletextIfNeed();
+                playerSetAdParamsWithDelay(Boolean.compare(mIsPip, false), true, mAudioADAutoStart ? 1100 : 0);
             }
-            mCurrentAudioTrackId = playerGetTracks(mTunedTracks, mTunedChannel, false);
-            notifyTracksChanged(mTunedTracks);
-            Log.i(TAG, "updateTrackAndSelect audio track selected: " + mCurrentAudioTrackId);
-            notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(mCurrentAudioTrackId));
-            notifyTrackSelected(TvTrackInfo.TYPE_VIDEO, "0");
-            initSubtitleOrTeletextIfNeed();
-            playerSetAdParamsWithDelay(Boolean.compare(mIsPip, false), true, mAudioADAutoStart ? 1100 : 0);
         }
 
         @Override
@@ -4619,6 +4573,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                     notifyVideoAvailable();
                                 }
                             } else {
+                                if (type.equals("ATV")) {
+                                    sendUpdateTrackMsg(PlayerState.PLAYING, false);
+                                }
                                 notifyVideoAvailable();
                             }
                             if (!Channel.isATV(mTunedChannel)) {
@@ -4700,6 +4657,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             if (mMainHandle != null) {
                                 mMainHandle.removeMessages(MSG_SET_TELETEXT_MIX_NORMAL);
                                 mMainHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
+                            }
+                            if (type.equals("ATV")) {
+                                sendUpdateTrackMsg(PlayerState.STOPPED, false);
                             }
                             break;
                         case "off":
@@ -9318,7 +9278,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 enableCC = true;
             }
         }
-        return enableCC;
+        return enableCC || AtvCcTool.getInstance().supportAtv();
     }
     public boolean isSubtitleCTL() {
        return getSubtitleFlag() >= SUBTITLE_CTL_HK_DVB_SUB;
