@@ -259,7 +259,6 @@ public class DtvkitDvbtSetup extends Activity {
         intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_DVBS_DVBT_DVBC, mSearchDvbcDvbtType);
         intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_NUMBER, mFoundServiceNumber);
         if (mFoundServiceNumber > 0) {
-            String serviceListJsonArray = (mServiceList != null && mServiceList.length() > 0) ? mServiceList.toString() : "";
             String firstServiceName = "";
             try {
                 if (mServiceList != null && mServiceList.length() > 0) {
@@ -280,7 +279,6 @@ public class DtvkitDvbtSetup extends Activity {
             } catch (JSONException e) {
                 Log.e(TAG, "finish JSONException = " + e.getMessage());
             }
-            intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_LIST, serviceListJsonArray);
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_FIRST_SERVICE, firstServiceName);
             if (mParameterManager != null) {
                 intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_LCN_STATE, mParameterManager.getAutomaticOrderingEnabled());
