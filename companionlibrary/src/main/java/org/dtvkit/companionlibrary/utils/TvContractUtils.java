@@ -569,13 +569,20 @@ public class TvContractUtils {
         String channelType, int originalNetworkId, int transportStreamId,
         int serviceId, int frequency, String ciNumber, String rawDisplayNumber) {
 
-        String result = null;
-        result = channelType
+        String result = channelType
                 + "-" + (frequency / 1000000)
                 + "-" + originalNetworkId
                 + "-" + transportStreamId
                 + "-" + serviceId
                 + "-" + ciNumber;
+        try {
+            // for ATV use
+            String signal = (String) internalProviderData.get("signal_type");
+            result = result + "-" + signal;
+        } catch (InternalProviderData.ParseException ignored) {}
+        if (DEBUG) {
+            Log.d(TAG,  "getUniqueStrForChannel::" + result);
+        }
         return result;
     }
 
