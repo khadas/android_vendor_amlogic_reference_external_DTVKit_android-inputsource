@@ -3568,16 +3568,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         protected void initSurface() {}
 
-        protected void tunePendingIfNeeded(long delayMillis) {
+        protected void tunePendingIfNeeded() {
             if (mPendingTuneUri != null) {
                 Log.d(TAG, "tunePending " + mPendingTuneUri);
                 Uri uri = mPendingTuneUri;
                 if (TvContract.isRecordedProgramUri(mPendingTuneUri)) {
                     mHandlerThreadHandle.removeMessages(MSG_TIMESHIFT_PLAY);
                     Message mess = mHandlerThreadHandle.obtainMessage(MSG_TIMESHIFT_PLAY, 0, 0, uri);
-                    boolean info = mHandlerThreadHandle.sendMessageDelayed(mess, delayMillis);
+                    boolean info = mHandlerThreadHandle.sendMessageDelayed(mess, 0);
                 } else {
-                    mMainHandle.postDelayed(() -> {onTune(uri);}, delayMillis);
+                    onTune(uri);
                 }
                 mPendingTuneUri = null;
             }
@@ -5643,7 +5643,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             mHandlerThreadHandle.post(() -> initSurface());
                             mCanPlay = true;
                             if (mSurface != null) {
-                                tunePendingIfNeeded(200);
+                                tunePendingIfNeeded();
                             }
                             // must be called after "setSurface"
                             /* refer this SOURCE_TYPE_DTV(1) in DroidLogicTvUtils.java */
