@@ -4510,10 +4510,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                              * type: "dvbtimeshifting" -> timeshift streaming
                              */
                             playerState = PlayerState.PLAYING;
-                            if (mTunedChannel == null) {
-                                return;
-                            }
                             if (type.equals("dvblive")) {
+                                if (mTunedChannel == null) {
+                                    return;
+                                }
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
                                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
                                 } else {
@@ -4547,6 +4547,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 });
                                 sendUpdateTrackMsg(PlayerState.PLAYING, true);
                             } else if (type.equals("dvbtimeshifting")) {
+                                if (mTunedChannel == null) {
+                                    return;
+                                }
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO)) {
                                     notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
                                 } else {
