@@ -2811,7 +2811,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         @Override
-        protected void onFinish(boolean tuneToATv, boolean ignoreFcc) {
+        protected void onFinish(boolean noStopATv, boolean ignoreFcc) {
             playerPipStop();
         }
     }
@@ -2893,6 +2893,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else {
                 if (!hasAnotherSession(this)) {
                     if (mMainHardware != null) {
+                        onFinishAsync(false, false); // can't block setSurface here!
                         mMainHardware.setSurface(null, null);
                     }
                     releaseTvHardware();
@@ -3045,9 +3046,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         @Override
-        protected void onFinish(boolean tuneToATv, boolean ignoreFcc) {
-            Log.i(TAG, "onFinish tuneToATv:" + tuneToATv + ", ignoreFcc:" + ignoreFcc);
-            if (tuneToATv && Channel.isATV(mTunedChannel)) {
+        protected void onFinish(boolean noStopATv, boolean ignoreFcc) {
+            Log.i(TAG, "onFinish noStopATv:" + noStopATv + ", ignoreFcc:" + ignoreFcc);
+            if (noStopATv && Channel.isATV(mTunedChannel)) {
                 Log.d(TAG, "onFinish No need to stop!");
             } else if (Channel.isATV(mTunedChannel)) {
                 atvPlayerStop();
@@ -3398,6 +3399,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             return true;
         }
 
+        @MainThread
         private void initHbbtvResource() {
             if (mIsPip) {
                 return;
@@ -3411,6 +3413,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
+        @MainThread
         private void deInitHbbtvResource() {
             if (mIsPip) {
                 return;
@@ -3532,11 +3535,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mSessionState = SessionState.RELEASING;
             doDestroyOverlay();
             mMainHandle.removeCallbacksAndMessages(null);
-            mHandlerThreadHandle.removeCallbacksAndMessages(null);
             if (!hasAnotherSession(this)) {
                 deInitHbbtvResource();
-                // MUST before MSG_DO_RELEASE
-                mHandlerThreadHandle.post(() -> onFinish(false, false));
             }
             mHandlerThreadHandle.sendEmptyMessage(MSG_DO_RELEASE);
         }
@@ -3544,6 +3544,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private void doRelease() {
             Log.i(TAG, "doRelease");
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
+            if (!hasAnotherSession(this)) {
+                onFinish(true, false);
+            }
             finalReleaseWorkThread();
             removeTunerSession(this);
             mSessionState = SessionState.RELEASED;
@@ -3556,7 +3559,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected abstract boolean doTune(Channel oldChannel, Channel newChannel,
                                           Uri channelUri, String dvbUri, boolean mhegTune);
 
-        protected abstract void onFinish(boolean tuneToATv, boolean ignoreFcc);
+        protected abstract void onFinish(boolean noStopATv, boolean ignoreFcc);
+        @MainThread
+        protected void onFinishAsync(final boolean noStopATv, final boolean ignoreFcc) {
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.postAtFrontOfQueue(() -> onFinish(noStopATv, ignoreFcc));
+            }
+        }
 
         protected abstract boolean readyToPlay();
 
