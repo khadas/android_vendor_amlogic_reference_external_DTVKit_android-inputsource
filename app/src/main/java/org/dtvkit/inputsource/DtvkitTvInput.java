@@ -85,8 +85,11 @@ import com.google.common.collect.Lists;
 
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.droidlogic.dtvkit.IndentingPrintWriter;
+import org.droidlogic.dtvkit.TvMTSSetting;
+
 import org.dtvkit.inputsource.caption.AtvCcTool;
 import org.dtvkit.inputsource.caption.CustomerFont;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -117,6 +120,7 @@ import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.stream.Collectors;
+import java.util.Collections;
 
 public class DtvkitTvInput extends TvInputService implements SystemControlEvent.DisplayModeListener {
     private static final String TAG = "DtvkitTvInput";
@@ -180,6 +184,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private String mCurrentRatingSystem = "DVB";
 
     private String mInputId;
+
+    private TvMTSSetting mTvMTSSetting;
 
     private enum SessionState {
         NONE, TUNED, RELEASING, RELEASED
@@ -653,6 +659,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         mConnectivityManager = (ConnectivityManager) this.getSystemService(ConnectivityManager.class);
         mSystemControlManager = SystemControlManager.getInstance();
+        mTvMTSSetting = TvMTSSetting.getInstance();
 
         mContentResolver.registerContentObserver(
                 Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
@@ -2955,6 +2962,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 if (Channel.isATV(mTunedChannel)) {
                     playResult = playerPlay_ATV(mTunedChannel);
+                    setATVMtsMode(mContext);
                 } else {
                     playResult = playerPlay(INDEX_FOR_MAIN, dvbUri, mAudioADAutoStart,
                             mainMuteStatus, 0, previousUriStr, nextUriStr).equals("ok");
@@ -2999,6 +3007,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     public abstract class DtvkitTvInputSession extends Session {
         protected final String TAG = getClass().getSimpleName() + "@" + mDtvkitTvInputSessionCount;
         protected Channel mTunedChannel = null;
+        protected final Context mContext;
 
         private List<TvTrackInfo> mTunedTracks = new ArrayList<>();
         private RecordedProgram recordedProgram = null;
@@ -3088,6 +3097,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         DtvkitTvInputSession(DtvkitTvInput service, boolean isPip) {
             super(service.getApplicationContext());
+            mContext = service.getApplicationContext();
             outService = service;
             mIsPip = isPip;
             mCurrentSessionIndex = mDtvkitTvInputSessionCount++;
@@ -4154,6 +4164,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else if (TextUtils.equals("pvr_seek_information", action)) {
                 long seekTime = data.getLong("pvr_seek_time");
                 playerSeekTo(seekTime / 1000);
+            } else if ("action_atv_set_output_mode".equals(action) && data != null) {
+                int value = data.getInt("mts_output_mode", 0);
+                DataProviderManager.putIntValue(mContext, ConstantManager.ACTION_ATV_SET_MTS_MODE, value);
             }
         }
 
@@ -7469,6 +7482,44 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
 
         return type;
+    }
+
+    private int playerGetAtvMtsMode() {
+        int defaultMTSmode = 0;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Atv.getAudioOutmode", new JSONArray());
+            if (obj != null && obj.getBoolean("accepted")) {
+                defaultMTSmode = obj.getInt("data");
+            }
+            Log.d(TAG, "playerGetAtvMtsMode mode = " + defaultMTSmode);
+        } catch (Exception e) {
+            Log.e(TAG, "playerGetAtvMtsMode failed, " + e.getMessage());
+        }
+        return defaultMTSmode;
+    }
+
+    private void playerSetAtvMtsMode(int mode) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(mode);
+            DtvkitGlueClient.getInstance().request("Atv.setAudioOutmode", args);
+        } catch (Exception e) {
+            Log.e(TAG, "playerSetAtvMtsMode failed, " + e.getMessage());
+        }
+    }
+
+    private void setATVMtsMode(Context context) {
+        int setmode = 0;
+        int savedmode = DataProviderManager.getIntValue(context, ConstantManager.ACTION_ATV_SET_MTS_MODE, playerGetAtvMtsMode());
+        List<TvMTSSetting.Mode> supportMode = mTvMTSSetting.getAtvMTSMode().getOutList();
+        Collections.sort(supportMode);
+        for (TvMTSSetting.Mode mode : supportMode) {
+            setmode = mode.getValue();
+            if (setmode == savedmode) {
+                break;
+            }
+        }
+        playerSetAtvMtsMode(setmode);
     }
 
     private void playerSetAudioStreamType(int type) {

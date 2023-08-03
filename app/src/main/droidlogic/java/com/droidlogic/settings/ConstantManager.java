@@ -188,6 +188,8 @@ public class ConstantManager {
     public static final int ADB_TELETEXT_TYPE_SCHEDULE = 0x04;
     public static final int ADB_TELETEXT_TYPE_SUBTITLE_HARD_HEARING = 0x05;
 
+    //add define for atv
+    public static final String ACTION_ATV_SET_MTS_MODE = "action_atv_set_mts_mode";
     //add dtvkit satellite
     public static final String DTVKIT_SATELLITE_DATA = "/mnt/vendor/odm_ext/etc/tvconfig/dtvkit/satellite.json";
     public static final String DTVKIT_LNBS_DATA = "/mnt/vendor/odm_ext/etc/tvconfig/dtvkit/lnb.json";
