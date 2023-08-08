@@ -96,10 +96,6 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileDescriptor;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
@@ -107,7 +103,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -117,8 +112,6 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 import java.util.stream.Collectors;
 import java.util.Collections;
 
@@ -589,14 +582,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 String from = intent.getStringExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM);
                 DtvkitTvInputSession mainSession = getMainTunerSession();
                 Bundle bundle = new Bundle();
-                if (TextUtils.equals("DvbUpdatedChannel", from)) {
+                if (TextUtils.equals("DvbUpdatedChannel", from)
+                    || TextUtils.equals("TVStatusChanged", from)) {
                     sendEmptyMessageToInputThreadHandler(MSG_STOP_MONITOR_SYNCING);
                     if (mainSession != null) {
                         mainSession.sendBundleToAppByTif(ConstantManager.EVENT_CHANNEL_LIST_UPDATED, bundle);
-                        if (!TextUtils.isEmpty(mDynamicDbSyncTag)) {
-                            mainSession.sendMsgTsUpdate(mDynamicDbSyncTag);
-                            mDynamicDbSyncTag = "";
-                        }
+                        mainSession.sendMsgTsUpdate();
                     }
                 } else if (TextUtils.equals("CiplusUpdateService", from)) {
                     sendEmptyMessageToInputThreadHandler(MSG_STOP_MONITOR_SYNCING);
@@ -826,6 +817,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private void updateDtvkitDatabase() {
         Log.i(TAG, "update Dtvkit Database start");
         checkAndUpdateLcn();
+        int dvbSource = getCurrentDvbSource();
+        EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(dvbSource));
         Bundle parameters = new Bundle();
         parameters.putString(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_SIGNAL_TYPE, "full");
         Intent intent = new Intent(this, DtvkitEpgSync.class);
@@ -1610,11 +1603,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private final DtvkitGlueClient.SignalHandler mChannelUpdateHandler = (signal, data) -> {
         if (signal.equals("DvbUpdatedChannel")) {
             Log.i(TAG, "DvbUpdatedChannel");
-            try {
-                mDynamicDbSyncTag = !TextUtils.equals(data.getString("uri"), mCiTuneServiceUri) ? data.getString("uri") : "";
-            } catch (JSONException ignore) {
+            DtvkitTvInputSession mainSession = getMainTunerSession();
+            if (mainSession != null) {
+                mainSession.mTuneInfo.update = true;
+                mainSession.mTuneInfo.isDTv = true;
+                mainSession.mTuneInfo.dvbUri = data.optString("uri");
             }
-            Log.d(TAG, "new Uri:" + mDynamicDbSyncTag);
             checkAndUpdateLcn();
             int dvbSource = getCurrentDvbSource();
             EpgSyncJobService.setChannelTypeFilter(TvContractUtils.dvbSourceToChannelTypeString(dvbSource));
@@ -3053,6 +3047,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private boolean mIsTeletextStarted = false;
         private boolean mIsMhepAppStarted = false;
+        private AlertDialog mProDialog;
+
+        private final TuneInfo mTuneInfo = new TuneInfo();
+        private final class TuneInfo {
+            public boolean update = false;
+            public boolean isDTv = true;
+            public int frequency = 0;
+            public String dvbUri = "";
+        }
 
         private final class AvailableState {
             AvailableState() {
@@ -3451,7 +3454,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mAudioADAutoStart = mDataManager.getIntParameters(DataManager.TV_KEY_AD_SWITCH) == 1;
             mAudioSystemCmdManager.handleAdtvAudioEvent(
                     AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0, 0);
-
+            mTuneInfo.isDTv = !Channel.isATV(targetChannel);
             boolean playResult = doTune(mTunedChannel, targetChannel, channelUri, dvbUri, mhegTune);
             if (!isSessionAvailable()) {
                 return;
@@ -3480,6 +3483,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 return;
             }
             mSessionState = SessionState.RELEASING;
+            exitNumberSearch();
             doDestroyOverlay();
             mMainHandle.removeCallbacksAndMessages(null);
             if (!hasAnotherSession(this)) {
@@ -4167,7 +4171,44 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             } else if ("action_atv_set_output_mode".equals(action) && data != null) {
                 int value = data.getInt("mts_output_mode", 0);
                 DataProviderManager.putIntValue(mContext, ConstantManager.ACTION_ATV_SET_MTS_MODE, value);
+            } else if (TextUtils.equals("tvscan_number_search", action)) {
+                int number = Integer.parseInt(data.getString("number_search_number"));
+                enterNumberSearch();
+                mHandlerThreadHandle.sendMessage(mHandlerThreadHandle.obtainMessage(MSG_NUMBER_SEARCH, number, 0));
             }
+        }
+
+
+
+        private void enterNumberSearch() {
+            final AlertDialog.Builder builder = new AlertDialog.Builder(DtvkitTvInput.this);
+            mProDialog = builder.create();
+            final View dialogView = View.inflate(DtvkitTvInput.this, R.layout.confirm_search, null);
+            final TextView title = dialogView.findViewById(R.id.dialog_title);
+            dialogView.findViewById(R.id.confirm).setVisibility(View.INVISIBLE);
+            dialogView.findViewById(R.id.cancel).setVisibility(View.INVISIBLE);
+            title.setText(R.string.number_search_and_wait);
+            mProDialog.setMessage(getResources().getString(R.string.searching));
+            //prevent exit key
+            mProDialog.setCancelable(false);
+            mProDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+            mProDialog.setView(dialogView);
+            mProDialog.show();
+            WindowManager.LayoutParams params = mProDialog.getWindow().getAttributes();
+            params.width = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
+                    500, getResources().getDisplayMetrics());
+            params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+            mProDialog.getWindow().setAttributes(params);
+            mProDialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
+            Log.w(TAG, "enterNumberSearch");
+        }
+
+        private void exitNumberSearch() {
+            if (mProDialog != null && mProDialog.isShowing()) {
+                Log.w(TAG, "exitNumberSearch");
+                mProDialog.dismiss();
+            }
+            mProDialog = null;
         }
 
         @Override
@@ -4511,15 +4552,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                } else if (signal.equals("PlayerStatusChanged")) {
                     String state = "off";
                     String type = "dvblive";
+                    String dvbUri = "";
                     try {
                         state = data.getString("state");
                         type = data.getString("type");
+                        dvbUri = data.optString("uri");
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
                     }
                     if (mTunedChannel != null) {
-                        if ((Channel.isATV(mTunedChannel) && !type.equals("ATV"))
-                            || (!Channel.isATV(mTunedChannel) && type.equals("ATV"))) {
+                        if ((!mTuneInfo.isDTv && !type.equals("ATV"))
+                            || (mTuneInfo.isDTv && type.equals("ATV"))) {
                             Log.i(TAG, "Ignore signal: " + state);
                             return;
                         }
@@ -4532,6 +4575,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                              * type: "dvbrecording"    -> dvr playback
                              * type: "dvbtimeshifting" -> timeshift streaming
                              */
+                            if (mTuneInfo.update) {
+                                mTuneInfo.update = false;
+                                mTuneInfo.dvbUri = dvbUri;
+                                sendMsgTsUpdate();
+                            }
                             playerState = PlayerState.PLAYING;
                             if (type.equals("dvblive")) {
                                 if (mTunedChannel == null) {
@@ -4591,7 +4639,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 }
                                 notifyVideoAvailable();
                             }
-                            if (!Channel.isATV(mTunedChannel)) {
+                            if (mTuneInfo.isDTv) {
                                 playerSetAdParamsWithDelay(Boolean.compare(mIsPip, false), true, mAudioADAutoStart ? 1100 : 0);
                             }
                             if (mMainHandle != null) {
@@ -4602,12 +4650,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                             }
                             break;
                         case "audio_only_playing":
+                            if (mTuneInfo.update) {
+                                mTuneInfo.update = false;
+                                mTuneInfo.dvbUri = dvbUri;
+                                sendMsgTsUpdate();
+                            }
                             if (type.equals("dvblive")) {
                                 if (mTunedChannel == null) {
                                     return;
                                 }
                                 notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
-                                sendUpdateTrackMsg(PlayerState.PLAYING, false);
+                                sendUpdateTrackMsg(PlayerState.PLAYING, true);
                             }
                             if (mMainHandle != null) {
                                 mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
@@ -5180,6 +5233,50 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                         mProviderSync.run(new FvpChannelEnhancedInfoSync(outService, FvpChannelEnhancedInfoSync.FVP_SYNC_IP_CHANNEL_INFO));
                     }
+                } else if (signal.equals("TVStatusChanged")) {
+                    boolean tvScan = false;
+                    String status = "";
+                    int freq = 0;
+                    try {
+                        tvScan = TextUtils.equals(data.getString("name"), "tv_scan");
+                        status = data.getString("status");
+                        freq = data.optInt("freq");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    if (tvScan) {
+                        if (TextUtils.equals("no_program_searched", status)) {
+                            runOnMainThread(this::exitNumberSearch);
+                        } else if (TextUtils.equals("dtv_air_searched", status)
+                                || TextUtils.equals("atv_air_searched", status)
+                                || TextUtils.equals("atv_cable_searched", status)) {
+                            runOnMainThread(this::exitNumberSearch);
+                            if (freq != 0) {
+                                mTuneInfo.update = true;
+                                mTuneInfo.frequency = freq;
+                                mTuneInfo.isDTv = status.contains("dtv");
+                                runOnMainThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (mMainHardware != null) {
+                                            Log.i(TAG, "update mMainStreamConfig isDTv:" + mTuneInfo.isDTv);
+                                            mMainHardware.setSurface(mSurface, mTuneInfo.isDTv ? mMainStreamConfig[0] : mMainStreamConfig[1]);
+                                        }
+                                    }
+                                });
+                            } else {
+                                Log.e(TAG, "wrong params");
+                                return;
+                            }
+                            Bundle parameters = new Bundle();
+                            Intent intent = new Intent(outService, DtvkitEpgSync.class);
+                            intent.putExtra("inputId", mInputId);
+                            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_FROM, signal);
+                            intent.putExtra(EpgSyncJobService.BUNDLE_KEY_SYNC_PARAMETERS, parameters);
+                            startService(intent);
+                            sendEmptyMessageToInputThreadHandler(MSG_START_MONITOR_SYNCING);
+                        }
+                    }
                 }
             }
         };
@@ -5206,6 +5303,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_RESET_CI_TUNE_SERVICE_URI = 20;
         protected static final int MSG_SET_STREAM_VOLUME = 21;
         protected static final int MSG_EVENT_SUBTITLE_OPENED = 22;
+        protected static final int MSG_NUMBER_SEARCH = 23;
 
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
@@ -5287,7 +5385,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         setBlockMute(mute);
                         break;
                     case MSG_SET_STREAM_VOLUME:
-                        if (Channel.isATV(mTunedChannel)) {
+                        if (!mTuneInfo.isDTv) {
                             if (msg.arg1 == 0) {
                                 mAudioSystemCmdManager.closeTvAudio();
                             } else {
@@ -5416,11 +5514,46 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         sendBundleToAppByTif(ConstantManager.ACTION_CI_PLUS_INFO, updateEvent);
                         break;
                     case MSG_TS_UPDATE:
-                        String newUri = (String)msg.obj;
-                        Log.d(TAG, "MSG_TS_UPDATE, uri:"+ newUri);
+                        String newUri = mTuneInfo.dvbUri;
                         Uri retuneUri;
                         long id = 0;
-                        Channel channel = TvContractUtils.getChannelWithDvbUri(mContentResolver, mInputId, newUri);
+                        Channel channel = null;
+                        List<Channel> channelList = TvContractUtils.getChannels(mContentResolver, mInputId);
+                        if (!mTuneInfo.isDTv && mTuneInfo.frequency > 0) {
+                            // atv case
+                            int freq = mTuneInfo.frequency;
+                            Log.d(TAG, "MSG_TS_UPDATE, freq:" + freq);
+                            int antennaType = 0;
+                            String dtvType = mDataManager.getStringParameters(DataManager.KEY_ISDB_ANTENNA_TYPE);
+                            if (TextUtils.equals(TvContract.Channels.TYPE_ATSC_C, dtvType)) {
+                                antennaType = 1;
+                            }
+                            for (Channel nextChannel : channelList) {
+                                if (Channel.isATV(nextChannel) && nextChannel.getAntennaType() == antennaType
+                                    && nextChannel.getFrequency() == freq) {
+                                    channel = nextChannel;
+                                    break;
+                                }
+                            }
+                        } else {
+                            Log.d(TAG, "MSG_TS_UPDATE, uri:" + newUri);
+                            for (Channel nextChannel : channelList) {
+                                InternalProviderData data = nextChannel.getInternalProviderData();
+                                if (data == null) {
+                                    continue;
+                                }
+                                String dvb = null;
+                                try {
+                                    dvb = (String) data.get("dvbUri");
+                                } catch (InternalProviderData.ParseException e) {
+                                    e.printStackTrace();
+                                }
+                                if (newUri.equals(dvb)) {
+                                    channel = nextChannel;
+                                    break;
+                                }
+                            }
+                        }
                         boolean found = false;
                         if (channel != null) {
                             found = true;
@@ -5451,6 +5584,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.i(TAG,"reset mCiTuneServiceUri");
                         mCiTuneServiceUri = "";
                         break;
+                    case MSG_NUMBER_SEARCH:
+                        onFinish(false, false);
+                        // update liveTv mute status.
+                        notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
+                        startNumberSearch(msg.arg1);
+                        break;
                     default:
                         Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
                         break;
@@ -5459,6 +5598,32 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 return true;
             });
             mMainHandle = new Handler(Looper.getMainLooper(), new MainCallback(this));
+        }
+
+        private void startNumberSearch(int channelNumber) {
+            String dtvType = mDataManager.getStringParameters(DataManager.KEY_ISDB_ANTENNA_TYPE);
+            String type = "AIR";
+            if (TextUtils.equals(TvContract.Channels.TYPE_ATSC_C, dtvType)) {
+                type = "CABLE";
+            }
+            String command = "Tv.startManualSearchAndPlayByChannelId";
+            JSONArray args = new JSONArray();
+            args.put(type);
+            args.put(String.valueOf(channelNumber));
+            try {
+                DtvkitGlueClient.getInstance().request(command, args);
+                Log.d(TAG, "command = " + command + ", args = " + args);
+            } catch (Exception e) {
+                Toast.makeText(getApplicationContext(), R.string.number_search_error, Toast.LENGTH_SHORT).show();
+                exitNumberSearch();
+            }
+        }
+
+        @Override
+        public void notifyChannelRetuned(Uri channelUri) {
+            super.notifyChannelRetuned(channelUri);
+            mTuneInfo.update = false;
+            Log.d(TAG, "notifyChannelRetuned:" + channelUri);
         }
 
         //use osd to hide video instead
@@ -6042,11 +6207,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
         }
 
-        public void sendMsgTsUpdate(String uri) {
+        public void sendMsgTsUpdate() {
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_TS_UPDATE);
-                Message msg = mHandlerThreadHandle.obtainMessage(MSG_TS_UPDATE, uri);
-                mHandlerThreadHandle.sendMessage(msg);
+                mHandlerThreadHandle.sendEmptyMessage(MSG_TS_UPDATE);
             }
         }
 
@@ -6202,7 +6366,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     result = "type=\"TYPE_DVB_S\" or type=\"TYPE_DVB_S2\"";
                     break;
                 case ParameterManager.SIGNAL_ISDBT:
-                    result = "type=\"TYPE_ISDB_T\"";
+                    result = "type=\"TYPE_ISDB_T\" or type=\"TYPE_PAL\" or type=\"TYPE_NTSC\" or type=\"TYPE_SECAM\"";
                     break;
                 default:
                     break;
@@ -6221,16 +6385,29 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     cursor = outService.getContentResolver().query(uri, Channel.PROJECTION, signalSelection, null, null);
                 }
                 if (cursor == null || cursor.getCount() == 0) {
+                    Log.w(TAG, "getFirstChannel total=0");
                     return null;
                 }
+
+                int antennaType = 0;
+                if (dvbSource == ParameterManager.SIGNAL_ISDBT) {
+                    String dtvType = mDataManager.getStringParameters(DataManager.KEY_ISDB_ANTENNA_TYPE);
+                    if (TextUtils.equals(TvContract.Channels.TYPE_ATSC_C, dtvType)) {
+                        antennaType = 1;
+                    }
+                }
+
                 while (cursor.moveToNext()) {
                     Channel nextChannel = Channel.fromCursor(cursor);
-                    if (nextChannel != null && nextChannel.getType().contains(signalType)) {
+                    Log.i(TAG, "channel " + nextChannel);
+                    if ((nextChannel.getType().contains(signalType) && antennaType == 0)
+                        || (Channel.isATV(nextChannel) && nextChannel.getAntennaType() == antennaType)) {
                         channel = nextChannel;
                         break;
                     }
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                Log.e(TAG, " " + e.getMessage());
             } finally {
                 if (cursor != null) {
                     cursor.close();

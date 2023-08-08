@@ -670,10 +670,11 @@ public class TvContractUtils {
      * @param resolver Application's ContentResolver.
      * @return List of channels.
      */
-    public static List<Channel> getChannels(ContentResolver resolver) {
+    public static List<Channel> getChannels(ContentResolver resolver, String inputId) {
+        Uri uri = TvContract.buildChannelsUriForInput(inputId);
         List<Channel> channels = new ArrayList<>();
         // TvProvider returns programs in chronological order by default.
-        try (Cursor cursor = resolver.query(Channels.CONTENT_URI, Channel.PROJECTION, null, null, null)) {
+        try (Cursor cursor = resolver.query(uri, Channel.PROJECTION, null, null, null)) {
             if (cursor == null || cursor.getCount() == 0) {
                 return channels;
             }

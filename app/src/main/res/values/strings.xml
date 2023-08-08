@@ -70,7 +70,9 @@
     <string name="terrestrial">Terrestrial</string>
     <string name="satellite">Satellite</string>
     <string name="cable">Cable</string>
-
+    <string name="searching">Searching</string>
+    <string name="number_search_and_wait">Searching channel, please wait...</string>
+    <string name="number_search_error">Searching channel error, Aborting...</string>
     <!-- manual search -->
     <string name="adtv_type">TV Type:</string>
     <string name="antenna_type">Antenna Type:</string>
