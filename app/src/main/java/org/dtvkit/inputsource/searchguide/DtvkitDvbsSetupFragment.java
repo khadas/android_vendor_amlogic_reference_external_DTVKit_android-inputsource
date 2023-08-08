@@ -760,7 +760,8 @@ public class DtvkitDvbsSetupFragment extends SearchStageFragment {
         if (opType == DvbsParameterManager.OPERATOR_M7
             || opType == DvbsParameterManager.OPERATOR_ASTRA_HD_PLUS
             || opType == DvbsParameterManager.OPERATOR_SKY_D
-            || opType == DvbsParameterManager.OPERATOR_AIRTEL) {
+            || opType == DvbsParameterManager.OPERATOR_AIRTEL
+            || opType == DvbsParameterManager.OPERATOR_SUNDIRECT) {
             args.put("quick");
             args.put(opType);
             args.put("fti");

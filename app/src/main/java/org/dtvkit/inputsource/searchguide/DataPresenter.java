@@ -94,6 +94,8 @@ public class DataPresenter {
             mOperateType = DvbsParameterManager.OPERATOR_AIRTEL;
         } else if (operateType.contains("TKGS")) {
             mOperateType = DvbsParameterManager.OPERATOR_TKGS;
+        } else if (operateType.contains("SunDirect")) {
+            mOperateType = DvbsParameterManager.OPERATOR_SUNDIRECT;
         } else {
             mOperateType = DvbsParameterManager.OPERATOR_DEFAULT;
         }

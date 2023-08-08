@@ -43,6 +43,7 @@ public class DvbsParameterManager {
     public static final int OPERATOR_SKY_D = 1;
     public static final int OPERATOR_M7 = 2;
     public static final int OPERATOR_AIRTEL = 0x400;
+    public static final int OPERATOR_SUNDIRECT = 0x401;
     public static final int OPERATOR_TKGS = 0x0301;
     public static final int OPERATOR_DEFAULT = 0xFFFF;
 
