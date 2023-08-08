@@ -4682,12 +4682,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         case "blocked":
                             String Rating = "";
                             int ratingAge = 4;
-                            try {
-                                ratingAge = data.getInt("rating");
-                                Rating = String.format("DVB_%d", ratingAge);
-                            } catch (JSONException ignore) {
-                                Log.e(TAG, ignore.getMessage());
+                            if (!type.equals("ATV")) {
+                                try {
+                                    ratingAge = data.getInt("rating");
+                                    Rating = String.format("DVB_%d", ratingAge);
+                                } catch (JSONException ignore) {
+                                    Log.e(TAG, ignore.getMessage());
+                                }
+                            } else {
+                                Log.d(TAG, "ATV chgannel blocked");
+                                Rating = "DVB_4";
                             }
+
                             if (mMainHandle != null) {
                                 mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
                                 Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
@@ -5760,7 +5766,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         private void setUnBlock(TvContentRating unblockedRating) {
             Log.i(TAG, "setUnBlock " + unblockedRating);
-            requestUnblockContent(mIsPip ? INDEX_FOR_PIP : INDEX_FOR_MAIN);
+            if (mTunedChannel != null && Channel.isATV(mTunedChannel)) {
+                Log.d(TAG, "set ATV UnBlock ");
+                requestATVUnblockContent();
+            } else {
+                requestUnblockContent(mIsPip ? INDEX_FOR_PIP : INDEX_FOR_MAIN);
+            }
             notifyContentAllowed();
         }
 
@@ -6370,18 +6381,45 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private void requestBlockChannel(long channelId, boolean isLocked) {
             Channel channel = getChannel(channelId);
             if (channel != null) {
-                String dvbUri = getChannelInternalDvbUri(channel);
-                if (mParameterManager != null) {
-                    mParameterManager.setChannelBlock(isLocked, dvbUri);
-                    if (mTunedChannel != null && (mTunedChannel.getId() == channelId)) {
-                        if (mMainHandle != null) {
-                            mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
-                            Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
-                            msg.arg1 = isLocked ? 0 : 1;
-                            mMainHandle.sendMessageDelayed(msg, 0);
+                if (Channel.isATV(channel)) {
+                    InternalProviderData data = channel.getInternalProviderData();
+                    if (data == null) {
+                        Log.d(TAG, "requestBlockChannel channel data is null ");
+                        return;
+                    }
+                    if (mParameterManager != null) {
+                        try {
+                            int unikey = Integer.parseInt((String) data.get("unikey")); //unikey
+                            mParameterManager.setATVChannelBlock(isLocked, unikey);
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
-                        if (!isLocked) {
-                            notifyContentAllowed();
+                        if (mTunedChannel != null && (mTunedChannel.getId() == channelId)) {
+                            if (mMainHandle != null) {
+                                mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                                Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                                msg.arg1 = isLocked ? 0 : 1;
+                                mMainHandle.sendMessageDelayed(msg, 0);
+                            }
+                            if (!isLocked) {
+                                notifyContentAllowed();
+                            }
+                        }
+                    }
+                } else {
+                    String dvbUri = getChannelInternalDvbUri(channel);
+                    if (mParameterManager != null) {
+                        mParameterManager.setChannelBlock(isLocked, dvbUri);
+                        if (mTunedChannel != null && (mTunedChannel.getId() == channelId)) {
+                            if (mMainHandle != null) {
+                                mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                                Message msg = mMainHandle.obtainMessage(MSG_EVENT_SHOW_HIDE_OVERLAY);
+                                msg.arg1 = isLocked ? 0 : 1;
+                                mMainHandle.sendMessageDelayed(msg, 0);
+                            }
+                            if (!isLocked) {
+                                notifyContentAllowed();
+                            }
                         }
                     }
                 }
@@ -8175,6 +8213,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             JSONArray args = new JSONArray();
             args.put(index);
             DtvkitGlueClient.getInstance().request("Player.unblock", args);
+        } catch (Exception e) {
+            Log.e(TAG, "requestUnblockContent " + e.getMessage());
+        }
+    }
+
+    private void requestATVUnblockContent() {
+        try {
+            JSONArray args = new JSONArray();
+            DtvkitGlueClient.getInstance().request("AtvPlayer.setChannelUnblock", args);
         } catch (Exception e) {
             Log.e(TAG, "requestUnblockContent " + e.getMessage());
         }

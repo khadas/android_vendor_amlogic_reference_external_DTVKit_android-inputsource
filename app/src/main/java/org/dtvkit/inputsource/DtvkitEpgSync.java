@@ -194,7 +194,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setTransportStreamId(0)
                         .setServiceId(0)
                         .setInternalProviderData(data)
-                        .setLocked(0)
+                        .setLocked(service.getBoolean("Block") == true ? 1: 0)
                         .setChannelAntennaType(service.getInt("SigType"))
                         .build());
             }

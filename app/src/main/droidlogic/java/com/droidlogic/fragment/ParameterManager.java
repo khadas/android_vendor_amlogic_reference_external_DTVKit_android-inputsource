@@ -2725,6 +2725,17 @@ public class ParameterManager {
         }
     }
 
+    public void setATVChannelBlock(boolean block, int atvUnikey) {
+        JSONArray args = new JSONArray();
+        try
+        {
+            args.put(atvUnikey);
+            args.put(block);
+            DtvkitGlueClient.getInstance().request("AtvPlayer.setChannelControlOn", args);
+        } catch (Exception e) {
+        }
+    }
+
     public int getTvSignalStatus() {
         int ret = 0;
         try {
