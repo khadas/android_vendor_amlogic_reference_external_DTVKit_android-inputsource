@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import com.amlogic.hbbtv.HbbTvManager;
 import com.droidlogic.app.CCSubtitleView;
 
+import org.dtvkit.inputsource.EWBSAlarmOverlayView;
 import org.json.JSONArray;
 
 import com.droidlogic.dtvkit.inputsource.CiMenuView;
@@ -31,6 +32,8 @@ import com.droidlogic.dtvkit.inputsource.HbbTvOverlayView;
 import org.droidlogic.dtvkit.SubtitleServerView;
 import org.droidlogic.dtvkit.MhegOverlayView;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import com.droidlogic.dtvkit.inputsource.utils.Constant;
 
@@ -49,6 +52,7 @@ public class DtvkitOverlayView extends FrameLayout {
     private int w;
     private int h;
     private HbbTvOverlayView mHbbTvFrameLayout = null;
+    private EWBSAlarmOverlayView mEwbsAlarmOverlayView = null;
 
     private boolean mhegTookKey = false;
     private KeyEvent lastMhegKey = null;
@@ -75,6 +79,8 @@ public class DtvkitOverlayView extends FrameLayout {
         mCasOsm.setVisibility(View.GONE);
         ciOverlayView = new CiMenuView(getContext());
         addView(ciOverlayView);
+        mEwbsAlarmOverlayView = new EWBSAlarmOverlayView(getContext());
+        addView(mEwbsAlarmOverlayView);
     }
 
     public void destroy() {
@@ -107,6 +113,10 @@ public class DtvkitOverlayView extends FrameLayout {
         if (mCasOsm != null) {
             removeView(mCasOsm);
             mCasOsm = null;
+        }
+        if (mEwbsAlarmOverlayView != null) {
+            removeView(mEwbsAlarmOverlayView);
+            mEwbsAlarmOverlayView = null;
         }
         removeView(mHbbTvFrameLayout);
     }
@@ -282,6 +292,7 @@ public class DtvkitOverlayView extends FrameLayout {
         h = height;
         nativeOverlayView.setSize(width, height);
         mSubServerView.setSize(width, height);
+        mEwbsAlarmOverlayView.setSize(width, height);
     }
 
     public void setSize(int x, int y, int width, int height) {
@@ -363,6 +374,18 @@ public class DtvkitOverlayView extends FrameLayout {
 
     public int getCasOsmDisplayMode() {
         return mCasOsmDisplayMode;
+    }
+
+    public void showEWBSAlarmView(JSONObject EWBSData) {
+        if (mEwbsAlarmOverlayView != null) {
+            mEwbsAlarmOverlayView.showEWBSJsonMsg(EWBSData);
+            mEwbsAlarmOverlayView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    public void hideEWBSAlarmView() {
+        mEwbsAlarmOverlayView.hideEWBSAlarmView();
+        mEwbsAlarmOverlayView.setVisibility(View.GONE);
     }
 
     public boolean checkMhegKeyLimit(KeyEvent event) {

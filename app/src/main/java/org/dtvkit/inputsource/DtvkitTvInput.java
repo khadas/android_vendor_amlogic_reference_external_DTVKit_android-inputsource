@@ -4175,6 +4175,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 int number = Integer.parseInt(data.getString("number_search_number"));
                 enterNumberSearch();
                 mHandlerThreadHandle.sendMessage(mHandlerThreadHandle.obtainMessage(MSG_NUMBER_SEARCH, number, 0));
+            } else if (TextUtils.equals("action_ewbs_switch_off", action)) {
+                if (mView != null) {
+                    mView.hideEWBSAlarmView();
+                }
+                if (mHandlerThreadHandle != null) {
+                    Message msg = mMainHandle.obtainMessage(MSG_BLOCK_MUTE_OR_UNMUTE, 0, 0);
+                    mHandlerThreadHandle.sendMessage(msg);
+                }
             }
         }
 
@@ -5199,9 +5207,39 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         Log.i(TAG,"EWSNotify error");
                     }
                 } else if (signal.equals("EWBSNotify")) {
-                    Bundle EWBSEvent = new Bundle();
-                    EWBSEvent.putString("EWBSNotify", data.toString());
-                    notifySessionEvent(ConstantManager.ACTION_EWBS_NOTIFY, EWBSEvent);
+                    if (DataProviderManager.getBooleanValue(outService, ConstantManager.EWBS_SWITCH, false)) {
+                        Bundle EWBSEvent = new Bundle();
+                        try {
+                            int start_end_flag = data.getInt("start_end_flag");
+                            if (start_end_flag == 1) {
+                                mMainHandle.post(() -> {
+                                    mView.showEWBSAlarmView(data);
+                                });
+
+                                // Is there an alarm built-in sound, if there is a need to play an alarm MP3 file
+                                // If the value is not 0, the mute channel sound is required, and the alarm sound is played
+                                int has_builtin_sound = data.getInt("has_builtin_sound");
+
+                                // The file ID of the current alarm sound (temporary code stream case does not support)
+                                int builtin_sound_id = data.getInt("builtin_sound_id");
+
+                                Message msg = mMainHandle.obtainMessage(MSG_BLOCK_MUTE_OR_UNMUTE, has_builtin_sound, 0);
+                                mHandlerThreadHandle.sendMessage(msg);
+                                EWBSEvent.putBoolean("has_builtin_sound", has_builtin_sound != 0);
+                                EWBSEvent.putInt("builtin_sound_id", builtin_sound_id);
+                            } else {
+                                mMainHandle.post(() -> {
+                                    mView.hideEWBSAlarmView();
+                                });
+                                Message msg = mMainHandle.obtainMessage(MSG_BLOCK_MUTE_OR_UNMUTE, 0, 0);
+                                mHandlerThreadHandle.sendMessage(msg);
+                            }
+                            EWBSEvent.putBoolean("start_end_flag", start_end_flag == 1);
+                            notifySessionEvent(ConstantManager.ACTION_EWBS_NOTIFY, EWBSEvent);
+                        } catch (JSONException e) {
+                            Log.i(TAG, "EWBSNotify error ");
+                        }
+                    }
                 } else if (signal.equals("EWSClose")) {
                     notifySessionEvent(ConstantManager.ACTION_EWS_CLOSE, null);
                 } else if (signal.equals("hbbNotifyAuthUrlUpdated")) {
@@ -5381,7 +5419,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         /* dtvkit handle this*/
                         break;
                     case MSG_BLOCK_MUTE_OR_UNMUTE:
-                        boolean mute = msg.arg1 == 0 ? false : true;
+                        boolean mute = msg.arg1 != 0;
                         setBlockMute(mute);
                         break;
                     case MSG_SET_STREAM_VOLUME:
