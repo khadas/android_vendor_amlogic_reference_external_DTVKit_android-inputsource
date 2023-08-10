@@ -259,6 +259,18 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         if (args != null && args.length > 0) {
             // todo: do more thing
             pw.println(Arrays.toString(args));
+            if (TextUtils.equals(args[0], "cmd") && args.length > 1) {
+                try {
+                    JSONObject cmd = new JSONObject(args[1]);
+                    JSONObject result = DtvkitGlueClient.getInstance().request(
+                            cmd.getString("command"), cmd.getJSONArray("json"));
+                    pw.println(result.toString());
+                } catch (Exception e) {
+                    pw.println(e.getMessage());
+                    e.printStackTrace();
+                }
+                return;
+            }
         }
         if (mMainHandler != null) {
             mMainHandler.dump(pw, "");
