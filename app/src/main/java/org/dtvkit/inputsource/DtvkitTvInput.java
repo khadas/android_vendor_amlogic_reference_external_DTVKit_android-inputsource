@@ -1178,7 +1178,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             for (Map.Entry<Long, DtvkitTvInputSession> entry : mTunerSessions.entrySet()) {
                 session = entry.getValue();
                 if (thiz != session
-                    && thiz.isPipSession() == session.isPipSession()) {
+                    && thiz.isPipSession() == session.isPipSession()
+                    && session.mSurface != null) {
                     return true;
                 }
             }
