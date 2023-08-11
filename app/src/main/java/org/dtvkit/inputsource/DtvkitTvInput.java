@@ -4663,12 +4663,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                                 mTuneInfo.dvbUri = dvbUri;
                                 sendMsgTsUpdate();
                             }
+                            playerState = PlayerState.PLAYING;
                             if (type.equals("dvblive")) {
                                 if (mTunedChannel == null) {
                                     return;
                                 }
                                 notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY);
-                                sendUpdateTrackMsg(PlayerState.PLAYING, true);
+                                sendUpdateTrackMsg(PlayerState.PLAYING, false);
                             }
                             if (mMainHandle != null) {
                                 mMainHandle.removeMessages(MSG_EVENT_SHOW_HIDE_OVERLAY);
