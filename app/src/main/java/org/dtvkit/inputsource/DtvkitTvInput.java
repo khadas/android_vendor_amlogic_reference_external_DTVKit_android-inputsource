@@ -5304,7 +5304,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     }
                     if (tvScan) {
                         if (TextUtils.equals("no_program_searched", status)) {
-                            runOnMainThread(this::exitNumberSearch);
+                            runOnMainThread(() -> {
+                                exitNumberSearch();
+                                if (mTunedChannel != null) {
+                                    onTune(TvContract.buildChannelUri(mTunedChannel.getId()), null);
+                                }
+                            });
                         } else if (TextUtils.equals("dtv_air_searched", status)
                                 || TextUtils.equals("atv_air_searched", status)
                                 || TextUtils.equals("atv_cable_searched", status)) {
