@@ -9130,14 +9130,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     }
 
     private void userDataStatus(boolean status) {
-        int subFlg = getSubtitleFlag();
-        if (subFlg >= SUBTITLE_CTL_HK_DVB_SUB) {
-            if (status) {
-                DtvkitGlueClient.getInstance().openUserData(); //for video afd
-            } else {
-                DtvkitGlueClient.getInstance().closeUserData(); //for video afd
-            }
-        }
+        // AFD is not obtained through subtitleserver.
+        // int subFlg = getSubtitleFlag();
+        // if (subFlg >= SUBTITLE_CTL_HK_DVB_SUB) {
+        //     if (status) {
+        //         DtvkitGlueClient.getInstance().openUserData(); //for video afd
+        //     } else {
+        //         DtvkitGlueClient.getInstance().closeUserData(); //for video afd
+        //     }
+        // }
     }
 
     private void checkAndUpdateLcn() {
