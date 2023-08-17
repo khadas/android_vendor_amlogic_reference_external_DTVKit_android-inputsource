@@ -39,6 +39,7 @@ public class ConstantManager {
     public static final String EVENT_CHANNEL_LIST_UPDATED = "event_channel_list_updated";
     public static final String EVENT_NO_CHANNEL_FOUND = "event_no_channel_found";
     public static final String VALUE_PIP_ACTION_TUNE_NEXT = "tune_next";
+    public static final String EVENT_TUNE_ATV_SNOW = "tune_atv_snow";
 
     //show or hide overlay
     public static final String ACTION_TIF_CONTROL_OVERLAY = "tif_control_overlay";

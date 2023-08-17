@@ -2950,7 +2950,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
             mTunedChannel = newChannel; // before play
             boolean playResult = false;
-            if (null == dvbUri) {
+            if (null == dvbUri && channelUri != null) {
                 Log.d(TAG, "Do Ip Channel Tune : " + newChannel.getAppLinkIntentUri());
                 //Ip channel load url
                 if (null != mHbbTvManager) {
@@ -3413,7 +3413,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
             Channel targetChannel = TvContractUtils.getChannel(mContentResolver, channelUri);
-            if (targetChannel == null) {
+            if (channelUri == null) {
+                targetChannel = createDummyATvChannel();
+            } else if (targetChannel == null) {
                 int dvbSource = getCurrentDvbSource();
                 Channel firstDbValidChannel = getFirstChannel(dvbSource);
                 if (firstDbValidChannel == null) {
@@ -3476,6 +3478,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     AudioSystemCmdManager.AUDIO_SERVICE_CMD_AD_SWITCH_ENABLE, mAudioADAutoStart ? 1 : 0, 0);
             mTuneInfo.isDTv = !Channel.isATV(targetChannel);
             boolean playResult = doTune(mTunedChannel, targetChannel, channelUri, dvbUri, mhegTune);
+            if (channelUri == null && Channel.isATV(targetChannel)) {
+                notifySessionEvent(ConstantManager.EVENT_TUNE_ATV_SNOW, null);
+            }
             if (!isSessionAvailable()) {
                 return;
             }
@@ -4201,6 +4206,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 if (mHandlerThreadHandle != null) {
                     Message msg = mMainHandle.obtainMessage(MSG_BLOCK_MUTE_OR_UNMUTE, 0, 0);
+                    mHandlerThreadHandle.sendMessage(msg);
+                }
+            } else if (TextUtils.equals(ConstantManager.EVENT_TUNE_ATV_SNOW, action)) {
+                if (mHandlerThreadHandle != null) {
+                    Message msg = mMainHandle.obtainMessage(MSG_TUNE_ATV_SNOW, 0, 0);
                     mHandlerThreadHandle.sendMessage(msg);
                 }
             }
@@ -5374,6 +5384,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         protected static final int MSG_SET_STREAM_VOLUME = 21;
         protected static final int MSG_EVENT_SUBTITLE_OPENED = 22;
         protected static final int MSG_NUMBER_SEARCH = 23;
+        protected static final int MSG_TUNE_ATV_SNOW = 24;
 
         //timeshift
         protected static final int MSG_TIMESHIFT_PLAY = 30;
@@ -5439,6 +5450,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         if (channelUri != null) {
                             onTuneByHandlerThreadHandle(channelUri, msg.arg1 != 0);
                         }
+                        break;
+                    case MSG_TUNE_ATV_SNOW:
+                        onTuneByHandlerThreadHandle(null, false);
                         break;
                     case MSG_CHECK_RESOLUTION:
                         if (!checkRealTimeResolution()) {
