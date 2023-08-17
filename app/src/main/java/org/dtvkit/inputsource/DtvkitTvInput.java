@@ -2931,7 +2931,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             }
 
 //            boolean mainMuteStatus = playerGetMute(); // must before stop
-            boolean mainMuteStatus = true; //Except for FCC, the Mute status of other scenes is controlled by LiveTV
+            boolean mainMuteStatus = !FeatureUtil.getFeatureSupportFcc(); //Except for FCC, the Mute status of other scenes is controlled by LiveTV
             onFinish(Channel.isATV(newChannel), FeatureUtil.getFeatureSupportFcc() && !getFccBufferUri().isEmpty());
             userDataStatus(false);
 
@@ -2939,10 +2939,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             String previousUriStr = getChannelInternalDvbUriForFcc(mFccPreviousBufferUri);
             String nextUriStr = getChannelInternalDvbUriForFcc(mFccNextBufferUri);
 
-            if (!TextUtils.isEmpty(previousUriStr) && !TextUtils.isEmpty(nextUriStr)) {
-                // when fcc tune, param: disable_audio in playerPlay must be false.
-                mainMuteStatus = false;
-            }
             // MUST double check
             if (!isSessionAvailable()) {
                 Log.e(TAG, "Abort tune because session is releasing...");
@@ -3058,6 +3054,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private int mCurrentAudioTrackId = -1;
         private ProviderSync mProviderSync = null;
 
+        private long mLastTuneTime = 0;
         private boolean mIsTeletextStarted = false;
         private boolean mIsMhepAppStarted = false;
         private AlertDialog mProDialog;
@@ -3443,6 +3440,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                 }
                 targetChannel = firstDbValidChannel;
             }
+
+            if (targetChannel != null && mTunedChannel != null
+                && targetChannel.getId() == mTunedChannel.getId()) {
+                long time = SystemClock.uptimeMillis();
+                if (time - mLastTuneTime < 1000) {
+                    Log.w(TAG, "duplicate tune, last tune is " + (time - mLastTuneTime) +  "ms ago, abort!");
+                    return;
+                }
+            }
+            mLastTuneTime = SystemClock.uptimeMillis();
 
             String dvbUri;
             boolean isVirtual = TvContractUtils.getBooleanFromChannelInternalProviderData(
