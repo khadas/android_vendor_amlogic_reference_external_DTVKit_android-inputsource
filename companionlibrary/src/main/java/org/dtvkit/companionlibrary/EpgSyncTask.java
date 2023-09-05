@@ -36,6 +36,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
+import java.util.HashMap;
 
 import com.droidlogic.dtvkit.companionlibrary.EpgSyncJobService;
 import com.droidlogic.dtvkit.companionlibrary.model.Channel;
@@ -285,6 +286,12 @@ public class EpgSyncTask {
                     oldProgramsIndex++;
                 }
             }
+
+            HashMap<Integer, Program> oldEventIdMap = new HashMap<>();
+            for (Program program : oldPrograms) {
+                if (DEBUG) Log.i(TAG, "updatePrograms oldEventIdMap.getEventId() = " + program.getEventId());
+                oldEventIdMap.put(program.getEventId(), program);
+            }
             // Compare the new programs with old programs one by one and update/delete the old one
             // or insert new program if there is no matching program in the database.
             ArrayList<ContentProviderOperation> ops = new ArrayList<>();
@@ -295,39 +302,42 @@ public class EpgSyncTask {
                 if (oldProgram != null) {
                     if (oldProgram.equals(newProgram)) {
                         // Exact match. No need to update. Move on to the next programs.
-                        if (DEBUG) Log.e(TAG, "equals");
-                        oldProgramsIndex++;
+                        if (DEBUG) Log.e(TAG, "updatePrograms equals");
+                        oldEventIdMap.remove(oldProgram.getEventId());
+                        oldPrograms.remove(oldProgramsIndex);
                         newProgramsIndex++;
                     } else if (mMainService.shouldUpdateProgramMetadata(oldProgram, newProgram)) {
                         // Partial match. Update the old program with the new one.
                         // NOTE: Use 'update' in this case instead of 'insert' and 'delete'. There
                         // could be application specific settings which belong to the old program.
-                        if (DEBUG) Log.v(TAG, "shouldUpdateProgramMetadata");
+                        if (DEBUG) Log.v(TAG, "updatePrograms shouldUpdateProgramMetadata");
                         ops.add(ContentProviderOperation.newUpdate(
                                         TvContract.buildProgramUri(oldProgram.getId()))
                                 .withValues(newProgram.toContentValues())
                                 .build());
-                        oldProgramsIndex++;
+                        oldEventIdMap.remove(oldProgram.getEventId());
+                        oldPrograms.remove(oldProgramsIndex);//No need to oldProgramsIndex++
                         newProgramsIndex++;
                     } else if (oldProgram.getEndTimeUtcMillis()
                             < newProgram.getEndTimeUtcMillis()) {
-                        if (DEBUG) Log.v(TAG, "old end time < new end time");
+                        if (DEBUG) Log.v(TAG, "updatePrograms old end time < new end time");
                         // No match. Remove the old program first to see if the next program in
                         // {@code oldPrograms} partially matches the new program.
                         ops.add(ContentProviderOperation.newDelete(
                                         TvContract.buildProgramUri(oldProgram.getId()))
                                 .build());
-                        oldProgramsIndex++;
+                        oldEventIdMap.remove(oldProgram.getEventId());
+                        oldPrograms.remove(oldProgramsIndex);//No need to oldProgramsIndex++
                     } else {
                         // No match. The new program does not match any of the old programs. Insert
                         // it as a new program.
-                        if (DEBUG) Log.v(TAG, "No match");
+                        if (DEBUG) Log.v(TAG, "updatePrograms No match");
                         addNewProgram = true;
                         newProgramsIndex++;
                     }
                 } else {
                     // No old programs. Just insert new programs.
-                    if (DEBUG) Log.v(TAG, "No old programs");
+                    if (DEBUG) Log.v(TAG, "updatePrograms No old programs");
                     addNewProgram = true;
                     newProgramsIndex++;
                 }
@@ -337,6 +347,20 @@ public class EpgSyncTask {
                             .withValues(newProgram.toContentValues())
                             .build());
                 }
+
+                 if (DEBUG) Log.i(TAG, "updatePrograms newProgram.getEventId() = " + newProgram.getEventId());
+                 if (oldEventIdMap.containsKey(newProgram.getEventId())) {
+                    oldProgram = oldEventIdMap.get(newProgram.getEventId());
+                    ops.add(ContentProviderOperation.newDelete(
+                                    TvContract.buildProgramUri(oldProgram.getId()))
+                            .build());
+
+                    if (DEBUG) Log.i(TAG, "updatePrograms newDelete oldProgram" + ops.size());
+                    oldEventIdMap.remove(oldProgram.getEventId());
+                    oldPrograms.remove(oldProgram);
+                    oldProgramsIndex--;
+                }
+                if (DEBUG) Log.i(TAG, "updatePrograms applyBatch ops " + ops.size() + ", newProgramsIndex = " + newProgramsIndex);
                 // Throttle the batch operation not to cause TransactionTooLargeException.
                 if (ops.size() > BATCH_OPERATION_COUNT || newProgramsIndex >= fetchedProgramsCount) {
                     if (DEBUG) Log.i(TAG, "updatePrograms number " + ops.size());

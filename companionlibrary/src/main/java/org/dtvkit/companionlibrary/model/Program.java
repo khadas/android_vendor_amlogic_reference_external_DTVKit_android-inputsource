@@ -562,6 +562,9 @@ public final class Program implements Comparable<Program> {
         if (!cursor.isNull(++index)) {
             builder.setRecordingProhibited(cursor.getInt(index) == IS_RECORDING_PROHIBITED);
         }
+        if (!cursor.isNull(++index)) {
+            builder.setEventId(cursor.getInt(index));
+        }
         return builder.build();
     }
 
@@ -590,7 +593,8 @@ public final class Program implements Comparable<Program> {
                 TvContract.Programs.COLUMN_INTERNAL_PROVIDER_FLAG4,
                 TvContract.Programs.COLUMN_SEARCHABLE,
                 TvContract.Programs.COLUMN_SEASON_TITLE,
-                TvContract.Programs.COLUMN_RECORDING_PROHIBITED
+                TvContract.Programs.COLUMN_RECORDING_PROHIBITED,
+                TvContract.Programs.COLUMN_EVENT_ID
         };
     }
 

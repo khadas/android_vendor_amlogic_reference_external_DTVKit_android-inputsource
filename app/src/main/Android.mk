@@ -27,7 +27,8 @@ LOCAL_STATIC_JAVA_LIBRARIES += \
    companionlibrary \
    android-support-v17-leanback \
    amlogic-hbbtv-client \
-   guava-android-31
+   guava-android-31 \
+   org.orbtv.orblibrary
 
 LOCAL_STATIC_JAVA_AAR_LIBRARIES += exo-player
 
@@ -59,6 +60,11 @@ LOCAL_USES_LIBRARIES := droidlogic.software.core droidlogic.dtvkit.software.core
 LOCAL_FULL_LIBS_MANIFEST_FILES := \
   $(LOCAL_PATH)/AndroidManifest.xml \
   $(LOCAL_PATH)/AndroidManifest-alarm-permissions.xml
+endif
+
+LOCAL_JNI_SHARED_LIBRARIES += liborg.orbtv.orblibrary.native
+ifeq ($(shell test $(PLATFORM_SDK_VERSION) -eq 30 && echo OK),OK)
+    LOCAL_REQUIRED_MODULES += TrichromeWebView
 endif
 LOCAL_DEX_PREOPT := false
 LOCAL_VENDOR_MODULE := true

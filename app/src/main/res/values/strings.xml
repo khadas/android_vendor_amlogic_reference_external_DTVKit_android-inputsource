@@ -153,6 +153,8 @@
     <string name="strSkip">Skip</string>
     <string name="strNoTeletext">No teletext</string>
 
+    <string name="allow">ALLOW</string>
+    <string name="deny">DENY</string>
     <!-- tkgs strings-->
     <string name="string_tkgs_operate_mode">Operate Mode</string>
     <string name="string_tkgs_locator_list">TKGS Locator List</string>

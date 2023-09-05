@@ -3768,6 +3768,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         public boolean onSelectTrack(int type, String trackId) {
             Log.i(TAG, "onSelectTrack " + type + ", " + trackId);
             boolean result = false;
+            if (mHbbTvManager != null) {
+                mResourceOwnedByBr = mHbbTvManager.checkIsBroadcastOwnResource();
+                if (mResourceOwnedByBr == false) {
+                    mHbbTvManager.selectBroadbandTracksAndNotify(type, trackId);
+                    return true;
+                }
+            } else {
+                mResourceOwnedByBr = true;
+            }
             if (mHandlerThreadHandle != null) {
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_SELECT_TRACK, type, 0, trackId);
                 result = mHandlerThreadHandle.sendMessage(mess);
@@ -3778,7 +3787,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         private void doSelectTrack(int type, String trackId) {
             Log.i(TAG, "doSelectTrack " + type + ", " + trackId);
             if (type == TvTrackInfo.TYPE_AUDIO) {
-                if (mResourceOwnedByBr) {
                     for (TvTrackInfo info : mTunedTracks) {
                         if (info.getType() == type && info.getId().equals(trackId)) {
                             adapterADSwitch(info);
@@ -3786,15 +3794,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                     }
                     if (playerSelectAudioTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
-                        mCurrentAudioTrackId = Integer.parseInt(trackId);
+                        mCurrentAudioTrackId = ((null == trackId) ? 0xFFFF : Integer.parseInt(trackId));
                         notifyTrackSelected(type, trackId);
                         if (mHbbTvManager != null) {
                             mHbbTvManager.notifyTrackSelectedToHbbtv(type, trackId);
                         }
                     }
-                } else {
-                    mHbbTvManager.selectBroadbandTracksAndNotify(type, trackId);
-                }
+            } else if (type == TvTrackInfo.TYPE_VIDEO) {
+                    if (playerSelectVideoTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
+                        notifyTrackSelected(type, trackId);
+                        if (mHbbTvManager != null) {
+                            mHbbTvManager.notifyTrackSelectedToHbbtv(type, trackId);
+                        }
+                    }
             } else if (type == TvTrackInfo.TYPE_SUBTITLE) {
                 if (Channel.isATV(mTunedChannel)) {
                     AtvCcTool.getInstance().selectCCTrack(getApplicationContext(), trackId);
@@ -8185,6 +8197,27 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             DtvkitGlueClient.getInstance().request("Player.setAudioStream", args);
         } catch (Exception e) {
             Log.e(TAG, "playerSelectAudioTrack = " + e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    private boolean playerSelectVideoTrack(int index) {
+        return playerSelectVideoTrack(INDEX_FOR_MAIN, index);
+    }
+
+    private boolean playerPipSelectVideoTrack(int index) {
+        return playerSelectVideoTrack(INDEX_FOR_PIP, index);
+    }
+
+    private boolean playerSelectVideoTrack(int id, int index) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(id);
+            args.put(index);
+            DtvkitGlueClient.getInstance().request("Player.setVideoStream", args);
+        } catch (Exception e) {
+            Log.e(TAG, "playerSelectVideoTrack = " + e.getMessage());
             return false;
         }
         return true;
