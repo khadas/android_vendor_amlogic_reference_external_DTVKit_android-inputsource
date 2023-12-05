@@ -5495,6 +5495,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     // after track changed, should update sound mode again
                     notifySessionEvent(ConstantManager.ACTION_AUDIO_TRACK_SELECTED, null);
                     sendUpdateTrackMsg(PlayerState.PLAYING, recordedProgram != null);
+                    // TODO: MAY be merged later, HandleAudioEvent is invalid in ATF
+                    if (FeatureUtil.getFeatureSupportTunerFramework()) {
+                        DtvkitTvInputSession main = getMainTunerSession();
+                        if (main != null && main.readyToPlay()) {
+                            main.playerSetAdParams(0);
+                        }
+                    }
                 } else if (signal.equals("TkgsStartTuneUpdate")) {
                     notifySessionEvent(ConstantManager.ACTION_TKGS_START_TUNE_UPDATE, null);
                     mMainHandle.post(()->showToast(R.string.string_tune_update_tip));
