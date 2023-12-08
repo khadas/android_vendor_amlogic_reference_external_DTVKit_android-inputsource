@@ -5500,7 +5500,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         }
                     }
                 } else if (signal.equals("TkgsStartTuneUpdate")) {
-                    notifySessionEvent(ConstantManager.ACTION_TKGS_START_TUNE_UPDATE, null);
                     mMainHandle.post(()->showToast(R.string.string_tune_update_tip));
                 } else if (signal.equals("TkgsFinishTuneUpdate")) {
                     try {
@@ -5511,6 +5510,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                         e.printStackTrace();
                     }
                     sendEmptyMessageToInputThreadHandler(MSG_UPDATE_DTVKIT_DATABASE);
+                    notifySessionEvent(ConstantManager.ACTION_TKGS_FINISH_TUNE_UPDATE, null);
                 } else if (signal.equals("FVP_LINER_IP_SERVICE_DONE")) {
                     //TBD: to sync IP Channel URI
                      if (!mIsPip) {
