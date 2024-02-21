@@ -260,6 +260,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
     private TunerAdapter mMainTuner = null;
     private final Object mMainTunerResourceLock = new Object();
 
+    private String mCurrentInputId = null;
+
     public DtvkitTvInput() {
         Log.i(TAG, "newInstance");
     }
@@ -660,6 +662,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
 
         mContentResolver.registerContentObserver(TvContract.RecordedPrograms.CONTENT_URI,
                 true, mRecordingsContentObserver);
+
+        mContentResolver.registerContentObserver(Uri.parse(DataProviderManager.CONTENT_URI + DataProviderManager.TABLE_STRING_NAME),
+                true, mDroidLogicDbContentObserver);
+        mCurrentInputId = DataProviderManager.getStringValue(this, "tv_current_inputid", "");
+        Log.i(TAG,"mCurrentInputId " + mCurrentInputId);
 
         IntentFilter parentalControl = new IntentFilter();
         parentalControl.addAction(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED);
@@ -1103,6 +1110,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             mAutoTimeManager.release();
         }
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
+        mContentResolver.unregisterContentObserver(mDroidLogicDbContentObserver);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingManagerHandler);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mChannelUpdateHandler);
         DtvkitGlueClient.getInstance().unregisterSignalHandler(mCIPLUSCardHandler);
@@ -7233,10 +7241,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     mPipTunerAdapter = new TunerAdapter(tuner, TunerAdapter.TUNER_TYPE_LIVE_1);
                 } else {
                     synchronized (mMainTunerResourceLock) {
-                    if (null == mMainTuner) {
-                        Tuner tuner = new Tuner(service.getApplicationContext(), sessionId, PRIORITY_HINT_USE_CASE_TYPE_LIVE);
-                        mMainTuner = new TunerAdapter(tuner, TunerAdapter.TUNER_TYPE_LIVE_0);
-                    } else {
+                        if (null == mMainTuner) {
+                            Tuner tuner = new Tuner(service.getApplicationContext(), sessionId, PRIORITY_HINT_USE_CASE_TYPE_LIVE);
+                            mMainTuner = new TunerAdapter(tuner, TunerAdapter.TUNER_TYPE_LIVE_0);
+                        } else {
                             if (null == mRecordingSession) {
                                 Log.i(TAG, "old session is not release, so not need create");
                             } else {
@@ -9041,6 +9049,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
         }
     }
 
+    private void DvbReleaseDtvDevice() {
+        try {
+            JSONArray args = new JSONArray();
+            args.put("");
+            DtvkitGlueClient.getInstance().request("Dvb.releaseDtvDevice", args);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+    }
+
     private boolean checkActiveRecording(JSONObject recordingStatus) {
         boolean active = false;
 
@@ -9387,6 +9405,39 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             if (!TvContract.RecordedPrograms.CONTENT_URI.equals(uri)) {
                 sendGetRecordingListMsg(1, "RecordingsContentObserver",
                         MSG_UPDATE_RECORDING_PROGRAM_DELAY);
+            }
+        }
+    };
+
+    private final ContentObserver mDroidLogicDbContentObserver = new ContentObserver(null) {
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            if (uri == null || false == FeatureUtil.getFeatureSupportTunerFramework()) {
+                return;
+            }
+            String fragment = uri.getFragment();
+            if (fragment != null && fragment.contains(" ")) {
+                String prop = "";
+                String val = "";
+                for (String s : fragment.split(" ")) {
+                    if (s.contains(DataProviderManager.PROPERTY)) {
+                        prop = s.split("=")[1];
+                    }
+                    if (s.contains(DataProviderManager.VALUE)) {
+                        val = s.split("=")[1];
+                    }
+                }
+                if (TextUtils.equals(prop, "tv_current_inputid") && val != null && !TextUtils.equals(mCurrentInputId, val)
+                        && (val.contains(String.valueOf(HARDWARE_MAIN_DEVICE_ID)) || mCurrentInputId.contains(String.valueOf(HARDWARE_MAIN_DEVICE_ID)))) {
+                    mCurrentInputId = val;
+                    mInputThreadHandler.post(() -> {
+                        if (mCurrentInputId.contains(String.valueOf(HARDWARE_PIP_DEVICE_ID)) || mCurrentInputId.contains(String.valueOf(HARDWARE_MAIN_DEVICE_ID))) {
+                            DvbRequestDtvDevice();
+                        } else {
+                            DvbReleaseDtvDevice();
+                        }
+                    });
+                }
             }
         }
     };
