@@ -9,6 +9,7 @@ import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.LayoutInflater;
 import android.view.KeyEvent;
 import android.content.IntentFilter;
@@ -106,6 +107,7 @@ public class CiMenuView extends LinearLayout {
                                     itemList.put("Authentication success");
                                     itemList.put("SAC establishment success");
                                     itemList.put("SAC establishment success");
+                                    itemList.put("05MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMW");
                                     jsonObject.put("itemList",itemList);
                                     Log.i(TAG,"jsonObject : " + jsonObject.toString());
                                     new CiMmiRequestMenu("CIPLUS_MMI_SCREEN_REQUEST", jsonObject);
@@ -305,7 +307,7 @@ public class CiMenuView extends LinearLayout {
                     final LinearLayout linearLayout = (LinearLayout)findViewById(R.id.ll_ci_MMI_Items);
                     final LayoutInflater inflater = LayoutInflater.from(mContext);
                     final TextView textView = (TextView)inflater.inflate(R.layout.mmi_button, null);
-                    textView.setLayoutParams(new LinearLayout.LayoutParams(1050, 40));
+                    textView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                     textView.setText(itemText);
                     textView.setId(buttonNum);
 
