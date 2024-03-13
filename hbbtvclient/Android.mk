@@ -39,6 +39,9 @@ else
 
 ORB_VENDOR := true
 ORB_HBBTV_VERSION ?= 203
+ifeq ($(shell test $(PLATFORM_SDK_VERSION) -gt 30 && echo OK),OK)
+USE_JSONCPP_ORB = 0
+endif
 
 include $(CLEAR_VARS)
 include $(LOCAL_PATH)/orb/android/orblibrary/src/main/Android.mk \
