@@ -3769,7 +3769,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
             Log.i(TAG, "onSelectTrack " + type + ", " + trackId);
             boolean result = false;
             if (mHbbTvManager != null) {
-                mResourceOwnedByBr = mHbbTvManager.checkIsBroadcastOwnResource();
+                runOnMainThread(() -> {
+                    if (mHbbTvManager != null) {
+                        mResourceOwnedByBr = mHbbTvManager.checkIsBroadcastOwnResource();
+                    }
+                 });
                 if (mResourceOwnedByBr == false) {
                     mHbbTvManager.selectBroadbandTracksAndNotify(type, trackId);
                     return true;
