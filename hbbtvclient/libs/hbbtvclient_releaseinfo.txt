@@ -1,6 +1,6 @@
 r-amlogic-vewd-client
-commit  82036ecd926bdca770bdb91c8639fe831d70a5ac
-Date:   Tue Feb 27 00:51:06 2024 -0800
+commit  a998fdf3b0615fffdf4611feb41841d9b37d1a32
+Date:   Fri Mar 29 18:20:47 2024 +0800
 s
 hbbtv-orb
 commit  1176bb9f27b9d60d5ceb9fd4afff1435cc60a786
