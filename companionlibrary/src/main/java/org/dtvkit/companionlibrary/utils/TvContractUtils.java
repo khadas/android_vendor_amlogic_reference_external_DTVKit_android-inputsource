@@ -137,7 +137,7 @@ public class TvContractUtils {
                             .filter(channel -> source.equals(toSignalType(channel.getType())))
                             .collect(Collectors.toList()), source, extras);
             // 3.delete channels that no need
-            handleChannelDelete(channelMap, context);
+            handleChannelDelete(ops, channelMap, context);
             // 4.delete old programs
             if (TextUtils.equals(EpgSyncJobService.BUNDLE_VALUE_SYNC_SEARCHED_MODE_AUTO, searchMode)) {
                 handleProgramDelete(context, source);
@@ -425,16 +425,17 @@ public class TvContractUtils {
     }
 
     //3.delete channels that don't exist in DtvKit db anymore
-    private static void handleChannelDelete(ArrayList<Pair<String, Long>> channelMap, Context context) {
-        ArrayList<Long> ids = new ArrayList<>();
+    private static void handleChannelDelete(ArrayList<ContentProviderOperation> ops, ArrayList<Pair<String, Long>> channelMap, Context context) {
         for (Pair<String, Long> entry : channelMap) {
             Long rowId = entry.second;
             if (DEBUG) {
                 Log.d(TAG, " handleChannelDelete add _ID=" + rowId);
             }
-            ids.add(rowId);
+            ops.add(ContentProviderOperation.newDelete(
+                            TvContract.buildChannelUri(rowId))
+                    .build());
         }
-        handleDelete(ids, context, true);
+//        handleDelete(ids, context);
     }
 
     // 4.delete old programs
@@ -458,7 +459,7 @@ public class TvContractUtils {
         } catch (Exception e) {
             Log.e(TAG, "handleProgramDelete Failed = " + e.getMessage());
         }
-        handleDelete(ids, context, false);
+        handleDelete(ids, context);
     }
 
     //5.deal insert or update channels to tv.db
@@ -485,22 +486,16 @@ public class TvContractUtils {
 //        }
     }
 
-    private static void handleDelete(ArrayList<Long> ids, Context context, boolean channelList) {
+    private static void handleDelete(ArrayList<Long> ids, Context context) {
         ArrayList<ContentProviderOperation> deleteOps = new ArrayList<>();
         ContentResolver resolver = context.getContentResolver();
         for (Long rowId : ids) {
             if (DEBUG) {
                 Log.d(TAG, " handleDelete add _ID=" + rowId);
             }
-            if (channelList) {
-                deleteOps.add(ContentProviderOperation.newDelete(
-                                TvContract.buildChannelUri(rowId))
-                        .build());
-            } else {
-                deleteOps.add(ContentProviderOperation.newDelete(
-                                TvContract.buildProgramUri(rowId))
-                        .build());
-            }
+            deleteOps.add(ContentProviderOperation.newDelete(
+                            TvContract.buildProgramUri(rowId))
+                    .build());
         }
         for (int i = 0; i < deleteOps.size(); i += BATCH_OPERATION_COUNT) {
             int toIndex =
