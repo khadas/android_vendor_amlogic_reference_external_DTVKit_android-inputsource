@@ -5347,24 +5347,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                     } else {
                         Log.d(TAG, "on signal MhegAppStarted null mTunedChannel");
                     }
-                } else if (signal.equals("hbbNotifyWindowSizeChanged")) {
-                    try {
-                        int x = data.getInt("x");
-                        int y = data.getInt("y");
-                        int width = data.getInt("width");
-                        int height = data.getInt("height");
-                        Log.d(TAG, "hbbNotifyWindowSizeChanged x= " + x + ", y = " + y + ",  width = " + width + ", height = " + height);
-                        runOnMainThread(() -> {
-                            if (mView != null) {
-                                mView.setSize(x, y, x+width, y+height);
-                            }
-                        });
-                    } catch (JSONException e) {
-                      Log.e(TAG, e.getMessage());
-                   }
-                }
-                else if (signal.equals("AppVideoPosition"))
-                {
+                } else if (signal.equals("AppVideoPosition")) {
                    Log.i(TAG, "AppVideoPosition");
                    if (mHandlerThreadHandle != null) {
                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
@@ -5420,8 +5403,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                        }
                    }
                    */
-                }
-                else if (signal.equals("ServiceRetuned")) {
+                } else if (signal.equals("ServiceRetuned")) {
                    String dvbUri = "";
                    Channel channel;
                    Uri retuneUri;
@@ -5461,8 +5443,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlEvent.
                       //    mHandlerThreadHandle.obtainMessage(MSG_START_MHEG5, 1/*mhegSupend*/, 0, dvbUri).sendToTarget();
                       //}
                    //}
-                }
-                else if (signal.equals("RecordingDiskFull")) {
+                } else if (signal.equals("RecordingDiskFull")) {
                     if (timeshiftRecorderState != RecorderState.STOPPED) {
                         /*free disk space exceeds the property's setting*/
                         Bundle event = new Bundle();
